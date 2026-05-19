@@ -26,13 +26,12 @@ class _HomePageState extends State<HomePage> {
 
   //aqui iran las paginas
   late final List<Widget> _pages = [
-    const Center(child: Text('Malla Curricular')),
-    CalculadoraPage(),
-    HorarioPage(),
+    const MallaPage(),
+    const CalculadoraPage(),
+    const HorarioPage(),
 
     // MODULO EXTRA A LOS ALUMNOS CON ROL 'Delegado'
-    if(user?.isDelegate ?? false)
-    const Center(child: Text('Delegado')),
+    if (user?.isDelegate ?? false) const Center(child: Text('Delegado')),
 
     const Center(child: Text('Perfil')),
   ];
@@ -54,7 +53,6 @@ class _HomePageState extends State<HomePage> {
 
           //CUERPO
           Expanded(child: _buildBody()),
-          
         ],
       ),
       //FOOTER
