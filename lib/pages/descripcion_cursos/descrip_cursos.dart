@@ -343,7 +343,7 @@ class DescripCursosPage extends StatelessWidget {
           return AsesoriasTab();
           //CONTACTOS
         case 2:
-          return const ContactosTab();
+          return ContactosTab();
 
 
         default:

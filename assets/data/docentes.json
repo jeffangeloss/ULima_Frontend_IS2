@@ -1,0 +1,16 @@
+{
+  "docentes": [
+
+    {
+      "code": "D01",
+      "firstName": "Hernan",
+      "lastName": "Quintana"
+    },
+
+    {
+      "code": "D02",
+      "firstName": "Carlos",
+      "lastName": "Lopez"
+    }
+  ]
+}
