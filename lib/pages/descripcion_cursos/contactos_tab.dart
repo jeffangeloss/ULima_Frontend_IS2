@@ -1,14 +1,113 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
-class ContactosTab extends StatelessWidget {
+import '../../components/descripcion_cursos/contacto_card.dart';
 
-  const ContactosTab({super.key});
+import 'descrip_cursos_controller.dart';
+
+class ContactosTab
+    extends StatelessWidget {
+
+  final DescripCursosController
+      control =
+          Get.find();
+
+  ContactosTab({
+    super.key,
+  });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
 
-    return const Center(
-      child: Text('Contactos'),
-    );
+    final colors =
+        Theme.of(context)
+            .colorScheme;
+
+    return Obx(() {
+
+      return ListView(
+
+        padding:
+            const EdgeInsets.all(16),
+
+        children: [
+
+          // DOCENTE
+          Text(
+
+            'DOCENTE',
+
+            style: TextStyle(
+
+              color:
+                  colors.secondary,
+
+              fontSize: 13,
+
+              fontWeight:
+                  FontWeight.w700,
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // Card docente
+          if (
+              control.docenteContacto.value != null
+          )
+
+            ContactoCard(
+
+              nombre:
+                  control.docenteContacto.value!.fullName,
+              rol:
+                  'docente',
+            ),
+
+          const SizedBox(height: 22),
+
+          // ALUMNOS
+          Text(
+
+            'ALUMNOS',
+
+            style: TextStyle(
+
+              color:
+                  colors.secondary,
+
+              fontSize: 13,
+
+              fontWeight:
+                  FontWeight.w700,
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // Lista alumnos
+          ...control.alumnosContacto.map((alumno) {
+            return Padding(
+
+              padding:
+                  const EdgeInsets.only(
+                bottom: 12,
+              ),
+
+              child: ContactoCard(
+
+                nombre:
+                    alumno.fullName,
+
+                rol:
+                    alumno.role,
+              ),
+            );
+          }),
+        ],
+      );
+    });
   }
 }
