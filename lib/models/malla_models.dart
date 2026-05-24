@@ -157,25 +157,37 @@ class CourseProgress {
   final Set<String> approvedElectives;
 
   /// Cursos (id) que el alumno está llevando en este ciclo.
-  final Set<String> currentCourses;
+  //final Set<String> currentCourses;
+  final List<Map<String, dynamic>> currentCourses;
 
   factory CourseProgress.empty() => CourseProgress(
-        approvedLevels: <int>{},
-        approvedElectives: <String>{},
-        currentCourses: <String>{},
-      );
+    approvedLevels: <int>{},
+    approvedElectives: <String>{},
+    currentCourses: <Map<String, dynamic>>[],
+  );
 
   factory CourseProgress.fromJson(Map<String, dynamic>? json) {
     if (json == null) return CourseProgress.empty();
+
+    // Convertimos currentCourses con lógica flexible
+    final rawCourses = (json['currentCourses'] as List?) ?? [];
+    final List<Map<String, dynamic>> processedCourses = rawCourses
+        .map((e) {
+          if (e is Map<String, dynamic>) return e;
+          // Si es un String antiguo, lo convertimos a mapa para que no rompa la app
+          return {'idSeccion': e.toString(), 'idCurso': 'desconocido'};
+        })
+        .toList()
+        .cast<Map<String, dynamic>>();
+
     return CourseProgress(
-      approvedLevels:
-          ((json['approvedLevels'] as List?) ?? const [])
-              .map<int>((e) => (e as num).toInt())
-              .toSet(),
-      approvedElectives:
-          ((json['approvedElectives'] as List?) ?? const []).cast<String>().toSet(),
-      currentCourses:
-          ((json['currentCourses'] as List?) ?? const []).cast<String>().toSet(),
+      approvedLevels: ((json['approvedLevels'] as List?) ?? const [])
+          .map<int>((e) => (e as num).toInt())
+          .toSet(),
+      approvedElectives: ((json['approvedElectives'] as List?) ?? const [])
+          .cast<String>()
+          .toSet(),
+      currentCourses: processedCourses,
     );
   }
 }

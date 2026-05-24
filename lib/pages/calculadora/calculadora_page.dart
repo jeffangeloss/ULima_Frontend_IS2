@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../components/calculadora/curso_card.dart';
-import '../../components/calculadora/add_nota_with_syllabus_modal.dart';
+import '../../components/calculadora/add_score.dart';
 import 'calculadora_controller.dart';
 
 // Usamos GetView para evitar el Get.put manual si ya está en los bindings,
@@ -207,7 +207,7 @@ class CalculadoraPage extends GetView<CalculadoraController> {
               (index) {
                 // Extraemos los datos de forma segura aquí
                 final curso = controller.cursos[index];
-                final seccion = curso['seccion']?.toString() ?? 'Sin sección';
+                final seccion = curso['codigoSeccion']?.toString() ?? 'Sin sección';
                 final nombre = curso['nombre']?.toString() ?? 'Curso desconocido';
 
                 return Padding(

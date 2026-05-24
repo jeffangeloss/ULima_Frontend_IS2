@@ -25,26 +25,20 @@ class Seccion {
   });
 
   // Convierte JSON a objeto
-  factory Seccion.fromJson(Map<String,dynamic> json,) {
-
+  factory Seccion.fromJson(Map<String, dynamic> json) {
     return Seccion(
-
-      idSeccion:json['idSeccion'],
-
-      codigoSeccion:json['codigoSeccion'],
-
-      promedioSeccion: (json['promedioSeccion'] as num).toDouble(),
-
-      idCurso:json['idCurso'],
-      curso:json['curso'],
-
-      docente: Docente.fromJson(json['docente']),
-
-      asistido:json['asistido'],
-
-      inasistencia:json['inasistencia'],
-
-      total: json['total'],
+      idSeccion: json['idSeccion']?.toString() ?? '',
+      codigoSeccion: json['codigoSeccion']?.toString() ?? '',
+      promedioSeccion: (json['promedioSeccion'] as num?)?.toDouble() ?? 0.0,
+      idCurso: json['idCurso']?.toString() ?? '',
+      curso: json['curso']?.toString() ?? 'Sin curso',
+      
+      // PROTECCIÓN: Si 'docente' es null, pasamos un mapa vacío para que no falle
+      docente: Docente.fromJson(json['docente'] ?? {}),
+      
+      asistido: (json['asistido'] as num?)?.toInt() ?? 0,
+      inasistencia: (json['inasistencia'] as num?)?.toInt() ?? 0,
+      total: (json['total'] as num?)?.toInt() ?? 0,
     );
   }
 }
