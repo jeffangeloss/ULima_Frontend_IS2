@@ -10,6 +10,8 @@ import 'storage_service.dart';
 
 class AuthService extends GetxService {
   static AuthService get to => Get.find();
+  static const String invalidCredentialsMessage =
+      'Código o contraseña incorrectos.';
 
   final Rx<UserModel?> _currentUser = Rx<UserModel?>(null);
   final RxList<Map<String, dynamic>> _users = <Map<String, dynamic>>[].obs;
@@ -21,6 +23,7 @@ class AuthService extends GetxService {
   final RxBool _loading = false.obs;
 
   UserModel? get currentUser => _currentUser.value;
+  Rx<UserModel?> get currentUserRx => _currentUser;
   bool get isLoggedIn => _currentUser.value != null;
   bool get isLoading => _loading.value;
 
@@ -104,14 +107,7 @@ class AuthService extends GetxService {
       return false;
     }
     final user = UserModel.fromJson(_withEspecialidadesFromRelation(match));
-    // Aplicar datos de setup guardados.
-    final careerId = _storage.savedCareerId;
-    if (careerId != null) user.careerId = careerId;
-    final especialidades = _storage.savedEspecialidades;
-    if (especialidades.isNotEmpty) user.especialidades = especialidades;
-    if (_storage.hasSavedSetup) {
-      user.setupComplete = _storage.savedSetupComplete;
-    }
+    await _applyStoredSetup(user);
 
     _currentUser.value = user;
     return true;
@@ -129,14 +125,13 @@ class AuthService extends GetxService {
       final match = _users.firstWhereOrNull(
         (u) => u['code'].toString() == normalizedCode,
       );
-      if (match == null) return 'No encontramos un alumno con ese código.';
-      if ((match['password'] as String?) != password) {
-        return 'La contraseña no es correcta.';
-      }
+      final passwordMatches =
+          match != null && (match['password'] as String?) == password;
+      if (!passwordMatches) return invalidCredentialsMessage;
 
-      _currentUser.value = UserModel.fromJson(
-        _withEspecialidadesFromRelation(match),
-      );
+      final user = UserModel.fromJson(_withEspecialidadesFromRelation(match));
+      await _applyStoredSetup(user);
+      _currentUser.value = user;
       await _storage.saveCode(normalizedCode);
       return null;
     } catch (e) {
@@ -149,17 +144,21 @@ class AuthService extends GetxService {
   /// Actualiza carrera/especialidades del usuario actual y marca el setup completo.
   Future<void> completeSetup({
     required int careerId,
-    required List<int> especialidades,
+    int? especialidadPrincipal,
+    required List<int> especialidadesInteres,
   }) async {
     final u = _currentUser.value;
     if (u == null) return;
     u.careerId = careerId;
-    u.especialidades = List.of(especialidades);
+    u.especialidadPrincipal = especialidadPrincipal;
+    u.especialidadesInteres = List.of(especialidadesInteres);
     u.setupComplete = true;
     _currentUser.refresh();
     await _storage.saveSetup(
+      code: u.code,
       careerId: careerId,
-      especialidades: especialidades,
+      especialidadPrincipal: especialidadPrincipal,
+      especialidadesInteres: especialidadesInteres,
       setupComplete: true,
     );
   }
@@ -167,5 +166,47 @@ class AuthService extends GetxService {
   Future<void> logout() async {
     _currentUser.value = null;
     await _storage.clearSession();
+  }
+
+  Future<void> _applyStoredSetup(UserModel user) async {
+    final code = user.code;
+    final hasUserSetup = _storage.hasSavedSetupFor(code);
+    if (!hasUserSetup && !_storage.hasSavedSetup) return;
+
+    final careerId = hasUserSetup
+        ? _storage.savedCareerIdFor(code)
+        : _storage.savedCareerId;
+    if (careerId != null) user.careerId = careerId;
+
+    user.setupComplete = hasUserSetup
+        ? _storage.savedSetupCompleteFor(code)
+        : _storage.savedSetupComplete;
+
+    final principal = hasUserSetup
+        ? _storage.savedEspecialidadPrincipalFor(code)
+        : _storage.savedEspecialidadPrincipal;
+    final interes = hasUserSetup
+        ? _storage.savedEspecialidadesInteresFor(code)
+        : _storage.savedEspecialidadesInteres;
+
+    if (principal != null || interes.isNotEmpty) {
+      user.especialidadPrincipal = principal;
+      user.especialidadesInteres = interes;
+    } else {
+      final legacy = hasUserSetup
+          ? _storage.savedEspecialidadesFor(code)
+          : _storage.savedEspecialidades;
+      if (legacy.isNotEmpty) user.especialidadesInteres = legacy;
+    }
+
+    if (!hasUserSetup && user.careerId != null) {
+      await _storage.saveSetup(
+        code: code,
+        careerId: user.careerId!,
+        especialidadPrincipal: user.especialidadPrincipal,
+        especialidadesInteres: user.especialidadesInteres,
+        setupComplete: user.setupComplete,
+      );
+    }
   }
 }

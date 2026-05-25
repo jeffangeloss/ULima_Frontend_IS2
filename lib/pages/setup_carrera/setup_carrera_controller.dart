@@ -2,71 +2,103 @@ import 'package:get/get.dart';
 
 import '../../services/auth_service.dart';
 
+enum SetupStep { carrera, decision, seleccion }
+
+enum SpecialtyDecision { si, noSe, explorar }
+
 class SetupCarreraController extends GetxController {
-  final selectedCarreraId = RxnInt();
-  final selectedEspecialidades = <int>{}.obs;
-  final errorMessage = RxnString();
+  final step = SetupStep.carrera.obs;
+  final decision = Rxn<SpecialtyDecision>();
+  final selectedPrincipal = RxnInt();
+  final selectedInteres = <int>{}.obs;
   final saving = false.obs;
+  final errorMessage = RxnString();
 
   AuthService get _auth => AuthService.to;
 
-  List<Map<String, dynamic>> get carreras => _auth.carreras;
+  String get selectedCarreraName => _auth.getCareerName(selectedCarreraId);
+
+  int? get selectedCarreraId => _auth.currentUser?.careerId;
 
   List<Map<String, dynamic>> get especialidadesDisponibles {
-    final cId = selectedCarreraId.value;
+    final cId = selectedCarreraId;
     if (cId == null) return const [];
     final list = _auth.especialidades
         .where((e) => e['carrera_id'] == cId && e['is_active'] == true)
         .toList();
     list.sort((a, b) {
-      final orderA = (a['display_order'] as num?)?.toInt() ?? 999;
-      final orderB = (b['display_order'] as num?)?.toInt() ?? 999;
-      return orderA.compareTo(orderB);
+      final oA = (a['display_order'] as num?)?.toInt() ?? 999;
+      final oB = (b['display_order'] as num?)?.toInt() ?? 999;
+      return oA.compareTo(oB);
     });
     return list;
-  }
-
-  String get selectedCarreraName {
-    return _auth.getCareerName(selectedCarreraId.value);
   }
 
   @override
   void onInit() {
     super.onInit();
     final u = _auth.currentUser;
-    final defaultCarrera = carreras.firstWhereOrNull(
-      (c) => c['is_active'] == true,
-    );
-    selectedCarreraId.value =
-        u?.careerId ?? (defaultCarrera?['id'] as int?) ?? 1;
-
-    if (u != null && u.especialidades.isNotEmpty) {
-      selectedEspecialidades.assignAll(u.especialidades);
+    if (u != null) {
+      selectedPrincipal.value = u.especialidadPrincipal;
+      selectedInteres.assignAll(u.especialidadesInteres);
     }
   }
 
-  void toggleEspecialidad(int id) {
-    if (selectedEspecialidades.contains(id)) {
-      selectedEspecialidades.remove(id);
+  void goToDecision() => step.value = SetupStep.decision;
+
+  void chooseNoSe() => _finish(principal: null, interes: []);
+
+  void chooseSi() {
+    decision.value = SpecialtyDecision.si;
+    step.value = SetupStep.seleccion;
+  }
+
+  void chooseExplorar() {
+    decision.value = SpecialtyDecision.explorar;
+    step.value = SetupStep.seleccion;
+  }
+
+  void setPrincipal(int id) {
+    if (selectedPrincipal.value == id) {
+      selectedPrincipal.value = null;
     } else {
-      selectedEspecialidades.add(id);
+      selectedPrincipal.value = id;
+      selectedInteres.remove(id);
+    }
+  }
+
+  void toggleInteres(int id) {
+    if (selectedPrincipal.value == id) return;
+    if (selectedInteres.contains(id)) {
+      selectedInteres.remove(id);
+    } else {
+      selectedInteres.add(id);
     }
   }
 
   Future<void> finish() async {
-    errorMessage.value = null;
+    await _finish(
+      principal: selectedPrincipal.value,
+      interes: selectedInteres.toList(),
+    );
+  }
 
-    final cId = selectedCarreraId.value;
+  Future<void> _finish({
+    required int? principal,
+    required List<int> interes,
+  }) async {
+    errorMessage.value = null;
+    final cId = selectedCarreraId;
     if (cId == null) {
-      errorMessage.value = 'Por favor, selecciona una carrera.';
+      errorMessage.value = 'No se pudo determinar tu carrera.';
       return;
     }
-
     saving.value = true;
     try {
       await _auth.completeSetup(
         careerId: cId,
-        especialidades: selectedEspecialidades.toList(),
+        especialidadPrincipal: principal,
+        especialidadesInteres: interes,
       );
       Get.offAllNamed('/home');
     } catch (e) {
