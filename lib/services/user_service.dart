@@ -53,4 +53,12 @@ class UserService {
       return null;
     }
   }
+  
+  Future<UserModel> findRequiredUserByCode(String code) async {
+    final user=await findUserByCode(code);
+    if(user==null){
+      throw Exception('No existe un usuario con código $code');
+    }
+    return user;
+  }
 }

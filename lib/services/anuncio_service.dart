@@ -1,22 +1,35 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import '../models/anuncio_model.dart';
+import 'user_service.dart';
 
-class AnuncioService {
+class AnuncioService{
+  final UserService _userService=UserService();
+
   Future<List<Anuncio>> fetchAnuncios(String idSeccion) async {
-    try {
-      final String response = await rootBundle.loadString('assets/data/anuncios.json');
+    try{
 
-      final data = json.decode(response);
-      final List<dynamic> anunciosRaw = data['anuncios'] ?? [];
+      final String response=await rootBundle.loadString('assets/data/anuncios.json');
+      final data=json.decode(response);
+      final List<dynamic> anunciosRaw=data['anuncios']??[];
 
-      final todosLosAnuncios = anunciosRaw.map((a) => Anuncio.fromJson(a)).toList();
+      // Filtra anuncios por sección
+      final filtrados=anunciosRaw.where((a)=>a['idSeccion'].toString()==idSeccion).toList();
 
-      return todosLosAnuncios.where((anuncio) => anuncio.cursoId == idSeccion).toList();
-      
-    } catch (e) {
-      print("Error cargando anuncios: $e");
-      return []; 
+      final List<Anuncio> anuncios=[];
+
+      for(final a in filtrados){
+        // Busca al delegado/subdelegado en users
+        final autor=await _userService.findRequiredUserByCode(a['autorCode'].toString());
+
+        // autor obligatorio
+        anuncios.add(Anuncio.fromJson(a,autor:autor));
+      }
+
+    return anuncios;
+    }catch(e){
+      print('Error cargando anuncios: $e');
+      return [];
     }
   }
 }

@@ -86,7 +86,7 @@
       "firstName": "Martín",
       "lastName": "Tejada",
       "email": "20232907@aloe.ulima.edu.pe",
-      "role": "estudiante",
+      "role": "delegado",
       "career_id": 1,
       "especialidades": [
         1
@@ -124,7 +124,7 @@
       "firstName": "Melissa",
       "lastName": "Ruiz",
       "email": "20232637@aloe.ulima.edu.pe",
-      "role": "estudiante",
+      "role": "subdelegado",
       "career_id": 1,
       "especialidades": [
         1

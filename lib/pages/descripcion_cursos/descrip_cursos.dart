@@ -269,7 +269,9 @@ class DescripCursosPage extends StatelessWidget {
   Widget _selectedPage(BuildContext context) {
     return Container(
       color: Theme.of(context).colorScheme.tertiaryContainer,
-      child: Obx(() {
+      child: Padding(
+        padding: const EdgeInsets.only(top: 12),
+        child: Obx(() {
         // AQUÍ PASAMOS EL ID A LAS TABS PARA QUE PUEDAN FILTRAR SUS DATOS
         switch (control.selectedTab.value) {
           case 0: return AnunciosTab(idSeccion: idSeccion);
@@ -277,7 +279,8 @@ class DescripCursosPage extends StatelessWidget {
           case 2: return ContactosTab(idSeccion: idSeccion);
           default: return AnunciosTab(idSeccion: idSeccion);
         }
-      }),
+        }),
+      ),
     );
   }
 
