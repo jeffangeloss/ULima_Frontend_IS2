@@ -107,10 +107,20 @@ class AuthService extends GetxService {
     // Aplicar datos de setup guardados.
     final careerId = _storage.savedCareerId;
     if (careerId != null) user.careerId = careerId;
-    final especialidades = _storage.savedEspecialidades;
-    if (especialidades.isNotEmpty) user.especialidades = especialidades;
     if (_storage.hasSavedSetup) {
       user.setupComplete = _storage.savedSetupComplete;
+    }
+
+    // Restaurar especialidades distinguiendo principal/interés.
+    final principal = _storage.savedEspecialidadPrincipal;
+    final interes = _storage.savedEspecialidadesInteres;
+    if (principal != null || interes.isNotEmpty) {
+      user.especialidadPrincipal = principal;
+      user.especialidadesInteres = interes;
+    } else {
+      // Migración desde lista plana antigua → todo pasa a interés.
+      final legacy = _storage.savedEspecialidades;
+      if (legacy.isNotEmpty) user.especialidadesInteres = legacy;
     }
 
     _currentUser.value = user;
@@ -149,17 +159,20 @@ class AuthService extends GetxService {
   /// Actualiza carrera/especialidades del usuario actual y marca el setup completo.
   Future<void> completeSetup({
     required int careerId,
-    required List<int> especialidades,
+    int? especialidadPrincipal,
+    required List<int> especialidadesInteres,
   }) async {
     final u = _currentUser.value;
     if (u == null) return;
     u.careerId = careerId;
-    u.especialidades = List.of(especialidades);
+    u.especialidadPrincipal = especialidadPrincipal;
+    u.especialidadesInteres = List.of(especialidadesInteres);
     u.setupComplete = true;
     _currentUser.refresh();
     await _storage.saveSetup(
       careerId: careerId,
-      especialidades: especialidades,
+      especialidadPrincipal: especialidadPrincipal,
+      especialidadesInteres: especialidadesInteres,
       setupComplete: true,
     );
   }

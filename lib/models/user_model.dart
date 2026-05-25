@@ -10,7 +10,13 @@ class UserModel {
   final String email;
   final String role; // estudiante | delegado | subdelegado
   int? careerId;
-  List<int> especialidades;
+
+  /// Especialidad elegida como mención principal (diploma).
+  int? especialidadPrincipal;
+
+  /// Especialidades marcadas como interés adicional.
+  List<int> especialidadesInteres;
+
   final String currentCycle;
   bool setupComplete;
   CourseProgress? courseProgress;
@@ -22,17 +28,28 @@ class UserModel {
     required this.email,
     required this.role,
     this.careerId,
-    List<int>? especialidades,
+    this.especialidadPrincipal,
+    List<int>? especialidadesInteres,
     required this.currentCycle,
     required this.setupComplete,
     this.courseProgress,
-  }) : especialidades = especialidades ?? <int>[];
+  }) : especialidadesInteres = especialidadesInteres ?? <int>[];
 
   String get fullName => '$firstName $lastName';
 
   bool get isDelegate => role == 'delegado' || role == 'subdelegado';
 
+  /// Lista combinada para código que no distingue principal/interés (MallaService, etc.).
+  List<int> get especialidades => [
+    ?especialidadPrincipal,
+    ...especialidadesInteres.where((id) => id != especialidadPrincipal),
+  ];
+
   factory UserModel.fromJson(Map<String, dynamic> json) {
+    // Migración: si vienen como lista plana antigua, el primero pasa a interés.
+    final legacyList =
+        (json['especialidades'] as List?)?.cast<int>() ?? <int>[];
+
     return UserModel(
       code: json['code'] as String,
       firstName: json['firstName'] as String,
@@ -40,7 +57,9 @@ class UserModel {
       email: json['email'] as String,
       role: json['role'] as String? ?? 'estudiante',
       careerId: json['career_id'] as int?,
-      especialidades: (json['especialidades'] as List?)?.cast<int>() ?? <int>[],
+      especialidadPrincipal: json['especialidad_principal'] as int?,
+      especialidadesInteres:
+          (json['especialidades_interes'] as List?)?.cast<int>() ?? legacyList,
       currentCycle: json['currentCycle'] as String? ?? '2026-1',
       setupComplete: json['setupComplete'] as bool? ?? false,
       courseProgress: CourseProgress.fromJson(
@@ -56,7 +75,8 @@ class UserModel {
     'email': email,
     'role': role,
     'career_id': careerId,
-    'especialidades': especialidades,
+    'especialidad_principal': especialidadPrincipal,
+    'especialidades_interes': especialidadesInteres,
     'currentCycle': currentCycle,
     'setupComplete': setupComplete,
   };

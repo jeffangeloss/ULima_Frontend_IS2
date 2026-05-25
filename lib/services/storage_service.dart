@@ -17,6 +17,8 @@ class StorageService extends GetxService {
   static const _kLegacyCareer = 'session_career';
   static const _kEspecialidades = 'session_especialidades_v2';
   static const _kLegacyEspecialidades = 'session_especialidades';
+  static const _kPrincipal = 'session_especialidad_principal';
+  static const _kInteres = 'session_especialidades_interes';
   static const _kSetupComplete = 'session_setup_complete';
   static const _kStatuses = 'session_statuses_v2';
   static const _kLegacyStatuses = 'session_statuses';
@@ -36,15 +38,24 @@ class StorageService extends GetxService {
 
   int? get savedCareerId => _prefs.getInt(_kCareerId);
 
-  List<int> get savedEspecialidades {
-    final raw = _prefs.getString(_kEspecialidades);
+  int? get savedEspecialidadPrincipal =>
+      _prefs.containsKey(_kPrincipal) ? _prefs.getInt(_kPrincipal) : null;
+
+  List<int> get savedEspecialidadesInteres =>
+      _parseIntList(_prefs.getString(_kInteres));
+
+  /// Lectura legacy (lista plana anterior). Usado para migrar sesiones antiguas.
+  List<int> get savedEspecialidades =>
+      _parseIntList(_prefs.getString(_kEspecialidades));
+
+  List<int> _parseIntList(String? raw) {
     if (raw == null) return const [];
     final decoded = jsonDecode(raw) as List;
     return decoded
-        .map((value) {
-          if (value is int) return value;
-          if (value is num) return value.toInt();
-          return int.tryParse(value.toString());
+        .map((v) {
+          if (v is int) return v;
+          if (v is num) return v.toInt();
+          return int.tryParse(v.toString());
         })
         .whereType<int>()
         .toList();
@@ -55,17 +66,28 @@ class StorageService extends GetxService {
       _prefs.containsKey(_kLegacyCareer) ||
       _prefs.containsKey(_kEspecialidades) ||
       _prefs.containsKey(_kLegacyEspecialidades) ||
+      _prefs.containsKey(_kPrincipal) ||
+      _prefs.containsKey(_kInteres) ||
       _prefs.containsKey(_kSetupComplete);
 
   bool get savedSetupComplete => _prefs.getBool(_kSetupComplete) ?? false;
 
   Future<void> saveSetup({
     required int careerId,
-    required List<int> especialidades,
+    int? especialidadPrincipal,
+    required List<int> especialidadesInteres,
     required bool setupComplete,
   }) async {
     await _prefs.setInt(_kCareerId, careerId);
-    await _prefs.setString(_kEspecialidades, jsonEncode(especialidades));
+    if (especialidadPrincipal != null) {
+      await _prefs.setInt(_kPrincipal, especialidadPrincipal);
+    } else {
+      await _prefs.remove(_kPrincipal);
+    }
+    await _prefs.setString(_kInteres, jsonEncode(especialidadesInteres));
+    // Mantiene la clave legacy con la lista combinada para compatibilidad.
+    final combined = [?especialidadPrincipal, ...especialidadesInteres];
+    await _prefs.setString(_kEspecialidades, jsonEncode(combined));
     await _prefs.setBool(_kSetupComplete, setupComplete);
   }
 
@@ -96,6 +118,8 @@ class StorageService extends GetxService {
     await _prefs.remove(_kLegacyCareer);
     await _prefs.remove(_kEspecialidades);
     await _prefs.remove(_kLegacyEspecialidades);
+    await _prefs.remove(_kPrincipal);
+    await _prefs.remove(_kInteres);
     await _prefs.remove(_kSetupComplete);
     await _prefs.remove(_kStatuses);
     await _prefs.remove(_kLegacyStatuses);
