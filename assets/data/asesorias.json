@@ -1,19 +1,106 @@
 {
-  "asesorias": [
+  "asesorias":[
     {
-      "id": "1",
-      "cursoId": "IS-856",
-      "curso": "Ingeniería de Software II",
-      "docente": {
-        "code": "D01",
-        "firstName": "Hernan",
-        "lastName": "Quintana"
-      },
-      "dia": "Lunes",
-      "inicio": "10:00",
-      "fin": "12:00",
-      "aula": "I2 piso 2 ITLAB",
-      "zoom": "https://www.figma.com/make/lhEnbMNLzpo7c57QibfDW2/ULIMA-Mobile-App-Design?p=f&t=bCsJTKQTX9Ifce6z-0"
-    }
+  "id":"1",
+  "courseId":"1",
+  "docenteCode":"D01",
+  "dia":"Viernes",
+  "inicio":"15:00",
+  "fin":"17:00",
+  "aula":"Pab I2 piso 2 ITLAB",
+  "zoom":"https://www.figma.com/make/lhEnbMNLzpo7c57QibfDW2/ULIMA-Mobile-App-Design?t=KRjd0ivj8B7QLmhG-0"
+},
+{
+  "id":"2",
+  "courseId":"4",
+  "docenteCode":"D02",
+  "dia":"Viernes",
+  "inicio":"10:00",
+  "fin":"11:00",
+  "aula":"Pab. I2-102 (8)",
+  "zoom":"https://www.figma.com/make/lhEnbMNLzpo7c57QibfDW2/ULIMA-Mobile-App-Design?t=KRjd0ivj8B7QLmhG-0"
+},
+{
+  "id":"3",
+  "courseId":"7",
+  "docenteCode":"D08",
+  "dia":"Lunes",
+  "inicio":"09:00",
+  "fin":"10:00",
+  "aula":"Pab. I2-102 (8)",
+  "zoom":"https://www.figma.com/make/lhEnbMNLzpo7c57QibfDW2/ULIMA-Mobile-App-Design?t=KRjd0ivj8B7QLmhG-0"
+},
+{
+  "id":"4",
+  "courseId":"7",
+  "docenteCode":"D09",
+  "dia":"Viernes",
+  "inicio":"19:00",
+  "fin":"20:00",
+  "aula":"Pab. I2-102 (4)",
+  "zoom":"https://www.figma.com/make/lhEnbMNLzpo7c57QibfDW2/ULIMA-Mobile-App-Design?t=KRjd0ivj8B7QLmhG-0"
+},
+{
+  "id":"5",
+  "courseId":"7",
+  "docenteCode":"D10",
+  "dia":"Martes",
+  "inicio":"20:00",
+  "fin":"21:00",
+  "aula":"Pab. I2-102 (8)",
+  "zoom":"https://www.figma.com/make/lhEnbMNLzpo7c57QibfDW2/ULIMA-Mobile-App-Design?t=KRjd0ivj8B7QLmhG-0"
+},
+{
+  "id":"6",
+  "courseId":"17",
+  "docenteCode":"D30",
+  "dia":"Jueves",
+  "inicio":"16:00",
+  "fin":"17:00",
+  "aula":"VIRTUAL",
+  "zoom":"https://www.figma.com/make/lhEnbMNLzpo7c57QibfDW2/ULIMA-Mobile-App-Design?t=KRjd0ivj8B7QLmhG-0"
+},
+{
+  "id":"7",
+  "courseId":"26",
+  "docenteCode":"D37",
+  "dia":"Miércoles",
+  "inicio":"14:00",
+  "fin":"15:00",
+  "aula":"Pab. O2 piso 11",
+  "zoom":"https://www.figma.com/make/lhEnbMNLzpo7c57QibfDW2/ULIMA-Mobile-App-Design?t=KRjd0ivj8B7QLmhG-0"
+},
+{
+  "id":"8",
+  "courseId":"12",
+  "docenteCode":"D24",
+  "dia":"Jueves",
+  "inicio":"19:00",
+  "fin":"20:00",
+  "aula":"VIRTUAL",
+  "zoom":"https://www.figma.com/make/lhEnbMNLzpo7c57QibfDW2/ULIMA-Mobile-App-Design?t=KRjd0ivj8B7QLmhG-0"
+},
+{
+  "id":"9",
+  "courseId":"13",
+  "docenteCode":"D27",
+  "dia":"Lunes",
+  "inicio":"09:00",
+  "fin":"10:00",
+  "aula":"Pab. O1 piso 9",
+  "zoom":"https://www.figma.com/make/lhEnbMNLzpo7c57QibfDW2/ULIMA-Mobile-App-Design?t=KRjd0ivj8B7QLmhG-0"
+},
+{
+  "id":"10",
+  "courseId":"9",
+  "docenteCode":"D29",
+  "dia":"Sábado",
+  "inicio":"09:00",
+  "fin":"10:00",
+  "aula":"Pab. I2-102 (10)",
+  "zoom":"https://www.figma.com/make/lhEnbMNLzpo7c57QibfDW2/ULIMA-Mobile-App-Design?t=KRjd0ivj8B7QLmhG-0"
+}
   ]
 }
+
+

@@ -16,11 +16,6 @@ import 'pages/setup_carrera/setup_carrera_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Force DDC to initialize the lucide_icons module now, while the call stack
-  // is shallow. Without this, the first LucideIcons access inside _ZoomToolbar
-  // triggers initializeAndLinkLibrary mid-mount and overflows the DDC JS stack.
-  // ignore: unnecessary_statements
   LucideIcons.info.codePoint;
 
   // Servicios globales permanentes.

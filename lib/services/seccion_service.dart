@@ -1,33 +1,35 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import '../models/seccion_model.dart';
+import 'package:ulima_plus/models/seccion_model.dart';
 
 class SeccionService {
+  Future<List<Seccion>> fetchSecciones() async {
+    try {
+      final String response = await rootBundle.loadString(
+        'assets/data/secciones.json',
+      );
+      final data = json.decode(response);
 
-  // Obtiene secciones
-  Future<List<Seccion>>
-      fetchSecciones() async {
+      final List<dynamic> sectionsRaw = data['secciones'] ?? [];
 
-    // Carga JSON
-    final String response =
-        await rootBundle.loadString(
-      'assets/data/secciones.json',
-    );
+      return sectionsRaw
+          .map((s) => Seccion.fromJson(s as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('Error cargando secciones: $e');
+      return [];
+    }
+  }
 
-    // Convierte JSON
-    final data =
-        json.decode(response);
+  Future<Seccion?> findSectionById(String id) async {
+    final sections = await fetchSecciones();
 
-    // Obtiene lista
-    final List secciones =
-        data['secciones'];
-
-    // Convierte a models
-    return secciones
-        .map(
-          (s) =>
-              Seccion.fromJson(s),
-        )
-        .toList();
+    try {
+      return sections.firstWhere((s) => s.idSeccion == id);
+    } catch (e) {
+      debugPrint('No existe seccion con id $id');
+      return null;
+    }
   }
 }

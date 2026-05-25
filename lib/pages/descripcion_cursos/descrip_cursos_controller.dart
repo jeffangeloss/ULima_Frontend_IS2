@@ -1,59 +1,80 @@
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:ulima_plus/models/anuncio_model.dart';
+import 'package:ulima_plus/models/asesoria_model.dart';
+import 'package:ulima_plus/models/contacto_model.dart';
 import 'package:ulima_plus/models/docente_model.dart';
 import 'package:ulima_plus/models/seccion_model.dart';
-import 'package:ulima_plus/models/user_model.dart';
 import 'package:ulima_plus/services/anuncio_service.dart';
+import 'package:ulima_plus/services/asesoria_service.dart';
 import 'package:ulima_plus/services/contacto_service.dart';
-import '../../models/asesoria_model.dart';
-import '../../services/asesoria_service.dart';
-import '../../services/seccion_service.dart';
+import 'package:ulima_plus/services/seccion_service.dart';
 
 class DescripCursosController extends GetxController {
-  // 1. Declaraciones únicas (sin duplicados)
+  final SeccionService _seccionService = SeccionService();
+  final AnuncioService _anuncioService = AnuncioService();
+  final AsesoriaService _asesoriaService = AsesoriaService();
+  final ContactoService _contactoService = ContactoService();
+
   RxList<Seccion> secciones = <Seccion>[].obs;
+  Rxn<Seccion> seccionActual = Rxn<Seccion>();
   RxList<Anuncio> anuncios = <Anuncio>[].obs;
   RxList<Asesoria> asesorias = <Asesoria>[].obs;
-  RxList<UserModel> alumnosContacto = <UserModel>[].obs;
+  RxList<ContactoCurso> alumnosContacto = <ContactoCurso>[].obs;
   Rxn<Docente> docenteContacto = Rxn<Docente>();
   RxInt selectedTab = 0.obs;
+  RxBool isLoading = false.obs;
 
-  // Método para buscar sección por ID (útil para tu UI)
   Seccion? getSeccionPorId(String id) {
     return secciones.firstWhereOrNull((s) => s.idSeccion == id);
   }
 
-  // Ahora recibe el idSeccion para cargar los datos específicos
-  void cargarDatosCurso(String idSeccion) {
-    fetchSecciones();
-    fetchAnuncios(idSeccion);
-    fetchAsesorias(idSeccion);
-    fetchContactos(idSeccion);
-  }
+  Future<void> cargarDatosCurso(String idSeccion) async {
+    try {
+      isLoading.value = true;
+      final seccion = await _seccionService.findSectionById(idSeccion);
+      if (seccion == null) {
+        throw Exception('No existe seccion con id $idSeccion');
+      }
 
-  Future<void> fetchSecciones() async {
-    final service = SeccionService();
-    final data = await service.fetchSecciones();
-    secciones.value = data;
+      seccionActual.value = seccion;
+      secciones.value = [seccion];
+
+      await Future.wait([
+        fetchAnuncios(idSeccion),
+        fetchAsesorias(idSeccion),
+        fetchContactos(idSeccion),
+      ]);
+    } catch (e) {
+      debugPrint('Error cargando datos del curso: $e');
+      limpiarDatos();
+    } finally {
+      isLoading.value = false;
+    }
   }
 
   Future<void> fetchAnuncios(String idSeccion) async {
-    final service = AnuncioService();
-    // Asegúrate de que tu servicio acepte el ID
-    final data = await service.fetchAnuncios(idSeccion);
+    final data = await _anuncioService.fetchAnuncios(idSeccion);
     anuncios.value = data;
   }
 
   Future<void> fetchAsesorias(String idSeccion) async {
-    final service = AsesoriaService();
-    final data = await service.fetchAsesorias(idSeccion);
+    final data = await _asesoriaService.fetchAsesorias(idSeccion);
     asesorias.value = data;
   }
 
   Future<void> fetchContactos(String idSeccion) async {
-    final service = ContactoService();
-    final data = await service.fetchContactos(idSeccion);
-    docenteContacto.value = data['docente'];
-    alumnosContacto.value = data['alumnos'];
+    final data = await _contactoService.fetchContactos(idSeccion);
+    docenteContacto.value = data['docente'] as Docente?;
+    alumnosContacto.value = List<ContactoCurso>.from(data['alumnos'] ?? []);
+  }
+
+  void limpiarDatos() {
+    secciones.clear();
+    seccionActual.value = null;
+    anuncios.clear();
+    asesorias.clear();
+    alumnosContacto.clear();
+    docenteContacto.value = null;
   }
 }
