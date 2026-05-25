@@ -2,9 +2,9 @@ import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:ulima_plus/models/anuncio_model.dart';
 import 'package:ulima_plus/models/asesoria_model.dart';
+import 'package:ulima_plus/models/contacto_model.dart';
 import 'package:ulima_plus/models/docente_model.dart';
 import 'package:ulima_plus/models/seccion_model.dart';
-import 'package:ulima_plus/models/user_model.dart';
 import 'package:ulima_plus/services/anuncio_service.dart';
 import 'package:ulima_plus/services/asesoria_service.dart';
 import 'package:ulima_plus/services/contacto_service.dart';
@@ -20,7 +20,7 @@ class DescripCursosController extends GetxController{
   Rxn<Seccion> seccionActual=Rxn<Seccion>();
   RxList<Anuncio> anuncios=<Anuncio>[].obs;
   RxList<Asesoria> asesorias=<Asesoria>[].obs;
-  RxList<UserModel> alumnosContacto=<UserModel>[].obs;
+  RxList<ContactoCurso> alumnosContacto=<ContactoCurso>[].obs;
   Rxn<Docente> docenteContacto=Rxn<Docente>();
   RxInt selectedTab=0.obs;
   RxBool isLoading=false.obs;
@@ -67,7 +67,7 @@ class DescripCursosController extends GetxController{
   Future<void> fetchContactos(String idSeccion) async {
     final data=await _contactoService.fetchContactos(idSeccion);
     docenteContacto.value=data['docente'] as Docente?;
-    alumnosContacto.value=List<UserModel>.from(data['alumnos']??[]);
+    alumnosContacto.value=List<ContactoCurso>.from(data['alumnos']??[]);
   }
   
   void limpiarDatos(){

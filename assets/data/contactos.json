@@ -2,7 +2,6 @@
   "contactos": [
     {
       "idSeccion": "IS-856",
-      "docenteCode": "D01",
       "alumnos": [
         "20235218",
         "20232637",
@@ -14,7 +13,6 @@
     },
     {
       "idSeccion": "PM-854",
-      "docenteCode": "D02",
       "alumnos": [
         "20235218",
         "20232637",

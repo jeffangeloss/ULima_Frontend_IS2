@@ -26,7 +26,7 @@ class AsesoriaService {
       final filtradas = asesoriasRaw.where((a) {
         final mismoCurso = a['courseId'].toString() == seccion.idCurso;
         final mismoDocente =
-            a['docenteCode'].toString() == seccion.docente.code;
+            a['docenteCode'].toString() == seccion.docenteCode;
 
         return mismoCurso && mismoDocente;
       }).toList();

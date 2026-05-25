@@ -38,7 +38,8 @@ class ContactosTab extends StatelessWidget {
           // Card docente
           if (control.docenteContacto.value != null)
             ContactoCard(
-              nombre: control.docenteContacto.value!.fullName,
+              nombres: control.docenteContacto.value!.firstName,
+              apellidos: control.docenteContacto.value!.lastName,
               rol: 'docente',
             ),
 
@@ -60,11 +61,17 @@ class ContactosTab extends StatelessWidget {
           const SizedBox(height: 12),
 
           // Lista alumnos
-          ...control.alumnosContacto.map((alumno) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
+          ...control.alumnosContacto.map((contacto){
+              final user=contacto.user;
+              final role=contacto.roleInSection;
 
-              child: ContactoCard(nombre: alumno.fullName, rol: alumno.role),
+              return Padding(
+                padding:const EdgeInsets.only(bottom:12),
+                child:ContactoCard(
+                  nombres:user.firstName,
+                  apellidos:user.lastName,
+                  rol:role,
+                ),
             );
           }),
         ],

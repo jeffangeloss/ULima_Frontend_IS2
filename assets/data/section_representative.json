@@ -1,0 +1,24 @@
+{
+  "sectionRepresentatives":[
+    {
+      "id":"1",
+      "enrollmentId":"1",
+      "role":"delegado"
+    },
+    {
+      "id":"2",
+      "enrollmentId":"11",
+      "role":"subdelegado"
+    },
+    {
+      "id":"3",
+      "enrollmentId":"7",
+      "role":"delegado"
+    },
+    {
+      "id":"4",
+      "enrollmentId":"10",
+      "role":"subdelegado"
+    }
+  ]
+}

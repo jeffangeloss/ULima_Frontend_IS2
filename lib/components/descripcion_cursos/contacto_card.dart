@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 class ContactoCard
     extends StatelessWidget {
 
-  final String nombre;
+  final String nombres;
+  final String apellidos;
   final String rol;
 
   const ContactoCard({
     super.key,
-    required this.nombre,
+    required this.nombres,
+    required this.apellidos,
     required this.rol,
   });
 
@@ -22,7 +24,7 @@ class ContactoCard
             .colorScheme;
 
     // Inicial nombre
-    final inicial = nombre.split(' ')[1][0].toUpperCase();
+    final inicial = nombres[0].toUpperCase();
 
     return Container(
 
@@ -98,7 +100,7 @@ class ContactoCard
                 // Nombre
                 Text(
 
-                  nombre.toUpperCase(), //
+                  apellidos.toUpperCase() + ', ' + nombres.toUpperCase(),
 
                   style: TextStyle(
 

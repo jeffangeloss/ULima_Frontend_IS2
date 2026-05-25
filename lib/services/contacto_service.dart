@@ -1,69 +1,86 @@
-import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:ulima_plus/models/contacto_model.dart';
 
-import 'package:flutter/services.dart';
-
-import '../models/user_model.dart';
-
-import 'user_service.dart';
 import 'docente_service.dart';
+import 'enrollment_service.dart';
+import 'seccion_service.dart';
+import 'section_representative_service.dart';
+import 'user_service.dart';
 
-class ContactoService {
-  final UserService _userService = UserService();
+class ContactoService{
+  final UserService _userService=UserService();
+  final DocenteService _docenteService=DocenteService();
+  final SeccionService _seccionService=SeccionService();
+  final EnrollmentService _enrollmentService=EnrollmentService();
+  final SectionRepresentativeService _representativeService=SectionRepresentativeService();
 
-  final DocenteService _docenteService = DocenteService();
-
-  // Obtiene contactos
-  Future<Map<String, dynamic>> fetchContactos(String idSeccion) async {
-    // Carga JSON
-    final String response = await rootBundle.loadString(
-      'assets/data/contactos.json',
-    );
-
-    // Convierte JSON
-    final data = json.decode(response);
-
-    // Lista contactos
-    final List contactos = data['contactos'];
-
-    // Busca sección
-    final contacto = contactos.firstWhere((c) => c['idSeccion'] == idSeccion);
-
-    // Busca docente
-    final docente = await _docenteService.findDocenteByCode(
-      contacto['docenteCode'],
-    );
-
-    // Lista códigos alumnos
-    final List alumnosCodes = contacto['alumnos'];
-
-    // Lista final alumnos
-    List<UserModel> alumnos = [];
-
-    // Busca alumnos
-    for (String code in alumnosCodes) {
-      final user = await _userService.findUserByCode(code);
-
-      if (user != null) {
-        alumnos.add(user);
+  Future<Map<String,dynamic>> fetchContactos(String idSeccion) async {
+    try{
+      // Docente sale de la sección
+      final seccion=await _seccionService.findSectionById(idSeccion);
+      if(seccion==null){
+        throw Exception('No existe sección $idSeccion');
       }
+
+      final docente=await _docenteService.findDocenteByCode(seccion.docenteCode);
+
+      // Alumnos salen de enrollments
+      final enrollments=await _enrollmentService.fetchBySection(idSeccion);
+      final List<ContactoCurso> contactos=[];
+
+      for(final enrollment in enrollments){
+        final user=await _userService.findUserByCode(enrollment.studentCode);
+
+        if(user!=null){
+          // Rol sale de section_representatives, no de UserModel
+          final role=await _representativeService.getRoleInSection(
+            idSeccion,
+            user.code,
+          );
+
+          contactos.add(
+            ContactoCurso(
+              user:user,
+              roleInSection:role,
+            ),
+          );
+        }
+      }
+
+      contactos.sort((a,b){
+        int prioridad(String role){
+          switch(role){
+            case 'delegado':
+              return 0;
+            case 'subdelegado':
+              return 1;
+            default:
+              return 2;
+          }
+        }
+
+        final compare=prioridad(a.roleInSection).compareTo(
+          prioridad(b.roleInSection),
+        );
+
+        if(compare==0){
+          return a.user.lastName.compareTo(b.user.lastName);
+        }
+
+        return compare;
+      });
+
+      return {
+        'docente':docente,
+        'alumnos':contactos,
+      };
+    }catch(e){
+      debugPrint('Error cargando contactos: $e');
+
+      return {
+        'docente':null,
+        'alumnos':<ContactoCurso>[],
+      };
     }
-
-    alumnos.sort((a, b) {
-      // Delegado primero
-      if (a.role == 'delegado' && b.role != 'delegado') {
-        return -1;
-      }
-
-      // Subdelegado segundo
-      if (a.role == 'subdelegado' && b.role == 'estudiante') {
-        return -1;
-      }
-
-      // Orden alfabético
-      return a.lastName.compareTo(b.lastName);
-    });
-
-    // Resultado final
-    return {'docente': docente, 'alumnos': alumnos};
   }
 }

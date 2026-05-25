@@ -3,8 +3,8 @@
     {
       "code": "20235218",
       "password": "ulima123",
-      "firstName": "Jeff",
-      "lastName": "Angelo",
+      "firstName": "Jefferson Angelo",
+      "lastName": "Sanchez Palacios",
       "email": "20235218@aloe.ulima.edu.pe",
       "role": "delegado",
       "career_id": 1,
@@ -42,8 +42,8 @@
     {
       "code": "20232548",
       "password": "ulima123",
-      "firstName": "Samantha",
-      "lastName": "Rodríguez",
+      "firstName": "Samantha Camila",
+      "lastName": "Rodríguez Melendez",
       "email": "20232548@aloe.ulima.edu.pe",
       "role": "subdelegado",
       "career_id": 1,
@@ -83,8 +83,8 @@
     {
       "code": "20232907",
       "password": "ulima123",
-      "firstName": "Martín",
-      "lastName": "Tejada",
+      "firstName": "Martín Rodrigo",
+      "lastName": "Tejada Montesinos",
       "email": "20232907@aloe.ulima.edu.pe",
       "role": "delegado",
       "career_id": 1,
@@ -121,8 +121,8 @@
     {
       "code": "20232637",
       "password": "ulima123",
-      "firstName": "Melissa",
-      "lastName": "Ruiz",
+      "firstName": "Melissa Alexandra",
+      "lastName": "Ruiz Delgado",
       "email": "20232637@aloe.ulima.edu.pe",
       "role": "subdelegado",
       "career_id": 1,
@@ -154,8 +154,8 @@
     {
       "code": "20232685",
       "password": "ulima123",
-      "firstName": "Julio",
-      "lastName": "Salazar",
+      "firstName": "Julio Gabriel",
+      "lastName": "Salazar Torres",
       "email": "20232685@aloe.ulima.edu.pe",
       "role": "estudiante",
       "career_id": 1,
@@ -193,8 +193,8 @@
     {
       "code": "20231098",
       "password": "ulima123",
-      "firstName": "Nehemias",
-      "lastName": "Falcon",
+      "firstName": "Nehemias Luis",
+      "lastName": "Falcon Farfan",
       "email": "20231098@aloe.ulima.edu.pe",
       "role": "estudiante",
       "career_id": 1,
@@ -223,41 +223,10 @@
       }
     },
     {
-      "code": "20231483",
-      "password": "ulima123",
-      "firstName": "Melissa",
-      "lastName": "Ruiz",
-      "email": "20231483@aloe.ulima.edu.pe",
-      "role": "estudiante",
-      "career_id": 1,
-      "especialidades": [
-        1
-      ],
-      "currentCycle": "2026-1",
-      "setupComplete": true,
-      "courseProgress": {
-        "approvedLevels": [
-          1,
-          2
-        ],
-        "approvedElectives": [],
-        "currentCourses": [
-          {
-            "idCurso": "1",
-            "idSeccion": "IS-856"
-          },
-          {
-            "idCurso": "4",
-            "idSeccion": "PM-854"
-          }
-        ]
-      }
-    },
-    {
       "code": "20225158",
       "password": "ulima123",
-      "firstName": "Hans",
-      "lastName": "Quispe",
+      "firstName": "Hans Anthony",
+      "lastName": "Quispe Mamani",
       "email": "20225158@aloe.ulima.edu.pe",
       "role": "estudiante",
       "career_id": 1,
@@ -274,47 +243,6 @@
         ],
         "approvedElectives": [],
         "currentCourses": [
-          {
-            "idCurso": "4",
-            "idSeccion": "PM-854"
-          }
-        ]
-      }
-    },
-    {
-      "code": "20221234",
-      "password": "ulima123",
-      "firstName": "María",
-      "lastName": "Quispe",
-      "email": "20221234@aloe.ulima.edu.pe",
-      "role": "estudiante",
-      "career_id": 1,
-      "especialidades": [
-        2
-      ],
-      "currentCycle": "2026-1",
-      "setupComplete": true,
-      "courseProgress": {
-        "approvedLevels": [
-          1,
-          2,
-          3,
-          4,
-          5,
-          6,
-          7,
-          8
-        ],
-        "approvedElectives": [
-          "internet_de_las_cosas",
-          "redes_avanzadas",
-          "topicos_avanzados_ciberseguridad"
-        ],
-        "currentCourses": [
-          {
-            "idCurso": "1",
-            "idSeccion": "IS-856"
-          },
           {
             "idCurso": "4",
             "idSeccion": "PM-854"
@@ -356,29 +284,12 @@
       }
     },
     {
-      "code": "20255678",
+      "code": "20231483",
       "password": "ulima123",
-      "firstName": "Lucía",
-      "lastName": "Torres",
-      "email": "20255678@aloe.ulima.edu.pe",
+      "firstName": "Ronald Alfredo",
+      "lastName": "Hurtado Lago",
+      "email": "20231483@aloe.ulima.edu.pe",
       "role": "estudiante",
-      "career_id": 2,
-      "especialidades": [],
-      "currentCycle": "2026-1",
-      "setupComplete": false,
-      "courseProgress": {
-        "approvedLevels": [],
-        "approvedElectives": [],
-        "currentCourses": []
-      }
-    },
-    {
-      "code": "20215555",
-      "password": "ulima123",
-      "firstName": "Diego",
-      "lastName": "Salinas",
-      "email": "20215555@aloe.ulima.edu.pe",
-      "role": "subdelegado",
       "career_id": 1,
       "especialidades": [
         3
@@ -407,10 +318,6 @@
           {
             "idCurso": "1",
             "idSeccion": "IS-856"
-          },
-          {
-            "idCurso": "4",
-            "idSeccion": "PM-854"
           }
         ]
       }

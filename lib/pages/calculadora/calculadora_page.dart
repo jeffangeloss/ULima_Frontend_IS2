@@ -11,13 +11,12 @@ class CalculadoraPage extends GetView<CalculadoraController> {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Extraemos el esquema de colores (cambiará solo si el sistema está en Dark Mode)
+    
     final colors = Theme.of(context).colorScheme;
     
     Get.lazyPut(() => CalculadoraController());
 
     return Scaffold(
-      // En tu darkScheme pusiste surface: Color(0xFF1F1F1F)
       backgroundColor: colors.surface, 
       body: Column(
         children: [ 

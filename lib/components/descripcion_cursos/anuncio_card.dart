@@ -18,8 +18,7 @@ class CardAnuncio extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
 
-    ColorScheme colors =
-        Theme.of(context).colorScheme;
+    ColorScheme colors = Theme.of(context).colorScheme;
 
     return Container(
       
@@ -38,8 +37,7 @@ class CardAnuncio extends StatelessWidget {
         padding: const EdgeInsets.all(16),
 
         child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
 
           children: [
 
