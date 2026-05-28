@@ -1,11 +1,10 @@
 // lib/services/auth_service.dart
-// Autenticación con JSON local + persistencia de sesión via StorageService.
+// Autenticación contra backend + persistencia de sesión via StorageService.
 
-import 'dart:convert';
-import 'package:flutter/services.dart' show rootBundle;
 import 'package:get/get.dart';
 
 import '../models/user_model.dart';
+import 'api_client.dart';
 import 'storage_service.dart';
 
 class AuthService extends GetxService {
@@ -14,13 +13,11 @@ class AuthService extends GetxService {
       'Código o contraseña incorrectos.';
 
   final Rx<UserModel?> _currentUser = Rx<UserModel?>(null);
-  final RxList<Map<String, dynamic>> _users = <Map<String, dynamic>>[].obs;
   final RxList<Map<String, dynamic>> _carreras = <Map<String, dynamic>>[].obs;
   final RxList<Map<String, dynamic>> _especialidades =
       <Map<String, dynamic>>[].obs;
-  final RxList<Map<String, dynamic>> _userEspecialidades =
-      <Map<String, dynamic>>[].obs;
   final RxBool _loading = false.obs;
+  final ApiClient _api = ApiClient();
 
   UserModel? get currentUser => _currentUser.value;
   Rx<UserModel?> get currentUserRx => _currentUser;
@@ -43,74 +40,23 @@ class AuthService extends GetxService {
     return match != null ? match['name'] as String : '';
   }
 
-  /// Carga el catálogo de usuarios mock desde assets (idempotente).
-  Future<void> _ensureLoaded() async {
-    if (_users.isNotEmpty &&
-        _carreras.isNotEmpty &&
-        _especialidades.isNotEmpty &&
-        _userEspecialidades.isNotEmpty) {
-      return;
-    }
-
-    final raw = await rootBundle.loadString('assets/data/users.json');
-    final decoded = jsonDecode(raw) as Map<String, dynamic>;
-    final list = (decoded['users'] as List).cast<Map<String, dynamic>>();
-    _users.assignAll(list);
-
-    final rawCarreras = await rootBundle.loadString(
-      'assets/data/carreras.json',
-    );
-    _carreras.assignAll(
-      (jsonDecode(rawCarreras) as List).cast<Map<String, dynamic>>(),
-    );
-
-    final rawEspecialidades = await rootBundle.loadString(
-      'assets/data/especialidades.json',
-    );
-    _especialidades.assignAll(
-      (jsonDecode(rawEspecialidades) as List).cast<Map<String, dynamic>>(),
-    );
-
-    final rawUserEspecialidades = await rootBundle.loadString(
-      'assets/data/user_especialidades.json',
-    );
-    _userEspecialidades.assignAll(
-      (jsonDecode(rawUserEspecialidades) as List).cast<Map<String, dynamic>>(),
-    );
-  }
-
-  Map<String, dynamic> _withEspecialidadesFromRelation(
-    Map<String, dynamic> userJson,
-  ) {
-    final copy = Map<String, dynamic>.from(userJson);
-    final userCode = copy['code'].toString();
-    final userEspIds = _userEspecialidades
-        .where((ue) => ue['user_code'].toString() == userCode)
-        .map((ue) => (ue['especialidad_id'] as num).toInt())
-        .toList();
-
-    if (userEspIds.isNotEmpty) {
-      copy['especialidades'] = userEspIds;
-    }
-    return copy;
-  }
-
   /// Intenta restaurar la sesión guardada en local storage.
   /// Devuelve true si se restauró correctamente.
   Future<bool> tryRestoreSession() async {
     final code = _storage.savedCode;
     if (code == null) return false;
-    await _ensureLoaded();
-    final match = _users.firstWhereOrNull((u) => u['code'].toString() == code);
-    if (match == null) {
+    try {
+      final response = await _api.getJson('/auth/me?code=$code');
+      final user = UserModel.fromJson(
+        Map<String, dynamic>.from(response['user'] as Map),
+      );
+      await _applyStoredSetup(user);
+      _currentUser.value = user;
+      return true;
+    } catch (_) {
       await _storage.clearSession();
       return false;
     }
-    final user = UserModel.fromJson(_withEspecialidadesFromRelation(match));
-    await _applyStoredSetup(user);
-
-    _currentUser.value = user;
-    return true;
   }
 
   /// Intenta autenticar al usuario. Devuelve null si OK, o mensaje de error.
@@ -120,22 +66,20 @@ class AuthService extends GetxService {
   }) async {
     _loading.value = true;
     try {
-      await _ensureLoaded();
       final normalizedCode = code.trim();
-      final match = _users.firstWhereOrNull(
-        (u) => u['code'].toString() == normalizedCode,
+      final response = await _api.postJson(
+        '/auth/login',
+        {'code': normalizedCode, 'password': password},
       );
-      final passwordMatches =
-          match != null && (match['password'] as String?) == password;
-      if (!passwordMatches) return invalidCredentialsMessage;
-
-      final user = UserModel.fromJson(_withEspecialidadesFromRelation(match));
+      final user = UserModel.fromJson(
+        Map<String, dynamic>.from(response['user'] as Map),
+      );
       await _applyStoredSetup(user);
       _currentUser.value = user;
       await _storage.saveCode(normalizedCode);
       return null;
     } catch (e) {
-      return 'Ocurrió un error inesperado: $e';
+      return e.toString().replaceFirst('Exception: ', '');
     } finally {
       _loading.value = false;
     }
