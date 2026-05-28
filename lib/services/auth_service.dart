@@ -40,6 +40,24 @@ class AuthService extends GetxService {
     return match != null ? match['name'] as String : '';
   }
 
+  Future<void> loadCatalogs() async {
+    final careersResponse = await _api.getJson('/academic-profile/careers');
+    _carreras.assignAll(
+      (careersResponse['careers'] as List? ?? const [])
+          .map((item) => Map<String, dynamic>.from(item as Map))
+          .toList(),
+    );
+
+    final specialtiesResponse = await _api.getJson(
+      '/academic-profile/specialties',
+    );
+    _especialidades.assignAll(
+      (specialtiesResponse['specialties'] as List? ?? const [])
+          .map((item) => Map<String, dynamic>.from(item as Map))
+          .toList(),
+    );
+  }
+
   /// Intenta restaurar la sesión guardada en local storage.
   /// Devuelve true si se restauró correctamente.
   Future<bool> tryRestoreSession() async {
@@ -50,6 +68,7 @@ class AuthService extends GetxService {
       final user = UserModel.fromJson(
         Map<String, dynamic>.from(response['user'] as Map),
       );
+      await loadCatalogs();
       await _applyStoredSetup(user);
       _currentUser.value = user;
       return true;
@@ -74,6 +93,7 @@ class AuthService extends GetxService {
       final user = UserModel.fromJson(
         Map<String, dynamic>.from(response['user'] as Map),
       );
+      await loadCatalogs();
       await _applyStoredSetup(user);
       _currentUser.value = user;
       await _storage.saveCode(normalizedCode);

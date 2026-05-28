@@ -1,8 +1,7 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
+import '../../services/api_client.dart';
 import '../../services/auth_service.dart';
 
 class DaySchedule {
@@ -18,6 +17,7 @@ class HorarioController extends GetxController {
   final daysList = <DaySchedule>[].obs;
 
   List<Map<String, dynamic>> _todasLasSecciones = [];
+  final ApiClient _api = ApiClient();
 
   @override
   void onInit() {
@@ -28,10 +28,11 @@ class HorarioController extends GetxController {
 
   Future<void> _loadDays() async {
     try {
-      final jsonString = await rootBundle.loadString(
-        'assets/data/schedule_days.json',
+      final code = AuthService.to.currentUser?.code;
+      final data = await _api.getJson(
+        '/schedule/me/sessions${code == null ? '' : '?code=$code'}',
       );
-      final List<dynamic> decoded = jsonDecode(jsonString);
+      final List<dynamic> decoded = data['days'] ?? [];
       daysList.assignAll(
         decoded
             .map(
@@ -52,10 +53,10 @@ class HorarioController extends GetxController {
 
   Future<void> _loadSecciones() async {
     try {
-      final jsonString = await rootBundle.loadString(
-        'assets/data/secciones.json',
+      final code = AuthService.to.currentUser?.code;
+      final data = await _api.getJson(
+        '/schedule/me/sessions${code == null ? '' : '?code=$code'}',
       );
-      final Map<String, dynamic> data = jsonDecode(jsonString);
       _todasLasSecciones = List<Map<String, dynamic>>.from(data['secciones']);
       update();
     } catch (e) {

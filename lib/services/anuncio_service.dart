@@ -1,35 +1,23 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import '../models/anuncio_model.dart';
-import 'user_service.dart';
+import '../models/user_model.dart';
+import 'api_client.dart';
 
 class AnuncioService {
-  final UserService _userService = UserService();
+  final ApiClient _api = ApiClient();
 
   Future<List<Anuncio>> fetchAnuncios(String idSeccion) async {
     try {
-      final String response = await rootBundle.loadString(
-        'assets/data/anuncios.json',
+      final data = await _api.getJson(
+        '/course-detail/sections/$idSeccion/announcements',
       );
-      final data = json.decode(response);
       final List<dynamic> anunciosRaw = data['anuncios'] ?? [];
 
-      final filtrados = anunciosRaw
-          .where((a) => a['idSeccion'].toString() == idSeccion)
-          .toList();
-
-      final List<Anuncio> anuncios = [];
-
-      for (final a in filtrados) {
-        final autor = await _userService.findRequiredUserByCode(
-          a['autorCode'].toString(),
-        );
-
-        anuncios.add(Anuncio.fromJson(a, autor: autor));
-      }
-
-      return anuncios;
+      return anunciosRaw.map((a) {
+        final json = Map<String, dynamic>.from(a as Map);
+        final autorJson = Map<String, dynamic>.from(json['autor'] as Map);
+        return Anuncio.fromJson(json, autor: UserModel.fromJson(autorJson));
+      }).toList();
     } catch (e) {
       debugPrint('Error cargando anuncios: $e');
       return [];

@@ -1,12 +1,11 @@
 // lib/services/malla_service.dart
 // Catálogo de la malla + cálculo de estados por alumno.
 
-import 'dart:convert';
-import 'package:flutter/services.dart' show rootBundle;
 import 'package:get/get.dart';
 
 import '../models/malla_models.dart';
 import '../models/user_model.dart';
+import 'api_client.dart';
 import 'auth_service.dart';
 
 class MallaService extends GetxService {
@@ -29,15 +28,18 @@ class MallaService extends GetxService {
 
   final RxList<CourseNode> _courses = <CourseNode>[].obs;
   final RxList<String> _specialties = <String>[].obs;
+  final ApiClient _api = ApiClient();
 
   List<CourseNode> get courses => _courses;
   List<String> get availableSpecialties => _specialties;
 
-  /// Carga el catálogo desde assets/data/malla_sistemas.json (idempotente).
+  /// Carga el catálogo desde el backend (idempotente).
   Future<void> load() async {
     if (_courses.isNotEmpty) return;
-    final raw = await rootBundle.loadString('assets/data/malla_sistemas.json');
-    final decoded = jsonDecode(raw) as Map<String, dynamic>;
+    final code = AuthService.to.currentUser?.code;
+    final decoded = await _api.getJson(
+      '/curriculum/me${code == null ? '' : '?code=$code'}',
+    );
     final list = (decoded['courses'] as List)
         .cast<Map<String, dynamic>>()
         .map(CourseNode.fromJson)
