@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 
 import '../models/user_model.dart';
 import 'api_client.dart';
+import 'malla_service.dart';
 import 'storage_service.dart';
 
 class AuthService extends GetxService {
@@ -155,6 +156,7 @@ class AuthService extends GetxService {
         // Logout es stateless; si el servidor no responde, limpiamos local igual.
       }
     }
+    MallaService.to.clear();
     _currentUser.value = null;
     await _storage.clearSession();
   }
