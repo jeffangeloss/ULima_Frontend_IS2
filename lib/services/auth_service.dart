@@ -1,5 +1,5 @@
 // lib/services/auth_service.dart
-// Autenticación contra backend + persistencia de sesión via StorageService.
+// Autenticación real contra el backend + persistencia segura del JWT.
 
 import 'package:get/get.dart';
 
@@ -12,6 +12,7 @@ class AuthService extends GetxService {
   static const String invalidCredentialsMessage =
       'Código o contraseña incorrectos.';
 
+  final ApiClient _api = ApiClient();
   final Rx<UserModel?> _currentUser = Rx<UserModel?>(null);
   final RxList<Map<String, dynamic>> _carreras = <Map<String, dynamic>>[].obs;
   final RxList<Map<String, dynamic>> _especialidades =
@@ -32,145 +33,177 @@ class AuthService extends GetxService {
   String getCareerName(int? id) {
     if (id == null) return '';
     final match = _carreras.firstWhereOrNull((c) => c['id'] == id);
-    return match != null ? match['name'] as String : '';
+    return match != null ? match['name']?.toString() ?? '' : '';
   }
 
   String getEspecialidadName(int id) {
     final match = _especialidades.firstWhereOrNull((e) => e['id'] == id);
-    return match != null ? match['name'] as String : '';
+    return match != null ? match['name']?.toString() ?? '' : '';
   }
 
-  Future<void> loadCatalogs() async {
-    final careersResponse = await _api.getJson('/academic-profile/careers');
-    _carreras.assignAll(
-      (careersResponse['careers'] as List? ?? const [])
-          .map((item) => Map<String, dynamic>.from(item as Map))
-          .toList(),
-    );
-
-    final specialtiesResponse = await _api.getJson(
-      '/academic-profile/specialties',
-    );
-    _especialidades.assignAll(
-      (specialtiesResponse['specialties'] as List? ?? const [])
-          .map((item) => Map<String, dynamic>.from(item as Map))
-          .toList(),
-    );
-  }
-
-  /// Intenta restaurar la sesión guardada en local storage.
-  /// Devuelve true si se restauró correctamente.
   Future<bool> tryRestoreSession() async {
-    final code = _storage.savedCode;
-    if (code == null) return false;
+    final token = await _storage.savedToken;
+    if (token == null || token.isEmpty) return false;
+
     try {
-      final response = await _api.getJson('/auth/me?code=$code');
-      final user = UserModel.fromJson(
-        Map<String, dynamic>.from(response['user'] as Map),
-      );
-      await loadCatalogs();
-      await _applyStoredSetup(user);
+      final response = await _api.getJson('/auth/me', token: token);
+      final user = UserModel.fromJson(_mapFrom(response['user']));
+      await _loadCatalogs(token: token, careerId: user.careerId);
       _currentUser.value = user;
+      await _storage.saveCode(user.code);
       return true;
+    } on ApiException {
+      await _storage.clearSession();
+      return false;
     } catch (_) {
       await _storage.clearSession();
       return false;
     }
   }
 
-  /// Intenta autenticar al usuario. Devuelve null si OK, o mensaje de error.
   Future<String?> login({
     required String code,
     required String password,
   }) async {
     _loading.value = true;
     try {
-      final normalizedCode = code.trim();
       final response = await _api.postJson(
         '/auth/login',
-        {'code': normalizedCode, 'password': password},
+        body: {'code': code.trim(), 'password': password},
       );
-      final user = UserModel.fromJson(
-        Map<String, dynamic>.from(response['user'] as Map),
-      );
-      await loadCatalogs();
-      await _applyStoredSetup(user);
+
+      final token = response['token']?.toString();
+      if (token == null || token.isEmpty) {
+        return 'No se recibió token de sesión.';
+      }
+
+      final user = UserModel.fromJson(_mapFrom(response['user']));
+      await _storage.saveToken(token);
+      await _storage.saveCode(user.code);
+      await _loadCatalogs(token: token, careerId: user.careerId);
       _currentUser.value = user;
-      await _storage.saveCode(normalizedCode);
       return null;
-    } catch (e) {
-      return e.toString().replaceFirst('Exception: ', '');
+    } on ApiException catch (e) {
+      if (e.code == 'USER_NOT_FOUND' || e.code == 'INVALID_PASSWORD') {
+        return invalidCredentialsMessage;
+      }
+      if (e.code == 'NOT_ENROLLED') {
+        return 'No tienes una matrícula activa.';
+      }
+      return e.message;
+    } catch (_) {
+      return 'No se pudo conectar con el servidor.';
     } finally {
       _loading.value = false;
     }
   }
 
-  /// Actualiza carrera/especialidades del usuario actual y marca el setup completo.
   Future<void> completeSetup({
     required int careerId,
     int? especialidadPrincipal,
     required List<int> especialidadesInteres,
   }) async {
-    final u = _currentUser.value;
-    if (u == null) return;
-    u.careerId = careerId;
-    u.especialidadPrincipal = especialidadPrincipal;
-    u.especialidadesInteres = List.of(especialidadesInteres);
-    u.setupComplete = true;
+    final user = _currentUser.value;
+    if (user == null) return;
+
+    final token = await _requiredToken();
+    final response = await _api.putJson(
+      '/academic-profile/me/specialties',
+      token: token,
+      body: {
+        'primarySpecialtyId': especialidadPrincipal,
+        'interestSpecialtyIds': especialidadesInteres,
+      },
+    );
+
+    final savedSpecialties = _listFrom(response, 'specialties');
+    final savedPrincipal = savedSpecialties
+        .where((s) => s['selectionType']?.toString() == 'primary')
+        .map((s) => _parseInt(s['specialtyId']))
+        .whereType<int>()
+        .firstOrNull;
+    final savedInterest = savedSpecialties
+        .where((s) => s['selectionType']?.toString() == 'interest')
+        .map((s) => _parseInt(s['specialtyId']))
+        .whereType<int>()
+        .toList();
+
+    user.careerId = careerId;
+    user.especialidadPrincipal = savedPrincipal;
+    user.especialidadesInteres = savedInterest;
+    user.setupComplete = response['setupComplete'] as bool? ?? true;
     _currentUser.refresh();
+
     await _storage.saveSetup(
-      code: u.code,
+      code: user.code,
       careerId: careerId,
-      especialidadPrincipal: especialidadPrincipal,
-      especialidadesInteres: especialidadesInteres,
-      setupComplete: true,
+      especialidadPrincipal: user.especialidadPrincipal,
+      especialidadesInteres: user.especialidadesInteres,
+      setupComplete: user.setupComplete,
     );
   }
 
   Future<void> logout() async {
+    final token = await _storage.savedToken;
+    if (token != null && token.isNotEmpty) {
+      try {
+        await _api.postJson(
+          '/auth/logout',
+          token: token,
+          body: const <String, dynamic>{},
+        );
+      } catch (_) {
+        // Logout es stateless; si el servidor no responde, limpiamos local igual.
+      }
+    }
     _currentUser.value = null;
     await _storage.clearSession();
   }
 
-  Future<void> _applyStoredSetup(UserModel user) async {
-    final code = user.code;
-    final hasUserSetup = _storage.hasSavedSetupFor(code);
-    if (!hasUserSetup && !_storage.hasSavedSetup) return;
+  Future<void> _loadCatalogs({required String token, int? careerId}) async {
+    final careersResponse = await _api.getJson(
+      '/academic-profile/careers',
+      token: token,
+    );
+    _carreras.assignAll(_listFrom(careersResponse, 'careers'));
 
-    final careerId = hasUserSetup
-        ? _storage.savedCareerIdFor(code)
-        : _storage.savedCareerId;
-    if (careerId != null) user.careerId = careerId;
+    final specialtiesResponse = await _api.getJson(
+      '/academic-profile/specialties',
+      token: token,
+      query: {'careerId': careerId?.toString()},
+    );
+    _especialidades.assignAll(_listFrom(specialtiesResponse, 'specialties'));
+  }
 
-    user.setupComplete = hasUserSetup
-        ? _storage.savedSetupCompleteFor(code)
-        : _storage.savedSetupComplete;
-
-    final principal = hasUserSetup
-        ? _storage.savedEspecialidadPrincipalFor(code)
-        : _storage.savedEspecialidadPrincipal;
-    final interes = hasUserSetup
-        ? _storage.savedEspecialidadesInteresFor(code)
-        : _storage.savedEspecialidadesInteres;
-
-    if (principal != null || interes.isNotEmpty) {
-      user.especialidadPrincipal = principal;
-      user.especialidadesInteres = interes;
-    } else {
-      final legacy = hasUserSetup
-          ? _storage.savedEspecialidadesFor(code)
-          : _storage.savedEspecialidades;
-      if (legacy.isNotEmpty) user.especialidadesInteres = legacy;
+  Future<String> _requiredToken() async {
+    final token = await _storage.savedToken;
+    if (token == null || token.isEmpty) {
+      throw Exception('No hay sesión activa.');
     }
+    return token;
+  }
 
-    if (!hasUserSetup && user.careerId != null) {
-      await _storage.saveSetup(
-        code: code,
-        careerId: user.careerId!,
-        especialidadPrincipal: user.especialidadPrincipal,
-        especialidadesInteres: user.especialidadesInteres,
-        setupComplete: user.setupComplete,
-      );
-    }
+  Map<String, dynamic> _mapFrom(dynamic value) {
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) return Map<String, dynamic>.from(value);
+    return <String, dynamic>{};
+  }
+
+  List<Map<String, dynamic>> _listFrom(
+    Map<String, dynamic> response,
+    String key,
+  ) {
+    final raw = response[key];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+  }
+
+  int? _parseInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '');
   }
 }
