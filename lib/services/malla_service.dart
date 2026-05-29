@@ -33,13 +33,16 @@ class MallaService extends GetxService {
   List<CourseNode> get courses => _courses;
   List<String> get availableSpecialties => _specialties;
 
+  /// Limpia el catálogo en memoria (llamar en logout para evitar cache stale).
+  void clear() {
+    _courses.clear();
+    _specialties.clear();
+  }
+
   /// Carga el catálogo desde el backend (idempotente).
   Future<void> load() async {
     if (_courses.isNotEmpty) return;
-    final code = AuthService.to.currentUser?.code;
-    final decoded = await _api.getJson(
-      '/curriculum/me${code == null ? '' : '?code=$code'}',
-    );
+    final decoded = await _api.getJson('/curriculum/me');
     final list = (decoded['courses'] as List)
         .cast<Map<String, dynamic>>()
         .map(CourseNode.fromJson)

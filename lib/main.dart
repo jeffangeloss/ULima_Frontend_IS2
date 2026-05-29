@@ -29,7 +29,6 @@ void main() async {
   await Future.wait([
     EvaluationSyllabusService().loadEvaluationData(),
     CoursesService().loadCoursesData(),
-    MallaService.to.load(),
   ]);
 
   // Intentar restaurar sesión guardada.

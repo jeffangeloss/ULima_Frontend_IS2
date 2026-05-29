@@ -38,11 +38,13 @@ class EvaluationComponent {
 class CourseSyllabus {
   final String cursoId;
   final String cursoNombre;
+  final String? silaboUrl;
   final List<EvaluationComponent> evaluaciones;
 
   CourseSyllabus({
     required this.cursoId,
     required this.cursoNombre,
+    this.silaboUrl,
     required this.evaluaciones,
   });
 
@@ -59,6 +61,7 @@ class CourseSyllabus {
     return CourseSyllabus(
       cursoId: json['cursoId'] ?? '',
       cursoNombre: json['cursoNombre'] ?? '',
+      silaboUrl: json['silaboUrl'] as String?,
       evaluaciones: evaluacionesList,
     );
   }

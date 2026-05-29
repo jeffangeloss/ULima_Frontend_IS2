@@ -15,6 +15,7 @@ class EvaluationSyllabusService {
 
   final ApiClient _api = ApiClient();
   late List<CourseSyllabus> _syllabusData;
+  final Map<String, String> _silaboUrlByCourseId = {};
   bool _isLoaded = false;
 
   /// Carga el archivo JSON con los datos de evaluaciones
@@ -27,12 +28,16 @@ class EvaluationSyllabusService {
         '/grades/me/courses${code == null ? '' : '?code=$code'}',
       );
       final cursosList = jsonData['syllabi'] as List<dynamic>? ?? [];
-
       _syllabusData = cursosList
-          .map(
-            (curso) => CourseSyllabus.fromJson(curso as Map<String, dynamic>),
-          )
+          .map((curso) => CourseSyllabus.fromJson(curso as Map<String, dynamic>))
           .toList();
+
+      final cursosConUrl = jsonData['cursos'] as List<dynamic>? ?? [];
+      for (final c in cursosConUrl) {
+        final id = c['id']?.toString();
+        final url = c['silaboUrl'] as String?;
+        if (id != null && url != null) _silaboUrlByCourseId[id] = url;
+      }
 
       _isLoaded = true;
       print('✓ Datos de evaluaciones cargados: ${_syllabusData.length} cursos');
@@ -61,6 +66,9 @@ class EvaluationSyllabusService {
 
   /// Obtiene todos los sílabos cargados
   List<CourseSyllabus> get allSyllabuses => _syllabusData;
+
+  /// Obtiene la URL del sílabo de un curso por su curriculum_course_id
+  String? getSilaboUrl(String courseId) => _silaboUrlByCourseId[courseId];
 
   /// Verifica si los datos ya están cargados
   bool get isLoaded => _isLoaded;

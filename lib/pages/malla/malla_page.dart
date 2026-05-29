@@ -6,8 +6,11 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import 'package:url_launcher/url_launcher.dart';
+
 import '../../configs/themes.dart';
 import '../../models/malla_models.dart';
+import '../../services/evaluations_service.dart';
 import 'malla_controller.dart';
 import 'widgets/course_card.dart';
 import 'widgets/prerequisite_painter.dart';
@@ -889,6 +892,8 @@ class _CourseDetailSheet extends StatelessWidget {
                   .toList(),
             ),
           ],
+          const SizedBox(height: 12),
+          _SilaboLink(courseId: course.id),
           const SizedBox(height: 18),
           if (currentStatus != CourseStatus.locked)
             ElevatedButton.icon(
@@ -1083,6 +1088,38 @@ class _PillStatus extends StatelessWidget {
           fontSize: 11,
           fontWeight: FontWeight.w900,
         ),
+      ),
+    );
+  }
+}
+
+class _SilaboLink extends StatelessWidget {
+  const _SilaboLink({required this.courseId});
+  final String courseId;
+
+  @override
+  Widget build(BuildContext context) {
+    final url = EvaluationSyllabusService().getSilaboUrl(courseId);
+    if (url == null) return const SizedBox.shrink();
+
+    return GestureDetector(
+      onTap: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: const [
+          Icon(Icons.open_in_new, size: 14, color: Color(0xFF0369A1)),
+          SizedBox(width: 5),
+          Text(
+            'Ver Sílabo',
+            style: TextStyle(
+              color: Color(0xFF0369A1),
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              decoration: TextDecoration.underline,
+              decorationColor: Color(0xFF0369A1),
+            ),
+          ),
+        ],
       ),
     );
   }
