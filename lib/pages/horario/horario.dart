@@ -103,6 +103,57 @@ class HorarioPage extends StatelessWidget {
               ),
             ),
             const Divider(height: 1, thickness: 1, color: Color(0xFFE5E5E5)),
+            Obx(() {
+              if (controller.isActiveWeekHighLoad) {
+                return Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFECEB),
+                    border: Border.all(color: const Color(0xFFFF5252), width: 1.5),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.warning_amber_rounded,
+                        color: Color(0xFFFF5252),
+                        size: 24,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            Text(
+                              "ALTA CARGA ACADÉMICA",
+                              style: TextStyle(
+                                color: Color(0xFFD32F2F),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              "Tienes 3 o más evaluaciones programadas en esta semana académica. Organiza bien tu tiempo.",
+                              style: TextStyle(
+                                color: Color(0xFFC62828),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                height: 1.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            }),
             Expanded(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
@@ -158,6 +209,8 @@ class HorarioPage extends StatelessWidget {
                         }),
                       ),
                       ...courses.map((course) {
+                        final bool isEvaluation = course['isEvaluation'] == true;
+
                         final nombreStr =
                             (course['curso'] as String? ?? 'CURSO')
                                 .toUpperCase();
@@ -177,8 +230,9 @@ class HorarioPage extends StatelessWidget {
                         final double heightVal =
                             (endVal - startVal) * hourHeight - 8.0;
 
-                        final courseColor =
-                            {
+                        final courseColor = isEvaluation
+                            ? const Color(0xFFFF5252)
+                            : {
                               'pink': colors.secondaryContainer,
                               'blue': colors.secondary,
                               'orange': colors.primary,
@@ -196,10 +250,116 @@ class HorarioPage extends StatelessWidget {
                           height: heightVal,
                           child: InkWell(
                             onTap: () {
-                              final String idSeccion = course['idSeccion'];
-                              Get.to(
-                                () => DescripCursosPage(idSeccion: idSeccion),
-                              );
+                              if (isEvaluation) {
+                                Get.defaultDialog(
+                                  title: "Detalles de Evaluación",
+                                  titleStyle: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFFD32F2F),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                                  radius: 16,
+                                  backgroundColor: isDark ? const Color(0xFF262630) : Colors.white,
+                                  content: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        "${course['evalSigla']} - ${course['evalNombre']}",
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                          color: isDark ? Colors.white : const Color(0xFF2D2D2D),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Row(
+                                        children: [
+                                          Icon(Icons.class_rounded, size: 18, color: colors.primary),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              "Curso: $nombreStr",
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w500,
+                                                color: isDark ? Colors.white70 : const Color(0xFF333333),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Row(
+                                        children: [
+                                          Icon(Icons.location_on_rounded, size: 18, color: colors.primary),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            "Salón: $aulaStr",
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w500,
+                                              color: isDark ? Colors.white70 : const Color(0xFF333333),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Row(
+                                        children: [
+                                          Icon(Icons.access_time_filled_rounded, size: 18, color: colors.primary),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            "Horario: $startStr - $endStr",
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w500,
+                                              color: isDark ? Colors.white70 : const Color(0xFF333333),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFFFECEB),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Row(
+                                          children: const [
+                                            Icon(Icons.info_outline_rounded, color: Color(0xFFD32F2F), size: 18),
+                                            SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                "Esta evaluación forma parte de tu calendario académico oficial.",
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w500,
+                                                  color: Color(0xFFC62828),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  confirm: TextButton(
+                                    onPressed: () => Get.back(),
+                                    child: const Text(
+                                      "Cerrar",
+                                      style: TextStyle(fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                );
+                              } else {
+                                final String idSeccion = course['idSeccion'];
+                                Get.to(
+                                  () => DescripCursosPage(idSeccion: idSeccion),
+                                );
+                              }
                             },
                             borderRadius: BorderRadius.circular(16),
                             child: Container(
@@ -207,42 +367,107 @@ class HorarioPage extends StatelessWidget {
                                 horizontal: 16,
                                 vertical: 12,
                               ),
-                              decoration: BoxDecoration(
-                                color: courseColor,
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: courseColor.withOpacity(0.35),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    nombreStr,
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: 0.3,
+                              decoration: isEvaluation
+                                  ? BoxDecoration(
+                                      gradient: const LinearGradient(
+                                        colors: [Color(0xFFFF5252), Color(0xFFFF7043)],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      ),
+                                      border: Border.all(
+                                        color: const Color(0xFFFFD54F),
+                                        width: 2.0,
+                                      ),
+                                      borderRadius: BorderRadius.circular(16),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: const Color(0xFFFF5252).withValues(alpha: 0.4),
+                                          blurRadius: 10,
+                                          offset: const Offset(0, 5),
+                                        ),
+                                      ],
+                                    )
+                                  : BoxDecoration(
+                                      color: courseColor,
+                                      borderRadius: BorderRadius.circular(16),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: courseColor.withValues(alpha: 0.35),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
                                     ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    aulaStr,
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.9),
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
+                              child: isEvaluation
+                                  ? Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: Colors.black.withValues(alpha: 0.3),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            "📝 EVALUACIÓN: ${course['evalSigla']}",
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w900,
+                                              letterSpacing: 0.5,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          "${course['evalNombre']}".toUpperCase(),
+                                          textAlign: TextAlign.center,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: 0.3,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          aulaStr,
+                                          style: TextStyle(
+                                            color: Colors.white.withValues(alpha: 0.9),
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  : Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          nombreStr,
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w800,
+                                            letterSpacing: 0.3,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          aulaStr,
+                                          style: TextStyle(
+                                            color: Colors.white.withValues(alpha: 0.9),
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ),
-                                ],
-                              ),
                             ),
                           ),
                         );

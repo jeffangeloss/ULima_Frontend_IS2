@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 
 import '../../models/malla_models.dart';
 import '../../models/user_model.dart';
+import '../../services/api_client.dart';
 import '../../services/auth_service.dart';
 import '../../services/malla_service.dart';
 import '../../services/storage_service.dart';
@@ -286,7 +287,7 @@ class MallaController extends GetxController {
 
   void cycleStatus(String courseId) {
     if (_isRealProgress(courseId)) return;
-    
+
     final current = statuses[courseId] ?? CourseStatus.locked;
     if (current == CourseStatus.locked) return;
     CourseStatus next;
@@ -309,22 +310,35 @@ class MallaController extends GetxController {
 
     final api = ApiClient();
     if (next == CourseStatus.current) {
-      api.putJson('/curriculum/me/simulation', {
-        'curriculumCourseId': int.parse(courseId),
-        'status': 'planned',
-      }).catchError((e) {
-        print("Error al guardar la simulación: $e");
-      });
+      api
+          .putJson(
+            '/curriculum/me/simulation',
+            body: {
+              'curriculumCourseId': int.parse(courseId),
+              'status': 'planned',
+            },
+          )
+          .catchError((e) {
+            debugPrint("Error al guardar la simulación: $e");
+            return <String, dynamic>{};
+          });
     } else if (next == CourseStatus.approved) {
-      api.putJson('/curriculum/me/simulation', {
-        'curriculumCourseId': int.parse(courseId),
-        'status': 'simulated_completed',
-      }).catchError((e) {
-        print("Error al guardar la simulación: $e");
-      });
+      api
+          .putJson(
+            '/curriculum/me/simulation',
+            body: {
+              'curriculumCourseId': int.parse(courseId),
+              'status': 'simulated_completed',
+            },
+          )
+          .catchError((e) {
+            debugPrint("Error al guardar la simulación: $e");
+            return <String, dynamic>{};
+          });
     } else if (next == CourseStatus.unlocked) {
       api.deleteJson('/curriculum/me/simulation/$courseId').catchError((e) {
-        print("Error al eliminar la simulación: $e");
+        debugPrint("Error al eliminar la simulación: $e");
+        return <String, dynamic>{};
       });
     }
   }
