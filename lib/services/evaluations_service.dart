@@ -1,6 +1,6 @@
-import 'dart:convert';
-import 'package:flutter/services.dart';
 import '../models/evaluation_model.dart';
+import 'api_client.dart';
+import 'auth_service.dart';
 
 /// Servicio para cargar y gestionar los datos de evaluaciones del sílabo
 class EvaluationSyllabusService {
@@ -13,6 +13,7 @@ class EvaluationSyllabusService {
 
   EvaluationSyllabusService._internal();
 
+  final ApiClient _api = ApiClient();
   late List<CourseSyllabus> _syllabusData;
   bool _isLoaded = false;
 
@@ -21,12 +22,11 @@ class EvaluationSyllabusService {
     if (_isLoaded) return;
 
     try {
-      final jsonString = await rootBundle.loadString(
-        'assets/data/evaluaciones.json',
+      final code = AuthService.to.currentUser?.code;
+      final jsonData = await _api.getJson(
+        '/grades/me/courses${code == null ? '' : '?code=$code'}',
       );
-
-      final Map<String, dynamic> jsonData = jsonDecode(jsonString);
-      final cursosList = jsonData['cursos'] as List<dynamic>? ?? [];
+      final cursosList = jsonData['syllabi'] as List<dynamic>? ?? [];
 
       _syllabusData = cursosList
           .map(

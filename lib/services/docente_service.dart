@@ -1,17 +1,12 @@
-import 'dart:convert';
-
-import 'package:flutter/services.dart';
-
 import '../models/docente_model.dart';
+import 'api_client.dart';
 
 class DocenteService {
-  Future<List<Docente>> fetchDocentes() async {
-    final String response = await rootBundle.loadString(
-      'assets/data/docentes.json',
-    );
+  final ApiClient _api = ApiClient();
 
-    final data = json.decode(response);
-    final List docentes = data['docentes'];
+  Future<List<Docente>> fetchDocentes() async {
+    final data = await _api.getJson('/course-detail/teachers');
+    final List docentes = data['docentes'] ?? [];
 
     return docentes.map((d) => Docente.fromJson(d)).toList();
   }
