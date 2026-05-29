@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import '../models/evaluation_model.dart';
 import 'api_client.dart';
 import 'auth_service.dart';
@@ -40,9 +41,9 @@ class EvaluationSyllabusService {
       }
 
       _isLoaded = true;
-      print('✓ Datos de evaluaciones cargados: ${_syllabusData.length} cursos');
+      debugPrint('✓ Datos de evaluaciones cargados: ${_syllabusData.length} cursos');
     } catch (e) {
-      print('✗ Error al cargar datos de evaluaciones: $e');
+      debugPrint('✗ Error al cargar datos de evaluaciones: $e');
       rethrow;
     }
   }

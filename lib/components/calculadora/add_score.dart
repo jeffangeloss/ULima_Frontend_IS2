@@ -171,9 +171,9 @@ class _AddNotaWithSyllabusModalState extends State<AddNotaWithSyllabusModal> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: colors.secondaryContainer.withOpacity(0.2),
+                    color: colors.secondaryContainer.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: colors.outline.withOpacity(0.3)),
+                    border: Border.all(color: colors.outline.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
@@ -192,7 +192,7 @@ class _AddNotaWithSyllabusModalState extends State<AddNotaWithSyllabusModal> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(
-                    border: Border.all(color: colors.outline.withOpacity(0.5)),
+                    border: Border.all(color: colors.outline.withValues(alpha: 0.5)),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: DropdownButtonHideUnderline(
@@ -202,7 +202,7 @@ class _AddNotaWithSyllabusModalState extends State<AddNotaWithSyllabusModal> {
                       hint: Text(
                         'Selecciona una evaluación',
                         style: TextStyle(
-                          color: colors.onSurfaceVariant.withOpacity(0.6),
+                          color: colors.onSurfaceVariant.withValues(alpha: 0.6),
                         ),
                       ),
                       value: _evaluacionSeleccionada,
@@ -216,7 +216,7 @@ class _AddNotaWithSyllabusModalState extends State<AddNotaWithSyllabusModal> {
                                 width: 32,
                                 height: 32,
                                 decoration: BoxDecoration(
-                                  color: primary.withOpacity(0.2),
+                                  color: primary.withValues(alpha: 0.2),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 alignment: Alignment.center,
@@ -269,9 +269,9 @@ class _AddNotaWithSyllabusModalState extends State<AddNotaWithSyllabusModal> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: primary.withOpacity(0.1),
+                    color: primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: primary.withOpacity(0.3)),
+                    border: Border.all(color: primary.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
@@ -293,7 +293,7 @@ class _AddNotaWithSyllabusModalState extends State<AddNotaWithSyllabusModal> {
                               '${_evaluacionSeleccionada!.peso.toStringAsFixed(1)}% (del sílabo del curso)',
                               style: TextStyle(
                                 fontSize: 11,
-                                color: primary.withOpacity(0.8),
+                                color: primary.withValues(alpha: 0.8),
                               ),
                             ),
                           ],
@@ -327,20 +327,20 @@ class _AddNotaWithSyllabusModalState extends State<AddNotaWithSyllabusModal> {
                       decoration: InputDecoration(
                         hintText: 'Ej: 15.5',
                         hintStyle: TextStyle(
-                          color: colors.onSurfaceVariant.withOpacity(0.6),
+                          color: colors.onSurfaceVariant.withValues(alpha: 0.6),
                         ),
                         errorText: _valorError,
                         errorStyle: TextStyle(color: colors.error),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(
-                            color: colors.outline.withOpacity(0.5),
+                            color: colors.outline.withValues(alpha: 0.5),
                           ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(
-                            color: colors.outline.withOpacity(0.5),
+                            color: colors.outline.withValues(alpha: 0.5),
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
@@ -366,7 +366,7 @@ class _AddNotaWithSyllabusModalState extends State<AddNotaWithSyllabusModal> {
                       onPressed: () => Navigator.pop(context),
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(
-                          color: colors.outline.withOpacity(0.5),
+                          color: colors.outline.withValues(alpha: 0.5),
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
@@ -392,7 +392,7 @@ class _AddNotaWithSyllabusModalState extends State<AddNotaWithSyllabusModal> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        disabledBackgroundColor: primary.withOpacity(0.3),
+                        disabledBackgroundColor: primary.withValues(alpha: 0.3),
                       ),
                       child: const Text(
                         'Registrar',

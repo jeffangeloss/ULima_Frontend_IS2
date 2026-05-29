@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import '../../models/evaluation_model.dart';
 import '../../services/evaluations_service.dart';
@@ -33,9 +34,9 @@ class CalculadoraController extends GetxController {
       for (var syllabus in _syllabusService.allSyllabuses) {
         syllabusData[syllabus.cursoId] = syllabus;
       }
-      print('✓ Datos del sílabo cargados en el controlador');
+      debugPrint('✓ Datos del sílabo cargados en el controlador');
     } catch (e) {
-      print('✗ Error al cargar datos del sílabo: $e');
+      debugPrint('✗ Error al cargar datos del sílabo: $e');
     }
   }
 
@@ -88,11 +89,11 @@ class CalculadoraController extends GetxController {
       }
 
       cursos.value = cursosExpandidos;
-      print(
+      debugPrint(
         '✓ Cursos y secciones cargados correctamente: ${cursos.length} secciones.',
       );
     } catch (e) {
-      print('✗ Error al inicializar cursos: $e');
+      debugPrint('✗ Error al inicializar cursos: $e');
     }
   }
 
@@ -144,7 +145,7 @@ class CalculadoraController extends GetxController {
     try {
       await _notasService.guardarNotas(_idEstudianteActual, cursos);
     } catch (e) {
-      print('✗ Error al guardar notas localmente: $e');
+      debugPrint('✗ Error al guardar notas localmente: $e');
     }
   }
 

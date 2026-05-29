@@ -25,7 +25,7 @@ class NotaTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.tertiaryContainer,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: colors.outline.withOpacity(0.2)),
+        border: Border.all(color: colors.outline.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
@@ -46,7 +46,7 @@ class NotaTile extends StatelessWidget {
                   text: TextSpan(
                     style: TextStyle(
                       fontSize: 12,
-                      color: colors.onSurfaceVariant.withOpacity(0.6),
+                      color: colors.onSurfaceVariant.withValues(alpha: 0.6),
                     ),
                     children: [
                       TextSpan(text: "Peso: $peso%  •  "),
@@ -78,7 +78,7 @@ class NotaTile extends StatelessWidget {
                 buttonColor: colors.error,
                 onConfirm: () {
                   onDelete();
-                  print("✅ ÉXITO: Se eliminó la nota '$titulo' correctamente.");
+                  debugPrint("✅ ÉXITO: Se eliminó la nota '$titulo' correctamente.");
                   Get.back();
                 },
               );

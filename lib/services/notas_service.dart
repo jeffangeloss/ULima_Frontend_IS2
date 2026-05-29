@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class NotasService {
@@ -30,9 +31,9 @@ class NotasService {
 
       final jsonString = jsonEncode(cursosSerializables);
       await prefs.setString('${_notasKey}_$idEstudiante', jsonString);
-      print('✓ Notas guardadas para estudiante: $idEstudiante');
+      debugPrint('✓ Notas guardadas para estudiante: $idEstudiante');
     } catch (e) {
-      print('✗ Error al guardar notas: $e');
+      debugPrint('✗ Error al guardar notas: $e');
     }
   }
 
@@ -42,14 +43,14 @@ class NotasService {
       final jsonString = prefs.getString('${_notasKey}_$idEstudiante');
 
       if (jsonString == null) {
-        print('No hay notas guardadas para: $idEstudiante');
+        debugPrint('No hay notas guardadas para: $idEstudiante');
         return [];
       }
 
       final List<dynamic> cursosJson = jsonDecode(jsonString);
       return List<Map<String, dynamic>>.from(cursosJson);
     } catch (e) {
-      print('✗ Error al cargar notas: $e');
+      debugPrint('✗ Error al cargar notas: $e');
       return [];
     }
   }
@@ -58,9 +59,9 @@ class NotasService {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('${_notasKey}_$idEstudiante');
-      print('✓ Notas eliminadas para: $idEstudiante');
+      debugPrint('✓ Notas eliminadas para: $idEstudiante');
     } catch (e) {
-      print('✗ Error al eliminar notas: $e');
+      debugPrint('✗ Error al eliminar notas: $e');
     }
   }
 
@@ -69,7 +70,7 @@ class NotasService {
       final prefs = await SharedPreferences.getInstance();
       return prefs.getString('currentStudentId');
     } catch (e) {
-      print('✗ Error al obtener ID del estudiante: $e');
+      debugPrint('✗ Error al obtener ID del estudiante: $e');
       return null;
     }
   }
@@ -79,7 +80,7 @@ class NotasService {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('currentStudentId', idEstudiante);
     } catch (e) {
-      print('✗ Error al guardar ID del estudiante: $e');
+      debugPrint('✗ Error al guardar ID del estudiante: $e');
     }
   }
 }
