@@ -48,7 +48,32 @@ class HorarioController extends GetxController {
             )
             .toList(),
       );
-      final idx = daysList.indexWhere((d) => d.dayName == 'Viernes');
+      
+      // Intentar buscar el día actual por fecha
+      final now = DateTime.now();
+      final months = [
+        "Enero",
+        "Febrero",
+        "Marzo",
+        "Abril",
+        "Mayo",
+        "Junio",
+        "Julio",
+        "Agosto",
+        "Septiembre",
+        "Octubre",
+        "Noviembre",
+        "Diciembre"
+      ];
+      final todayStr = "${now.day} de ${months[now.month - 1]}";
+
+      int idx = daysList.indexWhere(
+        (d) => d.dateText.toLowerCase() == todayStr.toLowerCase(),
+      );
+      if (idx == -1) {
+        // Fallback al primer viernes si no se encuentra el día exacto
+        idx = daysList.indexWhere((d) => d.dayName == 'Viernes');
+      }
       currentDayIndex.value = idx != -1 ? idx : 0;
     } catch (e) {
       debugPrint('Error al cargar dias: $e');
