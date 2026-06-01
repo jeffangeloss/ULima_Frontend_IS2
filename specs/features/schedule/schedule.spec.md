@@ -16,18 +16,19 @@ targets:
 - R19: Students can view exams organized by week and day.
 - R22: The system calculates evaluations per week.
 - R23: High-load weeks are identified.
+- R24: Class blocks show the classroom for each specific scheduled session.
+- R25: Course colors can be rendered from backend-provided hex colors.
+- R26: The schedule grid shows the current-time indicator for the current Lima day.
 
 ## UI Behavior
 
-- **Horario y Evaluaciones unificados**: El controlador `HorarioController` combina las sesiones de clase regulares con las evaluaciones programadas para el día seleccionado, ordenándolas en el cronograma semanal por bloques de tiempo.
-- **Búsqueda y Mapeo Dinámico**: Las evaluaciones obtenidas desde `/schedule/me/assessments` contienen una fecha ISO (p. ej., "2026-01-12") que es parseada y mapeada dinámicamente al formato de texto del día (p. ej., "12 de Enero") para compararla de forma robusta e insensible a mayúsculas/minúsculas con `activeDay.dateText`.
-- **Resaltado de Evaluaciones**: Los bloques de tiempo que correspondan a una evaluación se renderizan usando un **Card Premium Resaltado**:
-  - Fondo degradado brillante (Coral/Rojo).
-  - Borde grueso destacado de color Amarillo/Oro.
-  - Sombra difusa de color Coral.
-  - Indicador flotante: `📝 EVALUACIÓN: [SIGLA]`.
-  - Al pulsar el card, abre un diálogo GetX personalizado (`Get.defaultDialog`) mostrando detalles como el nombre oficial, sigla, curso, aula y hora.
-- **Alerta de Alta Carga Académica**: Si la semana actual del ciclo tiene **3 o más evaluaciones**, se activa una propiedad observable `isActiveWeekHighLoad` y la UI despliega un banner de advertencia destacado de color rojo y ambar debajo del selector de días.
+- **Unified schedule and evaluations**: `HorarioController` combines regular class sessions with scheduled assessments for the selected day and renders both in the same time grid.
+- **Dynamic date mapping**: Assessments from `/schedule/me/assessments` include an ISO date that is mapped to the day text format used by `activeDay.dateText`.
+- **Classrooms per session**: Each regular block uses `salon`/`aula` from that session, so a section can have different classrooms on different days.
+- **Course colors**: Regular class blocks accept `color` as either a legacy name (`blue`, `green`, etc.) or a hex value in `#RRGGBB`/`#AARRGGBB` format.
+- **Current-time line**: The grid shows a red current-time line only when the selected day is the current date in Lima, calculated as UTC-5, and the current time is between 7:00 and 22:00.
+- **Evaluation highlight**: Assessment blocks use the existing highlighted evaluation card and open the existing GetX details dialog when tapped.
+- **High-load alert**: If the active academic week has 3 or more assessments, `isActiveWeekHighLoad` is true and the UI shows the existing warning banner under the day selector.
 
 ## API Dependencies
 
@@ -37,5 +38,7 @@ targets:
 
 ## Verification
 
-- Verificar que los Cards de evaluaciones y las clases regulares convivan en la misma grilla horaria.
-- Verificar que el banner de alta carga se muestre solo en semanas con 3+ evaluaciones.
+- Verify that evaluation cards and regular classes coexist in the same time grid.
+- Verify that regular class blocks render per-session classrooms and hex colors.
+- Verify that the current-time line appears only on the current Lima day and only within schedule hours.
+- Verify that the high-load banner appears only in weeks with 3+ assessments.

@@ -31,6 +31,58 @@ class HorarioPage extends StatelessWidget {
     }
   }
 
+  Color _resolveScheduleColor(String colorStr, ColorScheme colors) {
+    final cleanColor = colorStr.trim();
+    final hexColor = cleanColor.startsWith('#')
+        ? cleanColor.substring(1)
+        : cleanColor;
+
+    if (RegExp(r'^[0-9a-fA-F]{6}$').hasMatch(hexColor)) {
+      return Color(int.parse('FF$hexColor', radix: 16));
+    }
+    if (RegExp(r'^[0-9a-fA-F]{8}$').hasMatch(hexColor)) {
+      return Color(int.parse(hexColor, radix: 16));
+    }
+
+    return {
+          'pink': colors.secondaryContainer,
+          'blue': colors.secondary,
+          'orange': colors.primary,
+          'green': colors.tertiaryContainer,
+          'purple': colors.tertiary,
+          'teal': colors.primaryContainer,
+          'red': colors.error,
+        }[cleanColor.toLowerCase()] ??
+        colors.outline;
+  }
+
+  Widget _currentTimeLine() {
+    return IgnorePointer(
+      child: SizedBox(
+        height: 12,
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.centerLeft,
+          children: [
+            Positioned(
+              left: 0,
+              right: 0,
+              child: Container(height: 2, color: const Color(0xFFFF5252)),
+            ),
+            Container(
+              width: 7,
+              height: 7,
+              decoration: const BoxDecoration(
+                color: Color(0xFFFF5252),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = Get.put(HorarioController());
@@ -49,6 +101,12 @@ class HorarioPage extends StatelessWidget {
 
         final courses = controller.currentDayCourses;
         final totalHours = (endHour - startHour).toInt() + 1;
+        final currentHour = controller.currentLimaHourDecimal;
+        final showCurrentTimeLine =
+            controller.isCurrentLimaDay(activeDay) &&
+            currentHour >= startHour &&
+            currentHour <= endHour;
+        final currentLineTop = (currentHour - startHour) * hourHeight + 6.0;
 
         return Column(
           children: [
@@ -107,11 +165,20 @@ class HorarioPage extends StatelessWidget {
               if (controller.isActiveWeekHighLoad) {
                 return Container(
                   width: double.infinity,
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFECEB),
-                    border: Border.all(color: const Color(0xFFFF5252), width: 1.5),
+                    border: Border.all(
+                      color: const Color(0xFFFF5252),
+                      width: 1.5,
+                    ),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
@@ -209,7 +276,8 @@ class HorarioPage extends StatelessWidget {
                         }),
                       ),
                       ...courses.map((course) {
-                        final bool isEvaluation = course['isEvaluation'] == true;
+                        final bool isEvaluation =
+                            course['isEvaluation'] == true;
 
                         final nombreStr =
                             (course['curso'] as String? ?? 'CURSO')
@@ -232,16 +300,7 @@ class HorarioPage extends StatelessWidget {
 
                         final courseColor = isEvaluation
                             ? const Color(0xFFFF5252)
-                            : {
-                              'pink': colors.secondaryContainer,
-                              'blue': colors.secondary,
-                              'orange': colors.primary,
-                              'green': colors.tertiaryContainer,
-                              'purple': colors.tertiary,
-                              'teal': colors.primaryContainer,
-                              'red': colors.error,
-                            }[colorStr.toLowerCase()] ??
-                            colors.outline;
+                            : _resolveScheduleColor(colorStr, colors);
 
                         return Positioned(
                           top: topPosition,
@@ -258,25 +317,37 @@ class HorarioPage extends StatelessWidget {
                                     fontWeight: FontWeight.w800,
                                     color: Color(0xFFD32F2F),
                                   ),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 15,
+                                  ),
                                   radius: 16,
-                                  backgroundColor: isDark ? const Color(0xFF262630) : Colors.white,
+                                  backgroundColor: isDark
+                                      ? const Color(0xFF262630)
+                                      : Colors.white,
                                   content: Column(
                                     mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         "${course['evalSigla']} - ${course['evalNombre']}",
                                         style: TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w700,
-                                          color: isDark ? Colors.white : const Color(0xFF2D2D2D),
+                                          color: isDark
+                                              ? Colors.white
+                                              : const Color(0xFF2D2D2D),
                                         ),
                                       ),
                                       const SizedBox(height: 12),
                                       Row(
                                         children: [
-                                          Icon(Icons.class_rounded, size: 18, color: colors.primary),
+                                          Icon(
+                                            Icons.class_rounded,
+                                            size: 18,
+                                            color: colors.primary,
+                                          ),
                                           const SizedBox(width: 8),
                                           Expanded(
                                             child: Text(
@@ -284,7 +355,9 @@ class HorarioPage extends StatelessWidget {
                                               style: TextStyle(
                                                 fontSize: 13,
                                                 fontWeight: FontWeight.w500,
-                                                color: isDark ? Colors.white70 : const Color(0xFF333333),
+                                                color: isDark
+                                                    ? Colors.white70
+                                                    : const Color(0xFF333333),
                                               ),
                                             ),
                                           ),
@@ -293,14 +366,20 @@ class HorarioPage extends StatelessWidget {
                                       const SizedBox(height: 8),
                                       Row(
                                         children: [
-                                          Icon(Icons.location_on_rounded, size: 18, color: colors.primary),
+                                          Icon(
+                                            Icons.location_on_rounded,
+                                            size: 18,
+                                            color: colors.primary,
+                                          ),
                                           const SizedBox(width: 8),
                                           Text(
                                             "Salón: $aulaStr",
                                             style: TextStyle(
                                               fontSize: 13,
                                               fontWeight: FontWeight.w500,
-                                              color: isDark ? Colors.white70 : const Color(0xFF333333),
+                                              color: isDark
+                                                  ? Colors.white70
+                                                  : const Color(0xFF333333),
                                             ),
                                           ),
                                         ],
@@ -308,14 +387,20 @@ class HorarioPage extends StatelessWidget {
                                       const SizedBox(height: 8),
                                       Row(
                                         children: [
-                                          Icon(Icons.access_time_filled_rounded, size: 18, color: colors.primary),
+                                          Icon(
+                                            Icons.access_time_filled_rounded,
+                                            size: 18,
+                                            color: colors.primary,
+                                          ),
                                           const SizedBox(width: 8),
                                           Text(
                                             "Horario: $startStr - $endStr",
                                             style: TextStyle(
                                               fontSize: 13,
                                               fontWeight: FontWeight.w500,
-                                              color: isDark ? Colors.white70 : const Color(0xFF333333),
+                                              color: isDark
+                                                  ? Colors.white70
+                                                  : const Color(0xFF333333),
                                             ),
                                           ),
                                         ],
@@ -325,11 +410,17 @@ class HorarioPage extends StatelessWidget {
                                         padding: const EdgeInsets.all(10),
                                         decoration: BoxDecoration(
                                           color: const Color(0xFFFFECEB),
-                                          borderRadius: BorderRadius.circular(8),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
                                         ),
                                         child: Row(
                                           children: const [
-                                            Icon(Icons.info_outline_rounded, color: Color(0xFFD32F2F), size: 18),
+                                            Icon(
+                                              Icons.info_outline_rounded,
+                                              color: Color(0xFFD32F2F),
+                                              size: 18,
+                                            ),
                                             SizedBox(width: 8),
                                             Expanded(
                                               child: Text(
@@ -350,7 +441,9 @@ class HorarioPage extends StatelessWidget {
                                     onPressed: () => Get.back(),
                                     child: const Text(
                                       "Cerrar",
-                                      style: TextStyle(fontWeight: FontWeight.bold),
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
                                 );
@@ -370,7 +463,10 @@ class HorarioPage extends StatelessWidget {
                               decoration: isEvaluation
                                   ? BoxDecoration(
                                       gradient: const LinearGradient(
-                                        colors: [Color(0xFFFF5252), Color(0xFFFF7043)],
+                                        colors: [
+                                          Color(0xFFFF5252),
+                                          Color(0xFFFF7043),
+                                        ],
                                         begin: Alignment.topLeft,
                                         end: Alignment.bottomRight,
                                       ),
@@ -381,7 +477,9 @@ class HorarioPage extends StatelessWidget {
                                       borderRadius: BorderRadius.circular(16),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: const Color(0xFFFF5252).withValues(alpha: 0.4),
+                                          color: const Color(
+                                            0xFFFF5252,
+                                          ).withValues(alpha: 0.4),
                                           blurRadius: 10,
                                           offset: const Offset(0, 5),
                                         ),
@@ -392,7 +490,9 @@ class HorarioPage extends StatelessWidget {
                                       borderRadius: BorderRadius.circular(16),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: courseColor.withValues(alpha: 0.35),
+                                          color: courseColor.withValues(
+                                            alpha: 0.35,
+                                          ),
                                           blurRadius: 8,
                                           offset: const Offset(0, 4),
                                         ),
@@ -400,14 +500,23 @@ class HorarioPage extends StatelessWidget {
                                     ),
                               child: isEvaluation
                                   ? Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
                                       children: [
                                         Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 2,
+                                          ),
                                           decoration: BoxDecoration(
-                                            color: Colors.black.withValues(alpha: 0.3),
-                                            borderRadius: BorderRadius.circular(8),
+                                            color: Colors.black.withValues(
+                                              alpha: 0.3,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
                                           ),
                                           child: Text(
                                             "📝 EVALUACIÓN: ${course['evalSigla']}",
@@ -421,7 +530,8 @@ class HorarioPage extends StatelessWidget {
                                         ),
                                         const SizedBox(height: 6),
                                         Text(
-                                          "${course['evalNombre']}".toUpperCase(),
+                                          "${course['evalNombre']}"
+                                              .toUpperCase(),
                                           textAlign: TextAlign.center,
                                           maxLines: 2,
                                           overflow: TextOverflow.ellipsis,
@@ -436,7 +546,9 @@ class HorarioPage extends StatelessWidget {
                                         Text(
                                           aulaStr,
                                           style: TextStyle(
-                                            color: Colors.white.withValues(alpha: 0.9),
+                                            color: Colors.white.withValues(
+                                              alpha: 0.9,
+                                            ),
                                             fontSize: 11,
                                             fontWeight: FontWeight.w600,
                                           ),
@@ -444,8 +556,10 @@ class HorarioPage extends StatelessWidget {
                                       ],
                                     )
                                   : Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
                                       children: [
                                         Text(
                                           nombreStr,
@@ -461,7 +575,9 @@ class HorarioPage extends StatelessWidget {
                                         Text(
                                           aulaStr,
                                           style: TextStyle(
-                                            color: Colors.white.withValues(alpha: 0.9),
+                                            color: Colors.white.withValues(
+                                              alpha: 0.9,
+                                            ),
                                             fontSize: 12,
                                             fontWeight: FontWeight.w600,
                                           ),
@@ -472,6 +588,13 @@ class HorarioPage extends StatelessWidget {
                           ),
                         );
                       }),
+                      if (showCurrentTimeLine)
+                        Positioned(
+                          top: currentLineTop,
+                          left: 75,
+                          right: 0,
+                          child: _currentTimeLine(),
+                        ),
                     ],
                   ),
                 ),

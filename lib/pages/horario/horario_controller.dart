@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
@@ -17,17 +19,55 @@ class HorarioController extends GetxController {
   final daysList = <DaySchedule>[].obs;
   final assessmentsList = <Map<String, dynamic>>[].obs;
   final weeklyLoad = <Map<String, dynamic>>[].obs;
+  final currentLimaTime = _nowInLima().obs;
 
   List<Map<String, dynamic>> _todasLasSecciones = [];
   final ApiClient _api = ApiClient();
+  Timer? _clockTimer;
+
+  static const List<String> _months = [
+    "Enero",
+    "Febrero",
+    "Marzo",
+    "Abril",
+    "Mayo",
+    "Junio",
+    "Julio",
+    "Agosto",
+    "Septiembre",
+    "Octubre",
+    "Noviembre",
+    "Diciembre",
+  ];
+
+  static DateTime _nowInLima() =>
+      DateTime.now().toUtc().subtract(const Duration(hours: 5));
+
+  static String _dateTextFor(DateTime date) =>
+      "${date.day} de ${_months[date.month - 1]}";
 
   @override
   void onInit() {
     super.onInit();
+    _startClock();
     _loadDays();
     _loadSecciones();
     _loadAssessments();
     _loadWeeklyLoad();
+  }
+
+  @override
+  void onClose() {
+    _clockTimer?.cancel();
+    super.onClose();
+  }
+
+  void _startClock() {
+    currentLimaTime.value = _nowInLima();
+    _clockTimer?.cancel();
+    _clockTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      currentLimaTime.value = _nowInLima();
+    });
   }
 
   Future<void> _loadDays() async {
@@ -48,24 +88,9 @@ class HorarioController extends GetxController {
             )
             .toList(),
       );
-      
+
       // Intentar buscar el día actual por fecha
-      final now = DateTime.now();
-      final months = [
-        "Enero",
-        "Febrero",
-        "Marzo",
-        "Abril",
-        "Mayo",
-        "Junio",
-        "Julio",
-        "Agosto",
-        "Septiembre",
-        "Octubre",
-        "Noviembre",
-        "Diciembre"
-      ];
-      final todayStr = "${now.day} de ${months[now.month - 1]}";
+      final todayStr = _dateTextFor(currentLimaTime.value);
 
       int idx = daysList.indexWhere(
         (d) => d.dateText.toLowerCase() == todayStr.toLowerCase(),
@@ -99,7 +124,9 @@ class HorarioController extends GetxController {
       final data = await _api.getJson(
         '/schedule/me/assessments${code == null ? '' : '?code=$code'}',
       );
-      assessmentsList.assignAll(List<Map<String, dynamic>>.from(data['assessments'] ?? []));
+      assessmentsList.assignAll(
+        List<Map<String, dynamic>>.from(data['assessments'] ?? []),
+      );
       update();
     } catch (e) {
       debugPrint('Error al cargar evaluaciones: $e');
@@ -112,7 +139,9 @@ class HorarioController extends GetxController {
       final data = await _api.getJson(
         '/schedule/me/load${code == null ? '' : '?code=$code'}',
       );
-      weeklyLoad.assignAll(List<Map<String, dynamic>>.from(data['weeks'] ?? []));
+      weeklyLoad.assignAll(
+        List<Map<String, dynamic>>.from(data['weeks'] ?? []),
+      );
       update();
     } catch (e) {
       debugPrint('Error al cargar carga semanal: $e');
@@ -121,6 +150,15 @@ class HorarioController extends GetxController {
 
   DaySchedule? get currentDay =>
       daysList.isEmpty ? null : daysList[currentDayIndex.value];
+
+  bool isCurrentLimaDay(DaySchedule day) =>
+      day.dateText.toLowerCase() ==
+      _dateTextFor(currentLimaTime.value).toLowerCase();
+
+  double get currentLimaHourDecimal {
+    final now = currentLimaTime.value;
+    return now.hour + (now.minute / 60.0) + (now.second / 3600.0);
+  }
 
   String _formatAmPm(String? timeStr) {
     if (timeStr == null || timeStr.isEmpty) return "08:00 am";
@@ -148,7 +186,9 @@ class HorarioController extends GetxController {
     if (match != null) {
       final weekNum = int.tryParse(match.group(0) ?? '');
       if (weekNum != null) {
-        final weekInfo = weeklyLoad.firstWhereOrNull((w) => w['weekNumber'] == weekNum);
+        final weekInfo = weeklyLoad.firstWhereOrNull(
+          (w) => w['weekNumber'] == weekNum,
+        );
         return weekInfo != null && weekInfo['isHighLoad'] == true;
       }
     }
@@ -184,40 +224,18 @@ class HorarioController extends GetxController {
           final courseDay = (horario['dia'] as String? ?? '').toLowerCase();
           if (courseDay != currentDayName) continue;
 
-          courses.add({
-            ...section,
-            ...horario,
-            'isEvaluation': false,
-          });
+          courses.add({...section, ...horario, 'isEvaluation': false});
         }
         continue;
       }
 
       final courseDay = (section['dia'] as String? ?? '').toLowerCase();
       if (courseDay == currentDayName) {
-        courses.add({
-          ...section,
-          'isEvaluation': false,
-        });
+        courses.add({...section, 'isEvaluation': false});
       }
     }
 
     // 2. Agregar las evaluaciones programadas para este dia
-    final months = [
-      "Enero",
-      "Febrero",
-      "Marzo",
-      "Abril",
-      "Mayo",
-      "Junio",
-      "Julio",
-      "Agosto",
-      "Septiembre",
-      "Octubre",
-      "Noviembre",
-      "Diciembre"
-    ];
-
     for (final assessment in assessmentsList) {
       final dateStr = assessment['date'] as String? ?? '';
       final parts = dateStr.split('-');
@@ -226,8 +244,9 @@ class HorarioController extends GetxController {
           final monthIdx = int.parse(parts[1]) - 1;
           final dayNum = int.parse(parts[2]);
           if (monthIdx >= 0 && monthIdx < 12) {
-            final formattedDate = "$dayNum de ${months[monthIdx]}";
-            if (formattedDate.toLowerCase() == activeDay.dateText.toLowerCase()) {
+            final formattedDate = "$dayNum de ${_months[monthIdx]}";
+            if (formattedDate.toLowerCase() ==
+                activeDay.dateText.toLowerCase()) {
               courses.add({
                 'isEvaluation': true,
                 'curso': assessment['courseName'] ?? 'Evaluación',
@@ -270,4 +289,3 @@ class HorarioController extends GetxController {
     }
   }
 }
-
