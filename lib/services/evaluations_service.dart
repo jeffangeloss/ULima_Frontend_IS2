@@ -28,9 +28,15 @@ class EvaluationSyllabusService {
       final jsonData = await _api.getJson(
         '/grades/me/courses${code == null ? '' : '?code=$code'}',
       );
-      final cursosList = jsonData['syllabi'] as List<dynamic>? ?? [];
+      final List<dynamic> cursosList = jsonData['syllabi'] as List? ?? [];
       _syllabusData = cursosList
-          .map((curso) => CourseSyllabus.fromJson(curso as Map<String, dynamic>))
+          .map((curso) {
+            if (curso is Map) {
+              return CourseSyllabus.fromJson(Map<String, dynamic>.from(curso));
+            }
+            return null;
+          })
+          .whereType<CourseSyllabus>()
           .toList();
 
       final cursosConUrl = jsonData['cursos'] as List<dynamic>? ?? [];

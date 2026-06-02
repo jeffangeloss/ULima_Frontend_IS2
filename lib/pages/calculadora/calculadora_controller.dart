@@ -101,13 +101,18 @@ class CalculadoraController extends GetxController {
     if (notas.isEmpty) return 0.0;
     double suma = 0;
     for (var n in notas) {
-      suma += (n['valor'] * (n['peso'] / 100));
+      final valor = double.tryParse(n['valor']?.toString() ?? '') ?? 0.0;
+      final peso = double.tryParse(n['peso']?.toString() ?? '') ?? 0.0;
+      suma += (valor * (peso / 100.0));
     }
     return suma;
   }
 
   double sumaPesos(List notas) {
-    return notas.fold(0, (sum, item) => sum + (item['peso'] as num));
+    return notas.fold(0.0, (sum, item) {
+      final peso = double.tryParse(item['peso']?.toString() ?? '') ?? 0.0;
+      return sum + peso;
+    });
   }
 
   void agregarNota(

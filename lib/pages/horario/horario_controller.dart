@@ -21,7 +21,7 @@ class HorarioController extends GetxController {
   final weeklyLoad = <Map<String, dynamic>>[].obs;
   final currentLimaTime = _nowInLima().obs;
 
-  List<Map<String, dynamic>> _todasLasSecciones = [];
+  final _todasLasSecciones = <Map<String, dynamic>>[].obs;
   final ApiClient _api = ApiClient();
   Timer? _clockTimer;
 
@@ -111,8 +111,11 @@ class HorarioController extends GetxController {
       final data = await _api.getJson(
         '/schedule/me/sessions${code == null ? '' : '?code=$code'}',
       );
-      _todasLasSecciones = List<Map<String, dynamic>>.from(data['secciones']);
-      update();
+      _todasLasSecciones.assignAll(
+        (data['secciones'] as List? ?? [])
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList(),
+      );
     } catch (e) {
       debugPrint('Error al cargar secciones: $e');
     }
@@ -140,7 +143,9 @@ class HorarioController extends GetxController {
         '/schedule/me/load${code == null ? '' : '?code=$code'}',
       );
       weeklyLoad.assignAll(
-        List<Map<String, dynamic>>.from(data['weeks'] ?? []),
+        (data['weeks'] as List? ?? [])
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList(),
       );
       update();
     } catch (e) {
@@ -160,41 +165,6 @@ class HorarioController extends GetxController {
     return now.hour + (now.minute / 60.0) + (now.second / 3600.0);
   }
 
-  String _formatAmPm(String? timeStr) {
-    if (timeStr == null || timeStr.isEmpty) return "08:00 am";
-    try {
-      final parts = timeStr.split(':');
-      int hour = int.parse(parts[0]);
-      int minute = parts.length > 1 ? int.parse(parts[1]) : 0;
-      final ampm = hour >= 12 ? 'pm' : 'am';
-      int displayHour = hour % 12 == 0 ? 12 : hour % 12;
-      final hStr = displayHour.toString().padLeft(2, '0');
-      final mStr = minute.toString().padLeft(2, '0');
-      return "$hStr:$mStr $ampm";
-    } catch (_) {
-      return "08:00 am";
-    }
-  }
-
-  bool get isActiveWeekHighLoad {
-    final activeDay = currentDay;
-    if (activeDay == null || weeklyLoad.isEmpty) return false;
-
-    // Extraer digito de weekText (e.g. "Semana 2 del ciclo" -> 2)
-    final regExp = RegExp(r'\d+');
-    final match = regExp.firstMatch(activeDay.weekText);
-    if (match != null) {
-      final weekNum = int.tryParse(match.group(0) ?? '');
-      if (weekNum != null) {
-        final weekInfo = weeklyLoad.firstWhereOrNull(
-          (w) => w['weekNumber'] == weekNum,
-        );
-        return weekInfo != null && weekInfo['isHighLoad'] == true;
-      }
-    }
-    return false;
-  }
-
   List<Map<String, dynamic>> get currentDayCourses {
     final activeDay = currentDay;
     if (activeDay == null) return const [];
@@ -203,7 +173,7 @@ class HorarioController extends GetxController {
     final List<dynamic> inscritas = user?.courseProgress?.currentCourses ?? [];
 
     final idsInscritos = inscritas
-        .map((i) => (i['idSeccion'] as String? ?? ''))
+        .map((i) => (i['idSeccion']?.toString() ?? ''))
         .where((id) => id.isNotEmpty)
         .toList();
 
@@ -213,7 +183,8 @@ class HorarioController extends GetxController {
 
     // 1. Agregar las clases regulares
     for (final section in _todasLasSecciones) {
-      final estaInscrito = idsInscritos.contains(section['idSeccion']);
+      final sectionIdStr = section['idSeccion']?.toString() ?? '';
+      final estaInscrito = idsInscritos.contains(sectionIdStr);
       if (!estaInscrito) continue;
 
       final horarios = section['horarios'];
@@ -235,35 +206,35 @@ class HorarioController extends GetxController {
       }
     }
 
-    // 2. Agregar las evaluaciones programadas para este dia
-    for (final assessment in assessmentsList) {
-      final dateStr = assessment['date'] as String? ?? '';
-      final parts = dateStr.split('-');
-      if (parts.length == 3) {
-        try {
-          final monthIdx = int.parse(parts[1]) - 1;
-          final dayNum = int.parse(parts[2]);
+    // 2. Buscar evaluaciones para este dia y asociarlas a las clases regulares
+    for (var course in courses) {
+      final sectionCode = course['codigoSeccion']?.toString().trim() ?? '';
+      final courseName = course['curso']?.toString().toLowerCase().trim() ?? '';
+
+      for (final assessment in assessmentsList) {
+        final dateStr = assessment['date'] as String? ?? '';
+        final parsedDate = DateTime.tryParse(dateStr);
+        if (parsedDate != null) {
+          final dayNum = parsedDate.day;
+          final monthIdx = parsedDate.month - 1;
           if (monthIdx >= 0 && monthIdx < 12) {
             final formattedDate = "$dayNum de ${_months[monthIdx]}";
-            if (formattedDate.toLowerCase() ==
-                activeDay.dateText.toLowerCase()) {
-              courses.add({
-                'isEvaluation': true,
-                'curso': assessment['courseName'] ?? 'Evaluación',
-                'salon': assessment['classroom'] ?? 'Por definir',
-                'color': 'red',
-                'hora_inicio': _formatAmPm(assessment['startTime']),
-                'hora_fin': _formatAmPm(assessment['endTime']),
-                'codigoSeccion': assessment['sectionCode'] ?? '',
-                'docenteCode': '',
-                'idSeccion': assessment['id'] ?? '',
-                'evalNombre': assessment['name'] ?? '',
-                'evalSigla': assessment['code'] ?? '',
-              });
+            final dateMatches = formattedDate.toLowerCase().trim() == activeDay.dateText.toLowerCase().trim();
+            
+            final evalSectionCode = assessment['sectionCode']?.toString().trim() ?? '';
+            final evalCourseName = assessment['courseName']?.toString().toLowerCase().trim() ?? '';
+            
+            final matchesCourse = (evalSectionCode.isNotEmpty && evalSectionCode == sectionCode) ||
+                                  (evalCourseName.isNotEmpty && evalCourseName == courseName);
+
+            if (dateMatches && matchesCourse) {
+              course['isEvaluation'] = true;
+              course['evalSigla'] = assessment['code'] ?? '';
+              course['evalNombre'] = assessment['name'] ?? '';
+              debugPrint("--> MERGED! Set isEvaluation = true for course: ${course['curso']} (${assessment['code']})");
+              break; // Encontrado para esta clase
             }
           }
-        } catch (e) {
-          debugPrint('Error parsing assessment date: $e');
         }
       }
     }

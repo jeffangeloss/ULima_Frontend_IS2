@@ -45,13 +45,24 @@ class MallaService extends GetxService {
   Future<void> load() async {
     if (_courses.isNotEmpty) return;
     final decoded = await _api.getJson('/curriculum/me');
-    final list = (decoded['courses'] as List)
-        .cast<Map<String, dynamic>>()
-        .map(CourseNode.fromJson)
+    final rawCourses = decoded['courses'] as List?;
+    final list = (rawCourses ?? [])
+        .map((item) {
+          if (item is Map) {
+            return CourseNode.fromJson(Map<String, dynamic>.from(item));
+          }
+          return null;
+        })
+        .whereType<CourseNode>()
         .toList();
     _courses.assignAll(list);
+
+    final rawSpecialties = decoded['specialties'] as List?;
     _specialties.assignAll(
-      ((decoded['specialties'] as List?) ?? const []).cast<String>(),
+      (rawSpecialties ?? [])
+          .map((e) => e?.toString() ?? '')
+          .where((e) => e.isNotEmpty)
+          .toList(),
     );
     if (decoded.containsKey('simulation')) {
       final simMap = <String, String>{};

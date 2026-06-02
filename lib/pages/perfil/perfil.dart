@@ -664,7 +664,7 @@ class _EspecialidadSheetState extends State<_EspecialidadSheet> {
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
                 child: Column(
                   children: opciones.map((esp) {
-                    final id = esp['id'] as int;
+                    final id = int.tryParse(esp['id']?.toString() ?? '') ?? 0;
                     final name = esp['name'] as String;
                     final desc = esp['description'] as String? ?? '';
                     final isPrincipal = _principal == id;
