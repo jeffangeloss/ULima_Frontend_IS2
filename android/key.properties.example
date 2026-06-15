@@ -1,0 +1,11 @@
+# Plantilla para la firma de release de Android.
+# 1. Generar el keystore (una sola vez):
+#      keytool -genkey -v -keystore ulimaplus-release.jks -keyalg RSA -keysize 2048 -validity 10000 -alias ulimaplus
+# 2. Copiar este archivo a android/key.properties y completar los valores reales.
+# 3. NO versionar key.properties ni el .jks (ya están en .gitignore).
+
+storePassword=CONTRASEÑA_DEL_KEYSTORE
+keyPassword=CONTRASEÑA_DE_LA_LLAVE
+keyAlias=ulimaplus
+# Ruta al keystore relativa a android/app (o ruta absoluta).
+storeFile=../ulimaplus-release.jks
