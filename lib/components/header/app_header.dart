@@ -34,7 +34,7 @@ class AppHeader extends StatelessWidget {
 
               InkWell(
                 onTap: () {
-                  print(
+                  debugPrint(
                     'Ir a Alertas',
                   ); 
                   //Get.to(() => const AlertasPage()); // Acción al tocar el ícono de notificaciones

@@ -1,7 +1,11 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
+
+import '../pages/login/login_page.dart';
+import 'storage_service.dart';
 
 class ApiException implements Exception {
   ApiException({
@@ -21,11 +25,22 @@ class ApiException implements Exception {
 }
 
 class ApiClient {
-  static const _configuredBaseUrl = String.fromEnvironment('API_BASE_URL');
+  ApiClient({String? configuredBaseUrl})
+    : _configuredBaseUrl = configuredBaseUrl ?? _defaultConfiguredBaseUrl;
+
+  static const _defaultConfiguredBaseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+  );
+  final String _configuredBaseUrl;
 
   String get baseUrl {
     if (_configuredBaseUrl.trim().isNotEmpty) {
-      return _configuredBaseUrl.trim().replaceFirst(RegExp(r'/$'), '');
+      return _sanitizeBaseUrl(_configuredBaseUrl);
+    }
+    if (kReleaseMode) {
+      throw StateError(
+        'API_BASE_URL debe definirse en builds release con --dart-define.',
+      );
     }
     if (kIsWeb) return 'http://localhost:3000';
     if (defaultTargetPlatform == TargetPlatform.android) {
@@ -58,6 +73,13 @@ class ApiClient {
     return _send('PUT', path, token: token, body: body);
   }
 
+  Future<Map<String, dynamic>> deleteJson(
+    String path, {
+    String? token,
+  }) {
+    return _send('DELETE', path, token: token);
+  }
+
   Future<Map<String, dynamic>> _send(
     String method,
     String path, {
@@ -65,12 +87,20 @@ class ApiClient {
     Map<String, String?> query = const {},
     Map<String, dynamic>? body,
   }) async {
+    final resolvedToken = token ?? await StorageService.to.savedToken;
     final request = http.Request(method, _uri(path, query));
-    request.headers.addAll(_headers(token));
+    request.headers.addAll(_headers(resolvedToken));
     if (body != null) request.body = jsonEncode(body);
 
     final streamed = await request.send();
     final resolved = await http.Response.fromStream(streamed);
+
+    if (resolved.statusCode == 401 && !path.contains('/auth/login')) {
+      await StorageService.to.clearSession();
+      Get.offAll(() => const LoginPage());
+      Get.snackbar('Sesión expirada', 'Tu sesión caducó o iniciaste sesión en otro dispositivo.');
+    }
+
     return _decode(resolved);
   }
 
@@ -85,11 +115,26 @@ class ApiClient {
         .replace(queryParameters: params.isEmpty ? null : params);
   }
 
-  Map<String, String> _headers(String? token) => {
-    'Accept': 'application/json',
-    'Content-Type': 'application/json',
-    if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
-  };
+  Map<String, String> _headers(String? token) {
+    final headers = {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    };
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+    try {
+      final code = StorageService.to.savedCode;
+      if (code != null && code.isNotEmpty) {
+        headers['X-User-Code'] = code;
+      }
+    } catch (_) {}
+    return headers;
+  }
+
+  String _sanitizeBaseUrl(String rawBaseUrl) {
+    return rawBaseUrl.trim().replaceFirst(RegExp(r'/$'), '');
+  }
 
   Map<String, dynamic> _decode(http.Response response) {
     final body = response.body.trim();

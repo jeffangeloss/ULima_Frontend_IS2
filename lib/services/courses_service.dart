@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'auth_service.dart';
 import 'api_client.dart';
 
@@ -29,9 +30,9 @@ class CoursesService {
       _coursesData = List<Map<String, dynamic>>.from(cursosList);
 
       _isLoaded = true;
-      print('✓ Datos de cursos cargados: ${_coursesData.length} cursos');
+      debugPrint('✓ Datos de cursos cargados: ${_coursesData.length} cursos');
     } catch (e) {
-      print('✗ Error al cargar datos de cursos: $e');
+      debugPrint('✗ Error al cargar datos de cursos: $e');
       rethrow;
     }
   }
