@@ -300,10 +300,9 @@ class _GoogleButton extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               SvgPicture.asset(
-                'assets/images/Universidad_de_Lima_logo.svg', // Idealmente cambiar a logo de Google
+                'assets/images/google_logo.svg',
                 width: 20,
                 height: 20,
-                colorMapper: palette.logoColorMapper,
               ),
               const SizedBox(width: 12),
               Text(

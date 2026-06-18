@@ -23,9 +23,15 @@ class AuthService extends GetxService {
       <Map<String, dynamic>>[].obs;
   final RxBool _loading = false.obs;
 
-  // Instancia única de Google Sign-In. En web requiere el clientId web.
+  // Instancia única de Google Sign-In.
+  // - Web: requiere `clientId` (el client web) para el botón oficial (GIS).
+  // - Android/iOS: requiere `serverClientId` (el MISMO client web) para que
+  //   `account.authentication.idToken` no sea null. Ese `idToken` se emite con
+  //   `aud = client web`, que es el que el backend verifica en `/auth/google`.
+  //   Sin `serverClientId`, en Android el idToken llega null y el login falla.
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     clientId: kIsWeb ? googleWebClientId : null,
+    serverClientId: kIsWeb ? null : googleWebClientId,
     scopes: const ['email'],
   );
 
@@ -135,6 +141,7 @@ class AuthService extends GetxService {
       final String? idToken = auth.idToken;
 
       if (idToken == null || idToken.isEmpty) {
+        await _resetGoogleAccount();
         return 'No se obtuvo información de Google.';
       }
 
@@ -145,6 +152,7 @@ class AuthService extends GetxService {
 
       final token = response['token']?.toString();
       if (token == null || token.isEmpty) {
+        await _resetGoogleAccount();
         return 'No se recibió token de sesión.';
       }
 
@@ -155,6 +163,7 @@ class AuthService extends GetxService {
       _currentUser.value = user;
       return null;
     } on ApiException catch (e) {
+      await _resetGoogleAccount();
       if (e.code == 'INVALID_DOMAIN') {
         return 'Debes usar tu correo @aloe.ulima.edu.pe.';
       }
@@ -163,8 +172,19 @@ class AuthService extends GetxService {
       }
       return e.message;
     } catch (_) {
+      await _resetGoogleAccount();
       return 'No se pudo iniciar sesión con Google.';
     }
+  }
+
+  /// Limpia la cuenta de Google en caché tras un intento fallido (p. ej. una
+  /// cuenta no-ULima rechazada por el backend). Sin esto, `signIn()` reusaría
+  /// silenciosamente la misma cuenta y el selector no volvería a aparecer.
+  /// En un login exitoso NO se llama, así que la sesión de Google sí se mantiene.
+  Future<void> _resetGoogleAccount() async {
+    try {
+      await _googleSignIn.signOut();
+    } catch (_) {}
   }
 
   Future<void> completeSetup({

@@ -7,6 +7,8 @@ targets:
   - ../../../lib/services/storage_service.dart
   - ../../../lib/services/api_client.dart
   - ../../../lib/models/user_model.dart
+  - ../../../lib/configs/google_auth_config.dart
+  - ../../../lib/components/google_sign_in_button*.dart
 ---
 
 # Auth
@@ -17,6 +19,7 @@ targets:
 | --- | --- |
 | US01 | Iniciar sesión con código y contraseña. |
 | US02 | Cerrar sesión. |
+| US03 | Iniciar sesión con Google (correo institucional `@aloe.ulima.edu.pe`) en web y Android. |
 
 ## Business Rules
 
@@ -106,6 +109,24 @@ targets:
 - El sistema **no permite sesiones concurrentes** para evitar incongruencias de datos (ej. un usuario modificando su perfil desde celular y web simultáneamente).
 - El Backend implementará "Token Versioning" u otro mecanismo para asegurar que al generar un nuevo JWT por un Login, los tokens anteriores del mismo usuario queden invalidados.
 - Si un usuario inicia sesión en un dispositivo nuevo, el dispositivo antiguo recibirá un error HTTP `401`. Esto desencadenará el flujo descrito en la regla BR-AUTH-F-07, expulsando al usuario del dispositivo antiguo de forma segura.
+
+### BR-AUTH-F-10: Google sign-in flow (web + Android)
+- El login con Google canjea un `idToken` de Google por un JWT propio vía `POST /auth/google` con `{ idToken }`.
+- El backend valida que el correo termine en `@aloe.ulima.edu.pe` y que el usuario exista; el resto del flujo (token, navegación) es idéntico a BR-AUTH-F-01.
+- **Configuración de Google OAuth** (`lib/configs/google_auth_config.dart` → `googleWebClientId`):
+  - El `GoogleSignIn` se construye con `clientId` solo en web y `serverClientId` solo en móvil; ambos usan el **mismo client ID web**.
+  - `serverClientId` es obligatorio en Android: sin él, `account.authentication.idToken` es `null` y el login falla con `"No se obtuvo información de Google."`. El `idToken` resultante lleva `aud = client web`, que es el que el backend verifica.
+- **Web** (`kIsWeb == true`):
+  - Se renderiza el botón oficial de Google Identity Services (`renderButton`, ver `google_sign_in_button_web.dart`); `signIn()` no se usa en web en `google_sign_in` 6.x.
+  - La cuenta seleccionada llega por `googleSignIn.onCurrentUserChanged` y `LoginController` la completa con `AuthService.finishGoogleLogin(account)`.
+- **Android** (`kIsWeb == false`):
+  - El botón propio dispara `LoginController.loginWithGoogle()` → `AuthService.loginWithGoogle()` → `_googleSignIn.signIn()` (flujo interactivo nativo) → `finishGoogleLogin(account)`.
+  - Requiere un **OAuth Client de tipo Android** registrado en el mismo proyecto de Google Cloud que el client web, con `package name = com.example.ulima_plus` y la huella **SHA-1** del certificado de firma (debug para desarrollo, release para producción). Este client NO se versiona ni se embebe: Google Play Services lo resuelve en runtime por package name + SHA-1. Sin él, `signIn()` falla con `ApiException: 10` (DEVELOPER_ERROR).
+  - No requiere `google-services.json` ni Firebase (`google_sign_in` no depende de Firebase).
+- **Errores mapeados** (`finishGoogleLogin`):
+  - `403 INVALID_DOMAIN` → `"Debes usar tu correo @aloe.ulima.edu.pe."`
+  - `401 USER_NOT_FOUND` → `"Tu correo no está registrado en el sistema."`
+  - Cancelación del usuario (`account == null`) → sin error, no navega.
 
 ## UI Behavior
 
