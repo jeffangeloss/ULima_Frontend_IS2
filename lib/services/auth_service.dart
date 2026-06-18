@@ -92,7 +92,6 @@ class AuthService extends GetxService {
         return 'No tienes una matrícula activa.';
       }
       return e.message;
-      return 'No se pudo conectar con el servidor.';
     } finally {
       _loading.value = false;
     }
