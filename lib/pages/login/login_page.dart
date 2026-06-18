@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 
+import '../../components/google_sign_in_button.dart';
 import '../../configs/themes.dart';
 import 'login_controller.dart';
 
@@ -270,6 +272,17 @@ class _GoogleButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // En web se usa el botón oficial de Google (GIS); signIn() no funciona en web.
+    if (kIsWeb) {
+      return Obx(
+        () => SizedBox(
+          height: 50,
+          child: controller.submitting.value
+              ? const Center(child: CircularProgressIndicator())
+              : Center(child: googleSignInButton()),
+        ),
+      );
+    }
     return Obx(
       () => SizedBox(
         height: 50,
