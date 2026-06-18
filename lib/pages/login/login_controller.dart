@@ -1,7 +1,11 @@
 // lib/pages/login/login_controller.dart
 
+import 'dart:async';
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../services/auth_service.dart';
 
@@ -13,6 +17,33 @@ class LoginController extends GetxController {
   final passwordVisible = false.obs;
 
   AuthService get _auth => AuthService.to;
+
+  StreamSubscription<GoogleSignInAccount?>? _googleSub;
+
+  @override
+  void onInit() {
+    super.onInit();
+    // En web el login con Google se hace con el botón oficial (renderButton):
+    // la cuenta llega por este stream, no por un Future.
+    if (kIsWeb) {
+      _googleSub =
+          _auth.googleSignIn.onCurrentUserChanged.listen(_onGoogleUserChanged);
+    }
+  }
+
+  Future<void> _onGoogleUserChanged(GoogleSignInAccount? account) async {
+    if (account == null || submitting.value) return;
+    errorMessage.value = null;
+    submitting.value = true;
+    final error = await _auth.finishGoogleLogin(account);
+    submitting.value = false;
+    if (error != null) {
+      errorMessage.value = error;
+      return;
+    }
+    final user = _auth.currentUser!;
+    Get.offAllNamed(user.setupComplete ? '/home' : '/setup-carrera');
+  }
 
   Future<void> submit() async {
     final code = codeController.text.trim();
@@ -58,6 +89,7 @@ class LoginController extends GetxController {
 
   @override
   void onClose() {
+    _googleSub?.cancel();
     codeController.dispose();
     passwordController.dispose();
     super.onClose();

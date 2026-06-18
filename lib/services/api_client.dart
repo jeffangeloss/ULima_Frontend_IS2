@@ -123,12 +123,9 @@ class ApiClient {
     if (token != null && token.isNotEmpty) {
       headers['Authorization'] = 'Bearer $token';
     }
-    try {
-      final code = StorageService.to.savedCode;
-      if (code != null && code.isNotEmpty) {
-        headers['X-User-Code'] = code;
-      }
-    } catch (_) {}
+    // El header X-User-Code se eliminó: era parte del antiguo bypass de auth
+    // (ya retirado del backend) y además rompía el preflight CORS en web,
+    // porque el backend solo permite Content-Type y Authorization.
     return headers;
   }
 

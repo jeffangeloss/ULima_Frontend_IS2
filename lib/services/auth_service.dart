@@ -1,9 +1,11 @@
 // lib/services/auth_service.dart
 // Autenticación real contra el backend + persistencia segura del JWT.
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import '../configs/google_auth_config.dart';
 import '../models/user_model.dart';
 import 'api_client.dart';
 import 'malla_service.dart';
@@ -20,6 +22,22 @@ class AuthService extends GetxService {
   final RxList<Map<String, dynamic>> _especialidades =
       <Map<String, dynamic>>[].obs;
   final RxBool _loading = false.obs;
+
+  // Instancia única de Google Sign-In.
+  // - Web: requiere `clientId` (el client web) para el botón oficial (GIS).
+  // - Android/iOS: requiere `serverClientId` (el MISMO client web) para que
+  //   `account.authentication.idToken` no sea null. Ese `idToken` se emite con
+  //   `aud = client web`, que es el que el backend verifica en `/auth/google`.
+  //   Sin `serverClientId`, en Android el idToken llega null y el login falla.
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    clientId: kIsWeb ? googleWebClientId : null,
+    serverClientId: kIsWeb ? null : googleWebClientId,
+    scopes: const ['email'],
+  );
+
+  /// Expuesta para que la UI de web pueda renderizar el botón oficial y
+  /// escuchar `onCurrentUserChanged`.
+  GoogleSignIn get googleSignIn => _googleSignIn;
 
   UserModel? get currentUser => _currentUser.value;
   Rx<UserModel?> get currentUserRx => _currentUser;
@@ -92,27 +110,38 @@ class AuthService extends GetxService {
         return 'No tienes una matrícula activa.';
       }
       return e.message;
-      return 'No se pudo conectar con el servidor.';
     } finally {
       _loading.value = false;
     }
   }
 
+  /// Login con Google en móvil/escritorio (flujo interactivo `signIn()`).
+  /// En web NO se usa: ahí el botón oficial (`renderButton`) dispara el flujo y
+  /// la cuenta llega por `googleSignIn.onCurrentUserChanged` (ver LoginController).
   Future<String?> loginWithGoogle() async {
     _loading.value = true;
     try {
-      final GoogleSignIn googleSignIn = GoogleSignIn(
-        scopes: ['email'],
-      );
-      final GoogleSignInAccount? account = await googleSignIn.signIn();
+      final account = await _googleSignIn.signIn();
       if (account == null) {
-        return null; // El usuario canceló el popup
+        return null; // El usuario canceló
       }
+      return await finishGoogleLogin(account);
+    } catch (_) {
+      return 'No se pudo iniciar sesión con Google.';
+    } finally {
+      _loading.value = false;
+    }
+  }
 
+  /// Completa el login con una cuenta de Google (web y móvil): obtiene el
+  /// idToken, lo canjea en el backend (`/auth/google`) y guarda la sesión.
+  Future<String?> finishGoogleLogin(GoogleSignInAccount account) async {
+    try {
       final GoogleSignInAuthentication auth = await account.authentication;
       final String? idToken = auth.idToken;
 
       if (idToken == null || idToken.isEmpty) {
+        await _resetGoogleAccount();
         return 'No se obtuvo información de Google.';
       }
 
@@ -123,6 +152,7 @@ class AuthService extends GetxService {
 
       final token = response['token']?.toString();
       if (token == null || token.isEmpty) {
+        await _resetGoogleAccount();
         return 'No se recibió token de sesión.';
       }
 
@@ -133,6 +163,7 @@ class AuthService extends GetxService {
       _currentUser.value = user;
       return null;
     } on ApiException catch (e) {
+      await _resetGoogleAccount();
       if (e.code == 'INVALID_DOMAIN') {
         return 'Debes usar tu correo @aloe.ulima.edu.pe.';
       }
@@ -141,10 +172,19 @@ class AuthService extends GetxService {
       }
       return e.message;
     } catch (_) {
+      await _resetGoogleAccount();
       return 'No se pudo iniciar sesión con Google.';
-    } finally {
-      _loading.value = false;
     }
+  }
+
+  /// Limpia la cuenta de Google en caché tras un intento fallido (p. ej. una
+  /// cuenta no-ULima rechazada por el backend). Sin esto, `signIn()` reusaría
+  /// silenciosamente la misma cuenta y el selector no volvería a aparecer.
+  /// En un login exitoso NO se llama, así que la sesión de Google sí se mantiene.
+  Future<void> _resetGoogleAccount() async {
+    try {
+      await _googleSignIn.signOut();
+    } catch (_) {}
   }
 
   Future<void> completeSetup({
@@ -209,7 +249,7 @@ class AuthService extends GetxService {
     _currentUser.value = null;
     await _storage.clearSession();
     try {
-      await GoogleSignIn().signOut();
+      await _googleSignIn.signOut();
     } catch (_) {}
   }
 
