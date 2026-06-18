@@ -49,8 +49,10 @@ class EvaluationSyllabusService {
       _isLoaded = true;
       debugPrint('✓ Datos de evaluaciones cargados: ${_syllabusData.length} cursos');
     } catch (e) {
+      // No bloquear el arranque: si falla (p. ej. 401 sin sesión), se
+      // inicializa vacío y se reintentará tras el login (_isLoaded sigue false).
       debugPrint('✗ Error al cargar datos de evaluaciones: $e');
-      rethrow;
+      _syllabusData = [];
     }
   }
 

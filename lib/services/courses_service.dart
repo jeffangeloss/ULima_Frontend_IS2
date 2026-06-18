@@ -32,8 +32,11 @@ class CoursesService {
       _isLoaded = true;
       debugPrint('✓ Datos de cursos cargados: ${_coursesData.length} cursos');
     } catch (e) {
+      // No bloquear el arranque de la app: si falla (p. ej. 401 sin sesión
+      // iniciada, por las rutas protegidas), se inicializa vacío y se
+      // reintentará tras el login (_isLoaded permanece en false).
       debugPrint('✗ Error al cargar datos de cursos: $e');
-      rethrow;
+      _coursesData = [];
     }
   }
 
