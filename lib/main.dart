@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '/configs/themes.dart';
 import '/services/auth_service.dart';
+import '/services/alert_service.dart';
 import '/services/courses_service.dart';
 import 'services/evaluations_service.dart';
 import '/services/malla_service.dart';
@@ -24,7 +25,9 @@ void main() async {
     permanent: true,
   );
   Get.put<AuthService>(AuthService(), permanent: true);
+  Get.put<AlertService>(AlertService(), permanent: true);
   Get.put<MallaService>(MallaService(), permanent: true);
+
 
   await Future.wait([
     EvaluationSyllabusService().loadEvaluationData(),
@@ -38,6 +41,11 @@ void main() async {
   if (restored) {
     final user = AuthService.to.currentUser!;
     initialRoute = user.setupComplete ? '/home' : '/setup-carrera';
+    try {
+      await AlertService.to.fetchAlerts();
+    } catch (e) {
+      print('Error loading alerts at startup: $e');
+    }
   } else {
     initialRoute = '/login';
   }

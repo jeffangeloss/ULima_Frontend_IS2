@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 
 import '../../models/malla_models.dart';
 import '../../models/user_model.dart';
+import '../../services/api_client.dart';
 import '../../services/auth_service.dart';
 import '../../services/malla_service.dart';
 import '../../services/storage_service.dart';
