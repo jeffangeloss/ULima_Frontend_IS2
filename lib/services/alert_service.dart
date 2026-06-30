@@ -41,7 +41,7 @@ class AlertService extends GetxService {
     if (user == null) return;
 
     try {
-      await _api.putJson('/alerts/me/$alertId/read', {});
+      await _api.putJson('/alerts/me/$alertId/read', body: {});
       final index = _alerts.indexWhere((a) => a.id == alertId);
       if (index != -1) {
         _alerts[index].isRead = true;
