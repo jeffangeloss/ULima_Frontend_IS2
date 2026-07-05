@@ -1,10 +1,13 @@
 // lib/pages/malla/malla_controller.dart
 // Orquesta el estado de la malla: catálogo + estados por curso + zoom + dos piscinas.
+// TT03: la lógica de dominio (prerrequisitos, derivación de estados, ciclo de
+// estados y mapeo de simulación) vive en lib/domain/malla/malla_logic.dart.
 
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../domain/malla/malla_logic.dart' as malla_logic;
 import '../../models/malla_models.dart';
 import '../../models/user_model.dart';
 import '../../services/api_client.dart';
@@ -171,9 +174,9 @@ class MallaController extends GetxController {
   Map<String, CourseStatus> _knownCourseStatuses(
     Map<String, CourseStatus> source,
   ) {
-    final knownIds = _malla.courses.map((c) => c.id).toSet();
-    return Map.fromEntries(
-      source.entries.where((e) => knownIds.contains(e.key)),
+    return malla_logic.filterKnownCourseStatuses(
+      malla_logic.MallaGraph(_malla.courses),
+      source,
     );
   }
 
@@ -186,9 +189,8 @@ class MallaController extends GetxController {
     };
   }
 
-  bool _isPersistentStatus(CourseStatus status) {
-    return status == CourseStatus.approved || status == CourseStatus.current;
-  }
+  bool _isPersistentStatus(CourseStatus status) =>
+      malla_logic.isPersistentStatus(status);
 
   /// Calcula las filas normalizadas (0-indexed) de los electivos dentro de su
   /// piscina y el max row de cada sección.
@@ -291,23 +293,10 @@ class MallaController extends GetxController {
 
   void cycleStatus(String courseId) {
     final current = statuses[courseId] ?? CourseStatus.locked;
-    if (current == CourseStatus.locked) return;
+    final next = malla_logic.nextCycleStatus(current);
+    if (next == null) return;
     final realStatus = _realStatusFor(courseId);
 
-    CourseStatus next;
-    switch (current) {
-      case CourseStatus.unlocked:
-        next = CourseStatus.current;
-        break;
-      case CourseStatus.current:
-        next = CourseStatus.approved;
-        break;
-      case CourseStatus.approved:
-        next = CourseStatus.unlocked;
-        break;
-      case CourseStatus.locked:
-        return;
-    }
     _syncExplicitSimulationCourse(courseId, next, realStatus);
     statuses[courseId] = next;
     _recomputeDerivedAvailability();
@@ -316,18 +305,8 @@ class MallaController extends GetxController {
     _persistSimulation(courseId, next, realStatus);
   }
 
-  CourseStatus? _statusFromSimulation(String status) {
-    switch (status) {
-      case 'planned':
-        return CourseStatus.current;
-      case 'simulated_completed':
-        return CourseStatus.approved;
-      case 'simulated_available':
-        return CourseStatus.unlocked;
-      default:
-        return null;
-    }
-  }
+  CourseStatus? _statusFromSimulation(String status) =>
+      malla_logic.statusFromSimulation(status);
 
   CourseStatus? _realStatusFor(String courseId) {
     final u = user;
@@ -340,30 +319,15 @@ class MallaController extends GetxController {
     CourseStatus next,
     CourseStatus? realStatus,
   ) {
-    if (realStatus == next) {
-      _explicitSimulationCourseIds.remove(courseId);
-    } else {
+    if (malla_logic.isExplicitSimulation(next, realStatus)) {
       _explicitSimulationCourseIds.add(courseId);
+    } else {
+      _explicitSimulationCourseIds.remove(courseId);
     }
   }
 
-  String? _simulationStatusFor(CourseStatus next, CourseStatus? realStatus) {
-    if (realStatus == next) return null;
-
-    switch (next) {
-      case CourseStatus.current:
-        return 'planned';
-      case CourseStatus.approved:
-        return 'simulated_completed';
-      case CourseStatus.unlocked:
-        return realStatus == CourseStatus.current ||
-                realStatus == CourseStatus.approved
-            ? 'simulated_available'
-            : null;
-      case CourseStatus.locked:
-        return null;
-    }
-  }
+  String? _simulationStatusFor(CourseStatus next, CourseStatus? realStatus) =>
+      malla_logic.simulationStatusFor(next, realStatus);
 
   void _persistSimulation(
     String courseId,
