@@ -13,6 +13,8 @@ import '/services/malla_service.dart';
 import '/services/storage_service.dart';
 import 'pages/home/home_page.dart';
 import 'pages/login/login_page.dart';
+import 'pages/password_reset/forgot_password_page.dart';
+import 'pages/password_reset/reset_password_page.dart';
 import 'pages/setup_carrera/setup_carrera_page.dart';
 
 void main() async {
@@ -68,6 +70,11 @@ class MyApp extends StatelessWidget {
       initialRoute: initialRoute,
       getPages: [
         GetPage(name: '/login', page: () => const LoginPage()),
+        GetPage(
+          name: '/forgot-password',
+          page: () => const ForgotPasswordPage(),
+        ),
+        GetPage(name: '/reset-password', page: () => const ResetPasswordPage()),
         GetPage(name: '/setup-carrera', page: () => const SetupCarreraPage()),
         GetPage(name: '/home', page: () => const HomePage()),
       ],
