@@ -1,8 +1,11 @@
 // lib/services/malla_service.dart
 // Catálogo de la malla + cálculo de estados por alumno.
+// TT03: el cálculo puro (prerrequisitos, derivación de estados, recálculo de
+// simulación) vive en lib/domain/malla/malla_logic.dart; aquí solo se delega.
 
 import 'package:get/get.dart';
 
+import '../domain/malla/malla_logic.dart' as malla_logic;
 import '../models/malla_models.dart';
 import '../models/user_model.dart';
 import 'api_client.dart';
@@ -82,48 +85,13 @@ class MallaService extends GetxService {
   /// Normaliza la especialidad del usuario al nombre oficial del diploma.
   String normalizeSpecialty(String esp) => _especialidadAliases[esp] ?? esp;
 
+  /// Vista pura del catálogo para delegar en malla_logic.
+  malla_logic.MallaGraph get _graph => malla_logic.MallaGraph(_courses);
+
   /// Calcula el mapa { courseId: status } para un usuario.
   Map<String, CourseStatus> computeStatuses(UserModel user) {
     final progress = user.courseProgress ?? CourseProgress.empty();
-    final currentCourseIds = currentCourseIdsFor(progress);
-
-    // Lookup por id.
-    final byId = <String, CourseNode>{for (final c in _courses) c.id: c};
-
-    // Set de cursos aprobados: los niveles aprobados solo incorporan cursos
-    // obligatorios; los electivos aprobados no completan ciclos académicos.
-    final approved = approvedCourseIdsFor(progress);
-
-    final result = <String, CourseStatus>{};
-    for (final c in _courses) {
-      // Si está en curso → current.
-      if (currentCourseIds.contains(c.id)) {
-        result[c.id] = CourseStatus.current;
-        continue;
-      }
-      // Si está aprobado → approved.
-      if (approved.contains(c.id)) {
-        result[c.id] = CourseStatus.approved;
-        continue;
-      }
-
-      // Verificar marcadores de ciclo (electivos).
-      final reqLvl = c.requiredCompletedLevel;
-      if (reqLvl != null &&
-          !hasCompletedMandatoryCyclesFromApprovedIds(approved, reqLvl)) {
-        result[c.id] = CourseStatus.locked;
-        continue;
-      }
-
-      // Verificar prerrequisitos concretos.
-      final allPrereqsOk = c.coursePrerequisites.every((p) {
-        if (!byId.containsKey(p)) return false;
-        return approved.contains(p);
-      });
-
-      result[c.id] = allPrereqsOk ? CourseStatus.unlocked : CourseStatus.locked;
-    }
-    return result;
+    return malla_logic.computeStatuses(_graph, progress);
   }
 
   /// Recalcula sólo los estados derivados (`locked` / `unlocked`) usando los
@@ -134,93 +102,42 @@ class MallaService extends GetxService {
     required Map<String, CourseStatus> currentStatuses,
     Set<String> fixedStatusCourseIds = const <String>{},
   }) {
-    final byId = <String, CourseNode>{for (final c in _courses) c.id: c};
-    final approved = currentStatuses.entries
-        .where((entry) => entry.value == CourseStatus.approved)
-        .map((entry) => entry.key)
-        .toSet();
-
-    final result = <String, CourseStatus>{};
-    for (final c in visibleCourses) {
-      final existing = currentStatuses[c.id];
-      if ((existing != null && fixedStatusCourseIds.contains(c.id)) ||
-          existing == CourseStatus.approved ||
-          existing == CourseStatus.current) {
-        result[c.id] = existing!;
-        continue;
-      }
-
-      final reqLvl = c.requiredCompletedLevel;
-      if (reqLvl != null &&
-          !hasCompletedMandatoryCyclesFromApprovedIds(approved, reqLvl)) {
-        result[c.id] = CourseStatus.locked;
-        continue;
-      }
-
-      final allPrereqsOk = c.coursePrerequisites.every((p) {
-        if (!byId.containsKey(p)) return false;
-        return approved.contains(p);
-      });
-
-      result[c.id] = allPrereqsOk ? CourseStatus.unlocked : CourseStatus.locked;
-    }
-
-    return result;
+    return malla_logic.recomputeDerivedAvailability(
+      graph: _graph,
+      visibleCourses: visibleCourses,
+      currentStatuses: currentStatuses,
+      fixedStatusCourseIds: fixedStatusCourseIds,
+    );
   }
 
   /// IDs aprobados derivados del progreso persistido.
-  ///
-  /// `approvedLevels` representa ciclos completos, pero cada ciclo completo
-  /// solo aporta cursos obligatorios. Los electivos aprobados se agregan como
-  /// cursos individuales y no sirven para completar un ciclo académico.
   Set<String> approvedCourseIdsFor(CourseProgress progress) {
-    final approved = <String>{};
-    for (final c in _courses) {
-      if (!c.isElective && progress.approvedLevels.contains(c.level)) {
-        approved.add(c.id);
-      }
-    }
-    approved.addAll(progress.approvedElectives);
-    return approved;
+    return malla_logic.approvedCourseIdsForProgress(_graph, progress);
   }
 
-  /// IDs de cursos en ciclo actual. Soporta el formato nuevo (`idCurso`) y
-  /// claves equivalentes por si quedan sesiones antiguas guardadas.
+  /// IDs de cursos en ciclo actual.
   Set<String> currentCourseIdsFor(CourseProgress progress) {
-    final ids = <String>{};
-    for (final currentCourse in progress.currentCourses) {
-      final rawId =
-          currentCourse['courseId'] ??
-          currentCourse['idCurso'] ??
-          currentCourse['id'];
-      if (rawId != null) ids.add(rawId.toString());
-    }
-    return ids;
+    return malla_logic.currentCourseIdsForProgress(progress);
   }
 
   /// True si todos los cursos obligatorios hasta `throughLevel` están aprobados.
-  ///
-  /// Los electivos se excluyen siempre, incluso si pertenecen visualmente a un
-  /// nivel anterior o ya fueron aprobados.
   bool hasCompletedMandatoryCyclesFromApprovedIds(
     Set<String> approvedCourseIds,
     int throughLevel,
   ) {
-    return _courses
-        .where((c) => !c.isElective && c.level <= throughLevel)
-        .every((c) => approvedCourseIds.contains(c.id));
+    return malla_logic.hasCompletedMandatoryCycles(
+      _graph,
+      approvedCourseIds,
+      throughLevel,
+    );
   }
 
   bool hasCompletedMandatoryCyclesFromStatuses(
     Map<String, CourseStatus> statuses,
     int throughLevel,
   ) {
-    final approvedCourseIds = statuses.entries
-        .where((entry) => entry.value == CourseStatus.approved)
-        .map((entry) => entry.key)
-        .toSet();
     return hasCompletedMandatoryCyclesFromApprovedIds(
-      approvedCourseIds,
+      malla_logic.approvedCourseIdsFromStatuses(statuses),
       throughLevel,
     );
   }
