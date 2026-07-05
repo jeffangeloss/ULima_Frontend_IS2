@@ -17,13 +17,15 @@ class AnunciosTab extends StatelessWidget {
         return const EmptyTabState(
           icon: Icons.campaign_outlined,
           title: 'Aún no hay publicaciones',
-          message: 'Todavía no hay anuncios de los delegados. Cuando se publique alguno, lo verás en esta sección.',
+          message:
+              'Todavía no hay anuncios de los delegados. Cuando se publique alguno, lo verás en esta sección.',
         );
       }
 
       return Padding(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
         child: ListView.builder(
+          padding: EdgeInsets.zero,
           itemCount: control.anuncios.length,
           itemBuilder: (context, index) {
             final anuncio = control.anuncios[index];

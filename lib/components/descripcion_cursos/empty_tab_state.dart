@@ -16,9 +16,10 @@ class EmptyTabState extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
-    return Center(
+    return Align(
+      alignment: Alignment.topCenter,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32),
+        padding: const EdgeInsets.fromLTRB(32, 28, 32, 0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

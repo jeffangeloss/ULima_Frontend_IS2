@@ -19,6 +19,7 @@ class ProfilePage extends StatelessWidget {
     return Scaffold(
       backgroundColor: MaterialTheme.pageBg(brightness),
       body: SafeArea(
+        top: false,
         child: Column(
           children: [
             _ProfileHeader(),
@@ -49,42 +50,68 @@ class ProfilePage extends StatelessWidget {
 // ── Header ────────────────────────────────────────────────────────────────────
 
 class _ProfileHeader extends StatelessWidget {
+  String _initialsFromAcademicName(
+    String fullName,
+    String firstName,
+    String lastName,
+  ) {
+    final parts = fullName
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .toList();
+
+    if (parts.length >= 3) {
+      return '${parts[2][0]}${parts[0][0]}'.toUpperCase();
+    }
+
+    if (parts.length == 2) {
+      return '${parts[1][0]}${parts[0][0]}'.toUpperCase();
+    }
+
+    return ((firstName.isNotEmpty ? firstName[0] : '') +
+            (lastName.isNotEmpty ? lastName[0] : ''))
+        .toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = AuthService.to.currentUser;
     final brightness = Theme.of(context).brightness;
-    final initials =
-        ((user?.firstName.isNotEmpty == true ? user!.firstName[0] : '') +
-                (user?.lastName.isNotEmpty == true ? user!.lastName[0] : ''))
-            .toUpperCase();
+    final isDark = brightness == Brightness.dark;
+    final initials = _initialsFromAcademicName(
+      user?.fullName ?? '',
+      user?.firstName ?? '',
+      user?.lastName ?? '',
+    );
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
       decoration: BoxDecoration(
-        color: MaterialTheme.headerColor(brightness),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x22000000),
-            blurRadius: 16,
-            offset: Offset(0, 4),
+        color: isDark ? const Color(0xFF262630) : const Color(0xFFFFF2EC),
+        border: Border(
+          bottom: BorderSide(
+            color: isDark ? const Color(0xFF343440) : const Color(0xFFE5E5E5),
+            width: 1,
           ),
-        ],
+        ),
       ),
       child: Row(
         children: [
           Container(
-            width: 56,
-            height: 56,
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.25),
-              borderRadius: BorderRadius.circular(16),
+              color: MaterialTheme.primaryColor.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(14),
             ),
             alignment: Alignment.center,
             child: Text(
               initials,
               style: const TextStyle(
-                color: Colors.white,
-                fontSize: 22,
+                color: MaterialTheme.primaryDark,
+                fontSize: 20,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -96,8 +123,8 @@ class _ProfileHeader extends StatelessWidget {
               children: [
                 Text(
                   user?.fullName ?? '',
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: isDark ? Colors.white : const Color(0xFF2D2D2D),
                     fontSize: 17,
                     fontWeight: FontWeight.w900,
                   ),
@@ -106,9 +133,11 @@ class _ProfileHeader extends StatelessWidget {
                 Text(
                   user?.code ?? '',
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.82),
+                    color: isDark
+                        ? const Color(0xFFB0B0C0)
+                        : const Color(0xFF666666),
                     fontSize: 13,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
@@ -188,7 +217,11 @@ class _CarreraCard extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.lock_outline, size: 13, color: MaterialTheme.labelColor(brightness)),
+                Icon(
+                  Icons.lock_outline,
+                  size: 13,
+                  color: MaterialTheme.labelColor(brightness),
+                ),
                 const SizedBox(width: 4),
                 Text(
                   'Fija',
@@ -804,7 +837,10 @@ class _EspecialidadSheetState extends State<_EspecialidadSheet> {
               child: Text(
                 'No hay especializaciones disponibles para tu carrera.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: MaterialTheme.placeholderText(brightness), fontSize: 13),
+                style: TextStyle(
+                  color: MaterialTheme.placeholderText(brightness),
+                  fontSize: 13,
+                ),
               ),
             )
           else

@@ -17,13 +17,15 @@ class AsesoriasTab extends StatelessWidget {
         return const EmptyTabState(
           icon: Icons.videocam_outlined,
           title: 'Aún no hay asesorías programadas',
-          message: 'Todavía no hay horarios de asesoría publicados. Cuando el docente los comparta, podrás verlos aquí.',
+          message:
+              'Todavía no hay horarios de asesoría publicados. Cuando el docente los comparta, podrás verlos aquí.',
         );
       }
 
       return Padding(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
         child: ListView.builder(
+          padding: EdgeInsets.zero,
           itemCount: control.asesorias.length,
           itemBuilder: (context, index) {
             final asesoria = control.asesorias[index];
