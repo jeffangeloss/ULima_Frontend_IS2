@@ -4,8 +4,10 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../configs/themes.dart';
 import '../../models/malla_models.dart';
+import '../../services/api_client.dart';
 import '../../services/auth_service.dart';
 import '../../services/malla_service.dart';
+import '../../services/password_reset_service.dart';
 import '../login/login_page.dart';
 
 class ProfilePage extends StatelessWidget {
@@ -29,6 +31,8 @@ class ProfilePage extends StatelessWidget {
                     _CarreraCard(),
                     SizedBox(height: 16),
                     _ConfigAcademicaSection(),
+                    SizedBox(height: 16),
+                    _SeguridadSection(),
                     SizedBox(height: 28),
                     _LogoutButton(),
                   ],
@@ -496,6 +500,151 @@ class _InteresChip extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Sección "Seguridad" ───────────────────────────────────────────────────────
+
+class _SeguridadSection extends StatelessWidget {
+  const _SeguridadSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 2, bottom: 10),
+          child: Text(
+            'Seguridad',
+            style: TextStyle(
+              color: MaterialTheme.textPrimary(brightness),
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.2,
+            ),
+          ),
+        ),
+        const _ResetPasswordCard(),
+      ],
+    );
+  }
+}
+
+/// Tarjeta "Restablecer contraseña": pide el código al backend (requestMe),
+/// muestra el correo enmascarado y lleva directo al paso 2 del flujo.
+class _ResetPasswordCard extends StatefulWidget {
+  const _ResetPasswordCard();
+
+  @override
+  State<_ResetPasswordCard> createState() => _ResetPasswordCardState();
+}
+
+class _ResetPasswordCardState extends State<_ResetPasswordCard> {
+  bool _sending = false;
+
+  Future<void> _start() async {
+    final user = AuthService.to.currentUser;
+    if (user == null || _sending) return;
+
+    setState(() => _sending = true);
+    try {
+      final result = await PasswordResetService().requestMe();
+      final maskedEmail = result.maskedEmail;
+      Get.toNamed(
+        '/reset-password',
+        arguments: {'identifier': user.code, 'maskedEmail': maskedEmail},
+      );
+      Get.snackbar(
+        'Código enviado',
+        maskedEmail.isEmpty
+            ? result.message
+            : 'Enviamos un código de verificación a $maskedEmail.',
+      );
+    } on ApiException catch (e) {
+      Get.snackbar('Error', e.message);
+    } catch (_) {
+      Get.snackbar('Error', 'No se pudo enviar el código. Intenta de nuevo.');
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+
+    return GestureDetector(
+      onTap: _start,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: MaterialTheme.cardBg(brightness),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: MaterialTheme.borderColor(brightness)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: MaterialTheme.espPrincipalBg(brightness),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              alignment: Alignment.center,
+              child: const Icon(
+                LucideIcons.keyRound,
+                color: MaterialTheme.primaryDark,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Restablecer contraseña',
+                    style: TextStyle(
+                      color: MaterialTheme.textPrimary(brightness),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Te enviaremos un código a tu correo institucional',
+                    style: TextStyle(
+                      color: MaterialTheme.labelColor(brightness),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            if (_sending)
+              const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.2,
+                  color: MaterialTheme.primaryColor,
+                ),
+              )
+            else
+              Icon(
+                LucideIcons.chevronRight,
+                size: 18,
+                color: MaterialTheme.labelColor(brightness),
+              ),
+          ],
+        ),
       ),
     );
   }
