@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../components/descripcion_cursos/asesoria_card.dart';
+import '../../components/descripcion_cursos/empty_tab_state.dart';
 import 'descrip_cursos_controller.dart';
 
 class AsesoriasTab extends StatelessWidget {
@@ -13,7 +14,11 @@ class AsesoriasTab extends StatelessWidget {
   Widget _buildBody(BuildContext context) {
     return Obx(() {
       if (control.asesorias.isEmpty) {
-        return const Center(child: Text('No hay asesorias'));
+        return const EmptyTabState(
+          icon: Icons.videocam_outlined,
+          title: 'Aún no hay asesorías programadas',
+          message: 'Todavía no hay horarios de asesoría publicados. Cuando el docente los comparta, podrás verlos aquí.',
+        );
       }
 
       return Padding(

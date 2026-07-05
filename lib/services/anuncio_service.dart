@@ -13,11 +13,22 @@ class AnuncioService {
       );
       final List<dynamic> anunciosRaw = data['anuncios'] ?? [];
 
-      return anunciosRaw.map((a) {
+      final anuncios = anunciosRaw.map((a) {
         final json = Map<String, dynamic>.from(a as Map);
         final autorJson = Map<String, dynamic>.from(json['autor'] as Map);
         return Anuncio.fromJson(json, autor: UserModel.fromJson(autorJson));
       }).toList();
+
+      anuncios.sort((a, b) {
+        final fechaA = DateTime.tryParse(a.fecha);
+        final fechaB = DateTime.tryParse(b.fecha);
+        if (fechaA == null && fechaB == null) return 0;
+        if (fechaA == null) return 1;
+        if (fechaB == null) return -1;
+        return fechaB.compareTo(fechaA);
+      });
+
+      return anuncios;
     } catch (e) {
       debugPrint('Error cargando anuncios: $e');
       return [];

@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:ulima_plus/pages/descripcion_cursos/descrip_cursos_controller.dart';
 
 import '../../components/descripcion_cursos/anuncio_card.dart';
+import '../../components/descripcion_cursos/empty_tab_state.dart';
 
 class AnunciosTab extends StatelessWidget {
   final String idSeccion;
@@ -13,7 +14,11 @@ class AnunciosTab extends StatelessWidget {
   Widget _buildBody(BuildContext context) {
     return Obx(() {
       if (control.anuncios.isEmpty) {
-        return const Center(child: Text('No hay anuncios'));
+        return const EmptyTabState(
+          icon: Icons.campaign_outlined,
+          title: 'Aún no hay publicaciones',
+          message: 'Todavía no hay anuncios de los delegados. Cuando se publique alguno, lo verás en esta sección.',
+        );
       }
 
       return Padding(
