@@ -6,7 +6,7 @@ import 'package:ulima_plus/components/footer/app_footer.dart';
 import 'package:ulima_plus/components/header/app_header.dart';
 import 'package:ulima_plus/pages/calculadora/calculadora_page.dart';
 import 'package:ulima_plus/pages/horario/horario.dart';
-import 'package:ulima_plus/pages/malla/malla_page.dart';
+import 'package:ulima_plus/pages/malla/malla_list_page.dart';
 import 'package:ulima_plus/services/auth_service.dart';
 import '../perfil/perfil.dart';
 
@@ -27,7 +27,9 @@ class _HomePageState extends State<HomePage> {
 
   //aqui iran las paginas
   late final List<Widget> _pages = [
-    const MallaPage(),
+    // HU19: vista lista de la malla (la clásica malla_page.dart queda sin
+    // referenciar en este PR).
+    const MallaListPage(),
     const CalculadoraPage(),
     const HorarioPage(),
 

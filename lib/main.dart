@@ -13,6 +13,7 @@ import '/services/malla_service.dart';
 import '/services/storage_service.dart';
 import 'pages/home/home_page.dart';
 import 'pages/login/login_page.dart';
+import 'pages/malla/malla_list_controller.dart';
 import 'pages/login/login_controller.dart';
 import 'pages/password_reset/forgot_password_controller.dart';
 import 'pages/password_reset/reset_password_controller.dart';
@@ -99,7 +100,16 @@ class MyApp extends StatelessWidget {
           }),
         ),
         GetPage(name: '/setup-carrera', page: () => const SetupCarreraPage()),
-        GetPage(name: '/home', page: () => const HomePage()),
+        GetPage(
+          name: '/home',
+          page: () => const HomePage(),
+          // HU19: el controller de la tab Malla se asocia a la RUTA (no a un
+          // Get.put dentro del build de la tab) para que sobreviva al cambio
+          // de pestañas y se elimine al salir de /home (logout).
+          binding: BindingsBuilder(() {
+            Get.lazyPut(() => MallaListController());
+          }),
+        ),
       ],
     );
   }

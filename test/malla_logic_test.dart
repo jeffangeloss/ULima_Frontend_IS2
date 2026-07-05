@@ -302,6 +302,155 @@ void main() {
     });
   });
 
+  group('Cascada de simulación (recomputeDerivedAvailabilityCascade, HU19)', () {
+    test('cascada de 3 niveles al revertir: quitar el aprobado simulado de A '
+        're-bloquea B (simulado) y D en la misma llamada (efecto dominó '
+        'completo, a diferencia de la versión de una pasada)', () {
+      // Cadena a ← b ← d. El alumno había simulado aprobar a y b (d quedó
+      // unlocked) y ahora revierte a: la cadena entera debe caer.
+      final result = recomputeDerivedAvailabilityCascade(
+        graph: graphCascada,
+        visibleCourses: graphCascada.courses,
+        currentStatuses: {
+          'a': CourseStatus.unlocked, // revertido por el alumno
+          'b': CourseStatus.approved, // simulado, ya nada lo sostiene
+          'c': CourseStatus.unlocked,
+          'd': CourseStatus.unlocked, // dependía de b
+          'e': CourseStatus.unlocked,
+        },
+      );
+      expect(result['a'], CourseStatus.unlocked);
+      expect(result['b'], CourseStatus.locked);
+      expect(result['c'], CourseStatus.locked);
+      expect(result['d'], CourseStatus.locked);
+      expect(result['e'], CourseStatus.locked);
+    });
+
+    test('cascada hacia adelante A→B→C: con a y b aprobados (simulados) toda '
+        'la descendencia directa queda disponible en una sola llamada y los '
+        'aprobados sostenidos se conservan', () {
+      final result = recomputeDerivedAvailabilityCascade(
+        graph: graphCascada,
+        visibleCourses: graphCascada.courses,
+        currentStatuses: {
+          'a': CourseStatus.approved,
+          'b': CourseStatus.approved,
+          'c': CourseStatus.locked,
+          'd': CourseStatus.locked,
+          'e': CourseStatus.locked,
+        },
+      );
+      // a no tiene prereqs y b está sostenido por a: ambos se conservan.
+      expect(result['a'], CourseStatus.approved);
+      expect(result['b'], CourseStatus.approved);
+      expect(result['c'], CourseStatus.unlocked);
+      expect(result['d'], CourseStatus.unlocked);
+      expect(result['e'], CourseStatus.unlocked);
+    });
+
+    test('no toca approved/current REALES (protectedCourseIds) aunque sus '
+        'prerrequisitos no estén aprobados; sin protección la misma entrada '
+        'sí se degrada en cadena', () {
+      final input = {
+        'a': CourseStatus.unlocked, // el prereq de b/c no está aprobado
+        'b': CourseStatus.approved, // aprobado REAL
+        'c': CourseStatus.current, // cursando REAL
+        'd': CourseStatus.locked,
+        'e': CourseStatus.locked,
+      };
+
+      final protegido = recomputeDerivedAvailabilityCascade(
+        graph: graphCascada,
+        visibleCourses: graphCascada.courses,
+        currentStatuses: Map.of(input),
+        protectedCourseIds: {'b', 'c'},
+      );
+      expect(protegido['b'], CourseStatus.approved);
+      expect(protegido['c'], CourseStatus.current);
+      // d depende de b, que sigue aprobado de verdad → disponible.
+      expect(protegido['d'], CourseStatus.unlocked);
+
+      final sinProteger = recomputeDerivedAvailabilityCascade(
+        graph: graphCascada,
+        visibleCourses: graphCascada.courses,
+        currentStatuses: Map.of(input),
+      );
+      expect(sinProteger['b'], CourseStatus.locked);
+      expect(sinProteger['c'], CourseStatus.locked);
+      expect(sinProteger['d'], CourseStatus.locked);
+    });
+
+    test('revertir NO re-bloquea lo que otro aprobado real sigue sosteniendo', () {
+      // x (real) y a son raíces; f depende de x, b depende de a.
+      final graph = MallaGraph([
+        course('x', level: 1),
+        course('a', level: 1),
+        course('f', level: 2, prerequisites: ['x']),
+        course('b', level: 2, prerequisites: ['a']),
+      ]);
+      final result = recomputeDerivedAvailabilityCascade(
+        graph: graph,
+        visibleCourses: graph.courses,
+        currentStatuses: {
+          'x': CourseStatus.approved, // real
+          'a': CourseStatus.unlocked, // simulación revertida
+          'f': CourseStatus.unlocked,
+          'b': CourseStatus.approved, // simulado colgando de a
+        },
+        protectedCourseIds: {'x'},
+      );
+      expect(result['f'], CourseStatus.unlocked); // x lo sigue sosteniendo
+      expect(result['b'], CourseStatus.locked); // nada sostiene a b
+    });
+
+    test('convergencia sin loops con prerrequisitos circulares', () {
+      // p ⇄ q circulares; r depende de p.
+      final graph = MallaGraph([
+        course('p', level: 1, prerequisites: ['q']),
+        course('q', level: 1, prerequisites: ['p']),
+        course('r', level: 2, prerequisites: ['p']),
+      ]);
+
+      // Ambos aprobados (simulados): se sostienen mutuamente y quedan estables.
+      final estables = recomputeDerivedAvailabilityCascade(
+        graph: graph,
+        visibleCourses: graph.courses,
+        currentStatuses: {
+          'p': CourseStatus.approved,
+          'q': CourseStatus.approved,
+          'r': CourseStatus.locked,
+        },
+      );
+      expect(estables['p'], CourseStatus.approved);
+      expect(estables['q'], CourseStatus.approved);
+      expect(estables['r'], CourseStatus.unlocked);
+
+      // Revertir p: el ciclo colapsa sin loop infinito y r se re-bloquea.
+      final colapso = recomputeDerivedAvailabilityCascade(
+        graph: graph,
+        visibleCourses: graph.courses,
+        currentStatuses: {
+          'p': CourseStatus.unlocked,
+          'q': CourseStatus.approved,
+          'r': CourseStatus.unlocked,
+        },
+      );
+      expect(colapso['p'], CourseStatus.locked);
+      expect(colapso['q'], CourseStatus.locked);
+      expect(colapso['r'], CourseStatus.locked);
+
+      // Un curso autorreferente aprobado (dato corrupto) no se sostiene solo.
+      final auto = course('auto', prerequisites: ['auto']);
+      final autoGraph = MallaGraph([auto]);
+      final autoResult = recomputeDerivedAvailabilityCascade(
+        graph: autoGraph,
+        visibleCourses: autoGraph.courses,
+        currentStatuses: {'auto': CourseStatus.approved},
+      );
+      expect(autoResult['auto'], CourseStatus.locked);
+    });
+  });
+
   group('Ciclo de estados (nextCycleStatus)', () {
     test('avanza unlocked → current → approved → unlocked', () {
       expect(nextCycleStatus(CourseStatus.unlocked), CourseStatus.current);
