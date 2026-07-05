@@ -1,18 +1,15 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import '../models/section_representative_model.dart';
+import 'api_client.dart';
 import 'enrollment_service.dart';
 
 class SectionRepresentativeService {
+  final ApiClient _api = ApiClient();
   final EnrollmentService _enrollmentService = EnrollmentService();
 
   Future<List<SectionRepresentative>> fetchRepresentatives() async {
     try {
-      final String response = await rootBundle.loadString(
-        'assets/data/section_representative.json',
-      );
-      final data = json.decode(response);
+      final data = await _api.getJson('/section-management/representatives');
       final List<dynamic> raw = data['sectionRepresentatives'] ?? [];
       return raw.map((r) => SectionRepresentative.fromJson(r)).toList();
     } catch (e) {

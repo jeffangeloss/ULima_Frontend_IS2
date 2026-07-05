@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 
+import '../../components/google_sign_in_button.dart';
 import '../../configs/themes.dart';
 import 'login_controller.dart';
 
@@ -75,18 +77,51 @@ class _LoginCard extends StatelessWidget {
                 autofillHints: const [AutofillHints.username],
               ),
               const SizedBox(height: 18),
-              _UnderlineField(
-                controller: controller.passwordController,
-                palette: palette,
-                hint: 'Contraseña',
-                obscureText: true,
-                textInputAction: TextInputAction.done,
-                autofillHints: const [AutofillHints.password],
-                onSubmitted: (_) => controller.submit(),
+              Obx(
+                () => _UnderlineField(
+                  controller: controller.passwordController,
+                  palette: palette,
+                  hint: 'Contraseña',
+                  obscureText: !controller.passwordVisible.value,
+                  textInputAction: TextInputAction.done,
+                  autofillHints: const [AutofillHints.password],
+                  onSubmitted: (_) => controller.submit(),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      controller.passwordVisible.value
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                      size: 20,
+                      color: palette.fieldHint,
+                    ),
+                    onPressed: () => controller.passwordVisible.toggle(),
+                    splashRadius: 18,
+                  ),
+                ),
               ),
               _ErrorMessage(controller: controller, palette: palette),
               const SizedBox(height: 28),
               _EntrarButton(controller: controller, palette: palette),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(child: Divider(color: palette.fieldLine)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text(
+                      'O inicia sesión con',
+                      style: TextStyle(
+                        color: palette.fieldHint,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  Expanded(child: Divider(color: palette.fieldLine)),
+                ],
+              ),
+              const SizedBox(height: 24),
+              _GoogleButton(controller: controller, palette: palette),
             ],
           ),
         ),
@@ -105,6 +140,7 @@ class _UnderlineField extends StatelessWidget {
     this.autofillHints,
     this.obscureText = false,
     this.onSubmitted,
+    this.suffixIcon,
   });
 
   final TextEditingController controller;
@@ -115,6 +151,7 @@ class _UnderlineField extends StatelessWidget {
   final Iterable<String>? autofillHints;
   final bool obscureText;
   final ValueChanged<String>? onSubmitted;
+  final Widget? suffixIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -138,6 +175,7 @@ class _UnderlineField extends StatelessWidget {
           fontSize: 15,
           fontWeight: FontWeight.w400,
         ),
+        suffixIcon: suffixIcon,
         contentPadding: const EdgeInsets.symmetric(vertical: 12),
         isDense: true,
         border: UnderlineInputBorder(
@@ -221,6 +259,61 @@ class _EntrarButton extends StatelessWidget {
                     letterSpacing: 0.3,
                   ),
                 ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GoogleButton extends StatelessWidget {
+  const _GoogleButton({required this.controller, required this.palette});
+  final LoginController controller;
+  final _LoginPalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    // En web se usa el botón oficial de Google (GIS); signIn() no funciona en web.
+    if (kIsWeb) {
+      return Obx(
+        () => SizedBox(
+          height: 50,
+          child: controller.submitting.value
+              ? const Center(child: CircularProgressIndicator())
+              : Center(child: googleSignInButton()),
+        ),
+      );
+    }
+    return Obx(
+      () => SizedBox(
+        height: 50,
+        child: OutlinedButton(
+          onPressed: controller.submitting.value ? null : controller.loginWithGoogle,
+          style: OutlinedButton.styleFrom(
+            backgroundColor: palette.card,
+            foregroundColor: palette.fieldText,
+            side: BorderSide(color: palette.fieldLine),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SvgPicture.asset(
+                'assets/images/google_logo.svg',
+                width: 20,
+                height: 20,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Google',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

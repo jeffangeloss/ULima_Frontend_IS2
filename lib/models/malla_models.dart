@@ -126,18 +126,24 @@ class CourseNode {
 
   factory CourseNode.fromJson(Map<String, dynamic> json) {
     return CourseNode(
-      id: json['id'] as String,
+      id: (json['id'] ?? '').toString(),
       code: (json['code'] ?? '').toString(),
-      name: json['name'] as String,
+      name: (json['name'] ?? '').toString(),
       credits: (json['credits'] as num?)?.toInt() ?? 3,
-      level: (json['level'] as num).toInt(),
-      prerequisites:
-          (json['prerequisites'] as List?)?.cast<String>() ?? const <String>[],
-      category: _parseCategory(json['category'] as String?),
+      level: (json['level'] as num?)?.toInt() ?? 1,
+      prerequisites: (json['prerequisites'] as List?)
+              ?.map((e) => e?.toString() ?? '')
+              .where((e) => e.isNotEmpty)
+              .toList() ??
+          const <String>[],
+      category: _parseCategory(json['category']?.toString()),
       row: (json['row'] as num?)?.toInt() ?? 0,
-      specialties:
-          (json['specialties'] as List?)?.cast<String>() ?? const <String>[],
-      externalFaculty: json['externalFaculty'] as String?,
+      specialties: (json['specialties'] as List?)
+              ?.map((e) => e?.toString() ?? '')
+              .where((e) => e.isNotEmpty)
+              .toList() ??
+          const <String>[],
+      externalFaculty: json['externalFaculty']?.toString(),
     );
   }
 }
@@ -173,19 +179,20 @@ class CourseProgress {
     final rawCourses = (json['currentCourses'] as List?) ?? [];
     final List<Map<String, dynamic>> processedCourses = rawCourses
         .map((e) {
-          if (e is Map<String, dynamic>) return e;
+          if (e is Map) return Map<String, dynamic>.from(e);
           // Si es un String antiguo, lo convertimos a mapa para que no rompa la app
           return {'idSeccion': e.toString(), 'idCurso': 'desconocido'};
         })
-        .toList()
-        .cast<Map<String, dynamic>>();
+        .toList();
 
     return CourseProgress(
       approvedLevels: ((json['approvedLevels'] as List?) ?? const [])
-          .map<int>((e) => (e as num).toInt())
+          .map((e) => e is num ? e.toInt() : (int.tryParse(e?.toString() ?? '') ?? 0))
+          .where((e) => e > 0)
           .toSet(),
       approvedElectives: ((json['approvedElectives'] as List?) ?? const [])
-          .cast<String>()
+          .map((e) => e?.toString() ?? '')
+          .where((e) => e.isNotEmpty)
           .toSet(),
       currentCourses: processedCourses,
     );

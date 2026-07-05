@@ -1,15 +1,13 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import '../models/enrollment_model.dart';
+import 'api_client.dart';
 
 class EnrollmentService {
+  final ApiClient _api = ApiClient();
+
   Future<List<Enrollment>> fetchEnrollments() async {
     try {
-      final String response = await rootBundle.loadString(
-        'assets/data/enrollments.json',
-      );
-      final data = json.decode(response);
+      final data = await _api.getJson('/course-detail/enrollments');
       final List<dynamic> raw = data['enrollments'] ?? [];
       return raw.map((e) => Enrollment.fromJson(e)).toList();
     } catch (e) {

@@ -1,0 +1,44 @@
+---
+name: Schedule
+description: Academic schedule, evaluation calendar, and weekly load visualization.
+targets:
+  - ../../../lib/pages/horario/**
+  - ../../../lib/services/evaluations_service.dart
+  - ../../../lib/services/seccion_service.dart
+  - ../../../assets/data/schedule_days.json
+  - ../../../assets/data/evaluaciones.json
+---
+
+# Schedule
+
+## Requirements
+
+- R19: Students can view exams organized by week and day.
+- R22: The system calculates evaluations per week.
+- R23: High-load weeks are identified.
+- R24: Class blocks show the classroom for each specific scheduled session.
+- R25: Course colors can be rendered from backend-provided hex colors.
+- R26: The schedule grid shows the current-time indicator for the current Lima day.
+
+## UI Behavior
+
+- **Unified schedule and evaluations**: `HorarioController` combines regular class sessions with scheduled assessments for the selected day and renders both in the same time grid.
+- **Dynamic date mapping**: Assessments from `/schedule/me/assessments` include an ISO date that is mapped to the day text format used by `activeDay.dateText`.
+- **Classrooms per session**: Each regular block uses `salon`/`aula` from that session, so a section can have different classrooms on different days.
+- **Course colors**: Regular class blocks accept `color` as either a legacy name (`blue`, `green`, etc.) or a hex value in `#RRGGBB`/`#AARRGGBB` format.
+- **Current-time line**: The grid shows a red current-time line only when the selected day is the current date in Lima, calculated as UTC-5, and the current time is between 7:00 and 22:00.
+- **Evaluation highlight**: Assessment blocks use the existing highlighted evaluation card and open the existing GetX details dialog when tapped.
+- **High-load alert**: If the active academic week has 3 or more assessments, `isActiveWeekHighLoad` is true and the UI shows the existing warning banner under the day selector.
+
+## API Dependencies
+
+- `GET /schedule/me/sessions`
+- `GET /schedule/me/assessments`
+- `GET /schedule/me/load`
+
+## Verification
+
+- Verify that evaluation cards and regular classes coexist in the same time grid.
+- Verify that regular class blocks render per-session classrooms and hex colors.
+- Verify that the current-time line appears only on the current Lima day and only within schedule hours.
+- Verify that the high-load banner appears only in weeks with 3+ assessments.

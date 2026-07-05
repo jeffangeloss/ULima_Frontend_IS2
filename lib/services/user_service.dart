@@ -1,17 +1,12 @@
-import 'dart:convert';
-
-import 'package:flutter/services.dart';
-
 import '../models/user_model.dart';
+import 'api_client.dart';
 
 class UserService {
-  Future<List<UserModel>> fetchUsers() async {
-    final String response = await rootBundle.loadString(
-      'assets/data/users.json',
-    );
+  final ApiClient _api = ApiClient();
 
-    final data = json.decode(response);
-    final List users = data['users'];
+  Future<List<UserModel>> fetchUsers() async {
+    final data = await _api.getJson('/academic-profile/users');
+    final List users = data['users'] ?? [];
 
     return users.map((u) => UserModel.fromJson(u)).toList();
   }

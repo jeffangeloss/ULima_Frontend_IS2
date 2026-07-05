@@ -16,11 +16,11 @@ class EvaluationComponent {
   /// Convertir desde JSON
   factory EvaluationComponent.fromJson(Map<String, dynamic> json) {
     return EvaluationComponent(
-      id: json['id'] ?? '',
-      nombre: json['nombre'] ?? '',
-      sigla: json['sigla'] ?? '',
-      peso: (json['peso'] as num).toDouble(),
-      tipo: json['tipo'] ?? '',
+      id: json['id']?.toString() ?? '',
+      nombre: json['nombre']?.toString() ?? '',
+      sigla: json['sigla']?.toString() ?? '',
+      peso: double.tryParse(json['peso']?.toString() ?? '') ?? 0.0,
+      tipo: json['tipo']?.toString() ?? '',
     );
   }
 
@@ -38,11 +38,13 @@ class EvaluationComponent {
 class CourseSyllabus {
   final String cursoId;
   final String cursoNombre;
+  final String? silaboUrl;
   final List<EvaluationComponent> evaluaciones;
 
   CourseSyllabus({
     required this.cursoId,
     required this.cursoNombre,
+    this.silaboUrl,
     required this.evaluaciones,
   });
 
@@ -50,15 +52,20 @@ class CourseSyllabus {
 
   /// Convertir desde JSON
   factory CourseSyllabus.fromJson(Map<String, dynamic> json) {
-    final evaluacionesList = (json['evaluaciones'] as List<dynamic>? ?? [])
-        .map(
-          (eval) => EvaluationComponent.fromJson(eval as Map<String, dynamic>),
-        )
-        .toList();
+    final evaluacionesList = (json['evaluaciones'] as List?)
+        ?.map((eval) {
+          if (eval is Map) {
+            return EvaluationComponent.fromJson(Map<String, dynamic>.from(eval));
+          }
+          return null;
+        })
+        .whereType<EvaluationComponent>()
+        .toList() ?? const [];
 
     return CourseSyllabus(
-      cursoId: json['cursoId'] ?? '',
-      cursoNombre: json['cursoNombre'] ?? '',
+      cursoId: json['cursoId']?.toString() ?? '',
+      cursoNombre: json['cursoNombre']?.toString() ?? '',
+      silaboUrl: json['silaboUrl']?.toString(),
       evaluaciones: evaluacionesList,
     );
   }

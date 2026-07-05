@@ -1,11 +1,14 @@
 // lib/services/auth_service.dart
-// Autenticación con JSON local + persistencia de sesión via StorageService.
+// Autenticación real contra el backend + persistencia segura del JWT.
 
-import 'dart:convert';
-import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:get/get.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
+import '../configs/google_auth_config.dart';
 import '../models/user_model.dart';
+import 'api_client.dart';
+import 'malla_service.dart';
 import 'storage_service.dart';
 
 class AuthService extends GetxService {
@@ -13,14 +16,28 @@ class AuthService extends GetxService {
   static const String invalidCredentialsMessage =
       'Código o contraseña incorrectos.';
 
+  final ApiClient _api = ApiClient();
   final Rx<UserModel?> _currentUser = Rx<UserModel?>(null);
-  final RxList<Map<String, dynamic>> _users = <Map<String, dynamic>>[].obs;
   final RxList<Map<String, dynamic>> _carreras = <Map<String, dynamic>>[].obs;
   final RxList<Map<String, dynamic>> _especialidades =
       <Map<String, dynamic>>[].obs;
-  final RxList<Map<String, dynamic>> _userEspecialidades =
-      <Map<String, dynamic>>[].obs;
   final RxBool _loading = false.obs;
+
+  // Instancia única de Google Sign-In.
+  // - Web: requiere `clientId` (el client web) para el botón oficial (GIS).
+  // - Android/iOS: requiere `serverClientId` (el MISMO client web) para que
+  //   `account.authentication.idToken` no sea null. Ese `idToken` se emite con
+  //   `aud = client web`, que es el que el backend verifica en `/auth/google`.
+  //   Sin `serverClientId`, en Android el idToken llega null y el login falla.
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    clientId: kIsWeb ? googleWebClientId : null,
+    serverClientId: kIsWeb ? null : googleWebClientId,
+    scopes: const ['email'],
+  );
+
+  /// Expuesta para que la UI de web pueda renderizar el botón oficial y
+  /// escuchar `onCurrentUserChanged`.
+  GoogleSignIn get googleSignIn => _googleSignIn;
 
   UserModel? get currentUser => _currentUser.value;
   Rx<UserModel?> get currentUserRx => _currentUser;
@@ -35,178 +52,251 @@ class AuthService extends GetxService {
   String getCareerName(int? id) {
     if (id == null) return '';
     final match = _carreras.firstWhereOrNull((c) => c['id'] == id);
-    return match != null ? match['name'] as String : '';
+    return match != null ? match['name']?.toString() ?? '' : '';
   }
 
   String getEspecialidadName(int id) {
     final match = _especialidades.firstWhereOrNull((e) => e['id'] == id);
-    return match != null ? match['name'] as String : '';
+    return match != null ? match['name']?.toString() ?? '' : '';
   }
 
-  /// Carga el catálogo de usuarios mock desde assets (idempotente).
-  Future<void> _ensureLoaded() async {
-    if (_users.isNotEmpty &&
-        _carreras.isNotEmpty &&
-        _especialidades.isNotEmpty &&
-        _userEspecialidades.isNotEmpty) {
-      return;
-    }
-
-    final raw = await rootBundle.loadString('assets/data/users.json');
-    final decoded = jsonDecode(raw) as Map<String, dynamic>;
-    final list = (decoded['users'] as List).cast<Map<String, dynamic>>();
-    _users.assignAll(list);
-
-    final rawCarreras = await rootBundle.loadString(
-      'assets/data/carreras.json',
-    );
-    _carreras.assignAll(
-      (jsonDecode(rawCarreras) as List).cast<Map<String, dynamic>>(),
-    );
-
-    final rawEspecialidades = await rootBundle.loadString(
-      'assets/data/especialidades.json',
-    );
-    _especialidades.assignAll(
-      (jsonDecode(rawEspecialidades) as List).cast<Map<String, dynamic>>(),
-    );
-
-    final rawUserEspecialidades = await rootBundle.loadString(
-      'assets/data/user_especialidades.json',
-    );
-    _userEspecialidades.assignAll(
-      (jsonDecode(rawUserEspecialidades) as List).cast<Map<String, dynamic>>(),
-    );
-  }
-
-  Map<String, dynamic> _withEspecialidadesFromRelation(
-    Map<String, dynamic> userJson,
-  ) {
-    final copy = Map<String, dynamic>.from(userJson);
-    final userCode = copy['code'].toString();
-    final userEspIds = _userEspecialidades
-        .where((ue) => ue['user_code'].toString() == userCode)
-        .map((ue) => (ue['especialidad_id'] as num).toInt())
-        .toList();
-
-    if (userEspIds.isNotEmpty) {
-      copy['especialidades'] = userEspIds;
-    }
-    return copy;
-  }
-
-  /// Intenta restaurar la sesión guardada en local storage.
-  /// Devuelve true si se restauró correctamente.
   Future<bool> tryRestoreSession() async {
-    final code = _storage.savedCode;
-    if (code == null) return false;
-    await _ensureLoaded();
-    final match = _users.firstWhereOrNull((u) => u['code'].toString() == code);
-    if (match == null) {
+    final token = await _storage.savedToken;
+    if (token == null || token.isEmpty) return false;
+
+    try {
+      final response = await _api.getJson('/auth/me', token: token);
+      final user = UserModel.fromJson(_mapFrom(response['user']));
+      await _loadCatalogs(token: token, careerId: user.careerId);
+      _currentUser.value = user;
+      await _storage.saveCode(user.code);
+      return true;
+    } on ApiException {
+      await _storage.clearSession();
+      return false;
+    } catch (_) {
       await _storage.clearSession();
       return false;
     }
-    final user = UserModel.fromJson(_withEspecialidadesFromRelation(match));
-    await _applyStoredSetup(user);
-
-    _currentUser.value = user;
-    return true;
   }
 
-  /// Intenta autenticar al usuario. Devuelve null si OK, o mensaje de error.
   Future<String?> login({
     required String code,
     required String password,
   }) async {
     _loading.value = true;
     try {
-      await _ensureLoaded();
-      final normalizedCode = code.trim();
-      final match = _users.firstWhereOrNull(
-        (u) => u['code'].toString() == normalizedCode,
+      final response = await _api.postJson(
+        '/auth/login',
+        body: {'code': code.trim(), 'password': password},
       );
-      final passwordMatches =
-          match != null && (match['password'] as String?) == password;
-      if (!passwordMatches) return invalidCredentialsMessage;
 
-      final user = UserModel.fromJson(_withEspecialidadesFromRelation(match));
-      await _applyStoredSetup(user);
+      final token = response['token']?.toString();
+      if (token == null || token.isEmpty) {
+        return 'No se recibió token de sesión.';
+      }
+
+      final user = UserModel.fromJson(_mapFrom(response['user']));
+      await _storage.saveToken(token);
+      await _storage.saveCode(user.code);
+      await _loadCatalogs(token: token, careerId: user.careerId);
       _currentUser.value = user;
-      await _storage.saveCode(normalizedCode);
       return null;
-    } catch (e) {
-      return 'Ocurrió un error inesperado: $e';
+    } on ApiException catch (e) {
+      if (e.code == 'USER_NOT_FOUND' || e.code == 'INVALID_PASSWORD') {
+        return invalidCredentialsMessage;
+      }
+      if (e.code == 'NOT_ENROLLED') {
+        return 'No tienes una matrícula activa.';
+      }
+      return e.message;
     } finally {
       _loading.value = false;
     }
   }
 
-  /// Actualiza carrera/especialidades del usuario actual y marca el setup completo.
+  /// Login con Google en móvil/escritorio (flujo interactivo `signIn()`).
+  /// En web NO se usa: ahí el botón oficial (`renderButton`) dispara el flujo y
+  /// la cuenta llega por `googleSignIn.onCurrentUserChanged` (ver LoginController).
+  Future<String?> loginWithGoogle() async {
+    _loading.value = true;
+    try {
+      final account = await _googleSignIn.signIn();
+      if (account == null) {
+        return null; // El usuario canceló
+      }
+      return await finishGoogleLogin(account);
+    } catch (_) {
+      return 'No se pudo iniciar sesión con Google.';
+    } finally {
+      _loading.value = false;
+    }
+  }
+
+  /// Completa el login con una cuenta de Google (web y móvil): obtiene el
+  /// idToken, lo canjea en el backend (`/auth/google`) y guarda la sesión.
+  Future<String?> finishGoogleLogin(GoogleSignInAccount account) async {
+    try {
+      final GoogleSignInAuthentication auth = await account.authentication;
+      final String? idToken = auth.idToken;
+
+      if (idToken == null || idToken.isEmpty) {
+        await _resetGoogleAccount();
+        return 'No se obtuvo información de Google.';
+      }
+
+      final response = await _api.postJson(
+        '/auth/google',
+        body: {'idToken': idToken},
+      );
+
+      final token = response['token']?.toString();
+      if (token == null || token.isEmpty) {
+        await _resetGoogleAccount();
+        return 'No se recibió token de sesión.';
+      }
+
+      final user = UserModel.fromJson(_mapFrom(response['user']));
+      await _storage.saveToken(token);
+      await _storage.saveCode(user.code);
+      await _loadCatalogs(token: token, careerId: user.careerId);
+      _currentUser.value = user;
+      return null;
+    } on ApiException catch (e) {
+      await _resetGoogleAccount();
+      if (e.code == 'INVALID_DOMAIN') {
+        return 'Debes usar tu correo @aloe.ulima.edu.pe.';
+      }
+      if (e.code == 'USER_NOT_FOUND') {
+        return 'Tu correo no está registrado en el sistema.';
+      }
+      return e.message;
+    } catch (_) {
+      await _resetGoogleAccount();
+      return 'No se pudo iniciar sesión con Google.';
+    }
+  }
+
+  /// Limpia la cuenta de Google en caché tras un intento fallido (p. ej. una
+  /// cuenta no-ULima rechazada por el backend). Sin esto, `signIn()` reusaría
+  /// silenciosamente la misma cuenta y el selector no volvería a aparecer.
+  /// En un login exitoso NO se llama, así que la sesión de Google sí se mantiene.
+  Future<void> _resetGoogleAccount() async {
+    try {
+      await _googleSignIn.signOut();
+    } catch (_) {}
+  }
+
   Future<void> completeSetup({
     required int careerId,
     int? especialidadPrincipal,
     required List<int> especialidadesInteres,
   }) async {
-    final u = _currentUser.value;
-    if (u == null) return;
-    u.careerId = careerId;
-    u.especialidadPrincipal = especialidadPrincipal;
-    u.especialidadesInteres = List.of(especialidadesInteres);
-    u.setupComplete = true;
+    final user = _currentUser.value;
+    if (user == null) return;
+
+    final token = await _requiredToken();
+    final response = await _api.putJson(
+      '/academic-profile/me/specialties',
+      token: token,
+      body: {
+        'primarySpecialtyId': especialidadPrincipal,
+        'interestSpecialtyIds': especialidadesInteres,
+      },
+    );
+
+    final savedSpecialties = _listFrom(response, 'specialties');
+    final savedPrincipal = savedSpecialties
+        .where((s) => s['selectionType']?.toString() == 'primary')
+        .map((s) => _parseInt(s['specialtyId']))
+        .whereType<int>()
+        .firstOrNull;
+    final savedInterest = savedSpecialties
+        .where((s) => s['selectionType']?.toString() == 'interest')
+        .map((s) => _parseInt(s['specialtyId']))
+        .whereType<int>()
+        .toList();
+
+    user.careerId = careerId;
+    user.especialidadPrincipal = savedPrincipal;
+    user.especialidadesInteres = savedInterest;
+    user.setupComplete = response['setupComplete'] as bool? ?? true;
     _currentUser.refresh();
+
     await _storage.saveSetup(
-      code: u.code,
+      code: user.code,
       careerId: careerId,
-      especialidadPrincipal: especialidadPrincipal,
-      especialidadesInteres: especialidadesInteres,
-      setupComplete: true,
+      especialidadPrincipal: user.especialidadPrincipal,
+      especialidadesInteres: user.especialidadesInteres,
+      setupComplete: user.setupComplete,
     );
   }
 
   Future<void> logout() async {
+    final token = await _storage.savedToken;
+    if (token != null && token.isNotEmpty) {
+      try {
+        await _api.postJson(
+          '/auth/logout',
+          token: token,
+          body: const <String, dynamic>{},
+        );
+      } catch (_) {
+        // Logout es stateless; si el servidor no responde, limpiamos local igual.
+      }
+    }
+    MallaService.to.clear();
     _currentUser.value = null;
     await _storage.clearSession();
+    try {
+      await _googleSignIn.signOut();
+    } catch (_) {}
   }
 
-  Future<void> _applyStoredSetup(UserModel user) async {
-    final code = user.code;
-    final hasUserSetup = _storage.hasSavedSetupFor(code);
-    if (!hasUserSetup && !_storage.hasSavedSetup) return;
+  Future<void> _loadCatalogs({required String token, int? careerId}) async {
+    final careersResponse = await _api.getJson(
+      '/academic-profile/careers',
+      token: token,
+    );
+    _carreras.assignAll(_listFrom(careersResponse, 'careers'));
 
-    final careerId = hasUserSetup
-        ? _storage.savedCareerIdFor(code)
-        : _storage.savedCareerId;
-    if (careerId != null) user.careerId = careerId;
+    final specialtiesResponse = await _api.getJson(
+      '/academic-profile/specialties',
+      token: token,
+      query: {'careerId': careerId?.toString()},
+    );
+    _especialidades.assignAll(_listFrom(specialtiesResponse, 'specialties'));
+  }
 
-    user.setupComplete = hasUserSetup
-        ? _storage.savedSetupCompleteFor(code)
-        : _storage.savedSetupComplete;
-
-    final principal = hasUserSetup
-        ? _storage.savedEspecialidadPrincipalFor(code)
-        : _storage.savedEspecialidadPrincipal;
-    final interes = hasUserSetup
-        ? _storage.savedEspecialidadesInteresFor(code)
-        : _storage.savedEspecialidadesInteres;
-
-    if (principal != null || interes.isNotEmpty) {
-      user.especialidadPrincipal = principal;
-      user.especialidadesInteres = interes;
-    } else {
-      final legacy = hasUserSetup
-          ? _storage.savedEspecialidadesFor(code)
-          : _storage.savedEspecialidades;
-      if (legacy.isNotEmpty) user.especialidadesInteres = legacy;
+  Future<String> _requiredToken() async {
+    final token = await _storage.savedToken;
+    if (token == null || token.isEmpty) {
+      throw Exception('No hay sesión activa.');
     }
+    return token;
+  }
 
-    if (!hasUserSetup && user.careerId != null) {
-      await _storage.saveSetup(
-        code: code,
-        careerId: user.careerId!,
-        especialidadPrincipal: user.especialidadPrincipal,
-        especialidadesInteres: user.especialidadesInteres,
-        setupComplete: user.setupComplete,
-      );
-    }
+  Map<String, dynamic> _mapFrom(dynamic value) {
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) return Map<String, dynamic>.from(value);
+    return <String, dynamic>{};
+  }
+
+  List<Map<String, dynamic>> _listFrom(
+    Map<String, dynamic> response,
+    String key,
+  ) {
+    final raw = response[key];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+  }
+
+  int? _parseInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '');
   }
 }

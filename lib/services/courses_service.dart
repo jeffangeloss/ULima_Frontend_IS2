@@ -1,5 +1,6 @@
-import 'dart:convert';
-import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
+import 'auth_service.dart';
+import 'api_client.dart';
 
 /// Servicio para cargar y gestionar los datos de cursos
 class CoursesService {
@@ -11,6 +12,7 @@ class CoursesService {
 
   CoursesService._internal();
 
+  final ApiClient _api = ApiClient();
   late List<Map<String, dynamic>> _coursesData;
   bool _isLoaded = false;
 
@@ -19,20 +21,22 @@ class CoursesService {
     if (_isLoaded) return;
 
     try {
-      final jsonString = await rootBundle.loadString(
-        'assets/data/courses.json',
+      final code = AuthService.to.currentUser?.code;
+      final jsonData = await _api.getJson(
+        '/grades/me/courses${code == null ? '' : '?code=$code'}',
       );
-
-      final Map<String, dynamic> jsonData = jsonDecode(jsonString);
       final cursosList = jsonData['cursos'] as List<dynamic>? ?? [];
 
       _coursesData = List<Map<String, dynamic>>.from(cursosList);
 
       _isLoaded = true;
-      print('✓ Datos de cursos cargados: ${_coursesData.length} cursos');
+      debugPrint('✓ Datos de cursos cargados: ${_coursesData.length} cursos');
     } catch (e) {
-      print('✗ Error al cargar datos de cursos: $e');
-      rethrow;
+      // No bloquear el arranque de la app: si falla (p. ej. 401 sin sesión
+      // iniciada, por las rutas protegidas), se inicializa vacío y se
+      // reintentará tras el login (_isLoaded permanece en false).
+      debugPrint('✗ Error al cargar datos de cursos: $e');
+      _coursesData = [];
     }
   }
 

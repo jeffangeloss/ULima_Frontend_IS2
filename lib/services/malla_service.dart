@@ -1,12 +1,11 @@
 // lib/services/malla_service.dart
 // Catálogo de la malla + cálculo de estados por alumno.
 
-import 'dart:convert';
-import 'package:flutter/services.dart' show rootBundle;
 import 'package:get/get.dart';
 
 import '../models/malla_models.dart';
 import '../models/user_model.dart';
+import 'api_client.dart';
 import 'auth_service.dart';
 
 class MallaService extends GetxService {
@@ -29,23 +28,49 @@ class MallaService extends GetxService {
 
   final RxList<CourseNode> _courses = <CourseNode>[].obs;
   final RxList<String> _specialties = <String>[].obs;
+  final RxMap<String, String> _simulation = <String, String>{}.obs;
+  final ApiClient _api = ApiClient();
 
   List<CourseNode> get courses => _courses;
   List<String> get availableSpecialties => _specialties;
+  Map<String, String> get simulation => _simulation;
 
-  /// Carga el catálogo desde assets/data/malla_sistemas.json (idempotente).
+  /// Limpia el catálogo en memoria (llamar en logout para evitar cache stale).
+  void clear() {
+    _courses.clear();
+    _specialties.clear();
+  }
+
+  /// Carga el catálogo desde el backend (idempotente).
   Future<void> load() async {
     if (_courses.isNotEmpty) return;
-    final raw = await rootBundle.loadString('assets/data/malla_sistemas.json');
-    final decoded = jsonDecode(raw) as Map<String, dynamic>;
-    final list = (decoded['courses'] as List)
-        .cast<Map<String, dynamic>>()
-        .map(CourseNode.fromJson)
+    final decoded = await _api.getJson('/curriculum/me');
+    final rawCourses = decoded['courses'] as List?;
+    final list = (rawCourses ?? [])
+        .map((item) {
+          if (item is Map) {
+            return CourseNode.fromJson(Map<String, dynamic>.from(item));
+          }
+          return null;
+        })
+        .whereType<CourseNode>()
         .toList();
     _courses.assignAll(list);
+
+    final rawSpecialties = decoded['specialties'] as List?;
     _specialties.assignAll(
-      ((decoded['specialties'] as List?) ?? const []).cast<String>(),
+      (rawSpecialties ?? [])
+          .map((e) => e?.toString() ?? '')
+          .where((e) => e.isNotEmpty)
+          .toList(),
     );
+    if (decoded.containsKey('simulation')) {
+      final simMap = <String, String>{};
+      for (final s in (decoded['simulation'] as List)) {
+        simMap[s['curriculumCourseId'].toString()] = s['status'].toString();
+      }
+      _simulation.assignAll(simMap);
+    }
   }
 
   /// Cantidad máxima de filas observadas en un mismo nivel (para sizing del canvas).
@@ -102,11 +127,12 @@ class MallaService extends GetxService {
   }
 
   /// Recalcula sólo los estados derivados (`locked` / `unlocked`) usando los
-  /// cursos aprobados manualmente en la pantalla. Los estados explícitos
-  /// (`current` / `approved`) se conservan porque son decisión del alumno.
+  /// cursos aprobados manualmente en la pantalla. Los estados explícitos de
+  /// simulación se conservan porque son decisión del alumno.
   Map<String, CourseStatus> recomputeDerivedAvailability({
     required Iterable<CourseNode> visibleCourses,
     required Map<String, CourseStatus> currentStatuses,
+    Set<String> fixedStatusCourseIds = const <String>{},
   }) {
     final byId = <String, CourseNode>{for (final c in _courses) c.id: c};
     final approved = currentStatuses.entries
@@ -117,7 +143,8 @@ class MallaService extends GetxService {
     final result = <String, CourseStatus>{};
     for (final c in visibleCourses) {
       final existing = currentStatuses[c.id];
-      if (existing == CourseStatus.approved ||
+      if ((existing != null && fixedStatusCourseIds.contains(c.id)) ||
+          existing == CourseStatus.approved ||
           existing == CourseStatus.current) {
         result[c.id] = existing!;
         continue;

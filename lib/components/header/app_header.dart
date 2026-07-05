@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:ulima_plus/configs/themes.dart';
+import 'package:ulima_plus/services/alert_service.dart';
+import 'package:ulima_plus/pages/alertas/alertas_page.dart';
 
 class AppHeader extends StatelessWidget {
   const AppHeader({super.key});
@@ -32,37 +35,53 @@ class AppHeader extends StatelessWidget {
                 ),
               ),
 
-              InkWell(
-                onTap: () {
-                  print(
-                    'Ir a Alertas',
-                  ); 
-                  //Get.to(() => const AlertasPage()); // Acción al tocar el ícono de notificaciones
-                },
-                child: Stack(
-                  children: [
-                    Icon(
-                      Icons.notifications_none,
-                      color: colors.onPrimary,
-                      size: 30,
-                    ),
+              Obx(() {
+                final count = Get.isRegistered<AlertService>()
+                    ? AlertService.to.unreadCount
+                    : 0;
 
-                    //
-                    Positioned(
-                      right: 0,
-                      top: 0,
-                      child: Container(
-                        width: 10,
-                        height: 10,
-                        decoration: BoxDecoration(
-                          color: Color.fromARGB(255, 29, 111, 219),
-                          shape: BoxShape.circle,
-                        ),
+                return InkWell(
+                  onTap: () {
+                    Get.to(() => const AlertasPage());
+                  },
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Icon(
+                        Icons.notifications_none,
+                        color: colors.onPrimary,
+                        size: 30,
                       ),
-                    ),
-                  ],
-                ),
-              ),
+                      if (count > 0)
+                        Positioned(
+                          right: -4,
+                          top: -4,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Color.fromARGB(255, 29, 111, 219),
+                              shape: BoxShape.circle,
+                            ),
+                            constraints: const BoxConstraints(
+                              minWidth: 18,
+                              minHeight: 18,
+                            ),
+                            child: Center(
+                              child: Text(
+                                '$count',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              }),
             ],
           ),
         ],
@@ -70,6 +89,7 @@ class AppHeader extends StatelessWidget {
     );
   }
 }
+
 
 /* LOGO SVG
 SvgPicture.asset(

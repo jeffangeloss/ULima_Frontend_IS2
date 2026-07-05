@@ -1,6 +1,7 @@
-import 'dart:convert';
-import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import '../models/evaluation_model.dart';
+import 'api_client.dart';
+import 'auth_service.dart';
 
 /// Servicio para cargar y gestionar los datos de evaluaciones del sílabo
 class EvaluationSyllabusService {
@@ -13,7 +14,9 @@ class EvaluationSyllabusService {
 
   EvaluationSyllabusService._internal();
 
+  final ApiClient _api = ApiClient();
   late List<CourseSyllabus> _syllabusData;
+  final Map<String, String> _silaboUrlByCourseId = {};
   bool _isLoaded = false;
 
   /// Carga el archivo JSON con los datos de evaluaciones
@@ -21,24 +24,35 @@ class EvaluationSyllabusService {
     if (_isLoaded) return;
 
     try {
-      final jsonString = await rootBundle.loadString(
-        'assets/data/evaluaciones.json',
+      final code = AuthService.to.currentUser?.code;
+      final jsonData = await _api.getJson(
+        '/grades/me/courses${code == null ? '' : '?code=$code'}',
       );
-
-      final Map<String, dynamic> jsonData = jsonDecode(jsonString);
-      final cursosList = jsonData['cursos'] as List<dynamic>? ?? [];
-
+      final List<dynamic> cursosList = jsonData['syllabi'] as List? ?? [];
       _syllabusData = cursosList
-          .map(
-            (curso) => CourseSyllabus.fromJson(curso as Map<String, dynamic>),
-          )
+          .map((curso) {
+            if (curso is Map) {
+              return CourseSyllabus.fromJson(Map<String, dynamic>.from(curso));
+            }
+            return null;
+          })
+          .whereType<CourseSyllabus>()
           .toList();
 
+      final cursosConUrl = jsonData['cursos'] as List<dynamic>? ?? [];
+      for (final c in cursosConUrl) {
+        final id = c['id']?.toString();
+        final url = c['silaboUrl'] as String?;
+        if (id != null && url != null) _silaboUrlByCourseId[id] = url;
+      }
+
       _isLoaded = true;
-      print('✓ Datos de evaluaciones cargados: ${_syllabusData.length} cursos');
+      debugPrint('✓ Datos de evaluaciones cargados: ${_syllabusData.length} cursos');
     } catch (e) {
-      print('✗ Error al cargar datos de evaluaciones: $e');
-      rethrow;
+      // No bloquear el arranque: si falla (p. ej. 401 sin sesión), se
+      // inicializa vacío y se reintentará tras el login (_isLoaded sigue false).
+      debugPrint('✗ Error al cargar datos de evaluaciones: $e');
+      _syllabusData = [];
     }
   }
 
@@ -61,6 +75,9 @@ class EvaluationSyllabusService {
 
   /// Obtiene todos los sílabos cargados
   List<CourseSyllabus> get allSyllabuses => _syllabusData;
+
+  /// Obtiene la URL del sílabo de un curso por su curriculum_course_id
+  String? getSilaboUrl(String courseId) => _silaboUrlByCourseId[courseId];
 
   /// Verifica si los datos ya están cargados
   bool get isLoaded => _isLoaded;

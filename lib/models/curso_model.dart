@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import '../services/courses_service.dart';
 
 class Curso {
@@ -30,7 +31,7 @@ class Curso {
 List<Map<String, dynamic>> getCursosActivos() {
   final service = CoursesService();
   if (!service.isLoaded) {
-    print('⚠️ Advertencia: Datos de cursos no cargados aún');
+    debugPrint('⚠️ Advertencia: Datos de cursos no cargados aún');
     return [];
   }
   return service.allCourses;

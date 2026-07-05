@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 
 import '../../models/malla_models.dart';
 import '../../models/user_model.dart';
+import '../../services/api_client.dart';
 import '../../services/auth_service.dart';
 import '../../services/malla_service.dart';
 import '../../services/storage_service.dart';
@@ -32,6 +33,7 @@ class MallaController extends GetxController {
 
   // ── Caché de layout (se recalcula en _refresh) ──────────────────────────────
   final _electiveNormRows = <String, int>{};
+  final _explicitSimulationCourseIds = <String>{};
   int _mandatoryMaxRow = 0;
   int _electiveMaxRow = 0;
 
@@ -81,14 +83,35 @@ class MallaController extends GetxController {
     try {
       await _malla.load();
       final code = user?.code;
+
+      final backendStatuses = <String, CourseStatus>{};
+      _explicitSimulationCourseIds.clear();
+      _malla.simulation.forEach((courseId, simStatus) {
+        final status = _statusFromSimulation(simStatus);
+        if (status != null) {
+          backendStatuses[courseId] = status;
+          _explicitSimulationCourseIds.add(courseId);
+        }
+      });
+
       final userSaved = code == null
           ? null
           : StorageService.to.savedStatusesFor(code);
       final sessionSaved = StorageService.to.savedStatuses;
       final saved = userSaved ?? sessionSaved;
-      if (saved != null) {
-        statuses.assignAll(_knownCourseStatuses(saved));
+
+      if (backendStatuses.isNotEmpty) {
+        statuses.assignAll(backendStatuses);
+      } else if (saved != null) {
+        final knownSaved = _knownCourseStatuses(saved);
+        statuses.assignAll(knownSaved);
+        _explicitSimulationCourseIds.addAll(
+          knownSaved.entries
+              .where((entry) => _isPersistentStatus(entry.value))
+              .map((entry) => entry.key),
+        );
       }
+
       _refresh(preserveCurrentStatuses: true);
       if (code != null && userSaved == null && sessionSaved != null) {
         StorageService.to.saveStatuses(statuses, code: code);
@@ -121,7 +144,8 @@ class MallaController extends GetxController {
       for (final id in visibleIds) id: computed[id] ?? CourseStatus.locked,
     };
     for (final entry in previousStatuses.entries) {
-      if (_isPersistentStatus(entry.value)) {
+      if (_explicitSimulationCourseIds.contains(entry.key) ||
+          _isPersistentStatus(entry.value)) {
         nextStatuses[entry.key] = entry.value;
       }
     }
@@ -137,6 +161,7 @@ class MallaController extends GetxController {
         _malla.recomputeDerivedAvailability(
           visibleCourses: cards,
           currentStatuses: statuses,
+          fixedStatusCourseIds: _explicitSimulationCourseIds,
         ),
       ),
     );
@@ -153,10 +178,12 @@ class MallaController extends GetxController {
   }
 
   Set<String> _persistentStatusCourseIds(Map<String, CourseStatus> source) {
-    return source.entries
-        .where((entry) => _isPersistentStatus(entry.value))
-        .map((entry) => entry.key)
-        .toSet();
+    return {
+      ..._explicitSimulationCourseIds,
+      ...source.entries
+          .where((entry) => _isPersistentStatus(entry.value))
+          .map((entry) => entry.key),
+    };
   }
 
   bool _isPersistentStatus(CourseStatus status) {
@@ -265,6 +292,8 @@ class MallaController extends GetxController {
   void cycleStatus(String courseId) {
     final current = statuses[courseId] ?? CourseStatus.locked;
     if (current == CourseStatus.locked) return;
+    final realStatus = _realStatusFor(courseId);
+
     CourseStatus next;
     switch (current) {
       case CourseStatus.unlocked:
@@ -279,9 +308,90 @@ class MallaController extends GetxController {
       case CourseStatus.locked:
         return;
     }
+    _syncExplicitSimulationCourse(courseId, next, realStatus);
     statuses[courseId] = next;
     _recomputeDerivedAvailability();
     StorageService.to.saveStatuses(statuses, code: user?.code);
+
+    _persistSimulation(courseId, next, realStatus);
+  }
+
+  CourseStatus? _statusFromSimulation(String status) {
+    switch (status) {
+      case 'planned':
+        return CourseStatus.current;
+      case 'simulated_completed':
+        return CourseStatus.approved;
+      case 'simulated_available':
+        return CourseStatus.unlocked;
+      default:
+        return null;
+    }
+  }
+
+  CourseStatus? _realStatusFor(String courseId) {
+    final u = user;
+    if (u == null) return null;
+    return _malla.computeStatuses(u)[courseId];
+  }
+
+  void _syncExplicitSimulationCourse(
+    String courseId,
+    CourseStatus next,
+    CourseStatus? realStatus,
+  ) {
+    if (realStatus == next) {
+      _explicitSimulationCourseIds.remove(courseId);
+    } else {
+      _explicitSimulationCourseIds.add(courseId);
+    }
+  }
+
+  String? _simulationStatusFor(CourseStatus next, CourseStatus? realStatus) {
+    if (realStatus == next) return null;
+
+    switch (next) {
+      case CourseStatus.current:
+        return 'planned';
+      case CourseStatus.approved:
+        return 'simulated_completed';
+      case CourseStatus.unlocked:
+        return realStatus == CourseStatus.current ||
+                realStatus == CourseStatus.approved
+            ? 'simulated_available'
+            : null;
+      case CourseStatus.locked:
+        return null;
+    }
+  }
+
+  void _persistSimulation(
+    String courseId,
+    CourseStatus next,
+    CourseStatus? realStatus,
+  ) {
+    final api = ApiClient();
+    final simulationStatus = _simulationStatusFor(next, realStatus);
+
+    if (simulationStatus != null) {
+      api
+          .putJson(
+            '/curriculum/me/simulation',
+            body: {
+              'curriculumCourseId': int.parse(courseId),
+              'status': simulationStatus,
+            },
+          )
+          .catchError((e) {
+            debugPrint("Error al guardar la simulación: $e");
+            return <String, dynamic>{};
+          });
+    } else {
+      api.deleteJson('/curriculum/me/simulation/$courseId').catchError((e) {
+        debugPrint("Error al eliminar la simulación: $e");
+        return <String, dynamic>{};
+      });
+    }
   }
 
   // ── Métricas de progreso ────────────────────────────────────────────────────

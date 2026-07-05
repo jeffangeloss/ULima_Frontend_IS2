@@ -38,7 +38,7 @@ class CursoCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(25),
               boxShadow: [
                 BoxShadow(
-                  color: colors.shadow.withOpacity(0.1),
+                  color: colors.shadow.withValues(alpha: 0.1),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -74,7 +74,7 @@ class CursoCard extends StatelessWidget {
                           Text(
                             "Ciclo: ${curso['ciclo']}",
                             style: TextStyle(
-                              color: colors.onPrimary.withOpacity(0.8),
+                              color: colors.onPrimary.withValues(alpha: 0.8),
                               fontSize: 11,
                             ),
                           ),
@@ -118,7 +118,7 @@ class CursoCard extends StatelessWidget {
                 Container(
                   height: 38,
                   decoration: BoxDecoration(
-                    color: colors.shadow.withOpacity(0.15),
+                    color: colors.shadow.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Stack(
@@ -127,7 +127,7 @@ class CursoCard extends StatelessWidget {
                         widthFactor: (sumaPesos / 100).clamp(0.0, 1.0),
                         child: Container(
                           decoration: BoxDecoration(
-                            color: colors.secondary.withOpacity(0.6),
+                            color: colors.secondary.withValues(alpha: 0.6),
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),

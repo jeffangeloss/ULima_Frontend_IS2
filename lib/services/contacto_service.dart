@@ -1,45 +1,32 @@
 import 'package:flutter/foundation.dart';
 import 'package:ulima_plus/models/contacto_model.dart';
+import 'package:ulima_plus/models/docente_model.dart';
+import 'package:ulima_plus/models/user_model.dart';
 
-import 'docente_service.dart';
-import 'enrollment_service.dart';
-import 'seccion_service.dart';
-import 'section_representative_service.dart';
-import 'user_service.dart';
+import 'api_client.dart';
 
 class ContactoService {
-  final UserService _userService = UserService();
-  final DocenteService _docenteService = DocenteService();
-  final SeccionService _seccionService = SeccionService();
-  final EnrollmentService _enrollmentService = EnrollmentService();
-  final SectionRepresentativeService _representativeService =
-      SectionRepresentativeService();
+  final ApiClient _api = ApiClient();
 
   Future<Map<String, dynamic>> fetchContactos(String idSeccion) async {
     try {
-      final seccion = await _seccionService.findSectionById(idSeccion);
-      if (seccion == null) {
-        throw Exception('No existe seccion $idSeccion');
-      }
-
-      final docente = await _docenteService.findDocenteByCode(
-        seccion.docenteCode,
+      final data = await _api.getJson(
+        '/course-detail/sections/$idSeccion/contacts',
       );
-      final enrollments = await _enrollmentService.fetchBySection(idSeccion);
-      final List<ContactoCurso> contactos = [];
-
-      for (final enrollment in enrollments) {
-        final user = await _userService.findUserByCode(enrollment.studentCode);
-
-        if (user != null) {
-          final role = await _representativeService.getRoleInSection(
-            idSeccion,
-            user.code,
-          );
-
-          contactos.add(ContactoCurso(user: user, roleInSection: role));
-        }
-      }
+      final docenteRaw = data['docente'];
+      final docente = docenteRaw == null
+          ? null
+          : Docente.fromJson(Map<String, dynamic>.from(docenteRaw as Map));
+      final List<dynamic> alumnosRaw = data['alumnos'] ?? [];
+      final contactos = alumnosRaw.map((raw) {
+        final json = Map<String, dynamic>.from(raw as Map);
+        return ContactoCurso(
+          user: UserModel.fromJson(
+            Map<String, dynamic>.from(json['user'] as Map),
+          ),
+          roleInSection: json['roleInSection']?.toString() ?? 'estudiante',
+        );
+      }).toList();
 
       contactos.sort((a, b) {
         final compare = _rolePriority(

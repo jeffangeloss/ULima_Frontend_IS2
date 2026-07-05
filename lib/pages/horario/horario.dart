@@ -14,21 +14,89 @@ class HorarioPage extends StatelessWidget {
   double _timeToHours(String timeStr) {
     try {
       final cleanStr = timeStr.trim().toLowerCase();
-      final parts = cleanStr.split(' ');
-      if (parts.length < 2) return 7.0;
+      
+      // If it contains am/pm, use the 12-hour parser
+      if (cleanStr.contains('am') || cleanStr.contains('pm')) {
+        final parts = cleanStr.split(' ');
+        if (parts.length >= 2) {
+          final isPm = parts[1] == 'pm';
+          final hms = parts[0].split(':');
+          int hour = int.tryParse(hms[0]) ?? 12;
+          int minute = hms.length > 1 ? (int.tryParse(hms[1]) ?? 0) : 0;
 
-      final isPm = parts[1] == 'pm';
-      final hms = parts[0].split(':');
-      int hour = int.tryParse(hms[0]) ?? 12;
-      int minute = hms.length > 1 ? (int.tryParse(hms[1]) ?? 0) : 0;
+          if (isPm && hour != 12) hour += 12;
+          if (!isPm && hour == 12) hour = 0;
 
-      if (isPm && hour != 12) hour += 12;
-      if (!isPm && hour == 12) hour = 0;
+          return hour + (minute / 60.0);
+        }
+      }
 
-      return hour + (minute / 60.0);
+      // Try 24-hour parser (e.g., "14:00:00", "14:00")
+      final hms = cleanStr.split(':');
+      if (hms.isNotEmpty) {
+        final hour = int.tryParse(hms[0]);
+        if (hour != null) {
+          final minute = hms.length > 1 ? (int.tryParse(hms[1]) ?? 0) : 0;
+          return hour + (minute / 60.0);
+        }
+      }
+
+      return 7.0;
     } catch (_) {
       return 7.0;
     }
+  }
+
+  Color _resolveScheduleColor(String colorStr, ColorScheme colors) {
+    final cleanColor = colorStr.trim();
+    final hexColor = cleanColor.startsWith('#')
+        ? cleanColor.substring(1)
+        : cleanColor;
+
+    if (RegExp(r'^[0-9a-fA-F]{6}$').hasMatch(hexColor)) {
+      return Color(int.parse('FF$hexColor', radix: 16));
+    }
+    if (RegExp(r'^[0-9a-fA-F]{8}$').hasMatch(hexColor)) {
+      return Color(int.parse(hexColor, radix: 16));
+    }
+
+    return {
+          'pink': colors.secondaryContainer,
+          'blue': colors.secondary,
+          'orange': colors.primary,
+          'green': colors.tertiaryContainer,
+          'purple': colors.tertiary,
+          'teal': colors.primaryContainer,
+          'red': colors.error,
+        }[cleanColor.toLowerCase()] ??
+        colors.outline;
+  }
+
+  Widget _currentTimeLine() {
+    return IgnorePointer(
+      child: SizedBox(
+        height: 12,
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.centerLeft,
+          children: [
+            Positioned(
+              left: 0,
+              right: 0,
+              child: Container(height: 2, color: const Color(0xFFFF5252)),
+            ),
+            Container(
+              width: 7,
+              height: 7,
+              decoration: const BoxDecoration(
+                color: Color(0xFFFF5252),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -49,6 +117,12 @@ class HorarioPage extends StatelessWidget {
 
         final courses = controller.currentDayCourses;
         final totalHours = (endHour - startHour).toInt() + 1;
+        final currentHour = controller.currentLimaHourDecimal;
+        final showCurrentTimeLine =
+            controller.isCurrentLimaDay(activeDay) &&
+            currentHour >= startHour &&
+            currentHour <= endHour;
+        final currentLineTop = (currentHour - startHour) * hourHeight + 6.0;
 
         return Column(
           children: [
@@ -103,6 +177,7 @@ class HorarioPage extends StatelessWidget {
               ),
             ),
             const Divider(height: 1, thickness: 1, color: Color(0xFFE5E5E5)),
+
             Expanded(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
@@ -158,6 +233,9 @@ class HorarioPage extends StatelessWidget {
                         }),
                       ),
                       ...courses.map((course) {
+                        final bool isEvaluation =
+                            course['isEvaluation'] == true;
+
                         final nombreStr =
                             (course['curso'] as String? ?? 'CURSO')
                                 .toUpperCase();
@@ -177,17 +255,7 @@ class HorarioPage extends StatelessWidget {
                         final double heightVal =
                             (endVal - startVal) * hourHeight - 8.0;
 
-                        final courseColor =
-                            {
-                              'pink': colors.secondaryContainer,
-                              'blue': colors.secondary,
-                              'orange': colors.primary,
-                              'green': colors.tertiaryContainer,
-                              'purple': colors.tertiary,
-                              'teal': colors.primaryContainer,
-                              'red': colors.error,
-                            }[colorStr.toLowerCase()] ??
-                            colors.outline;
+                        final courseColor = _resolveScheduleColor(colorStr, colors);
 
                         return Positioned(
                           top: topPosition,
@@ -196,57 +264,119 @@ class HorarioPage extends StatelessWidget {
                           height: heightVal,
                           child: InkWell(
                             onTap: () {
-                              final String idSeccion = course['idSeccion'];
-                              Get.to(
-                                () => DescripCursosPage(idSeccion: idSeccion),
-                              );
+                              final String idSeccion = course['idSeccion']?.toString() ?? '';
+                              if (idSeccion.isNotEmpty) {
+                                Get.to(
+                                  () => DescripCursosPage(idSeccion: idSeccion),
+                                );
+                              }
                             },
                             borderRadius: BorderRadius.circular(16),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
-                              ),
                               decoration: BoxDecoration(
                                 color: courseColor,
                                 borderRadius: BorderRadius.circular(16),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: courseColor.withOpacity(0.35),
+                                    color: courseColor.withValues(
+                                      alpha: 0.35,
+                                    ),
                                     blurRadius: 8,
                                     offset: const Offset(0, 4),
                                   ),
                                 ],
                               ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.center,
+                              child: Stack(
                                 children: [
-                                  Text(
-                                    nombreStr,
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: 0.3,
+                                  Center(
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 12,
+                                      ),
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            nombreStr,
+                                            textAlign: TextAlign.center,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w800,
+                                              letterSpacing: 0.3,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            "Sección: ${course['codigoSeccion'] ?? 'Sin sección'}",
+                                            style: TextStyle(
+                                              color: Colors.white.withValues(
+                                                alpha: 0.9,
+                                              ),
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            aulaStr,
+                                            style: TextStyle(
+                                              color: Colors.white.withValues(
+                                                alpha: 0.9,
+                                              ),
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    aulaStr,
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.9),
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
+                                  if (isEvaluation)
+                                    Positioned(
+                                      top: 8,
+                                      right: 8,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 3,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withValues(
+                                            alpha: 0.25,
+                                          ),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          "📝 EVAL: ${course['evalSigla']}",
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 8,
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: 0.3,
+                                          ),
+                                        ),
+                                      ),
                                     ),
-                                  ),
                                 ],
                               ),
                             ),
                           ),
                         );
                       }),
+                      if (showCurrentTimeLine)
+                        Positioned(
+                          top: currentLineTop,
+                          left: 75,
+                          right: 0,
+                          child: _currentTimeLine(),
+                        ),
                     ],
                   ),
                 ),
