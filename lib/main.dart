@@ -13,6 +13,9 @@ import '/services/malla_service.dart';
 import '/services/storage_service.dart';
 import 'pages/home/home_page.dart';
 import 'pages/login/login_page.dart';
+import 'pages/login/login_controller.dart';
+import 'pages/password_reset/forgot_password_controller.dart';
+import 'pages/password_reset/reset_password_controller.dart';
 import 'pages/password_reset/forgot_password_page.dart';
 import 'pages/password_reset/reset_password_page.dart';
 import 'pages/setup_carrera/setup_carrera_page.dart';
@@ -69,12 +72,32 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       initialRoute: initialRoute,
       getPages: [
-        GetPage(name: '/login', page: () => const LoginPage()),
+        // Bindings por ruta: asocian cada controller a SU ruta de forma
+        // explícita. Sin esto, Get.put dentro del build podía asociarlo al
+        // overlay del snackbar activo durante la transición, y al descartarse
+        // el snackbar GetX eliminaba el controller de la página visible
+        // (crash "TextEditingController was used after being disposed").
+        GetPage(
+          name: '/login',
+          page: () => const LoginPage(),
+          binding: BindingsBuilder(() {
+            Get.lazyPut(() => LoginController());
+          }),
+        ),
         GetPage(
           name: '/forgot-password',
           page: () => const ForgotPasswordPage(),
+          binding: BindingsBuilder(() {
+            Get.lazyPut(() => ForgotPasswordController());
+          }),
         ),
-        GetPage(name: '/reset-password', page: () => const ResetPasswordPage()),
+        GetPage(
+          name: '/reset-password',
+          page: () => const ResetPasswordPage(),
+          binding: BindingsBuilder(() {
+            Get.lazyPut(() => ResetPasswordController());
+          }),
+        ),
         GetPage(name: '/setup-carrera', page: () => const SetupCarreraPage()),
         GetPage(name: '/home', page: () => const HomePage()),
       ],

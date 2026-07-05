@@ -1,12 +1,17 @@
 // lib/pages/password_reset/password_reset_ui.dart
 // Paleta y widgets compartidos por las pantallas del flujo de recuperación
 // de contraseña. Replica el estilo visual de la pantalla de login
-// (card centrada, campos underline y soporte de dark mode).
+// (card centrada, campos en caja y soporte de dark mode).
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show TextInputFormatter;
+import 'package:flutter/services.dart'
+    show
+        FilteringTextInputFormatter,
+        LengthLimitingTextInputFormatter,
+        TextInputFormatter;
 
 import '../../configs/themes.dart';
+import 'password_reset_validators.dart';
 
 class PasswordResetPalette {
   const PasswordResetPalette({
@@ -16,6 +21,7 @@ class PasswordResetPalette {
     required this.cardShadow,
     required this.fieldText,
     required this.fieldHint,
+    required this.fieldFill,
     required this.fieldLine,
     required this.focusedFieldLine,
     required this.cursor,
@@ -38,7 +44,8 @@ class PasswordResetPalette {
         cardBorder: Color(0xFF262626),
         cardShadow: Color(0x99000000),
         fieldText: Color(0xFFF4F4F4),
-        fieldHint: Color(0xFFEDEDED),
+        fieldHint: Color(0xFF9A9AA6),
+        fieldFill: Color(0xFF2A2A36),
         fieldLine: Color(0xFFE7E7E7),
         focusedFieldLine: Color(0xFFFA7525),
         cursor: Color(0xFFFA7525),
@@ -59,6 +66,7 @@ class PasswordResetPalette {
       cardShadow: Color(0x33000000),
       fieldText: Color(0xFF1A1A1A),
       fieldHint: Color(0xFF9B9B9B),
+      fieldFill: Color(0xFFF1F5F9),
       fieldLine: Color(0xFFCFCFCF),
       focusedFieldLine: MaterialTheme.primaryColor,
       cursor: MaterialTheme.primaryColor,
@@ -78,6 +86,7 @@ class PasswordResetPalette {
   final Color cardShadow;
   final Color fieldText;
   final Color fieldHint;
+  final Color fieldFill;
   final Color fieldLine;
   final Color focusedFieldLine;
   final Color cursor;
@@ -156,7 +165,33 @@ class PasswordResetScaffold extends StatelessWidget {
   }
 }
 
-/// Campo de texto underline con el mismo estilo del login.
+/// Etiqueta de un grupo label+campo. Va a 8px de SU campo (proximidad).
+class PasswordResetFieldLabel extends StatelessWidget {
+  const PasswordResetFieldLabel({
+    super.key,
+    required this.palette,
+    required this.text,
+  });
+
+  final PasswordResetPalette palette;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: TextStyle(
+        color: palette.fieldText,
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.1,
+      ),
+    );
+  }
+}
+
+/// Campo de texto en caja (filled, 12px de radio, borde naranja al enfocar)
+/// con el mismo estilo del login.
 class PasswordResetField extends StatelessWidget {
   const PasswordResetField({
     super.key,
@@ -204,16 +239,177 @@ class PasswordResetField extends StatelessWidget {
           fontWeight: FontWeight.w400,
         ),
         suffixIcon: suffixIcon,
-        contentPadding: const EdgeInsets.symmetric(vertical: 12),
+        filled: true,
+        fillColor: palette.fieldFill,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
         isDense: true,
-        border: UnderlineInputBorder(
-          borderSide: BorderSide(color: palette.fieldLine),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
         ),
-        enabledBorder: UnderlineInputBorder(
-          borderSide: BorderSide(color: palette.fieldLine),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
         ),
-        focusedBorder: UnderlineInputBorder(
-          borderSide: BorderSide(color: palette.focusedFieldLine, width: 1.5),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: palette.focusedFieldLine, width: 2),
+        ),
+      ),
+    );
+  }
+}
+
+/// Código OTP en casillas individuales: un TextField oculto conserva el
+/// teclado numérico, el pegado y el TextEditingController del GetX
+/// controller; las casillas solo pintan los dígitos del valor actual.
+class PasswordResetOtpField extends StatefulWidget {
+  const PasswordResetOtpField({
+    super.key,
+    required this.controller,
+    required this.palette,
+    this.length = passwordResetCodeLength,
+  });
+
+  final TextEditingController controller;
+  final PasswordResetPalette palette;
+  final int length;
+
+  @override
+  State<PasswordResetOtpField> createState() => _PasswordResetOtpFieldState();
+}
+
+class _PasswordResetOtpFieldState extends State<PasswordResetOtpField> {
+  final FocusNode _focusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_handleValueChanged);
+    _focusNode.addListener(_handleFocusChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant PasswordResetOtpField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Si el padre reconstruye con otro TextEditingController, re-vincular el
+    // listener para que las casillas sigan reflejando el texto actual.
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_handleValueChanged);
+      widget.controller.addListener(_handleValueChanged);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_handleValueChanged);
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  /// Mantiene el cursor al final para que escribir siempre agregue el
+  /// siguiente dígito (auto-avance) y retroceso borre el último.
+  void _handleValueChanged() {
+    final endSelection = TextSelection.collapsed(
+      offset: widget.controller.text.length,
+    );
+    if (widget.controller.selection != endSelection) {
+      widget.controller.selection = endSelection;
+    }
+    if (mounted) setState(() {});
+  }
+
+  void _handleFocusChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final text = widget.controller.text;
+    final activeIndex = text.length < widget.length
+        ? text.length
+        : widget.length - 1;
+
+    return Stack(
+      children: [
+        Row(
+          children: [
+            for (var i = 0; i < widget.length; i++) ...[
+              if (i > 0) const SizedBox(width: 8),
+              Expanded(
+                child: _OtpBox(
+                  palette: widget.palette,
+                  digit: i < text.length ? text[i] : '',
+                  active: _focusNode.hasFocus && i == activeIndex,
+                ),
+              ),
+            ],
+          ],
+        ),
+        // TextField invisible extendido sobre las casillas: tocar cualquiera
+        // lo enfoca, y una pulsación larga permite pegar el código completo.
+        Positioned.fill(
+          child: TextField(
+            controller: widget.controller,
+            focusNode: _focusNode,
+            keyboardType: TextInputType.number,
+            textInputAction: TextInputAction.next,
+            autocorrect: false,
+            enableSuggestions: false,
+            autofillHints: const [AutofillHints.oneTimeCode],
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(widget.length),
+            ],
+            showCursor: false,
+            cursorWidth: 0,
+            style: const TextStyle(color: Colors.transparent, fontSize: 1),
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              isCollapsed: true,
+              counterText: '',
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _OtpBox extends StatelessWidget {
+  const _OtpBox({
+    required this.palette,
+    required this.digit,
+    required this.active,
+  });
+
+  final PasswordResetPalette palette;
+  final String digit;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 120),
+      height: 52,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: palette.fieldFill,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: active ? palette.focusedFieldLine : Colors.transparent,
+          width: 2,
+        ),
+      ),
+      child: Text(
+        digit,
+        style: TextStyle(
+          color: palette.fieldText,
+          fontSize: 22,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );

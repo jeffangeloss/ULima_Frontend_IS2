@@ -21,6 +21,9 @@ class ResetPasswordController extends GetxController {
   final passwordController = TextEditingController();
   final confirmController = TextEditingController();
 
+  /// Paso visible: 0 = código de verificación, 1 = nueva contraseña.
+  final step = 0.obs;
+
   final errorMessage = RxnString();
   final submitting = false.obs;
   final resending = false.obs;
@@ -55,6 +58,23 @@ class ResetPasswordController extends GetxController {
         Get.offNamed('/forgot-password');
       });
     }
+  }
+
+  /// Paso 1 -> 2: valida el formato del código localmente y avanza.
+  void continueToPassword() {
+    final codeError = validateResetCode(codeController.text.trim());
+    if (codeError != null) {
+      errorMessage.value = codeError;
+      return;
+    }
+    errorMessage.value = null;
+    step.value = 1;
+  }
+
+  /// Paso 2 -> 1 (flecha atrás o código rechazado por el backend).
+  void backToCode() {
+    errorMessage.value = null;
+    step.value = 0;
   }
 
   Future<void> submit() async {
@@ -98,6 +118,11 @@ class ResetPasswordController extends GetxController {
       );
     } on ApiException catch (e) {
       errorMessage.value = e.message;
+      if (e.code == 'INVALID_RESET_CODE') {
+        // El código es el problema: regresar al paso del código para
+        // corregirlo o reenviarlo, con el error visible ahí.
+        step.value = 0;
+      }
     } catch (_) {
       errorMessage.value =
           'No se pudo restablecer la contraseña. Intenta de nuevo.';

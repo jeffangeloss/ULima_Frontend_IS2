@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 
-import '../pages/login/login_page.dart';
 import 'storage_service.dart';
 
 class ApiException implements Exception {
@@ -97,8 +96,17 @@ class ApiClient {
 
     if (resolved.statusCode == 401 && !path.contains('/auth/login')) {
       await StorageService.to.clearSession();
-      Get.offAll(() => const LoginPage());
-      Get.snackbar('Sesión expirada', 'Tu sesión caducó o iniciaste sesión en otro dispositivo.');
+      // No re-navegar si ya estamos en el login: tras un cambio de contraseña
+      // las peticiones en vuelo caducan en 401 y una segunda Get.offAll
+      // destruye el controller de la pantalla de login visible (crash de
+      // TextEditingController disposed). Tampoco navegar antes de que
+      // GetMaterialApp exista (arranque de la app).
+      final alreadyOnLogin =
+          Get.currentRoute == '/login' || Get.currentRoute == '/LoginPage';
+      if (Get.context != null && !alreadyOnLogin) {
+        Get.offAllNamed('/login');
+        Get.snackbar('Sesión expirada', 'Tu sesión caducó o iniciaste sesión en otro dispositivo.');
+      }
     }
 
     return _decode(resolved);

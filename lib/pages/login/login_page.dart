@@ -12,7 +12,7 @@ class LoginPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(LoginController());
+    final controller = Get.find<LoginController>();
     final palette = _LoginPalette.from(context);
 
     return Scaffold(
@@ -68,20 +68,26 @@ class _LoginCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 32),
-              _UnderlineField(
+              // Grupo: etiqueta a 8px de su campo, 20px entre grupos
+              // (proximidad: cada etiqueta pertenece visualmente a SU campo).
+              _FieldLabel(palette: palette, text: 'Código'),
+              const SizedBox(height: 8),
+              _BoxedField(
                 controller: controller.codeController,
                 palette: palette,
-                hint: 'Código',
+                hint: 'Tu código de alumno',
                 keyboardType: TextInputType.number,
                 textInputAction: TextInputAction.next,
                 autofillHints: const [AutofillHints.username],
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 20),
+              _FieldLabel(palette: palette, text: 'Contraseña'),
+              const SizedBox(height: 8),
               Obx(
-                () => _UnderlineField(
+                () => _BoxedField(
                   controller: controller.passwordController,
                   palette: palette,
-                  hint: 'Contraseña',
+                  hint: 'Tu contraseña',
                   obscureText: !controller.passwordVisible.value,
                   textInputAction: TextInputAction.done,
                   autofillHints: const [AutofillHints.password],
@@ -132,8 +138,28 @@ class _LoginCard extends StatelessWidget {
   }
 }
 
-class _UnderlineField extends StatelessWidget {
-  const _UnderlineField({
+class _FieldLabel extends StatelessWidget {
+  const _FieldLabel({required this.palette, required this.text});
+
+  final _LoginPalette palette;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: TextStyle(
+        color: palette.fieldText,
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.1,
+      ),
+    );
+  }
+}
+
+class _BoxedField extends StatelessWidget {
+  const _BoxedField({
     required this.controller,
     required this.palette,
     required this.hint,
@@ -178,16 +204,24 @@ class _UnderlineField extends StatelessWidget {
           fontWeight: FontWeight.w400,
         ),
         suffixIcon: suffixIcon,
-        contentPadding: const EdgeInsets.symmetric(vertical: 12),
+        filled: true,
+        fillColor: palette.fieldFill,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
         isDense: true,
-        border: UnderlineInputBorder(
-          borderSide: BorderSide(color: palette.fieldLine),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
         ),
-        enabledBorder: UnderlineInputBorder(
-          borderSide: BorderSide(color: palette.fieldLine),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
         ),
-        focusedBorder: UnderlineInputBorder(
-          borderSide: BorderSide(color: palette.focusedFieldLine, width: 1.5),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: palette.focusedFieldLine, width: 2),
         ),
       ),
     );
@@ -354,6 +388,7 @@ class _LoginPalette {
     required this.cardShadow,
     required this.fieldText,
     required this.fieldHint,
+    required this.fieldFill,
     required this.fieldLine,
     required this.focusedFieldLine,
     required this.cursor,
@@ -376,7 +411,8 @@ class _LoginPalette {
         cardBorder: Color(0xFF262626),
         cardShadow: Color(0x99000000),
         fieldText: Color(0xFFF4F4F4),
-        fieldHint: Color(0xFFEDEDED),
+        fieldHint: Color(0xFF9A9AA6),
+        fieldFill: Color(0xFF2A2A36),
         fieldLine: Color(0xFFE7E7E7),
         focusedFieldLine: Color(0xFFFA7525),
         cursor: Color(0xFFFA7525),
@@ -397,6 +433,7 @@ class _LoginPalette {
       cardShadow: Color(0x33000000),
       fieldText: Color(0xFF1A1A1A),
       fieldHint: Color(0xFF9B9B9B),
+      fieldFill: Color(0xFFF1F5F9),
       fieldLine: Color(0xFFCFCFCF),
       focusedFieldLine: MaterialTheme.primaryColor,
       cursor: MaterialTheme.primaryColor,
@@ -415,6 +452,7 @@ class _LoginPalette {
   final Color cardShadow;
   final Color fieldText;
   final Color fieldHint;
+  final Color fieldFill;
   final Color fieldLine;
   final Color focusedFieldLine;
   final Color cursor;
