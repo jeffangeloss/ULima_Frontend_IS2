@@ -48,6 +48,10 @@ class CalculadoraController extends GetxController {
           user?.courseProgress?.currentCourses ?? [];
       _idEstudianteActual =
           await _notasService.obtenerIdEstudianteActual() ?? 'default';
+      // Reintenta la carga si el arranque falló (p. ej. la app inició sin
+      // sesión): loadCoursesData es idempotente y sale de inmediato si ya
+      // cargó; sin esto, la calculadora quedaba vacía para siempre.
+      await _coursesService.loadCoursesData();
       final cursosData = _coursesService.allCourses;
       final notasGuardadas = await _notasService.cargarNotas(
         _idEstudianteActual,
