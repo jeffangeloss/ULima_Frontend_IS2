@@ -24,9 +24,6 @@ class CardAnuncio extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: colors.outline, width: 0.5),
       ),
-
-      margin: const EdgeInsets.only(bottom: 12),
-
       child: Padding(
         padding: const EdgeInsets.all(16),
 

@@ -16,7 +16,10 @@ class ContactoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
-    final inicial = nombres[0].toUpperCase();
+    final initials =
+        ((nombres.isNotEmpty ? nombres[0] : '') +
+                (apellidos.isNotEmpty ? apellidos[0] : ''))
+            .toUpperCase();
 
     return Container(
       width: double.infinity,
@@ -43,15 +46,15 @@ class ContactoCard extends StatelessWidget {
 
             child: Center(
               child: Text(
-                inicial,
+                initials,
 
                 style: TextStyle(
-                  color: colors.onSurface,
+                  color: colors.onSurfaceVariant,
 
                   fontSize: 20,
 
-                  fontWeight: FontWeight.bold,
-                ),
+                  fontWeight: FontWeight.w900,
+                )
               ),
             ),
           ),

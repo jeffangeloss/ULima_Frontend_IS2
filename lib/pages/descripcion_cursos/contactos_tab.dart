@@ -22,7 +22,7 @@ class ContactosTab extends StatelessWidget {
         return const SkeletonCardList(count: 4, padding: EdgeInsets.all(16));
       }
       return ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
         children: [
           Text(
             'DOCENTE',

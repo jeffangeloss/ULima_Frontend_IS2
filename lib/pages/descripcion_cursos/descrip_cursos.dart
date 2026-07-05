@@ -299,21 +299,18 @@ class DescripCursosPage extends StatelessWidget {
   Widget _selectedPage(BuildContext context) {
     return Container(
       color: Theme.of(context).colorScheme.tertiaryContainer,
-      child: Padding(
-        padding: const EdgeInsets.only(top: 12),
-        child: Obx(() {
-          switch (control.selectedTab.value) {
-            case 0:
-              return AnunciosTab(idSeccion: idSeccion);
-            case 1:
-              return AsesoriasTab(idSeccion: idSeccion);
-            case 2:
-              return ContactosTab(idSeccion: idSeccion);
-            default:
-              return AnunciosTab(idSeccion: idSeccion);
-          }
-        }),
-      ),
+      child: Obx(() {
+        switch (control.selectedTab.value) {
+          case 0:
+            return AnunciosTab(idSeccion: idSeccion);
+          case 1:
+            return AsesoriasTab(idSeccion: idSeccion);
+          case 2:
+            return ContactosTab(idSeccion: idSeccion);
+          default:
+            return AnunciosTab(idSeccion: idSeccion);
+        }
+      }),
     );
   }
 
