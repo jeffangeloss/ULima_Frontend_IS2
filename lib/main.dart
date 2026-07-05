@@ -13,7 +13,9 @@ import '/services/malla_service.dart';
 import '/services/storage_service.dart';
 import 'pages/home/home_page.dart';
 import 'pages/login/login_page.dart';
+import 'pages/malla/malla_controller.dart';
 import 'pages/malla/malla_list_controller.dart';
+import 'pages/malla/malla_page.dart';
 import 'pages/login/login_controller.dart';
 import 'pages/password_reset/forgot_password_controller.dart';
 import 'pages/password_reset/reset_password_controller.dart';
@@ -108,6 +110,17 @@ class MyApp extends StatelessWidget {
           // de pestañas y se elimine al salir de /home (logout).
           binding: BindingsBuilder(() {
             Get.lazyPut(() => MallaListController());
+          }),
+        ),
+        // TT07 (#103): la malla clásica vuelve como "Vista mapa (clásica)" de
+        // SOLO LECTURA. El binding re-ejecuta lazyPut en cada entrada a la
+        // ruta y GetX elimina el controller al salir, así que la vista se
+        // hidrata fresca siempre (sin estado stale) y sin Get.put en builds.
+        GetPage(
+          name: '/malla-clasica',
+          page: () => const MallaPage(),
+          binding: BindingsBuilder(() {
+            Get.lazyPut(() => MallaController());
           }),
         ),
       ],

@@ -140,13 +140,24 @@ class _ProgressHeader extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Mi malla',
-              style: TextStyle(
-                color: MaterialTheme.textPrimary(brightness),
-                fontSize: 16,
-                fontWeight: FontWeight.w900,
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Mi malla',
+                    style: TextStyle(
+                      color: MaterialTheme.textPrimary(brightness),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                // TT07: acceso de solo lectura a la vista mapa (clásica).
+                // Deshabilitado durante TODO el modo simulación: el mapa solo
+                // muestra estado persistido y lo que se ve en pantalla durante
+                // una simulación aún no lo está.
+                _MapViewButton(enabled: !sim),
+              ],
             ),
             const SizedBox(height: 8),
             // Barra de progreso: real (naranja sólido) y, en simulación,
@@ -215,6 +226,73 @@ class _ProgressHeader extends StatelessWidget {
   }
 
   String _signed(int value) => value >= 0 ? '+$value' : '$value';
+}
+
+// ── Botón "Vista mapa" (TT07) ──────────────────────────────────────────────────
+// Abre la malla clásica como vista mapa de SOLO LECTURA (/malla-clasica).
+// En modo simulación queda deshabilitado y, al tocarlo, explica por qué:
+// el mapa solo muestra estado persistido y la simulación en curso no lo está.
+class _MapViewButton extends StatelessWidget {
+  const _MapViewButton({required this.enabled});
+  final bool enabled;
+
+  void _onTap() {
+    if (!enabled) {
+      Get.snackbar(
+        'Vista mapa no disponible',
+        'Guarda o descarta la simulación para ver el mapa',
+        snackPosition: SnackPosition.BOTTOM,
+        margin: const EdgeInsets.all(12),
+      );
+      return;
+    }
+    Get.toNamed<void>('/malla-clasica');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    final fg = enabled
+        ? MaterialTheme.textSecondary(brightness)
+        : MaterialTheme.textMuted(brightness);
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      child: Material(
+        color: MaterialTheme.tagBg(brightness),
+        borderRadius: BorderRadius.circular(99),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(99),
+          onTap: _onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(99),
+              border: Border.all(color: MaterialTheme.borderColor(brightness)),
+            ),
+            child: Opacity(
+              opacity: enabled ? 1 : 0.5,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.map_outlined, size: 15, color: fg),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Vista mapa',
+                    style: TextStyle(
+                      color: fg,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 // ── Chips de filtro ────────────────────────────────────────────────────────────

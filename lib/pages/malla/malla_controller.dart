@@ -2,6 +2,13 @@
 // Orquesta el estado de la malla: catálogo + estados por curso + zoom + dos piscinas.
 // TT03: la lógica de dominio (prerrequisitos, derivación de estados, ciclo de
 // estados y mapeo de simulación) vive en lib/domain/malla/malla_logic.dart.
+//
+// TT07 (#103): este controller alimenta EXCLUSIVAMENTE la "Vista mapa
+// (clásica)" de solo lectura (/malla-clasica). Solo LEE estado persistido
+// (backend + StorageService); no expone ningún camino de escritura — el
+// antiguo cycleStatus y la persistencia de simulación (PUT/DELETE
+// /curriculum/me/simulation, saveStatuses) se eliminaron: la única fuente de
+// escritura es la vista de lista (MallaListController).
 
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -10,7 +17,6 @@ import 'package:get/get.dart';
 import '../../domain/malla/malla_logic.dart' as malla_logic;
 import '../../models/malla_models.dart';
 import '../../models/user_model.dart';
-import '../../services/api_client.dart';
 import '../../services/auth_service.dart';
 import '../../services/malla_service.dart';
 import '../../services/storage_service.dart';
@@ -115,10 +121,10 @@ class MallaController extends GetxController {
         );
       }
 
+      // TT07: sin escritura de migración a StorageService aquí — la vista
+      // mapa es solo lectura; la vista de lista ya guarda con code al
+      // persistir una simulación.
       _refresh(preserveCurrentStatuses: true);
-      if (code != null && userSaved == null && sessionSaved != null) {
-        StorageService.to.saveStatuses(statuses, code: code);
-      }
     } finally {
       loading.value = false;
     }
@@ -289,74 +295,8 @@ class MallaController extends GetxController {
     return Size(w, h);
   }
 
-  // ── Ciclo de estado ─────────────────────────────────────────────────────────
-
-  void cycleStatus(String courseId) {
-    final current = statuses[courseId] ?? CourseStatus.locked;
-    final next = malla_logic.nextCycleStatus(current);
-    if (next == null) return;
-    final realStatus = _realStatusFor(courseId);
-
-    _syncExplicitSimulationCourse(courseId, next, realStatus);
-    statuses[courseId] = next;
-    _recomputeDerivedAvailability();
-    StorageService.to.saveStatuses(statuses, code: user?.code);
-
-    _persistSimulation(courseId, next, realStatus);
-  }
-
   CourseStatus? _statusFromSimulation(String status) =>
       malla_logic.statusFromSimulation(status);
-
-  CourseStatus? _realStatusFor(String courseId) {
-    final u = user;
-    if (u == null) return null;
-    return _malla.computeStatuses(u)[courseId];
-  }
-
-  void _syncExplicitSimulationCourse(
-    String courseId,
-    CourseStatus next,
-    CourseStatus? realStatus,
-  ) {
-    if (malla_logic.isExplicitSimulation(next, realStatus)) {
-      _explicitSimulationCourseIds.add(courseId);
-    } else {
-      _explicitSimulationCourseIds.remove(courseId);
-    }
-  }
-
-  String? _simulationStatusFor(CourseStatus next, CourseStatus? realStatus) =>
-      malla_logic.simulationStatusFor(next, realStatus);
-
-  void _persistSimulation(
-    String courseId,
-    CourseStatus next,
-    CourseStatus? realStatus,
-  ) {
-    final api = ApiClient();
-    final simulationStatus = _simulationStatusFor(next, realStatus);
-
-    if (simulationStatus != null) {
-      api
-          .putJson(
-            '/curriculum/me/simulation',
-            body: {
-              'curriculumCourseId': int.parse(courseId),
-              'status': simulationStatus,
-            },
-          )
-          .catchError((e) {
-            debugPrint("Error al guardar la simulación: $e");
-            return <String, dynamic>{};
-          });
-    } else {
-      api.deleteJson('/curriculum/me/simulation/$courseId').catchError((e) {
-        debugPrint("Error al eliminar la simulación: $e");
-        return <String, dynamic>{};
-      });
-    }
-  }
 
   // ── Métricas de progreso ────────────────────────────────────────────────────
   int get approvedCount => _visibleStatusCount(CourseStatus.approved);

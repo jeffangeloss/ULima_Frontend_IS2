@@ -1,5 +1,12 @@
 // lib/pages/malla/malla_page.dart
 // Malla curricular con dos piscinas: obligatorios (arriba) y electivos (abajo).
+//
+// TT07 (#103): esta vista vuelve como "Vista mapa (clásica)" de SOLO LECTURA,
+// accesible desde la vista de lista vía la ruta /malla-clasica. Muestra
+// únicamente el estado persistido; toda escritura (simulación incluida)
+// ocurre exclusivamente en la vista de lista. El controller se obtiene con
+// Get.find (lo registra el binding de la ruta en main.dart), de modo que cada
+// entrada a la ruta crea una instancia fresca y GetX la elimina al salir.
 
 import 'dart:math' as math;
 
@@ -13,19 +20,28 @@ import 'widgets/course_card.dart';
 import 'widgets/course_detail_sheet.dart';
 import 'widgets/prerequisite_painter.dart';
 
-class MallaPage extends StatelessWidget {
+class MallaPage extends GetView<MallaController> {
   const MallaPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final c = Get.put(MallaController());
+    final c = controller; // registrado por el binding de /malla-clasica
     final colors = Theme.of(context).colorScheme;
     final brightness = Theme.of(context).brightness;
 
-    return Container(
-      color: MaterialTheme.pageBg(brightness),
-      child: Column(
+    return Scaffold(
+      backgroundColor: MaterialTheme.pageBg(brightness),
+      appBar: AppBar(
+        backgroundColor: MaterialTheme.headerColor(brightness),
+        foregroundColor: Colors.white,
+        title: const Text(
+          'Vista mapa (clásica)',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+        ),
+      ),
+      body: Column(
         children: [
+          const _ReadOnlyBanner(),
           _ProgressBar(controller: c, colors: colors),
           _ZoomToolbar(controller: c),
           Expanded(
@@ -37,6 +53,38 @@ class MallaPage extends StatelessWidget {
                       ),
                     )
                   : _MallaCanvas(controller: c),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Banner de solo lectura ─────────────────────────────────────────────────────
+class _ReadOnlyBanner extends StatelessWidget {
+  const _ReadOnlyBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    final fg = MaterialTheme.textSecondary(brightness);
+    return Container(
+      width: double.infinity,
+      color: MaterialTheme.tagBg(brightness),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Icon(Icons.visibility_outlined, size: 16, color: fg),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Vista clásica — solo lectura',
+              style: TextStyle(
+                color: fg,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
         ],
@@ -449,6 +497,8 @@ class _MallaCanvasState extends State<_MallaCanvas> {
                   ),
 
                   // ── Cards obligatorias ────────────────────────────────────
+                  // TT07: sin onLongPress — la vista mapa es solo lectura y
+                  // no cicla estados.
                   for (final c in mandatory)
                     Positioned(
                       left: positions[c.id]!.dx,
@@ -457,7 +507,7 @@ class _MallaCanvasState extends State<_MallaCanvas> {
                         course: c,
                         status: statuses[c.id] ?? CourseStatus.locked,
                         onTap: () => _openDetails(context, c, statuses),
-                        onLongPress: () => controller.cycleStatus(c.id),
+                        onLongPress: null,
                       ),
                     ),
 
@@ -470,7 +520,7 @@ class _MallaCanvasState extends State<_MallaCanvas> {
                         course: c,
                         status: statuses[c.id] ?? CourseStatus.locked,
                         onTap: () => _openDetails(context, c, statuses),
-                        onLongPress: () => controller.cycleStatus(c.id),
+                        onLongPress: null,
                       ),
                     ),
                 ],
@@ -673,6 +723,8 @@ class _MallaCanvasState extends State<_MallaCanvas> {
   ) {
     // HU19: el sheet vive en widgets/course_detail_sheet.dart (compartido con
     // la vista lista); aquí se inyectan las dependencias del controller.
+    // TT07: readOnly=true y sin onCycleStatus — desde la vista mapa el sheet
+    // jamás muestra el botón de cambiar estado.
     final controller = widget.controller;
     showCourseDetailSheet(
       context,
@@ -680,7 +732,8 @@ class _MallaCanvasState extends State<_MallaCanvas> {
       statuses: statuses,
       courseById: {for (final c in controller.cards) c.id: c},
       hasCompletedMandatoryCycles: controller.hasCompletedMandatoryCycles,
-      onCycleStatus: () => controller.cycleStatus(course.id),
+      onCycleStatus: null,
+      readOnly: true,
     );
   }
 }

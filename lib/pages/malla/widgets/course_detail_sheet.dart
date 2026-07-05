@@ -20,6 +20,7 @@ void showCourseDetailSheet(
   required bool Function(int throughLevel, Map<String, CourseStatus> statuses)
       hasCompletedMandatoryCycles,
   VoidCallback? onCycleStatus,
+  bool readOnly = false,
 }) {
   final brightness = Theme.of(context).brightness;
   showModalBottomSheet<void>(
@@ -35,6 +36,7 @@ void showCourseDetailSheet(
       courseById: courseById,
       hasCompletedMandatoryCycles: hasCompletedMandatoryCycles,
       onCycleStatus: onCycleStatus,
+      readOnly: readOnly,
     ),
   );
 }
@@ -47,6 +49,7 @@ class CourseDetailSheet extends StatelessWidget {
     required this.courseById,
     required this.hasCompletedMandatoryCycles,
     this.onCycleStatus,
+    this.readOnly = false,
   });
 
   final CourseNode course;
@@ -63,6 +66,11 @@ class CourseDetailSheet extends StatelessWidget {
   /// Acción del botón de ciclo de estado. Null → el sheet es solo lectura
   /// (la vista lista lo oculta fuera del modo simulación).
   final VoidCallback? onCycleStatus;
+
+  /// TT07: en true el sheet NUNCA muestra el botón de cambiar estado, aunque
+  /// llegue un [onCycleStatus] (defensa extra para la vista mapa clásica).
+  /// Default false para no alterar el comportamiento de la vista lista.
+  final bool readOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -243,7 +251,7 @@ class CourseDetailSheet extends StatelessWidget {
                 ],
               ),
             )
-          else if (onCycleStatus != null)
+          else if (!readOnly && onCycleStatus != null)
             ElevatedButton.icon(
               onPressed: () {
                 onCycleStatus!();
