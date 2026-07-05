@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../../components/descripcion_cursos/asesoria_card.dart';
 import '../../components/descripcion_cursos/empty_tab_state.dart';
+import '../../components/skeleton.dart';
 import 'descrip_cursos_controller.dart';
 
 class AsesoriasTab extends StatelessWidget {
@@ -13,6 +14,13 @@ class AsesoriasTab extends StatelessWidget {
 
   Widget _buildBody(BuildContext context) {
     return Obx(() {
+      if (control.isLoading.value && control.asesorias.isEmpty) {
+        return const SkeletonCardList(
+          count: 3,
+          padding: EdgeInsets.fromLTRB(16, 4, 16, 16),
+          showAvatar: false,
+        );
+      }
       if (control.asesorias.isEmpty) {
         return const EmptyTabState(
           icon: Icons.videocam_outlined,

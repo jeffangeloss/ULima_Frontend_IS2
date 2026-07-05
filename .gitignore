@@ -48,3 +48,6 @@ app.*.map.json
 /android/key.properties
 **/*.jks
 **/*.keystore
+
+# Artefactos de Swift Package Manager (Xcode los regenera)
+ios/**/xcshareddata/swiftpm/

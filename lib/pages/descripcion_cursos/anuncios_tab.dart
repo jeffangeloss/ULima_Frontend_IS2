@@ -4,6 +4,7 @@ import 'package:ulima_plus/pages/descripcion_cursos/descrip_cursos_controller.da
 
 import '../../components/descripcion_cursos/anuncio_card.dart';
 import '../../components/descripcion_cursos/empty_tab_state.dart';
+import '../../components/skeleton.dart';
 
 class AnunciosTab extends StatelessWidget {
   final String idSeccion;
@@ -13,6 +14,13 @@ class AnunciosTab extends StatelessWidget {
 
   Widget _buildBody(BuildContext context) {
     return Obx(() {
+      if (control.isLoading.value && control.anuncios.isEmpty) {
+        return const SkeletonCardList(
+          count: 3,
+          padding: EdgeInsets.fromLTRB(16, 4, 16, 16),
+          showAvatar: false,
+        );
+      }
       if (control.anuncios.isEmpty) {
         return const EmptyTabState(
           icon: Icons.campaign_outlined,

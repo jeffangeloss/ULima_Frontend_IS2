@@ -12,7 +12,7 @@ class ForgotPasswordPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(ForgotPasswordController());
+    final controller = Get.find<ForgotPasswordController>();
     final palette = PasswordResetPalette.from(context);
 
     return PasswordResetScaffold(
@@ -43,10 +43,16 @@ class ForgotPasswordPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 26),
+          // Grupo: etiqueta a 8px de su campo (proximidad).
+          PasswordResetFieldLabel(
+            palette: palette,
+            text: 'Código de alumno o correo',
+          ),
+          const SizedBox(height: 8),
           PasswordResetField(
             controller: controller.identifierController,
             palette: palette,
-            hint: 'Código de alumno o correo institucional',
+            hint: 'Ej. 20231234 o nombre@aloe.ulima.edu.pe',
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.done,
             onSubmitted: (_) => controller.submit(),
