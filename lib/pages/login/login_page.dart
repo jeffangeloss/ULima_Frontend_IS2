@@ -102,7 +102,9 @@ class _LoginCard extends StatelessWidget {
               _ErrorMessage(controller: controller, palette: palette),
               const SizedBox(height: 28),
               _EntrarButton(controller: controller, palette: palette),
-              const SizedBox(height: 24),
+              const SizedBox(height: 10),
+              _ForgotPasswordLink(palette: palette),
+              const SizedBox(height: 14),
               Row(
                 children: [
                   Expanded(child: Divider(color: palette.fieldLine)),
@@ -259,6 +261,30 @@ class _EntrarButton extends StatelessWidget {
                     letterSpacing: 0.3,
                   ),
                 ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ForgotPasswordLink extends StatelessWidget {
+  const _ForgotPasswordLink({required this.palette});
+  final _LoginPalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: TextButton(
+        onPressed: () => Get.toNamed('/forgot-password'),
+        style: TextButton.styleFrom(
+          foregroundColor: palette.fieldHint,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          minimumSize: Size.zero,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+        child: const Text(
+          '¿Olvidaste tu contraseña?',
+          style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
         ),
       ),
     );
