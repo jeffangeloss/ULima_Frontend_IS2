@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../components/descripcion_cursos/contacto_card.dart';
+import '../../components/skeleton.dart';
 import 'descrip_cursos_controller.dart';
 
 class ContactosTab extends StatelessWidget {
@@ -15,6 +16,11 @@ class ContactosTab extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
 
     return Obx(() {
+      if (control.isLoading.value &&
+          control.docenteContacto.value == null &&
+          control.alumnosContacto.isEmpty) {
+        return const SkeletonCardList(count: 4, padding: EdgeInsets.all(16));
+      }
       return ListView(
         padding: const EdgeInsets.all(16),
         children: [

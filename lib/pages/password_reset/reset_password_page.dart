@@ -2,7 +2,6 @@
 // Paso 2 de la recuperación de contraseña (HU20): código + nueva contraseña.
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import 'password_reset_ui.dart';
@@ -48,23 +47,26 @@ class ResetPasswordPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 26),
-          PasswordResetField(
+          // Grupo: código de verificación (etiqueta a 8px de su campo,
+          // 22px entre grupos).
+          PasswordResetFieldLabel(
+            palette: palette,
+            text: 'Código de verificación',
+          ),
+          const SizedBox(height: 8),
+          PasswordResetOtpField(
             controller: controller.codeController,
             palette: palette,
-            hint: 'Código de $passwordResetCodeLength dígitos',
-            keyboardType: TextInputType.number,
-            textInputAction: TextInputAction.next,
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,
-              LengthLimitingTextInputFormatter(passwordResetCodeLength),
-            ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 22),
+          // Grupo: nueva contraseña.
+          PasswordResetFieldLabel(palette: palette, text: 'Nueva contraseña'),
+          const SizedBox(height: 8),
           Obx(
             () => PasswordResetField(
               controller: controller.passwordController,
               palette: palette,
-              hint: 'Nueva contraseña',
+              hint: 'Mínimo $passwordResetMinPasswordLength caracteres',
               obscureText: !controller.passwordVisible.value,
               textInputAction: TextInputAction.next,
               suffixIcon: _VisibilityToggle(
@@ -74,12 +76,18 @@ class ResetPasswordPage extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 22),
+          // Grupo: confirmación.
+          PasswordResetFieldLabel(
+            palette: palette,
+            text: 'Confirmar contraseña',
+          ),
+          const SizedBox(height: 8),
           Obx(
             () => PasswordResetField(
               controller: controller.confirmController,
               palette: palette,
-              hint: 'Confirmar contraseña',
+              hint: 'Repite la nueva contraseña',
               obscureText: !controller.confirmVisible.value,
               textInputAction: TextInputAction.done,
               onSubmitted: (_) => controller.submit(),
@@ -166,10 +174,7 @@ class _ResendLink extends StatelessWidget {
           ),
           child: Text(
             label,
-            style: const TextStyle(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w700,
-            ),
+            style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
           ),
         ),
       );

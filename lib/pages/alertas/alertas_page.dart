@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:ulima_plus/components/skeleton.dart';
 import 'package:ulima_plus/configs/themes.dart';
 import 'package:ulima_plus/models/alert_model.dart';
 import 'package:ulima_plus/services/alert_service.dart';
@@ -135,7 +136,12 @@ class _AlertasPageState extends State<AlertasPage> {
       ),
       body: Obx(() {
         if (AlertService.to.isLoading && AlertService.to.alerts.isEmpty) {
-          return const Center(child: CircularProgressIndicator());
+          // Skeleton de cards en lugar de spinner central: mantiene la
+          // estructura visual de la lista mientras cargan las alertas.
+          return const SkeletonCardList(
+            count: 4,
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          );
         }
 
         final alerts = AlertService.to.alerts;
