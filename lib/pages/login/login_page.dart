@@ -12,7 +12,7 @@ class LoginPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(LoginController());
+    final controller = Get.find<LoginController>();
     final palette = _LoginPalette.from(context);
 
     return Scaffold(

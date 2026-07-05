@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 
-import '../pages/login/login_page.dart';
 import 'storage_service.dart';
 
 class ApiException implements Exception {
@@ -105,7 +104,7 @@ class ApiClient {
       final alreadyOnLogin =
           Get.currentRoute == '/login' || Get.currentRoute == '/LoginPage';
       if (Get.context != null && !alreadyOnLogin) {
-        Get.offAll(() => const LoginPage());
+        Get.offAllNamed('/login');
         Get.snackbar('Sesión expirada', 'Tu sesión caducó o iniciaste sesión en otro dispositivo.');
       }
     }

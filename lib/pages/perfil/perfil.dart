@@ -8,7 +8,6 @@ import '../../services/api_client.dart';
 import '../../services/auth_service.dart';
 import '../../services/malla_service.dart';
 import '../../services/password_reset_service.dart';
-import '../login/login_page.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -435,12 +434,16 @@ class _PrincipalChip extends StatelessWidget {
             color: MaterialTheme.primaryColor,
           ),
           const SizedBox(width: 6),
-          Text(
-            name,
-            style: const TextStyle(
-              color: MaterialTheme.primaryDark,
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
+          Flexible(
+            child: Text(
+              name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: MaterialTheme.primaryDark,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
           if (pending > 0) ...[
@@ -1084,7 +1087,7 @@ class _LogoutButton extends StatelessWidget {
       child: OutlinedButton.icon(
         onPressed: () async {
           await AuthService.to.logout();
-          Get.offAll(() => const LoginPage());
+          Get.offAllNamed('/login');
         },
         icon: const Icon(LucideIcons.logOut, size: 18),
         label: const Text(
