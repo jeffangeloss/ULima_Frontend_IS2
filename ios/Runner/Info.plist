@@ -66,5 +66,21 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- Google Sign-In (iOS): client ID del cliente OAuth de iOS
+	     (público, como el de web) y el URL scheme invertido con el que
+	     Google regresa a la app tras autenticar. -->
+	<key>GIDClientID</key>
+	<string>608661962945-06p9dbc9ketu2ue1nbm2318rf6of942h.apps.googleusercontent.com</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.608661962945-06p9dbc9ketu2ue1nbm2318rf6of942h</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>
