@@ -19,7 +19,10 @@ class CourseCard extends StatelessWidget {
   final CourseNode course;
   final CourseStatus status;
   final VoidCallback onTap;
-  final VoidCallback onLongPress;
+
+  /// Null → sin gesto de ciclo de estado (TT07: la vista mapa clásica es
+  /// solo lectura y pasa null explícitamente).
+  final VoidCallback? onLongPress;
 
   IconData get _statusIcon {
     switch (status) {

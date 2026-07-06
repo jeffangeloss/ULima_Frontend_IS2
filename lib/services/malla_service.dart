@@ -110,6 +110,27 @@ class MallaService extends GetxService {
     );
   }
 
+  /// HU19: variante con efecto dominó completo (itera hasta punto fijo) para
+  /// el modo simulación de la vista lista. Ver malla_logic.
+  Map<String, CourseStatus> recomputeDerivedAvailabilityCascade({
+    required Iterable<CourseNode> visibleCourses,
+    required Map<String, CourseStatus> currentStatuses,
+    Set<String> protectedCourseIds = const <String>{},
+  }) {
+    return malla_logic.recomputeDerivedAvailabilityCascade(
+      graph: _graph,
+      visibleCourses: visibleCourses,
+      currentStatuses: currentStatuses,
+      protectedCourseIds: protectedCourseIds,
+    );
+  }
+
+  /// Reemplaza el snapshot local de la simulación persistida (tras guardar
+  /// desde la vista lista) para que ambas vistas partan del mismo baseline.
+  void replaceSimulation(Map<String, String> simulation) {
+    _simulation.assignAll(simulation);
+  }
+
   /// IDs aprobados derivados del progreso persistido.
   Set<String> approvedCourseIdsFor(CourseProgress progress) {
     return malla_logic.approvedCourseIdsForProgress(_graph, progress);

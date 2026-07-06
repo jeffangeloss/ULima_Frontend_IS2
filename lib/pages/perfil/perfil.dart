@@ -706,6 +706,9 @@ class _EspecialidadSheetState extends State<_EspecialidadSheet> {
     final user = AuthService.to.currentUser;
     _principal = user?.especialidadPrincipal;
     _interes = Set.of(user?.especialidadesInteres ?? []);
+    // Sanear estado heredado inconsistente (principal duplicada como interés
+    // por datos antiguos): el backend lo rechaza con 409 DUPLICATE_PRIMARY.
+    if (_principal != null) _interes.remove(_principal);
   }
 
   List<Map<String, dynamic>> get _opciones {
@@ -746,14 +749,25 @@ class _EspecialidadSheetState extends State<_EspecialidadSheet> {
   }
 
   Future<void> _save() async {
+    if (_saving) return;
     setState(() => _saving = true);
     final auth = AuthService.to;
-    await auth.completeSetup(
-      careerId: auth.currentUser!.careerId!,
-      especialidadPrincipal: _principal,
-      especialidadesInteres: _interes.toList(),
-    );
-    if (mounted) Navigator.of(context).pop();
+    try {
+      await auth.completeSetup(
+        careerId: auth.currentUser!.careerId!,
+        especialidadPrincipal: _principal,
+        especialidadesInteres: _interes.toList(),
+      );
+      if (mounted) Navigator.of(context).pop();
+      Get.snackbar('Especialidades actualizadas',
+          'Tu selección se guardó correctamente.');
+    } on ApiException catch (e) {
+      Get.snackbar('No se pudo guardar', e.message);
+    } catch (_) {
+      Get.snackbar('No se pudo guardar', 'Intenta de nuevo en unos minutos.');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   @override

@@ -198,6 +198,71 @@ Map<String, CourseStatus> recomputeDerivedAvailability({
   return result;
 }
 
+/// Variante de [recomputeDerivedAvailability] para el modo simulación de la
+/// vista lista (HU19, issues #91/#92): itera hasta punto fijo para propagar el
+/// efecto dominó completo (A→B→C) en ambas direcciones. La función original de
+/// una sola pasada NO cambia (decisión de compatibilidad con la vista previa).
+///
+/// Reglas por pasada:
+/// - Un curso de [protectedCourseIds] con estado `approved`/`current`
+///   (progreso REAL del alumno) nunca se degrada, aunque sus prerrequisitos
+///   dejen de estar aprobados.
+/// - Un `approved`/`current` simulado se conserva mientras sus prerrequisitos
+///   sigan aprobados (algo lo sostiene). Si dejan de estarlo, se degrada a su
+///   disponibilidad derivada, lo que puede degradar en cadena a sus
+///   dependientes en pasadas siguientes (revertir A re-bloquea B, C, ...).
+/// - Todo lo demás se deriva (`locked`/`unlocked`) del set de aprobados.
+///
+/// Converge siempre: los estados derivados nunca producen `approved`, así que
+/// el set de aprobados solo puede reducirse entre pasadas y el punto fijo
+/// existe incluso con prerrequisitos circulares (un ciclo de aprobados se
+/// sostiene mutuamente y queda estable; un curso autorreferente no se sostiene
+/// a sí mismo). `maxPasses` actúa como cinturón de seguridad adicional.
+Map<String, CourseStatus> recomputeDerivedAvailabilityCascade({
+  required MallaGraph graph,
+  required Iterable<CourseNode> visibleCourses,
+  required Map<String, CourseStatus> currentStatuses,
+  Set<String> protectedCourseIds = const <String>{},
+}) {
+  final visible = visibleCourses.toList();
+  final working = Map<String, CourseStatus>.from(currentStatuses);
+  final maxPasses = visible.length + 2;
+
+  var changed = true;
+  var passes = 0;
+  while (changed && passes < maxPasses) {
+    changed = false;
+    passes++;
+    final approved = approvedCourseIdsFromStatuses(working);
+    for (final c in visible) {
+      final existing = working[c.id];
+      final isDecision = existing == CourseStatus.approved ||
+          existing == CourseStatus.current;
+
+      final CourseStatus next;
+      if (isDecision && protectedCourseIds.contains(c.id)) {
+        // Progreso real: intocable.
+        next = existing!;
+      } else if (isDecision &&
+          isCourseUnlocked(graph, c, approved.difference({c.id}))) {
+        // Decisión simulada sostenida por sus prerrequisitos.
+        next = existing!;
+      } else {
+        next = deriveAvailability(graph, c, approved);
+      }
+
+      if (next != existing) {
+        working[c.id] = next;
+        changed = true;
+      }
+    }
+  }
+
+  return {
+    for (final c in visible) c.id: working[c.id] ?? CourseStatus.locked,
+  };
+}
+
 /// Filtra un mapa de estados dejando solo cursos que existen en el catálogo.
 Map<String, CourseStatus> filterKnownCourseStatuses(
   MallaGraph graph,

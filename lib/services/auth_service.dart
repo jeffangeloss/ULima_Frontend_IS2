@@ -201,7 +201,10 @@ class AuthService extends GetxService {
       token: token,
       body: {
         'primarySpecialtyId': especialidadPrincipal,
-        'interestSpecialtyIds': especialidadesInteres,
+        // La principal nunca viaja también como interés (409 DUPLICATE_PRIMARY).
+        'interestSpecialtyIds': especialidadesInteres
+            .where((id) => id != especialidadPrincipal)
+            .toList(),
       },
     );
 

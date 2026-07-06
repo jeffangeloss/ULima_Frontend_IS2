@@ -1,33 +1,47 @@
 // lib/pages/malla/malla_page.dart
 // Malla curricular con dos piscinas: obligatorios (arriba) y electivos (abajo).
+//
+// TT07 (#103): esta vista vuelve como "Vista mapa (clásica)" de SOLO LECTURA,
+// accesible desde la vista de lista vía la ruta /malla-clasica. Muestra
+// únicamente el estado persistido; toda escritura (simulación incluida)
+// ocurre exclusivamente en la vista de lista. El controller se obtiene con
+// Get.find (lo registra el binding de la ruta en main.dart), de modo que cada
+// entrada a la ruta crea una instancia fresca y GetX la elimina al salir.
 
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import 'package:url_launcher/url_launcher.dart';
-
 import '../../configs/themes.dart';
 import '../../models/malla_models.dart';
-import '../../services/evaluations_service.dart';
 import 'malla_controller.dart';
 import 'widgets/course_card.dart';
+import 'widgets/course_detail_sheet.dart';
 import 'widgets/prerequisite_painter.dart';
 
-class MallaPage extends StatelessWidget {
+class MallaPage extends GetView<MallaController> {
   const MallaPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final c = Get.put(MallaController());
+    final c = controller; // registrado por el binding de /malla-clasica
     final colors = Theme.of(context).colorScheme;
     final brightness = Theme.of(context).brightness;
 
-    return Container(
-      color: MaterialTheme.pageBg(brightness),
-      child: Column(
+    return Scaffold(
+      backgroundColor: MaterialTheme.pageBg(brightness),
+      appBar: AppBar(
+        backgroundColor: MaterialTheme.headerColor(brightness),
+        foregroundColor: Colors.white,
+        title: const Text(
+          'Vista mapa (clásica)',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+        ),
+      ),
+      body: Column(
         children: [
+          const _ReadOnlyBanner(),
           _ProgressBar(controller: c, colors: colors),
           _ZoomToolbar(controller: c),
           Expanded(
@@ -39,6 +53,38 @@ class MallaPage extends StatelessWidget {
                       ),
                     )
                   : _MallaCanvas(controller: c),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Banner de solo lectura ─────────────────────────────────────────────────────
+class _ReadOnlyBanner extends StatelessWidget {
+  const _ReadOnlyBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    final fg = MaterialTheme.textSecondary(brightness);
+    return Container(
+      width: double.infinity,
+      color: MaterialTheme.tagBg(brightness),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Icon(Icons.visibility_outlined, size: 16, color: fg),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Vista clásica — solo lectura',
+              style: TextStyle(
+                color: fg,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
         ],
@@ -451,6 +497,8 @@ class _MallaCanvasState extends State<_MallaCanvas> {
                   ),
 
                   // ── Cards obligatorias ────────────────────────────────────
+                  // TT07: sin onLongPress — la vista mapa es solo lectura y
+                  // no cicla estados.
                   for (final c in mandatory)
                     Positioned(
                       left: positions[c.id]!.dx,
@@ -459,7 +507,7 @@ class _MallaCanvasState extends State<_MallaCanvas> {
                         course: c,
                         status: statuses[c.id] ?? CourseStatus.locked,
                         onTap: () => _openDetails(context, c, statuses),
-                        onLongPress: () => controller.cycleStatus(c.id),
+                        onLongPress: null,
                       ),
                     ),
 
@@ -472,7 +520,7 @@ class _MallaCanvasState extends State<_MallaCanvas> {
                         course: c,
                         status: statuses[c.id] ?? CourseStatus.locked,
                         onTap: () => _openDetails(context, c, statuses),
-                        onLongPress: () => controller.cycleStatus(c.id),
+                        onLongPress: null,
                       ),
                     ),
                 ],
@@ -673,15 +721,19 @@ class _MallaCanvasState extends State<_MallaCanvas> {
     CourseNode course,
     Map<String, CourseStatus> statuses,
   ) {
-    final brightness = Theme.of(context).brightness;
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: MaterialTheme.sheetBg(brightness),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => _CourseDetailSheet(course: course, statuses: statuses),
+    // HU19: el sheet vive en widgets/course_detail_sheet.dart (compartido con
+    // la vista lista); aquí se inyectan las dependencias del controller.
+    // TT07: readOnly=true y sin onCycleStatus — desde la vista mapa el sheet
+    // jamás muestra el botón de cambiar estado.
+    final controller = widget.controller;
+    showCourseDetailSheet(
+      context,
+      course: course,
+      statuses: statuses,
+      courseById: {for (final c in controller.cards) c.id: c},
+      hasCompletedMandatoryCycles: controller.hasCompletedMandatoryCycles,
+      onCycleStatus: null,
+      readOnly: true,
     );
   }
 }
@@ -747,399 +799,6 @@ class _SectionLabel extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-// ── Detail sheet ───────────────────────────────────────────────────────────────
-class _CourseDetailSheet extends StatelessWidget {
-  const _CourseDetailSheet({required this.course, required this.statuses});
-  final CourseNode course;
-  final Map<String, CourseStatus> statuses;
-
-  @override
-  Widget build(BuildContext context) {
-    final controller = Get.find<MallaController>();
-    final currentStatus = statuses[course.id] ?? CourseStatus.locked;
-    final brightness = Theme.of(context).brightness;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        20,
-        16,
-        20,
-        MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: MaterialTheme.sheetHandle(brightness),
-                borderRadius: BorderRadius.circular(99),
-              ),
-            ),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: currentStatus.color.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  course.code,
-                  style: TextStyle(
-                    color: currentStatus.borderColor,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 11,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              _PillStatus(status: currentStatus),
-              if (course.isExternal) ...[
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: MaterialTheme.externalBadgeBg(brightness),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    course.externalFaculty!,
-                    style: TextStyle(
-                      color: MaterialTheme.textDimmed(brightness),
-                      fontWeight: FontWeight.w800,
-                      fontSize: 11,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            course.name,
-            style: TextStyle(
-              color: MaterialTheme.textPrimary(brightness),
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 6,
-            children: [
-              _InfoTag(
-                icon: Icons.layers_outlined,
-                text: 'Nivel ${course.level}',
-              ),
-              _InfoTag(
-                icon: Icons.workspace_premium_outlined,
-                text: '${course.credits} créditos',
-              ),
-              if (course.isElective)
-                const _InfoTag(icon: Icons.bookmark_border, text: 'Electivo'),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Prerrequisitos',
-            style: TextStyle(
-              color: MaterialTheme.textSecondary(brightness),
-              fontSize: 13,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0.4,
-            ),
-          ),
-          const SizedBox(height: 6),
-          _PrereqList(course: course, statuses: statuses),
-          if (course.isElective && course.specialties.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Text(
-              'Forma parte de los diplomas',
-              style: TextStyle(
-                color: MaterialTheme.textSecondary(brightness),
-                fontSize: 13,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0.4,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: course.specialties
-                  .map(
-                    (s) => Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: MaterialTheme.specialtyBg(brightness),
-                        borderRadius: BorderRadius.circular(99),
-                      ),
-                      child: Text(
-                        s,
-                        style: const TextStyle(
-                          color: MaterialTheme.primaryDark,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                  )
-                  .toList(),
-            ),
-          ],
-          const SizedBox(height: 12),
-          _SilaboLink(courseId: course.id),
-          const SizedBox(height: 18),
-          if (currentStatus != CourseStatus.locked)
-            ElevatedButton.icon(
-              onPressed: () {
-                controller.cycleStatus(course.id);
-                Navigator.pop(context);
-              },
-              icon: const Icon(Icons.repeat, size: 18),
-              label: Text(_nextStatusLabel(currentStatus)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: MaterialTheme.primaryColor,
-                foregroundColor: Colors.white,
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            )
-          else
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: MaterialTheme.lockedBg(brightness),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.lock_outline, size: 16, color: MaterialTheme.textMuted(brightness)),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Este curso está bloqueado hasta que cumplas sus prerrequisitos.',
-                      style: TextStyle(
-                        color: MaterialTheme.textDimmed(brightness),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  String _nextStatusLabel(CourseStatus s) {
-    switch (s) {
-      case CourseStatus.unlocked:
-        return 'Marcar como cursando';
-      case CourseStatus.current:
-        return 'Marcar como aprobado';
-      case CourseStatus.approved:
-        return 'Volver a disponible';
-      case CourseStatus.locked:
-        return 'No disponible';
-    }
-  }
-}
-
-class _PrereqList extends StatelessWidget {
-  const _PrereqList({required this.course, required this.statuses});
-  final CourseNode course;
-  final Map<String, CourseStatus> statuses;
-
-  @override
-  Widget build(BuildContext context) {
-    final brightness = Theme.of(context).brightness;
-    final mallaController = Get.find<MallaController>();
-    final byId = {for (final c in mallaController.cards) c.id: c};
-    final concrete = course.coursePrerequisites;
-    final cycleReq = course.requiredCompletedLevel;
-    final cycleReqOk = cycleReq == null
-        ? false
-        : mallaController.hasCompletedMandatoryCycles(cycleReq, statuses);
-
-    if (concrete.isEmpty && cycleReq == null) {
-      return Text(
-        'Este curso no tiene prerrequisitos.',
-        style: TextStyle(
-          color: MaterialTheme.textMuted(brightness),
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-        ),
-      );
-    }
-
-    return Column(
-      children: [
-        if (cycleReq != null)
-          _PrereqRow(
-            label:
-                'Haber aprobado todos los obligatorios hasta el nivel $cycleReq',
-            ok: cycleReqOk,
-            icon: cycleReqOk ? Icons.flag_outlined : Icons.block,
-          ),
-        ...concrete.map((p) {
-          final c = byId[p];
-          final ok = statuses[p] == CourseStatus.approved;
-          return _PrereqRow(
-            label: c?.name ?? p,
-            ok: ok,
-            icon: ok ? Icons.done_all : Icons.block,
-          );
-        }),
-      ],
-    );
-  }
-}
-
-class _PrereqRow extends StatelessWidget {
-  const _PrereqRow({required this.label, required this.ok, required this.icon});
-  final String label;
-  final bool ok;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final brightness = Theme.of(context).brightness;
-    final color = ok ? const Color(0xFF10B981) : const Color(0xFFEF4444);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
-        children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                color: MaterialTheme.textSecondary(brightness),
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InfoTag extends StatelessWidget {
-  const _InfoTag({required this.icon, required this.text});
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final brightness = Theme.of(context).brightness;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: MaterialTheme.tagBg(brightness),
-        borderRadius: BorderRadius.circular(99),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 13, color: MaterialTheme.textSecondary(brightness)),
-          const SizedBox(width: 5),
-          Text(
-            text,
-            style: TextStyle(
-              color: MaterialTheme.textSecondary(brightness),
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PillStatus extends StatelessWidget {
-  const _PillStatus({required this.status});
-  final CourseStatus status;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: status.color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(99),
-        border: Border.all(color: status.borderColor.withValues(alpha: 0.5)),
-      ),
-      child: Text(
-        status.label,
-        style: TextStyle(
-          color: status.borderColor,
-          fontSize: 11,
-          fontWeight: FontWeight.w900,
-        ),
-      ),
-    );
-  }
-}
-
-class _SilaboLink extends StatelessWidget {
-  const _SilaboLink({required this.courseId});
-  final String courseId;
-
-  @override
-  Widget build(BuildContext context) {
-    final url = EvaluationSyllabusService().getSilaboUrl(courseId);
-    if (url == null) return const SizedBox.shrink();
-
-    final brightness = Theme.of(context).brightness;
-    final linkColor = brightness == Brightness.light
-        ? const Color(0xFF0369A1)
-        : const Color(0xFF38BDF8);
-
-    return GestureDetector(
-      onTap: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.open_in_new, size: 14, color: linkColor),
-          const SizedBox(width: 5),
-          Text(
-            'Ver Sílabo',
-            style: TextStyle(
-              color: linkColor,
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              decoration: TextDecoration.underline,
-              decorationColor: linkColor,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
