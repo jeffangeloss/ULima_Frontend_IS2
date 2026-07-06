@@ -167,4 +167,84 @@ void main() {
     expect(SilaboService.esFirmaPdf([]), isFalse);
     expect(SilaboService.esFirmaPdf(utf8.encode('%PD')), isFalse);
   });
+
+  // Ampliación HU21 (issue #106): nombre presentable del PDF compartido.
+  group('nombreArchivoPresentable', () {
+    test('conserva títulos normales (con tildes y ñ)', () {
+      expect(
+        SilaboService.nombreArchivoPresentable('Ingeniería de Software II'),
+        'Ingeniería de Software II',
+      );
+      expect(
+        SilaboService.nombreArchivoPresentable('Diseño y Señales'),
+        'Diseño y Señales',
+      );
+    });
+
+    test('sustituye caracteres inválidos de nombre de archivo', () {
+      final limpio = SilaboService.nombreArchivoPresentable(
+        r'Curso: ¿Redes? <v2> / "Final" | *2026*',
+      );
+      // "¿" sí es válido en un nombre de archivo; solo se limpian los
+      // ilegales de iOS/Android/Windows y separadores de ruta.
+      expect(limpio, 'Curso ¿Redes v2 Final 2026');
+      expect(limpio, isNot(contains(RegExp(r'[\\/:*?"<>|]'))));
+    });
+
+    test('elimina caracteres de control y saltos de línea', () {
+      expect(
+        SilaboService.nombreArchivoPresentable('Cálculo\nAvanzado\tI\x00'),
+        'Cálculo Avanzado I',
+      );
+    });
+
+    test('sin punto inicial (oculto) ni puntos/espacios finales', () {
+      expect(
+        SilaboService.nombreArchivoPresentable('.Sílabo confidencial...'),
+        'Sílabo confidencial',
+      );
+    });
+
+    test('vacío o solo basura → Silabo', () {
+      expect(SilaboService.nombreArchivoPresentable(''), 'Silabo');
+      expect(SilaboService.nombreArchivoPresentable('   '), 'Silabo');
+      expect(SilaboService.nombreArchivoPresentable('...'), 'Silabo');
+      expect(SilaboService.nombreArchivoPresentable('/:*?"<>|'), 'Silabo');
+    });
+
+    test('recorta títulos absurdamente largos a 80 caracteres', () {
+      final largo = 'Tópicos Especiales ' * 20; // ~380 chars
+      final nombre = SilaboService.nombreArchivoPresentable(largo);
+      expect(nombre.length, lessThanOrEqualTo(80));
+      expect(nombre, isNot(endsWith(' ')));
+    });
+  });
+
+  test(
+      'prepararCompartible escribe el PDF con nombre presentable '
+      '(no el fileId de la caché)', () async {
+    final service = buildService((_) => http.Response.bytes(_pdfBytes, 200));
+
+    final archivo = await service.prepararCompartible(
+      'Ingeniería de Software II',
+      _pdfBytes,
+    );
+
+    expect(archivo.path, endsWith('/silabos/compartir/Ingeniería de Software II.pdf'));
+    expect(archivo.existsSync(), isTrue);
+    expect(archivo.readAsBytesSync(), equals(_pdfBytes));
+  });
+
+  test('prepararCompartible sin directorio disponible → SilaboDescargaException',
+      () async {
+    final service = SilaboService(
+      httpClientFactory: () => MockClient((_) async => http.Response('', 500)),
+      cacheDirProvider: () async => throw StateError('sin path_provider'),
+    );
+
+    await expectLater(
+      service.prepararCompartible('Curso', _pdfBytes),
+      throwsA(isA<SilaboDescargaException>()),
+    );
+  });
 }

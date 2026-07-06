@@ -6,8 +6,11 @@
 //     fallback "Abrir en Drive"
 //   - Reintentar vuelve a pedir el PDF
 //   - URL que no es de Drive → error de enlace inválido
+// Los tests de la ampliación HU21 (pill de zoom, doble-toque y botón de
+// compartir) viven en test/silabo_viewer_zoom_test.dart.
 
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -23,7 +26,11 @@ const String _urlDrive =
     'https://drive.google.com/file/d/1UOWW27UJ7x1Y4cRqmBUmTBuIIQZvUQXl/view';
 
 class _FakeSilaboService extends SilaboService {
-  _FakeSilaboService(this._onFetch);
+  _FakeSilaboService(this._onFetch, {Directory? cacheDir})
+      : super(
+          cacheDirProvider:
+              cacheDir == null ? null : (() async => cacheDir),
+        );
 
   final Future<Uint8List> Function() _onFetch;
   int llamadas = 0;
@@ -40,7 +47,12 @@ class _FakeSilaboService extends SilaboService {
 
 /// App de prueba: un botón navega a '/silabo' con los argumentos reales que
 /// usa el call-site del course_detail_sheet.
-Widget _app(_FakeSilaboService service, {String url = _urlDrive}) {
+Widget _app(
+  _FakeSilaboService service, {
+  String url = _urlDrive,
+  CompartirArchivos? compartir,
+  CrearPdfController? crearPdfController,
+}) {
   return GetMaterialApp(
     initialRoute: '/',
     getPages: [
@@ -62,7 +74,11 @@ Widget _app(_FakeSilaboService service, {String url = _urlDrive}) {
         name: '/silabo',
         page: () => const SilaboViewerPage(),
         binding: BindingsBuilder(() {
-          Get.lazyPut(() => SilaboViewerController(service: service));
+          Get.lazyPut(() => SilaboViewerController(
+                service: service,
+                compartirArchivos: compartir,
+                crearPdfController: crearPdfController,
+              ));
         }),
       ),
     ],

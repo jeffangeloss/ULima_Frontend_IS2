@@ -151,6 +151,54 @@ class SilaboService {
     }
   }
 
+  /// Nombre de archivo presentable (sin extensión) derivado de [titulo],
+  /// para que la hoja de compartir no muestre el fileId de la caché
+  /// ("abc123.pdf"). Sustituye caracteres inválidos en nombres de archivo,
+  /// colapsa espacios, evita nombres ocultos (punto inicial) y recorta a un
+  /// largo razonable. Si no queda nada usable devuelve 'Silabo'.
+  static String nombreArchivoPresentable(String titulo) {
+    var nombre = titulo
+        // Inválidos en iOS/Android/Windows + separadores de ruta.
+        .replaceAll(RegExp(r'[\\/:*?"<>|]'), ' ')
+        // Caracteres de control.
+        .replaceAll(RegExp(r'[\x00-\x1F\x7F]'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    // Recorte por puntos de código (runes) para no partir un surrogate pair
+    // (p. ej. emojis) a la mitad, y DESPUÉS limpiar extremos: el recorte
+    // puede reintroducir un punto/espacio final inválido.
+    if (nombre.runes.length > 80) {
+      nombre = String.fromCharCodes(nombre.runes.take(80));
+    }
+    // Sin punto inicial (archivo oculto) ni puntos/espacios finales
+    // (inválido en Windows y confunde la extensión).
+    nombre = nombre.replaceAll(RegExp(r'^[.\s]+|[.\s]+$'), '');
+    return nombre.isEmpty ? 'Silabo' : nombre;
+  }
+
+  /// Escribe [bytes] en un archivo temporal con nombre presentable derivado
+  /// de [titulo] (p. ej. "Ingeniería de Software II.pdf") y lo devuelve,
+  /// listo para la hoja de compartir del sistema. A diferencia de la caché
+  /// por fileId, aquí el nombre SÍ es visible para el usuario.
+  ///
+  /// Lanza [SilaboDescargaException] si el archivo no se puede escribir.
+  Future<File> prepararCompartible(String titulo, Uint8List bytes) async {
+    try {
+      final base = await _cacheDirProvider();
+      final sep = Platform.pathSeparator;
+      final dir = Directory('${base.path}${sep}silabos${sep}compartir');
+      if (!dir.existsSync()) dir.createSync(recursive: true);
+      final file =
+          File('${dir.path}$sep${nombreArchivoPresentable(titulo)}.pdf');
+      await file.writeAsBytes(bytes, flush: true);
+      return file;
+    } on SilaboException {
+      rethrow;
+    } catch (_) {
+      throw const SilaboDescargaException('No se pudo preparar el sílabo.');
+    }
+  }
+
   /// Archivo de caché para [fileId], o null si el directorio no está
   /// disponible (p. ej. plataformas sin path_provider).
   Future<File?> _archivoCache(String fileId) async {
