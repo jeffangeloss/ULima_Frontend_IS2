@@ -6,6 +6,7 @@ import 'anuncios_tab.dart';
 import 'asesoria_tab.dart';
 import 'contactos_tab.dart';
 import 'descrip_cursos_controller.dart';
+import '../../components/skeleton.dart';
 
 class DescripCursosPage extends StatelessWidget {
   final String idSeccion;
@@ -320,10 +321,67 @@ class DescripCursosPage extends StatelessWidget {
       final seccion = control.getSeccionPorId(idSeccion);
 
       if (seccion == null) {
+        // Skeleton con la silueta real de la pantalla (título + barra de
+        // sección + bloque de asistencia con dona + tabs + cards), en lugar
+        // del spinner central clásico.
         return Scaffold(
-          body: Center(
-            child: CircularProgressIndicator(
-              color: Theme.of(context).colorScheme.primary,
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          body: SafeArea(
+            child: SkeletonPulse(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 14),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    child: SkeletonBox(width: 220, height: 22, borderRadius: 6),
+                  ),
+                  const SizedBox(height: 14),
+                  const SkeletonBox(
+                    width: double.infinity,
+                    height: 34,
+                    borderRadius: 0,
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: const [
+                              SkeletonBox(width: 140, height: 20, borderRadius: 6),
+                              SizedBox(height: 14),
+                              SkeletonBox(width: 110, height: 14, borderRadius: 6),
+                              SizedBox(height: 10),
+                              SkeletonBox(width: 110, height: 14, borderRadius: 6),
+                              SizedBox(height: 14),
+                              SkeletonBox(width: 90, height: 16, borderRadius: 6),
+                            ],
+                          ),
+                        ),
+                        const SkeletonBox(width: 90, height: 90, borderRadius: 45),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: const [
+                        Expanded(child: SkeletonBox(height: 28, borderRadius: 8)),
+                        SizedBox(width: 12),
+                        Expanded(child: SkeletonBox(height: 28, borderRadius: 8)),
+                        SizedBox(width: 12),
+                        Expanded(child: SkeletonBox(height: 28, borderRadius: 8)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Expanded(
+                    child: SkeletonCardList(count: 2, showAvatar: false),
+                  ),
+                ],
+              ),
             ),
           ),
         );

@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../descripcion_cursos/descrip_cursos.dart';
 import 'horario_controller.dart';
+import '../../components/skeleton.dart';
 
 class HorarioPage extends StatelessWidget {
   const HorarioPage({super.key});
@@ -112,7 +113,37 @@ class HorarioPage extends StatelessWidget {
       body: Obx(() {
         final activeDay = controller.currentDay;
         if (activeDay == null) {
-          return const Center(child: CircularProgressIndicator());
+          // Skeleton con la silueta del horario (selector de días + bloques
+          // de clases) en lugar del spinner central.
+          return SkeletonPulse(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      for (var i = 0; i < 5; i++) ...[
+                        const Expanded(
+                          child: SkeletonBox(height: 44, borderRadius: 12),
+                        ),
+                        if (i < 4) const SizedBox(width: 8),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 22),
+                  for (final alto in const [88.0, 64.0, 110.0, 76.0]) ...[
+                    SkeletonBox(
+                      width: double.infinity,
+                      height: alto,
+                      borderRadius: 14,
+                    ),
+                    const SizedBox(height: 14),
+                  ],
+                ],
+              ),
+            ),
+          );
         }
 
         final courses = controller.currentDayCourses;
