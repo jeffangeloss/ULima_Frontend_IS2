@@ -303,29 +303,28 @@ class _FilterChipsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
+    final bg = MaterialTheme.cardBg(brightness);
     return Container(
       width: double.infinity,
-      color: MaterialTheme.cardBg(brightness),
-      padding: const EdgeInsets.only(bottom: 10),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Obx(() {
-          final active = controller.filter.value;
-          return Row(
-            children: [
-              for (final f in MallaListFilter.values) ...[
-                _FilterPill(
-                  label: f.label,
-                  active: f == active,
-                  onTap: () => controller.setFilter(f),
-                ),
-                if (f != MallaListFilter.values.last) const SizedBox(width: 8),
-              ],
-            ],
-          );
-        }),
-      ),
+      color: bg,
+      padding: const EdgeInsets.fromLTRB(20, 2, 20, 12),
+      // Wrap en lugar de fila desplazable: los cinco filtros siempre
+      // visibles (en dos líneas si hace falta), sin chips cortados.
+      child: Obx(() {
+        final active = controller.filter.value;
+        return Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final f in MallaListFilter.values)
+              _FilterPill(
+                label: f.label,
+                active: f == active,
+                onTap: () => controller.setFilter(f),
+              ),
+          ],
+        );
+      }),
     );
   }
 }
@@ -345,15 +344,13 @@ class _FilterPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
     return Material(
-      color: active
-          ? MaterialTheme.primaryColor
-          : MaterialTheme.tagBg(brightness),
+      color: active ? MaterialTheme.primaryColor : Colors.transparent,
       borderRadius: BorderRadius.circular(99),
       child: InkWell(
         borderRadius: BorderRadius.circular(99),
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(99),
             border: Border.all(
