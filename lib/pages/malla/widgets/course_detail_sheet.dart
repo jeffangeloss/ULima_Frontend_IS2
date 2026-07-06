@@ -5,7 +5,7 @@
 // inyectan por parámetro para que cualquier vista pueda reusarlo.
 
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:get/get.dart';
 
 import '../../../configs/themes.dart';
 import '../../../models/malla_models.dart';
@@ -223,7 +223,7 @@ class CourseDetailSheet extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 12),
-          _SilaboLink(courseId: course.id),
+          _SilaboLink(courseId: course.id, courseName: course.name),
           const SizedBox(height: 18),
           if (currentStatus == CourseStatus.locked)
             Container(
@@ -435,8 +435,9 @@ class _PillStatus extends StatelessWidget {
 }
 
 class _SilaboLink extends StatelessWidget {
-  const _SilaboLink({required this.courseId});
+  const _SilaboLink({required this.courseId, required this.courseName});
   final String courseId;
+  final String courseName;
 
   @override
   Widget build(BuildContext context) {
@@ -449,12 +450,16 @@ class _SilaboLink extends StatelessWidget {
         : const Color(0xFF38BDF8);
 
     return GestureDetector(
-      onTap: () =>
-          launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+      // HU21: abre el visor de PDF in-app ('/silabo') en vez de expulsar a
+      // Drive; el launchUrl externo vive ahora solo como fallback del visor.
+      onTap: () => Get.toNamed<void>(
+        '/silabo',
+        arguments: {'url': url, 'titulo': courseName},
+      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.open_in_new, size: 14, color: linkColor),
+          Icon(Icons.picture_as_pdf_outlined, size: 14, color: linkColor),
           const SizedBox(width: 5),
           Text(
             'Ver Sílabo',

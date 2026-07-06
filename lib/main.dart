@@ -22,6 +22,8 @@ import 'pages/password_reset/reset_password_controller.dart';
 import 'pages/password_reset/forgot_password_page.dart';
 import 'pages/password_reset/reset_password_page.dart';
 import 'pages/setup_carrera/setup_carrera_page.dart';
+import 'pages/silabo/silabo_viewer_controller.dart';
+import 'pages/silabo/silabo_viewer_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -121,6 +123,17 @@ class MyApp extends StatelessWidget {
           page: () => const MallaPage(),
           binding: BindingsBuilder(() {
             Get.lazyPut(() => MallaController());
+          }),
+        ),
+        // HU21 (#105/#106): visor de sílabos in-app. Argumentos:
+        // {'url': <silaboUrl de la BD>, 'titulo': <nombre del curso>}.
+        // Binding por ruta (regla del repo: nada de Get.put en builds); el
+        // controller se crea fresco en cada entrada y se elimina al salir.
+        GetPage(
+          name: '/silabo',
+          page: () => const SilaboViewerPage(),
+          binding: BindingsBuilder(() {
+            Get.lazyPut(() => SilaboViewerController());
           }),
         ),
       ],
