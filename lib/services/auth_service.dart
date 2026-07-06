@@ -8,6 +8,8 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../configs/google_auth_config.dart';
 import '../models/user_model.dart';
 import 'api_client.dart';
+import 'courses_service.dart';
+import 'evaluations_service.dart';
 import 'malla_service.dart';
 import 'storage_service.dart';
 
@@ -248,7 +250,11 @@ class AuthService extends GetxService {
         // Logout es stateless; si el servidor no responde, limpiamos local igual.
       }
     }
+    // TT06: invalidar TODAS las cachés por-usuario para que otra cuenta en el
+    // mismo dispositivo no vea datos del usuario anterior.
     MallaService.to.clear();
+    CoursesService().clear();
+    EvaluationSyllabusService().clear();
     _currentUser.value = null;
     await _storage.clearSession();
     try {

@@ -33,20 +33,28 @@ class MallaService extends GetxService {
   final RxList<String> _specialties = <String>[].obs;
   final RxMap<String, String> _simulation = <String, String>{}.obs;
   final ApiClient _api = ApiClient();
+  // Código del alumno cuyos datos están en caché (TT06): /curriculum/me es
+  // por-usuario (trae su simulación persistida), así que un cambio de cuenta
+  // que no pasó por logout() (p. ej. sesión expirada por 401) debe recargar.
+  String? _loadedForCode;
 
   List<CourseNode> get courses => _courses;
   List<String> get availableSpecialties => _specialties;
   Map<String, String> get simulation => _simulation;
 
-  /// Limpia el catálogo en memoria (llamar en logout para evitar cache stale).
+  /// Limpia el catálogo y la simulación en memoria (llamar en logout para
+  /// evitar cache stale; la simulación guardada persiste en el backend).
   void clear() {
     _courses.clear();
     _specialties.clear();
+    _simulation.clear();
+    _loadedForCode = null;
   }
 
-  /// Carga el catálogo desde el backend (idempotente).
+  /// Carga el catálogo desde el backend (idempotente por usuario).
   Future<void> load() async {
-    if (_courses.isNotEmpty) return;
+    final code = AuthService.to.currentUser?.code;
+    if (_courses.isNotEmpty && code == _loadedForCode) return;
     final decoded = await _api.getJson('/curriculum/me');
     final rawCourses = decoded['courses'] as List?;
     final list = (rawCourses ?? [])
@@ -74,6 +82,9 @@ class MallaService extends GetxService {
       }
       _simulation.assignAll(simMap);
     }
+    // Solo tras una carga exitosa: si el fetch falla a mitad, la caché no
+    // debe quedar marcada como perteneciente al usuario nuevo.
+    _loadedForCode = code;
   }
 
   /// Cantidad máxima de filas observadas en un mismo nivel (para sizing del canvas).
