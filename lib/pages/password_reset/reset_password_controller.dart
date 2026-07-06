@@ -11,6 +11,7 @@ import 'package:get/get.dart';
 import '../../services/api_client.dart';
 import '../../services/auth_service.dart';
 import '../../services/password_reset_service.dart';
+import '../../services/session_navigation.dart';
 import '../../services/storage_service.dart';
 import 'password_reset_validators.dart';
 
@@ -108,10 +109,12 @@ class ResetPasswordController extends GetxController {
       );
       // La contraseña cambió: se invalida cualquier sesión local y se vuelve
       // al login. Se limpia el token antes para que logout() no llame al
-      // backend con credenciales ya inválidas.
+      // backend con credenciales ya inválidas. offAllToLogin garantiza una
+      // sola ruta /login aunque otro camino (p. ej. un 401 en vuelo) ya haya
+      // navegado (ver services/session_navigation.dart).
       await StorageService.to.clearToken();
       await AuthService.to.logout();
-      Get.offAllNamed('/login');
+      offAllToLogin();
       Get.snackbar(
         'Contraseña actualizada',
         'Inicia sesión con tu nueva contraseña.',

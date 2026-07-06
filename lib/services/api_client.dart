@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 
+import 'session_navigation.dart';
 import 'storage_service.dart';
 
 class ApiException implements Exception {
@@ -96,15 +97,18 @@ class ApiClient {
 
     if (resolved.statusCode == 401 && !path.contains('/auth/login')) {
       await StorageService.to.clearSession();
-      // No re-navegar si ya estamos en el login: tras un cambio de contraseña
-      // las peticiones en vuelo caducan en 401 y una segunda Get.offAll
-      // destruye el controller de la pantalla de login visible (crash de
-      // TextEditingController disposed). Tampoco navegar antes de que
-      // GetMaterialApp exista (arranque de la app).
-      final alreadyOnLogin =
-          Get.currentRoute == '/login' || Get.currentRoute == '/LoginPage';
-      if (Get.context != null && !alreadyOnLogin) {
-        Get.offAllNamed('/login');
+      // Un 401 del propio /auth/logout no es una "sesión expirada" que deba
+      // navegar desde aquí: el cierre de sesión es voluntario y quien lo
+      // inició (el botón del Perfil) navega al login. Navegar también aquí
+      // apilaba DOS rutas /login y rompía los campos de la pantalla visible
+      // (tipeo fantasma; ver session_navigation.dart), además de mostrar un
+      // snackbar engañoso durante un logout intencional.
+      //
+      // Para el resto de 401s, offAllToLogin() garantiza una sola navegación
+      // aunque varias peticiones en vuelo caduquen a la vez, no navega antes
+      // de que GetMaterialApp exista (arranque) y devuelve false si /login ya
+      // es la ruta actual (el snackbar solo se muestra si de verdad navegó).
+      if (!path.contains('/auth/logout') && offAllToLogin()) {
         Get.snackbar('Sesión expirada', 'Tu sesión caducó o iniciaste sesión en otro dispositivo.');
       }
     }
