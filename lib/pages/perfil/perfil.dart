@@ -8,6 +8,7 @@ import '../../services/api_client.dart';
 import '../../services/auth_service.dart';
 import '../../services/malla_service.dart';
 import '../../services/password_reset_service.dart';
+import '../../services/session_navigation.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -1137,7 +1138,12 @@ class _LogoutButton extends StatelessWidget {
       child: OutlinedButton.icon(
         onPressed: () async {
           await AuthService.to.logout();
-          Get.offAllNamed('/login');
+          // offAllToLogin: si el /auth/logout respondió 401 (token ya
+          // invalidado) y el interceptor ya nos dejó en el login, NO apilar
+          // una segunda ruta /login: eso destruía el LoginController de la
+          // pantalla visible y sus campos dejaban de repintar al teclear
+          // (ver services/session_navigation.dart).
+          offAllToLogin();
         },
         icon: const Icon(LucideIcons.logOut, size: 18),
         label: const Text(
