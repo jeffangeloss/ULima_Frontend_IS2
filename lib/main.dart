@@ -23,7 +23,7 @@ import 'pages/login/login_page.dart';
 import 'pages/malla/malla_controller.dart';
 import 'pages/malla/malla_list_controller.dart';
 import 'pages/malla/malla_page.dart';
-import 'pages/login/login_controller.dart';
+import 'pages/login/login_binding.dart';
 import 'pages/password_reset/forgot_password_controller.dart';
 import 'pages/password_reset/reset_password_controller.dart';
 import 'pages/password_reset/forgot_password_page.dart';
@@ -96,9 +96,10 @@ class MyApp extends StatelessWidget {
         GetPage(
           name: '/login',
           page: () => const LoginPage(),
-          binding: BindingsBuilder(() {
-            Get.lazyPut(() => LoginController());
-          }),
+          // LoginController PERMANENTE (ver LoginBinding): evita el "tipeo
+          // fantasma" cuando se navega a /login con una /login previa aún en el
+          // stack (flujo reset de contraseña). Cubre todos los caminos a /login.
+          binding: LoginBinding(),
         ),
         GetPage(
           name: '/forgot-password',
