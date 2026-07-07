@@ -44,16 +44,51 @@ class _CardAsesoriaState extends State<CardAsesoria> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
 
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
 
-                  children: [
-                    Text(
-                      '${widget.asesoria.dia} ${widget.asesoria.inicio} - ${widget.asesoria.fin}',
+                    children: [
+                      // HU18: badge "Extra · fecha" + etiqueta del dictante (Profesor/JP).
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          if (widget.asesoria.esExtra)
+                            _Chip(
+                              text: widget.asesoria.fecha != null
+                                  ? 'Extra · ${widget.asesoria.fecha}'
+                                  : 'Extra',
+                              color: colors.primary,
+                            ),
+                          _Chip(
+                            text: widget.asesoria.dictanteRol,
+                            color: colors.secondary,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        '${widget.asesoria.dia} ${widget.asesoria.inicio} - ${widget.asesoria.fin}',
 
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ],
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.groups_outlined,
+                              size: 14, color: colors.secondary),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${widget.asesoria.asistentes} asistirán',
+                            style: TextStyle(color: colors.secondary, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
 
                 Text(
@@ -167,6 +202,28 @@ class _CardAsesoriaState extends State<CardAsesoria> {
           style: TextStyle(color: colors.onSurface.withValues(alpha: 0.9)),
         ),
       ],
+    );
+  }
+}
+
+/// Etiqueta compacta (HU18): badge "Extra · fecha" y rol del dictante.
+class _Chip extends StatelessWidget {
+  const _Chip({required this.text, required this.color});
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: color),
+      ),
     );
   }
 }

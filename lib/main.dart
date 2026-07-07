@@ -10,8 +10,15 @@ import '/services/alert_service.dart';
 import '/services/courses_service.dart';
 import 'services/evaluations_service.dart';
 import '/services/malla_service.dart';
+import '/services/post_login_route.dart';
 import '/services/storage_service.dart';
 import 'pages/home/home_page.dart';
+import 'pages/teacher/teacher_home_binding.dart';
+import 'pages/teacher/teacher_home_page.dart';
+import 'pages/teacher/create_advising_binding.dart';
+import 'pages/teacher/create_advising_page.dart';
+import 'pages/teacher/attendees_binding.dart';
+import 'pages/teacher/attendees_page.dart';
 import 'pages/login/login_page.dart';
 import 'pages/malla/malla_controller.dart';
 import 'pages/malla/malla_list_controller.dart';
@@ -49,11 +56,15 @@ void main() async {
   String initialRoute;
   if (restored) {
     final user = AuthService.to.currentUser!;
-    initialRoute = user.setupComplete ? '/home' : '/setup-carrera';
-    try {
-      await AlertService.to.fetchAlerts();
-    } catch (e) {
-      print('Error loading alerts at startup: $e');
+    initialRoute = postLoginRoute(user);
+    // Las alertas son de alumno (endpoint /alerts/me con requireRole de
+    // alumno): no se piden para docentes (recibirían 403).
+    if (!user.isTeacher) {
+      try {
+        await AlertService.to.fetchAlerts();
+      } catch (e) {
+        print('Error loading alerts at startup: $e');
+      }
     }
   } else {
     initialRoute = '/login';
@@ -135,6 +146,22 @@ class MyApp extends StatelessWidget {
           binding: BindingsBuilder(() {
             Get.lazyPut(() => SilaboViewerController());
           }),
+        ),
+        // HU18: pantalla principal del docente (profesor/JP). Binding por ruta.
+        GetPage(
+          name: '/teacher-home',
+          page: () => const TeacherHomePage(),
+          binding: TeacherHomeBinding(),
+        ),
+        GetPage(
+          name: '/teacher-advising-create',
+          page: () => const CreateAdvisingPage(),
+          binding: CreateAdvisingBinding(),
+        ),
+        GetPage(
+          name: '/teacher-advising-attendees',
+          page: () => const AttendeesPage(),
+          binding: AttendeesBinding(),
         ),
       ],
     );

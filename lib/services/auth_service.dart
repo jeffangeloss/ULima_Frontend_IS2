@@ -69,7 +69,11 @@ class AuthService extends GetxService {
     try {
       final response = await _api.getJson('/auth/me', token: token);
       final user = UserModel.fromJson(_mapFrom(response['user']));
-      await _loadCatalogs(token: token, careerId: user.careerId);
+      // Los catálogos de carrera/especialidad son de alumno (endpoints con
+      // requireRole de alumno): un docente recibiría 403.
+      if (!user.isTeacher) {
+        await _loadCatalogs(token: token, careerId: user.careerId);
+      }
       _currentUser.value = user;
       await _storage.saveCode(user.code);
       return true;
@@ -101,7 +105,10 @@ class AuthService extends GetxService {
       final user = UserModel.fromJson(_mapFrom(response['user']));
       await _storage.saveToken(token);
       await _storage.saveCode(user.code);
-      await _loadCatalogs(token: token, careerId: user.careerId);
+      // Los catálogos son de alumno; un docente (HU18) los omite (evita 403).
+      if (!user.isTeacher) {
+        await _loadCatalogs(token: token, careerId: user.careerId);
+      }
       _currentUser.value = user;
       return null;
     } on ApiException catch (e) {

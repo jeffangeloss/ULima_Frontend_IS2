@@ -9,8 +9,11 @@ class UserModel {
   final String lastName;
   final String email;
 
-  /// student/delegate/subdelegate o legado estudiante/delegado/subdelegado.
+  /// student/delegate/subdelegate/teacher o legado estudiante/delegado/subdelegado.
   final String role;
+
+  /// HU18: etiqueta docente ("Profesor"/"Jefe de Práctica"); null para alumnos.
+  final String? teacherLabel;
   int? careerId;
 
   /// Especialidad elegida como mención principal (diploma).
@@ -29,6 +32,7 @@ class UserModel {
     required this.lastName,
     required this.email,
     required this.role,
+    this.teacherLabel,
     this.careerId,
     this.especialidadPrincipal,
     List<int>? especialidadesInteres,
@@ -44,6 +48,9 @@ class UserModel {
       role == 'subdelegado' ||
       role == 'delegate' ||
       role == 'subdelegate';
+
+  /// HU18: cuenta docente (profesor o JP). Incluye variante legado en español.
+  bool get isTeacher => role == 'teacher' || role == 'docente';
 
   /// Lista combinada para código que no distingue principal/interés (MallaService, etc.).
   List<int> get especialidades => [
@@ -87,6 +94,7 @@ class UserModel {
           json['institutionalEmail']?.toString() ??
           '',
       role: json['role'] as String? ?? 'estudiante',
+      teacherLabel: json['teacherLabel']?.toString(),
       careerId: _parseInt(json['career_id'] ?? json['careerId']),
       especialidadPrincipal:
           _parseInt(json['especialidad_principal']) ?? primaryFromSpecialties,
@@ -112,6 +120,7 @@ class UserModel {
     'lastName': lastName,
     'email': email,
     'role': role,
+    'teacherLabel': teacherLabel,
     'career_id': careerId,
     'especialidad_principal': especialidadPrincipal,
     'especialidades_interes': especialidadesInteres,

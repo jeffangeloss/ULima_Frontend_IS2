@@ -8,6 +8,7 @@ import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../services/auth_service.dart';
+import '../../services/post_login_route.dart';
 
 class LoginController extends GetxController {
   final codeController = TextEditingController();
@@ -42,7 +43,7 @@ class LoginController extends GetxController {
       return;
     }
     final user = _auth.currentUser!;
-    Get.offAllNamed(user.setupComplete ? '/home' : '/setup-carrera');
+    Get.offAllNamed(postLoginRoute(user));
   }
 
   Future<void> submit() async {
@@ -67,7 +68,7 @@ class LoginController extends GetxController {
     }
 
     final user = _auth.currentUser!;
-    Get.offAllNamed(user.setupComplete ? '/home' : '/setup-carrera');
+    Get.offAllNamed(postLoginRoute(user));
   }
 
   Future<void> loginWithGoogle() async {
@@ -84,7 +85,7 @@ class LoginController extends GetxController {
     }
 
     final user = _auth.currentUser!;
-    Get.offAllNamed(user.setupComplete ? '/home' : '/setup-carrera');
+    Get.offAllNamed(postLoginRoute(user));
   }
 
   @override

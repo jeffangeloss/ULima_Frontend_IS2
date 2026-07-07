@@ -22,6 +22,7 @@ class DescripCursosController extends GetxController {
   RxList<Asesoria> asesorias = <Asesoria>[].obs;
   RxList<ContactoCurso> alumnosContacto = <ContactoCurso>[].obs;
   Rxn<Docente> docenteContacto = Rxn<Docente>();
+  Rxn<Docente> jpContacto = Rxn<Docente>(); // HU18: jefe de práctica (0 o 1)
   RxInt selectedTab = 0.obs;
   RxBool isLoading = false.obs;
 
@@ -66,6 +67,7 @@ class DescripCursosController extends GetxController {
   Future<void> fetchContactos(String idSeccion) async {
     final data = await _contactoService.fetchContactos(idSeccion);
     docenteContacto.value = data['docente'] as Docente?;
+    jpContacto.value = data['jefePractica'] as Docente?;
     alumnosContacto.value = List<ContactoCurso>.from(data['alumnos'] ?? []);
   }
 
@@ -76,5 +78,6 @@ class DescripCursosController extends GetxController {
     asesorias.clear();
     alumnosContacto.clear();
     docenteContacto.value = null;
+    jpContacto.value = null;
   }
 }

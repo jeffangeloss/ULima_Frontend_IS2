@@ -11,6 +11,12 @@ class Asesoria {
   final String aula;
   final String zoom;
 
+  // HU18: campos nuevos (opcionales para compatibilidad con backends viejos).
+  final String kind; // 'recurring' | 'extra'
+  final String? fecha; // 'YYYY-MM-DD' (solo extras)
+  final String dictanteRol; // 'Profesor' | 'JP'
+  final int asistentes;
+
   Asesoria({
     required this.id,
     required this.courseId,
@@ -21,7 +27,13 @@ class Asesoria {
     required this.fin,
     required this.aula,
     required this.zoom,
+    this.kind = 'recurring',
+    this.fecha,
+    this.dictanteRol = 'Profesor',
+    this.asistentes = 0,
   });
+
+  bool get esExtra => kind == 'extra';
 
   factory Asesoria.fromJson(
     Map<String, dynamic> json, {
@@ -38,6 +50,12 @@ class Asesoria {
       fin: json['fin'].toString(),
       aula: json['aula'].toString(),
       zoom: json['zoom'].toString(),
+      kind: json['kind']?.toString() ?? 'recurring',
+      fecha: json['fecha']?.toString(),
+      dictanteRol: json['dictanteRol']?.toString() ?? 'Profesor',
+      asistentes: json['asistentes'] is int
+          ? json['asistentes'] as int
+          : int.tryParse(json['asistentes']?.toString() ?? '') ?? 0,
     );
   }
 }
