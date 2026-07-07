@@ -17,6 +17,11 @@ class ContactoService {
       final docente = docenteRaw == null
           ? null
           : Docente.fromJson(Map<String, dynamic>.from(docenteRaw as Map));
+      // HU18: jefe de práctica de la sección (0 o 1).
+      final jpRaw = data['jefePractica'];
+      final jefePractica = jpRaw == null
+          ? null
+          : Docente.fromJson(Map<String, dynamic>.from(jpRaw as Map));
       final List<dynamic> alumnosRaw = data['alumnos'] ?? [];
       final contactos = alumnosRaw.map((raw) {
         final json = Map<String, dynamic>.from(raw as Map);
@@ -40,11 +45,11 @@ class ContactoService {
         return compare;
       });
 
-      return {'docente': docente, 'alumnos': contactos};
+      return {'docente': docente, 'jefePractica': jefePractica, 'alumnos': contactos};
     } catch (e) {
       debugPrint('Error cargando contactos: $e');
 
-      return {'docente': null, 'alumnos': <ContactoCurso>[]};
+      return {'docente': null, 'jefePractica': null, 'alumnos': <ContactoCurso>[]};
     }
   }
 

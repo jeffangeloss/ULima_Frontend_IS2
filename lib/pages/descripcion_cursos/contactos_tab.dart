@@ -39,6 +39,24 @@ class ContactosTab extends StatelessWidget {
               apellidos: control.docenteContacto.value!.lastName,
               rol: 'docente',
             ),
+          // HU18: grupo Jefe de Práctica (solo si la sección tiene JP).
+          if (control.jpContacto.value != null) ...[
+            const SizedBox(height: 22),
+            Text(
+              'JEFE DE PRÁCTICA',
+              style: TextStyle(
+                color: colors.secondary,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ContactoCard(
+              nombres: control.jpContacto.value!.firstName,
+              apellidos: control.jpContacto.value!.lastName,
+              rol: 'jp',
+            ),
+          ],
           const SizedBox(height: 22),
           Text(
             'ALUMNOS',
