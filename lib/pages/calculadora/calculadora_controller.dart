@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
+import '../../domain/notas/notas_calculo.dart' as notas_calculo;
 import '../../models/evaluation_model.dart';
 import '../../services/evaluations_service.dart';
 import '../../services/courses_service.dart';
@@ -101,23 +102,10 @@ class CalculadoraController extends GetxController {
     }
   }
 
-  double calcularPromedio(List notas) {
-    if (notas.isEmpty) return 0.0;
-    double suma = 0;
-    for (var n in notas) {
-      final valor = double.tryParse(n['valor']?.toString() ?? '') ?? 0.0;
-      final peso = double.tryParse(n['peso']?.toString() ?? '') ?? 0.0;
-      suma += (valor * (peso / 100.0));
-    }
-    return suma;
-  }
+  // El cálculo puro vive en lib/domain/notas/ para poder testearlo (TT03).
+  double calcularPromedio(List notas) => notas_calculo.calcularPromedioPonderado(notas);
 
-  double sumaPesos(List notas) {
-    return notas.fold(0.0, (sum, item) {
-      final peso = double.tryParse(item['peso']?.toString() ?? '') ?? 0.0;
-      return sum + peso;
-    });
-  }
+  double sumaPesos(List notas) => notas_calculo.sumaDePesos(notas);
 
   void agregarNota(
     int cursoIndex,

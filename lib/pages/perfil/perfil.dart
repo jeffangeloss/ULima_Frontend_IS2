@@ -20,25 +20,66 @@ class ProfilePage extends StatelessWidget {
       backgroundColor: MaterialTheme.pageBg(brightness),
       body: SafeArea(
         top: false,
-        child: Column(
-          children: [
-            _ProfileHeader(),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: const [
-                    _CarreraCard(),
-                    SizedBox(height: 16),
-                    _ConfigAcademicaSection(),
-                    SizedBox(height: 16),
-                    _SeguridadSection(),
-                    SizedBox(height: 28),
-                    _LogoutButton(),
-                  ],
-                ),
+        // HU15: si no hay datos de perfil disponibles (sesión perdida o carga
+        // fallida), mostrar un estado de error en vez de campos vacíos.
+        child: AuthService.to.currentUser == null
+            ? const _ProfileErrorState()
+            : Column(
+                children: [
+                  _ProfileHeader(),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: const [
+                          _CarreraCard(),
+                          SizedBox(height: 16),
+                          _ConfigAcademicaSection(),
+                          SizedBox(height: 16),
+                          _SeguridadSection(),
+                          SizedBox(height: 28),
+                          _LogoutButton(),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
+      ),
+    );
+  }
+}
+
+// ── Estado de error (HU15) ────────────────────────────────────────────────────
+
+class _ProfileErrorState extends StatelessWidget {
+  const _ProfileErrorState();
+
+  @override
+  Widget build(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.person_off_outlined, size: 48, color: MaterialTheme.textMuted(brightness)),
+            const SizedBox(height: 12),
+            Text(
+              'No se pudieron cargar tus datos de perfil.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: MaterialTheme.textSecondary(brightness),
+              ),
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton(
+              onPressed: offAllToLogin,
+              child: const Text('Volver a iniciar sesión'),
             ),
           ],
         ),
@@ -140,6 +181,20 @@ class _ProfileHeader extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
+                // HU15: correo institucional (criterio de #68).
+                if ((user?.email ?? '').isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    user!.email,
+                    style: TextStyle(
+                      color: isDark
+                          ? const Color(0xFFB0B0C0)
+                          : const Color(0xFF666666),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -1137,6 +1192,29 @@ class _LogoutButton extends StatelessWidget {
       height: 50,
       child: OutlinedButton.icon(
         onPressed: () async {
+          // HU02: confirmar antes de cerrar sesión (evita salidas accidentales).
+          final confirmar = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Cerrar sesión'),
+              content: const Text('¿Seguro que quieres cerrar sesión?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(false),
+                  child: const Text('Cancelar'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(true),
+                  child: const Text(
+                    'Cerrar sesión',
+                    style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
+            ),
+          );
+          if (confirmar != true) return;
+
           await AuthService.to.logout();
           // offAllToLogin: si el /auth/logout respondió 401 (token ya
           // invalidado) y el interceptor ya nos dejó en el login, NO apilar
