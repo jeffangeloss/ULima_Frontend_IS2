@@ -26,11 +26,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
+import 'package:ulima_plus/pages/login/login_binding.dart';
 import 'package:ulima_plus/pages/login/login_controller.dart';
 import 'package:ulima_plus/pages/login/login_page.dart';
 import 'package:ulima_plus/services/session_navigation.dart';
 
-/// App mínima con la ruta /login REAL (misma page y mismo binding que
+/// App mínima con la ruta /login REAL (misma page y el LoginBinding real que
 /// main.dart) y un /perfil de prueba desde donde se cierra sesión.
 Widget _buildApp() {
   return GetMaterialApp(
@@ -39,9 +40,7 @@ Widget _buildApp() {
       GetPage(
         name: '/login',
         page: () => const LoginPage(),
-        binding: BindingsBuilder(() {
-          Get.lazyPut(() => LoginController());
-        }),
+        binding: LoginBinding(),
       ),
       GetPage(
         name: '/perfil',

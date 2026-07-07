@@ -46,6 +46,18 @@ class LoginController extends GetxController {
     Get.offAllNamed(postLoginRoute(user));
   }
 
+  /// Limpia el formulario. Se llama al (re)entrar a /login porque el
+  /// LoginController es permanente (ver LoginBinding): así una sesión nueva
+  /// —o el mismo dispositivo con otro usuario— no ve el código/contraseña
+  /// tecleados antes. No se disponen los TextEditingController (siguen vivos).
+  void resetFields() {
+    codeController.clear();
+    passwordController.clear();
+    errorMessage.value = null;
+    submitting.value = false;
+    passwordVisible.value = false;
+  }
+
   Future<void> submit() async {
     final code = codeController.text.trim();
     final password = passwordController.text;
