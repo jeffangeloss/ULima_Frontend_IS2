@@ -2,8 +2,8 @@ name: Build and Release APK
 
 on:
   push:
-    tags:
-      - "v*"
+    branches:
+      - build-apk
   workflow_dispatch:
     inputs:
       version:
@@ -43,22 +43,23 @@ jobs:
         run: flutter build apk --release
 
       - name: Obtener versión
-        id: version
         run: |
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             echo "VERSION=${GITHUB_REF_NAME}" >> $GITHUB_ENV
           else
-            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
+            echo "VERSION=${{ github.event.inputs.version || 'v0.0.1' }}" >> $GITHUB_ENV
           fi
 
       - name: Renombrar APK
         run: |
-          mkdir release
+          mkdir -p release
           cp build/app/outputs/flutter-apk/app-release.apk release/ULimaPlus.apk
 
-      - name: Crear Release
+      - name: Crear GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.VERSION }}
           name: ULima++ ${{ env.VERSION }}
           files: release/ULimaPlus.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
