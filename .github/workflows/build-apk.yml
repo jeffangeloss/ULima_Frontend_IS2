@@ -3,11 +3,8 @@ name: Build APK Test
 on:
   push:
     branches:
-      - feature/github-actions-apk
+      - build-apk
   workflow_dispatch:
-
-permissions:
-  contents: write
 
 jobs:
   build-android:
