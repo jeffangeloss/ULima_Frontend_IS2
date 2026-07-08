@@ -1,10 +1,18 @@
-name: Build APK Test
+name: Build and Release APK
 
 on:
   push:
-    branches:
-      - build-apk
+    tags:
+      - "v*"
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Versión del release"
+        required: true
+        default: "v0.0.1"
+
+permissions:
+  contents: write
 
 jobs:
   build-android:
@@ -25,22 +33,32 @@ jobs:
           git clone https://github.com/flutter/flutter.git --depth 1 -b stable "$HOME/flutter"
           echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
 
-      - name: Verificar Flutter
+      - name: Flutter Doctor
         run: flutter doctor -v
 
-      - name: Descargar dependencias
+      - name: Instalar dependencias
         run: flutter pub get
 
-      - name: Compilar APK release
+      - name: Compilar APK
         run: flutter build apk --release
 
-      - name: Preparar APK de prueba
+      - name: Obtener versión
+        id: version
         run: |
-          mkdir -p release
-          cp build/app/outputs/flutter-apk/app-release.apk release/ULimaPlus-test.apk
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "VERSION=${GITHUB_REF_NAME}" >> $GITHUB_ENV
+          else
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
+          fi
 
-      - name: Guardar APK como artifact
-        uses: actions/upload-artifact@v4
+      - name: Renombrar APK
+        run: |
+          mkdir release
+          cp build/app/outputs/flutter-apk/app-release.apk release/ULimaPlus.apk
+
+      - name: Crear Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: ULimaPlus-test-apk
-          path: release/ULimaPlus-test.apk
+          tag_name: ${{ env.VERSION }}
+          name: ULima++ ${{ env.VERSION }}
+          files: release/ULimaPlus.apk
