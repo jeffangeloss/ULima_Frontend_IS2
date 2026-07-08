@@ -43,7 +43,7 @@ class AnunciosTab extends StatelessWidget {
               child: CardAnuncio(
                 titulo: anuncio.titulo,
                 descripcion: anuncio.mensaje,
-                autor: '${anuncio.autor.fullName} - ${anuncio.autor.role}',
+                autor: '${anuncio.autor.fullName} - ${anuncio.autor.roleLabel}',
                 fecha: anuncio.fecha,
               ),
             );

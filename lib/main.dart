@@ -14,7 +14,9 @@ import '/services/post_login_route.dart';
 import '/services/storage_service.dart';
 import 'pages/home/home_page.dart';
 import 'pages/teacher/teacher_home_binding.dart';
+import 'pages/teacher/teacher_home_controller.dart';
 import 'pages/teacher/teacher_home_page.dart';
+import 'pages/teacher/teacher_sections_controller.dart';
 import 'pages/teacher/create_advising_binding.dart';
 import 'pages/teacher/create_advising_page.dart';
 import 'pages/teacher/attendees_binding.dart';
@@ -44,7 +46,6 @@ void main() async {
   Get.put<AuthService>(AuthService(), permanent: true);
   Get.put<AlertService>(AlertService(), permanent: true);
   Get.put<MallaService>(MallaService(), permanent: true);
-
 
   await Future.wait([
     EvaluationSyllabusService().loadEvaluationData(),
@@ -124,6 +125,8 @@ class MyApp extends StatelessWidget {
           // de pestañas y se elimine al salir de /home (logout).
           binding: BindingsBuilder(() {
             Get.lazyPut(() => MallaListController());
+            Get.lazyPut(() => TeacherSectionsController());
+            Get.lazyPut(() => TeacherHomeController());
           }),
         ),
         // TT07 (#103): la malla clásica vuelve como "Vista mapa (clásica)" de

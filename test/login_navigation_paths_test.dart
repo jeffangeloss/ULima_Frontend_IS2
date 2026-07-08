@@ -45,12 +45,15 @@ Widget _buildApp({required String initialRoute}) {
   return GetMaterialApp(
     initialRoute: initialRoute,
     getPages: [
-      GetPage(name: '/login', page: () => const LoginPage(), binding: LoginBinding()),
+      GetPage(
+        name: '/login',
+        page: () => const LoginPage(),
+        binding: LoginBinding(),
+      ),
       GetPage(name: '/forgot-password', page: () => stub('forgot')),
       GetPage(name: '/reset-password', page: () => stub('reset')),
       GetPage(name: '/home', page: () => stub('home')),
       GetPage(name: '/perfil', page: () => stub('perfil')),
-      GetPage(name: '/teacher-home', page: () => stub('teacher')),
       GetPage(name: '/setup-carrera', page: () => stub('setup')),
     ],
   );
@@ -122,9 +125,9 @@ void main() {
   );
 
   testWidgets(
-    'Camino 4 — logout del docente (teacher-home → offAllToLogin) [HU18]',
+    'Camino 4 - logout del docente (home shell -> offAllToLogin) [TT09]',
     (tester) async {
-      await tester.pumpWidget(_buildApp(initialRoute: '/teacher-home'));
+      await tester.pumpWidget(_buildApp(initialRoute: '/home'));
       await tester.pumpAndSettle();
 
       expect(offAllToLogin(), isTrue);
@@ -151,14 +154,13 @@ void main() {
     },
   );
 
-  testWidgets(
-    'Camino 6 — arranque directo en /login (initialRoute)',
-    (tester) async {
-      await tester.pumpWidget(_buildApp(initialRoute: '/login'));
-      await tester.pumpAndSettle();
-      await _typeAndVerify(tester, '20234444');
-    },
-  );
+  testWidgets('Camino 6 — arranque directo en /login (initialRoute)', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_buildApp(initialRoute: '/login'));
+    await tester.pumpAndSettle();
+    await _typeAndVerify(tester, '20234444');
+  });
 
   testWidgets(
     'Camino 7 — login ↔ forgot repetido y luego reset (varias /login enterradas)',

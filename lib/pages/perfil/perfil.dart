@@ -16,30 +16,33 @@ class ProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
+    final user = AuthService.to.currentUser;
     return Scaffold(
       backgroundColor: MaterialTheme.pageBg(brightness),
       body: SafeArea(
         top: false,
         // HU15: si no hay datos de perfil disponibles (sesión perdida o carga
         // fallida), mostrar un estado de error en vez de campos vacíos.
-        child: AuthService.to.currentUser == null
+        child: user == null
             ? const _ProfileErrorState()
             : Column(
                 children: [
-                  _ProfileHeader(),
+                  const _ProfileHeader(),
                   Expanded(
                     child: SingleChildScrollView(
                       padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: const [
-                          _CarreraCard(),
-                          SizedBox(height: 16),
-                          _ConfigAcademicaSection(),
-                          SizedBox(height: 16),
-                          _SeguridadSection(),
-                          SizedBox(height: 28),
-                          _LogoutButton(),
+                        children: [
+                          if (!user.isTeacher) ...[
+                            const _CarreraCard(),
+                            const SizedBox(height: 16),
+                            const _ConfigAcademicaSection(),
+                            const SizedBox(height: 16),
+                          ],
+                          const _SeguridadSection(),
+                          const SizedBox(height: 28),
+                          const _LogoutButton(),
                         ],
                       ),
                     ),
@@ -65,7 +68,11 @@ class _ProfileErrorState extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.person_off_outlined, size: 48, color: MaterialTheme.textMuted(brightness)),
+            Icon(
+              Icons.person_off_outlined,
+              size: 48,
+              color: MaterialTheme.textMuted(brightness),
+            ),
             const SizedBox(height: 12),
             Text(
               'No se pudieron cargar tus datos de perfil.',
@@ -91,6 +98,8 @@ class _ProfileErrorState extends StatelessWidget {
 // ── Header ────────────────────────────────────────────────────────────────────
 
 class _ProfileHeader extends StatelessWidget {
+  const _ProfileHeader();
+
   String _initialsFromAcademicName(
     String fullName,
     String firstName,
@@ -815,8 +824,10 @@ class _EspecialidadSheetState extends State<_EspecialidadSheet> {
         especialidadesInteres: _interes.toList(),
       );
       if (mounted) Navigator.of(context).pop();
-      Get.snackbar('Especialidades actualizadas',
-          'Tu selección se guardó correctamente.');
+      Get.snackbar(
+        'Especialidades actualizadas',
+        'Tu selección se guardó correctamente.',
+      );
     } on ApiException catch (e) {
       Get.snackbar('No se pudo guardar', e.message);
     } catch (_) {
@@ -1207,7 +1218,10 @@ class _LogoutButton extends StatelessWidget {
                   onPressed: () => Navigator.of(ctx).pop(true),
                   child: const Text(
                     'Cerrar sesión',
-                    style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w700),
+                    style: TextStyle(
+                      color: Colors.redAccent,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ],
