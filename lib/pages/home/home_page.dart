@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:ulima_plus/components/footer/app_footer.dart';
 import 'package:ulima_plus/components/header/app_header.dart';
 import 'package:ulima_plus/pages/calculadora/calculadora_page.dart';
+import 'package:ulima_plus/pages/delegado/delegado_cursos/delegado_cursos_page.dart';
 import 'package:ulima_plus/pages/horario/horario.dart';
 import 'package:ulima_plus/pages/malla/malla_list_page.dart';
 import 'package:ulima_plus/services/auth_service.dart';
@@ -34,7 +35,7 @@ class _HomePageState extends State<HomePage> {
     const HorarioPage(),
 
     // MODULO EXTRA A LOS ALUMNOS CON ROL 'Delegado'
-    if (user?.isDelegate ?? false) const Center(child: Text('Delegado')),
+    if (user?.isDelegate ?? false) DelegadoCursosPage(),
 
     const ProfilePage(),
   ];
