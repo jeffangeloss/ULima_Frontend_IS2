@@ -3,13 +3,15 @@ import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../configs/themes.dart';
+import '../../../models/anuncio_model.dart';
 import '../../../models/curso_delegado_model.dart';
 import 'create_announcement_controller.dart';
 
 class CreateAnnouncementPage extends StatefulWidget {
-  const CreateAnnouncementPage({super.key, required this.curso});
+  const CreateAnnouncementPage({super.key, required this.curso, this.anuncio});
 
   final CursoDelegado curso;
+  final Anuncio? anuncio;
 
   @override
   State<CreateAnnouncementPage> createState() => _CreateAnnouncementPageState();
@@ -22,9 +24,13 @@ class _CreateAnnouncementPageState extends State<CreateAnnouncementPage> {
   @override
   void initState() {
     super.initState();
-    _tag = 'create-announcement-${widget.curso.idSeccion}';
+    _tag =
+        'create-announcement-${widget.curso.idSeccion}-${widget.anuncio?.id ?? 'new'}';
     controller = Get.put(
-      CreateAnnouncementController(curso: widget.curso),
+      CreateAnnouncementController(
+        curso: widget.curso,
+        anuncio: widget.anuncio,
+      ),
       tag: _tag,
     );
   }
@@ -77,7 +83,9 @@ class _CreateAnnouncementPageState extends State<CreateAnnouncementPage> {
 
     return Scaffold(
       backgroundColor: MaterialTheme.pageBg(brightness),
-      appBar: AppBar(title: const Text('Nuevo anuncio')),
+      appBar: AppBar(
+        title: Text(controller.isEditing ? 'Editar anuncio' : 'Nuevo anuncio'),
+      ),
       body: Obx(
         () => SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
@@ -85,12 +93,12 @@ class _CreateAnnouncementPageState extends State<CreateAnnouncementPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _SectionBanner(curso: widget.curso, brightness: brightness),
-              label('Titulo'),
+              label('Título'),
               TextField(
                 controller: controller.titleController,
                 textInputAction: TextInputAction.next,
                 decoration: boxDecoration(
-                  'Ej. Cambio de aula para la practica',
+                  'Ej. Cambio de aula para la práctica',
                 ),
               ),
               label('Mensaje'),
@@ -100,7 +108,7 @@ class _CreateAnnouncementPageState extends State<CreateAnnouncementPage> {
                 maxLines: 10,
                 textInputAction: TextInputAction.newline,
                 decoration: boxDecoration(
-                  'Escribe la actualizacion para tu seccion',
+                  'Escribe la actualización para tu sección',
                 ),
               ),
               if (controller.errorMessage.value != null)
@@ -138,10 +146,20 @@ class _CreateAnnouncementPageState extends State<CreateAnnouncementPage> {
                             strokeWidth: 2.2,
                           ),
                         )
-                      : const Icon(LucideIcons.send, size: 18),
-                  label: const Text(
-                    'Publicar anuncio',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                      : Icon(
+                          controller.isEditing
+                              ? LucideIcons.save
+                              : LucideIcons.send,
+                          size: 18,
+                        ),
+                  label: Text(
+                    controller.isEditing
+                        ? 'Guardar cambios'
+                        : 'Publicar anuncio',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
               ),

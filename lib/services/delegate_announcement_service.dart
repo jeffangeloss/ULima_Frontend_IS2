@@ -7,12 +7,13 @@ import 'auth_service.dart';
 
 class DelegateAnnouncementService {
   final ApiClient _api = ApiClient();
-  final List<Anuncio> _mockAnnouncements = [];
+  static final List<Anuncio> _mockAnnouncements = [];
+  static final Set<String> _deletedAnnouncementIds = {};
 
   Future<List<Anuncio>> fetchAnnouncementsBySection(String sectionId) async {
     try {
       final data = await _api.getJson(
-        '/api/v1/sections/$sectionId/announcements',
+        '/section-management/sections/$sectionId/announcements',
       );
       final raw = _unwrapList(data);
       final anuncios = raw.map((item) {
@@ -28,22 +29,11 @@ class DelegateAnnouncementService {
         );
       }).toList();
 
-      anuncios.sort((a, b) {
-        final aDate = DateTime.tryParse(a.fecha);
-        final bDate = DateTime.tryParse(b.fecha);
-        if (aDate == null && bDate == null) return 0;
-        if (aDate == null) return 1;
-        if (bDate == null) return -1;
-        return bDate.compareTo(aDate);
-      });
-
-      return anuncios;
+      return _mergeLocalChanges(sectionId, anuncios);
     } catch (e) {
+      if (!_canUseMockFallback(e)) rethrow;
       debugPrint('Historial mock de anuncios delegado: $e');
-      return _mockAnnouncements
-          .where((anuncio) => anuncio.idSeccion == sectionId)
-          .toList()
-        ..sort((a, b) => b.fecha.compareTo(a.fecha));
+      return _mergeLocalChanges(sectionId, const []);
     }
   }
 
@@ -54,14 +44,17 @@ class DelegateAnnouncementService {
   }) async {
     try {
       final data = await _api.postJson(
-        '/api/v1/delegate/announcements',
-        body: {'sectionId': sectionId, 'title': title, 'message': message},
+        '/section-management/sections/$sectionId/announcements',
+        body: {'title': title, 'message': message},
       );
 
       return data['success'] == true ||
+          data['anuncio'] != null ||
+          data['message'] != null ||
           data['id'] != null ||
           data['data'] != null;
     } catch (e) {
+      if (!_canUseMockFallback(e)) rethrow;
       debugPrint('Publicacion mock de anuncio delegado: $e');
       await Future<void>.delayed(const Duration(milliseconds: 350));
       _mockAnnouncements.insert(
@@ -80,6 +73,118 @@ class DelegateAnnouncementService {
       );
       return true;
     }
+  }
+
+  Future<bool> updateAnnouncement({
+    required String announcementId,
+    required String sectionId,
+    required String title,
+    required String message,
+  }) async {
+    try {
+      final data = await _api.putJson(
+        '/section-management/announcements/$announcementId',
+        body: {'title': title, 'message': message},
+      );
+
+      return data['success'] == true ||
+          data['anuncio'] != null ||
+          data['message'] != null ||
+          data['id'] != null ||
+          data['data'] != null;
+    } catch (e) {
+      if (!_canUseMockFallback(e)) rethrow;
+      debugPrint('Edicion mock de anuncio delegado: $e');
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      final index = _mockAnnouncements.indexWhere(
+        (anuncio) => anuncio.id == announcementId,
+      );
+      if (index == -1) {
+        _mockAnnouncements.insert(
+          0,
+          Anuncio(
+            id: announcementId,
+            idSeccion: sectionId,
+            titulo: title,
+            mensaje: message,
+            fecha: DateTime.now().toIso8601String(),
+            autorCode: AuthService.to.currentUser?.code ?? '',
+            autor:
+                AuthService.to.currentUser ??
+                UserModel.fromJson(_currentUserJson()),
+          ),
+        );
+      } else {
+        _mockAnnouncements[index] = _mockAnnouncements[index].copyWith(
+          titulo: title,
+          mensaje: message,
+          fecha: DateTime.now().toIso8601String(),
+        );
+      }
+      _deletedAnnouncementIds.remove(announcementId);
+      return true;
+    }
+  }
+
+  Future<bool> deleteAnnouncement(String announcementId) async {
+    try {
+      final data = await _api.deleteJson(
+        '/section-management/announcements/$announcementId',
+      );
+
+      return data['success'] == true || data['message'] != null || data.isEmpty;
+    } catch (e) {
+      if (!_canUseMockFallback(e)) rethrow;
+      debugPrint('Eliminacion mock de anuncio delegado: $e');
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+      _deletedAnnouncementIds.add(announcementId);
+      _mockAnnouncements.removeWhere((anuncio) => anuncio.id == announcementId);
+      return true;
+    }
+  }
+
+  bool _canUseMockFallback(Object error) {
+    if (error is! ApiException) return true;
+    return error.statusCode == 404 && error.code == 'HTTP_ERROR';
+  }
+
+  List<Anuncio> _mergeLocalChanges(
+    String sectionId,
+    List<Anuncio> remoteAnnouncements,
+  ) {
+    final merged = remoteAnnouncements
+        .where((anuncio) => !_deletedAnnouncementIds.contains(anuncio.id))
+        .toList();
+    final local = _mockAnnouncements.where(
+      (anuncio) =>
+          anuncio.idSeccion == sectionId &&
+          !_deletedAnnouncementIds.contains(anuncio.id),
+    );
+
+    for (final localAnnouncement in local) {
+      final index = merged.indexWhere(
+        (remoteAnnouncement) => remoteAnnouncement.id == localAnnouncement.id,
+      );
+      if (index == -1) {
+        merged.add(localAnnouncement);
+      } else {
+        merged[index] = localAnnouncement;
+      }
+    }
+
+    _sortNewestFirst(merged);
+    return merged;
+  }
+
+  void _sortNewestFirst(List<Anuncio> anuncios) {
+    anuncios.sort((a, b) {
+      final aDate = DateTime.tryParse(a.fecha);
+      final bDate = DateTime.tryParse(b.fecha);
+      if (aDate == null && bDate == null) return 0;
+      if (aDate == null) return 1;
+      if (bDate == null) return -1;
+      return bDate.compareTo(aDate);
+    });
   }
 
   List<dynamic> _unwrapList(Map<String, dynamic> data) {

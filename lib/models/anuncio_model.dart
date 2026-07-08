@@ -19,6 +19,26 @@ class Anuncio {
     required this.autor,
   });
 
+  Anuncio copyWith({
+    String? id,
+    String? idSeccion,
+    String? titulo,
+    String? mensaje,
+    String? fecha,
+    String? autorCode,
+    UserModel? autor,
+  }) {
+    return Anuncio(
+      id: id ?? this.id,
+      idSeccion: idSeccion ?? this.idSeccion,
+      titulo: titulo ?? this.titulo,
+      mensaje: mensaje ?? this.mensaje,
+      fecha: fecha ?? this.fecha,
+      autorCode: autorCode ?? this.autorCode,
+      autor: autor ?? this.autor,
+    );
+  }
+
   factory Anuncio.fromJson(
     Map<String, dynamic> json, {
     required UserModel autor,

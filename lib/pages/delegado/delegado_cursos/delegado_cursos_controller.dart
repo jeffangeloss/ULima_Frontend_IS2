@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 
 import '../../../models/curso_delegado_model.dart';
+import '../../../services/api_client.dart';
 import '../../../services/delegate_service.dart';
 import '../delegado_anuncios/delegado_anuncios_page.dart';
 
@@ -23,6 +24,15 @@ class DelegadoCursosController extends GetxController {
     loading.value = true;
     try {
       cursos.assignAll(await _delegateService.fetchDelegateSections());
+    } on ApiException catch (e) {
+      cursos.clear();
+      Get.snackbar('No se pudieron cargar tus secciones', e.message);
+    } catch (_) {
+      cursos.clear();
+      Get.snackbar(
+        'No se pudieron cargar tus secciones',
+        'Revisa tu conexión e intenta nuevamente.',
+      );
     } finally {
       loading.value = false;
     }

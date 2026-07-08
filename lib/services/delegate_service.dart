@@ -10,7 +10,7 @@ class DelegateService {
 
   Future<List<CursoDelegado>> fetchDelegateSections() async {
     try {
-      final data = await _api.getJson('/api/v1/delegate/sections');
+      final data = await _api.getJson('/section-management/representatives');
       final raw = _unwrapList(data);
       return raw
           .map(
@@ -18,6 +18,7 @@ class DelegateService {
           )
           .toList();
     } catch (e) {
+      if (!_canUseMockFallback(e)) rethrow;
       debugPrint('Usando cursos delegado mock temporal: $e');
       return _mockDelegateSections();
     }
@@ -29,8 +30,19 @@ class DelegateService {
     if (payload is Map && payload['sections'] is List) {
       return payload['sections'] as List;
     }
+    if (payload is Map && payload['sectionRepresentatives'] is List) {
+      return payload['sectionRepresentatives'] as List;
+    }
     if (data['sections'] is List) return data['sections'] as List;
+    if (data['sectionRepresentatives'] is List) {
+      return data['sectionRepresentatives'] as List;
+    }
     return const [];
+  }
+
+  bool _canUseMockFallback(Object error) {
+    if (error is! ApiException) return true;
+    return error.statusCode == 404 && error.code == 'HTTP_ERROR';
   }
 
   List<CursoDelegado> _mockDelegateSections() {

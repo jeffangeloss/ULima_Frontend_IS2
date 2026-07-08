@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../components/descripcion_cursos/anuncio_card.dart';
 import '../../../components/skeleton.dart';
 import '../../../configs/themes.dart';
 import '../../../models/anuncio_model.dart';
@@ -44,7 +45,7 @@ class _DelegadoAnunciosPageState extends State<DelegadoAnunciosPage> {
 
     return Scaffold(
       backgroundColor: MaterialTheme.pageBg(brightness),
-      appBar: AppBar(title: const Text('Gestion de delegado')),
+      appBar: AppBar(title: const Text('Gestión de Sección')),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: controller.openCreate,
         backgroundColor: MaterialTheme.primaryColor,
@@ -76,7 +77,7 @@ class _DelegadoAnunciosPageState extends State<DelegadoAnunciosPage> {
                   padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
                   child: _SectionTitle(
                     title: 'Historial de anuncios',
-                    subtitle: 'Publicaciones enviadas a esta seccion',
+                    subtitle: 'Publicaciones enviadas a esta sección',
                     brightness: brightness,
                     onRefresh: controller.fetchAnnouncements,
                   ),
@@ -95,7 +96,7 @@ class _DelegadoAnunciosPageState extends State<DelegadoAnunciosPage> {
                   hasScrollBody: false,
                   child: _EmptyState(
                     icon: LucideIcons.megaphone,
-                    message: 'Aun no has publicado anuncios para esta seccion.',
+                    message: 'Aún no has publicado anuncios para esta sección.',
                     brightness: brightness,
                   ),
                 )
@@ -106,7 +107,13 @@ class _DelegadoAnunciosPageState extends State<DelegadoAnunciosPage> {
                     padding: EdgeInsets.fromLTRB(16, index == 0 ? 0 : 6, 16, 6),
                     child: _AnnouncementCard(
                       anuncio: controller.anunciosPublicados[index],
-                      brightness: brightness,
+                      onEdit: () => controller.openEdit(
+                        controller.anunciosPublicados[index],
+                      ),
+                      onDelete: () => _confirmDelete(
+                        context,
+                        controller.anunciosPublicados[index],
+                      ),
                     ),
                   ),
                 ),
@@ -116,6 +123,28 @@ class _DelegadoAnunciosPageState extends State<DelegadoAnunciosPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _confirmDelete(BuildContext context, Anuncio anuncio) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Eliminar anuncio'),
+        content: Text('¿Eliminar "${anuncio.titulo}" del historial?'),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Get.back(result: true),
+            child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (ok == true) await controller.deleteAnnouncement(anuncio);
   }
 }
 
@@ -254,8 +283,8 @@ class _StatisticsSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _SectionTitle(
-            title: 'Estadisticas de la seccion',
-            subtitle: 'Resumen academico del salon',
+            title: 'Estadísticas de la sección',
+            subtitle: 'Resumen académico del salón',
             brightness: brightness,
             onRefresh: controller.fetchStatistics,
           ),
@@ -277,7 +306,7 @@ class _StatisticsSection extends StatelessWidget {
               return _InlineEmptyState(
                 icon: LucideIcons.chartColumn,
                 message:
-                    'Aun no hay estadisticas disponibles para esta seccion.',
+                    'Aún no hay estadísticas disponibles para esta sección.',
                 brightness: brightness,
               );
             }
@@ -430,89 +459,69 @@ class _BarRow extends StatelessWidget {
   }
 }
 
+enum _AnnouncementAction { edit, delete }
+
 class _AnnouncementCard extends StatelessWidget {
-  const _AnnouncementCard({required this.anuncio, required this.brightness});
+  const _AnnouncementCard({
+    required this.anuncio,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   final Anuncio anuncio;
-  final Brightness brightness;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
-    final formattedDate = _formatDate(anuncio.fecha);
+    final colors = Theme.of(context).colorScheme;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: MaterialTheme.cardBg(brightness),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: MaterialTheme.borderColor(brightness)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  anuncio.titulo,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: MaterialTheme.textPrimary(brightness),
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              _Badge(
-                text: formattedDate,
-                color: MaterialTheme.textMuted(brightness),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            anuncio.mensaje,
-            maxLines: 4,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: MaterialTheme.textSecondary(brightness),
-              fontSize: 13,
-              height: 1.35,
+    return CardAnuncio(
+      titulo: anuncio.titulo,
+      descripcion: anuncio.mensaje,
+      autor: '${anuncio.autor.fullName} - ${anuncio.autor.roleLabel}',
+      fecha: anuncio.fecha,
+      action: PopupMenuButton<_AnnouncementAction>(
+        tooltip: 'Acciones',
+        icon: Icon(
+          LucideIcons.ellipsisVertical,
+          size: 18,
+          color: colors.secondary,
+        ),
+        onSelected: (action) {
+          switch (action) {
+            case _AnnouncementAction.edit:
+              onEdit();
+              break;
+            case _AnnouncementAction.delete:
+              onDelete();
+              break;
+          }
+        },
+        itemBuilder: (_) => const [
+          PopupMenuItem(
+            value: _AnnouncementAction.edit,
+            child: Row(
+              children: [
+                Icon(LucideIcons.pencil, size: 17),
+                SizedBox(width: 8),
+                Text('Editar'),
+              ],
             ),
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Icon(
-                LucideIcons.userRound,
-                size: 15,
-                color: MaterialTheme.primaryColor,
-              ),
-              const SizedBox(width: 5),
-              Expanded(
-                child: Text(
-                  '${anuncio.autor.fullName} · ${anuncio.autor.role}',
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: MaterialTheme.primaryColor,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ],
+          PopupMenuItem(
+            value: _AnnouncementAction.delete,
+            child: Row(
+              children: [
+                Icon(LucideIcons.trash2, size: 17, color: Colors.red),
+                SizedBox(width: 8),
+                Text('Eliminar', style: TextStyle(color: Colors.red)),
+              ],
+            ),
           ),
         ],
       ),
     );
-  }
-
-  static String _formatDate(String raw) {
-    final date = DateTime.tryParse(raw);
-    if (date == null) return raw;
-    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
 }
 

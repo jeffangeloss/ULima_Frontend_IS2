@@ -5,6 +5,7 @@ class CardAnuncio extends StatelessWidget {
   final String descripcion;
   final String autor;
   final String fecha;
+  final Widget? action;
 
   const CardAnuncio({
     super.key,
@@ -12,11 +13,13 @@ class CardAnuncio extends StatelessWidget {
     required this.descripcion,
     required this.autor,
     required this.fecha,
+    this.action,
   });
 
   @override
   Widget build(BuildContext context) {
     ColorScheme colors = Theme.of(context).colorScheme;
+    final formattedFecha = _formatDate(fecha);
 
     return Container(
       decoration: BoxDecoration(
@@ -31,10 +34,20 @@ class CardAnuncio extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
 
           children: [
-            Text(
-              titulo,
-
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    titulo,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                if (action != null) ...[const SizedBox(width: 8), action!],
+              ],
             ),
 
             const SizedBox(height: 10),
@@ -56,7 +69,7 @@ class CardAnuncio extends StatelessWidget {
                 ),
 
                 Text(
-                  fecha,
+                  formattedFecha,
 
                   style: TextStyle(color: colors.secondary, fontSize: 12),
                 ),
@@ -66,5 +79,17 @@ class CardAnuncio extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  static String _formatDate(String raw) {
+    final date = DateTime.tryParse(raw);
+    if (date == null) {
+      final datePrefix = RegExp(r'^(\d{4})-(\d{2})-(\d{2})').firstMatch(raw);
+      if (datePrefix != null) {
+        return '${datePrefix.group(3)}/${datePrefix.group(2)}/${datePrefix.group(1)}';
+      }
+      return raw.split(RegExp(r'\s+')).first;
+    }
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
 }

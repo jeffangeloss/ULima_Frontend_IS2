@@ -1,7 +1,6 @@
 // lib/pages/teacher/teacher_home_page.dart
-// HU18: pantalla principal del docente (profesor/JP). Lista sus asesorías con
-// el contador de confirmados; el header muestra su rol; el "+" abre el
-// formulario de asesoría extra.
+// HU18: pantalla principal del docente (profesor/JP). Lista sus asesorias con
+// el contador de confirmados; el "+" abre el formulario de asesoria extra.
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -12,20 +11,47 @@ import '../../models/advising_models.dart';
 import 'teacher_home_controller.dart';
 
 class TeacherHomePage extends StatelessWidget {
-  const TeacherHomePage({super.key});
+  const TeacherHomePage({super.key, this.embedded = false});
+
+  final bool embedded;
 
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<TeacherHomeController>();
     final brightness = Theme.brightnessOf(context);
+    final body = _TeacherSessionsBody(
+      controller: controller,
+      brightness: brightness,
+      onConfirmDelete: (session) =>
+          _confirmDelete(context, controller, session),
+    );
+
+    if (embedded) {
+      return Stack(
+        children: [
+          Positioned.fill(child: body),
+          Positioned(
+            right: 16,
+            bottom: 16,
+            child: FloatingActionButton.extended(
+              onPressed: controller.openCreate,
+              backgroundColor: MaterialTheme.primaryColor,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.add),
+              label: const Text('Asesoria extra'),
+            ),
+          ),
+        ],
+      );
+    }
 
     return Scaffold(
       backgroundColor: MaterialTheme.pageBg(brightness),
       appBar: AppBar(
-        title: const Text('Mis asesorías'),
+        title: const Text('Mis asesorias'),
         actions: [
           IconButton(
-            tooltip: 'Cerrar sesión',
+            tooltip: 'Cerrar sesion',
             icon: const Icon(Icons.logout),
             onPressed: controller.logout,
           ),
@@ -36,9 +62,56 @@ class TeacherHomePage extends StatelessWidget {
         backgroundColor: MaterialTheme.primaryColor,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
-        label: const Text('Asesoría extra'),
+        label: const Text('Asesoria extra'),
       ),
-      body: RefreshIndicator(
+      body: body,
+    );
+  }
+
+  Future<void> _confirmDelete(
+    BuildContext context,
+    TeacherHomeController controller,
+    AdvisingSession session,
+  ) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Eliminar asesoria'),
+        content: Text(
+          'Eliminar la asesoria extra del ${session.fecha ?? session.dia}?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Get.back(result: true),
+            child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) await controller.deleteSession(session);
+  }
+}
+
+class _TeacherSessionsBody extends StatelessWidget {
+  const _TeacherSessionsBody({
+    required this.controller,
+    required this.brightness,
+    required this.onConfirmDelete,
+  });
+
+  final TeacherHomeController controller;
+  final Brightness brightness;
+  final void Function(AdvisingSession session) onConfirmDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: MaterialTheme.pageBg(brightness),
+      child: RefreshIndicator(
         onRefresh: controller.loadSessions,
         color: MaterialTheme.primaryColor,
         child: Obx(() {
@@ -48,7 +121,9 @@ class TeacherHomePage extends StatelessWidget {
           return CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
-              SliverToBoxAdapter(child: _Header(controller: controller, brightness: brightness)),
+              SliverToBoxAdapter(
+                child: _Header(controller: controller, brightness: brightness),
+              ),
               if (loading && sessions.isEmpty)
                 const SliverToBoxAdapter(
                   child: Padding(
@@ -70,7 +145,8 @@ class TeacherHomePage extends StatelessWidget {
                   hasScrollBody: false,
                   child: _EmptyState(
                     icon: Icons.event_available_outlined,
-                    message: 'Aún no tienes asesorías. Pulsa "Asesoría extra" para crear una.',
+                    message:
+                        'Aun no tienes asesorias. Pulsa "Asesoria extra" para crear una.',
                     brightness: brightness,
                   ),
                 )
@@ -84,7 +160,7 @@ class TeacherHomePage extends StatelessWidget {
                       brightness: brightness,
                       onTap: () => controller.openAttendees(sessions[i]),
                       onDelete: sessions[i].esExtra
-                          ? () => _confirmDelete(context, controller, sessions[i])
+                          ? () => onConfirmDelete(sessions[i])
                           : null,
                     ),
                   ),
@@ -95,28 +171,6 @@ class TeacherHomePage extends StatelessWidget {
         }),
       ),
     );
-  }
-
-  Future<void> _confirmDelete(
-    BuildContext context,
-    TeacherHomeController controller,
-    AdvisingSession session,
-  ) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Eliminar asesoría'),
-        content: Text('¿Eliminar la asesoría extra del ${session.fecha ?? session.dia}?'),
-        actions: [
-          TextButton(onPressed: () => Get.back(result: false), child: const Text('Cancelar')),
-          TextButton(
-            onPressed: () => Get.back(result: true),
-            child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-    if (ok == true) await controller.deleteSession(session);
   }
 }
 
@@ -200,13 +254,13 @@ class _SessionCard extends StatelessWidget {
   static const _modalityLabel = {
     'classroom': 'Presencial',
     'virtual': 'Virtual',
-    'hybrid': 'Híbrida',
+    'hybrid': 'Hibrida',
   };
 
   @override
   Widget build(BuildContext context) {
     final cuandoExtra = session.esExtra && session.fecha != null
-        ? '${session.dia} · ${session.fecha}'
+        ? '${session.dia} - ${session.fecha}'
         : session.dia;
 
     return InkWell(
@@ -234,19 +288,30 @@ class _SessionCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (session.esExtra) const _Badge(text: 'Extra', color: MaterialTheme.primaryColor),
+                if (session.esExtra)
+                  const _Badge(
+                    text: 'Extra',
+                    color: MaterialTheme.primaryColor,
+                  ),
               ],
             ),
             const SizedBox(height: 6),
             Row(
               children: [
-                Icon(Icons.schedule, size: 15, color: MaterialTheme.textMuted(brightness)),
+                Icon(
+                  Icons.schedule,
+                  size: 15,
+                  color: MaterialTheme.textMuted(brightness),
+                ),
                 const SizedBox(width: 4),
                 Flexible(
                   child: Text(
-                    '$cuandoExtra · ${session.inicio}–${session.fin}',
+                    '$cuandoExtra - ${session.inicio}-${session.fin}',
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 13, color: MaterialTheme.textSecondary(brightness)),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: MaterialTheme.textSecondary(brightness),
+                    ),
                   ),
                 ),
               ],
@@ -254,20 +319,34 @@ class _SessionCard extends StatelessWidget {
             const SizedBox(height: 4),
             Row(
               children: [
-                Icon(Icons.place_outlined, size: 15, color: MaterialTheme.textMuted(brightness)),
+                Icon(
+                  Icons.place_outlined,
+                  size: 15,
+                  color: MaterialTheme.textMuted(brightness),
+                ),
                 const SizedBox(width: 4),
                 Text(
                   _modalityLabel[session.modality] ?? session.modality,
-                  style: TextStyle(fontSize: 13, color: MaterialTheme.textSecondary(brightness)),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: MaterialTheme.textSecondary(brightness),
+                  ),
                 ),
                 const SizedBox(width: 12),
-                _Badge(text: session.rol, color: MaterialTheme.textMuted(brightness)),
+                _Badge(
+                  text: session.rol,
+                  color: MaterialTheme.textMuted(brightness),
+                ),
               ],
             ),
             const SizedBox(height: 10),
             Row(
               children: [
-                Icon(Icons.groups_outlined, size: 16, color: MaterialTheme.primaryColor),
+                const Icon(
+                  Icons.groups_outlined,
+                  size: 16,
+                  color: MaterialTheme.primaryColor,
+                ),
                 const SizedBox(width: 4),
                 Text(
                   session.cupo != null
@@ -284,10 +363,17 @@ class _SessionCard extends StatelessWidget {
                   IconButton(
                     tooltip: 'Eliminar',
                     visualDensity: VisualDensity.compact,
-                    icon: Icon(Icons.delete_outline, size: 20, color: MaterialTheme.textMuted(brightness)),
+                    icon: Icon(
+                      Icons.delete_outline,
+                      size: 20,
+                      color: MaterialTheme.textMuted(brightness),
+                    ),
                     onPressed: onDelete,
                   ),
-                Icon(Icons.chevron_right, color: MaterialTheme.textMuted(brightness)),
+                Icon(
+                  Icons.chevron_right,
+                  color: MaterialTheme.textMuted(brightness),
+                ),
               ],
             ),
           ],
@@ -312,14 +398,22 @@ class _Badge extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: color),
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
       ),
     );
   }
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.icon, required this.message, required this.brightness});
+  const _EmptyState({
+    required this.icon,
+    required this.message,
+    required this.brightness,
+  });
   final IconData icon;
   final String message;
   final Brightness brightness;
@@ -336,7 +430,10 @@ class _EmptyState extends StatelessWidget {
           Text(
             message,
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 14, color: MaterialTheme.textSecondary(brightness)),
+            style: TextStyle(
+              fontSize: 14,
+              color: MaterialTheme.textSecondary(brightness),
+            ),
           ),
         ],
       ),

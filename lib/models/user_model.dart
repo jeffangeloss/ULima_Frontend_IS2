@@ -43,6 +43,37 @@ class UserModel {
 
   String get fullName => '$firstName $lastName';
 
+  String get roleLabel {
+    final normalized = role.trim().toLowerCase();
+    if (teacherLabel != null && teacherLabel!.trim().isNotEmpty) {
+      return teacherLabel!;
+    }
+
+    switch (normalized) {
+      case 'delegate':
+      case 'delegado':
+        return 'Delegado';
+      case 'subdelegate':
+      case 'subdelegado':
+        return 'Subdelegado';
+      case 'teacher':
+      case 'docente':
+      case 'profesor':
+        return 'Profesor';
+      case 'jp':
+      case 'jefe de practica':
+      case 'jefe de práctica':
+        return 'Jefe de Práctica';
+      case 'student':
+      case 'estudiante':
+      case 'alumno':
+        return 'Alumno';
+    }
+
+    if (normalized.isEmpty) return '';
+    return '${normalized[0].toUpperCase()}${normalized.substring(1)}';
+  }
+
   bool get isDelegate =>
       role == 'delegado' ||
       role == 'subdelegado' ||
