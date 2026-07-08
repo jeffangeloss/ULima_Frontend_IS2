@@ -8,7 +8,7 @@ Este repositorio usa Tessl con Spec Driven Development. No implementes cambios f
 - Backend proveedor: `../ULima_Backend_IS2`.
 - Contrato REST local: `docs/specs/api-contracts.md`.
 - PostgreSQL definitivo vive detrás del backend.
-- `assets/data/*.json` es mock descartable; no es fuente final ni fallback para features integradas.
+- No existen archivos `assets/data/` en el proyecto; la única fuente de verdad es PostgreSQL a través del backend.
 
 ## Flujo Obligatorio
 
@@ -53,8 +53,8 @@ Este repositorio usa Tessl con Spec Driven Development. No implementes cambios f
 ## Reglas De Dominio
 
 - Usuarios: estudiantes.
-- Roles: `student`, `delegate`, `subdelegate`.
-- Docente no inicia sesión; solo se muestra como dato académico.
+- Roles: `student`, `delegate`, `subdelegate`, `teacher`.
+- Docente puede iniciar sesión (HU18) y tiene su propio home (`teacher_home_page.dart`).
 - Las notas son personales no oficiales.
 - Riesgo académico depende del promedio personal.
 - Alta carga depende de 3+ evaluaciones en una semana.

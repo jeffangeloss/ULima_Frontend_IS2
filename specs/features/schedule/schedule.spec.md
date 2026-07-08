@@ -5,8 +5,6 @@ targets:
   - ../../../lib/pages/horario/**
   - ../../../lib/services/evaluations_service.dart
   - ../../../lib/services/seccion_service.dart
-  - ../../../assets/data/schedule_days.json
-  - ../../../assets/data/evaluaciones.json
 ---
 
 # Schedule
@@ -27,7 +25,7 @@ targets:
 - **Classrooms per session**: Each regular block uses `salon`/`aula` from that session, so a section can have different classrooms on different days.
 - **Course colors**: Regular class blocks accept `color` as either a legacy name (`blue`, `green`, etc.) or a hex value in `#RRGGBB`/`#AARRGGBB` format.
 - **Current-time line**: The grid shows a red current-time line only when the selected day is the current date in Lima, calculated as UTC-5, and the current time is between 7:00 and 22:00.
-- **Evaluation highlight**: Assessment blocks use the existing highlighted evaluation card and open the existing GetX details dialog when tapped.
+- **Course block tap**: Al tocar un bloque de curso, se navega a `DescripCursosPage` con el `idSeccion` correspondiente (no existe un details dialog separado para evaluaciones).
 - **High-load alert**: If the active academic week has 3 or more assessments, `isActiveWeekHighLoad` is true and the UI shows the existing warning banner under the day selector.
 
 ## API Dependencies

@@ -138,9 +138,8 @@ The following files are no longer referenced by the academic profile feature:
 
 | File | Status | Reason |
 | --- | --- | --- |
-| `assets/data/carreras.json` | 🗑️ Remove from spec targets | Catalog comes from `/academic-profile/careers` |
-| `assets/data/especialidades.json` | 🗑️ Remove from spec targets | Catalog comes from `/academic-profile/specialties` |
-| `lib/services/user_service.dart` | 🗑️ Remove from spec targets | Legacy service calling `/academic-profile/users` (not in contract) |
+| `assets/data/` | 🗑️ Eliminado | El directorio `assets/data/` no existe en el proyecto. |
+| `lib/services/user_service.dart` | 🗑️ Legacy | Servicio que llama a `GET /academic-profile/users` — endpoint no implementado en backend. |
 
 ## Verification
 

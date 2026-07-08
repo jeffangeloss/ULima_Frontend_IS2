@@ -28,6 +28,9 @@ targets:
 - `GET /course-detail/sections/:sectionId`
 - `GET /course-detail/sections/:sectionId/announcements`
 - `GET /course-detail/sections/:sectionId/advising`
+- `GET /course-detail/sections/:sectionId/contacts`
+- `GET /course-detail/teachers`
+- `GET /course-detail/enrollments`
 
 ## Verification
 

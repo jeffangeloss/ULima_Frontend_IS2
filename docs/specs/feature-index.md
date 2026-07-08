@@ -4,15 +4,19 @@ This index connects real user stories, product requirements, Flutter files, mock
 
 | Priority | Feature | Spec | User Stories | Requirements | Flutter target | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| 0 | Platform Runtime | `specs/features/platform-runtime/platform-runtime.spec.md` | Infra | Runtime config | `lib/services/api_client.dart` | Active |
-| 1 | Auth | `specs/features/auth/auth.spec.md` | US01, US02 | R1, R2, RNF7 | `lib/pages/login`, `lib/services/auth_service.dart` | Rewrite first |
-| 2 | Academic Profile | `specs/features/academic-profile/academic-profile.spec.md` | US05 | R12, R13 | `lib/pages/setup_carrera` | Rewrite second |
-| 3 | Curriculum | `specs/features/curriculum/curriculum.spec.md` | US03, US04 | R4, R5, R10, R11 | `lib/pages/malla` | Rewrite third |
-| 4 | Grades | `specs/features/grades/grades.spec.md` | US06, US07 | R6, R9 | `lib/pages/calculadora` | Rewrite fourth |
-| 5 | Schedule | `specs/features/schedule/schedule.spec.md` | US09 | R19 | `lib/pages/horario` | Rewrite fifth |
-| 6 | Course Detail | `specs/features/course-detail/course-detail.spec.md` | US13, US14 | R20 | `lib/pages/descripcion_cursos` | Rewrite sixth |
-| 7 | Alerts | `specs/features/alerts/alerts.spec.md` | US15 | R15, R16, R22, R23 | `lib/pages/home`, `lib/pages/perfil` | Rewrite seventh |
-| 8 | Section Management | `specs/features/section-management/section-management.spec.md` | US16, US17, US18 | R14, R17, R18, R21 | services and delegate mockups | Rewrite eighth |
+| 0 | Platform Runtime | `specs/features/platform-runtime/platform-runtime.spec.md` | Infra | Runtime config | `lib/services/api_client.dart` | Activo |
+| 1 | Auth | `specs/features/auth/auth.spec.md` | US01, US02 | R1, R2, RNF7 | `lib/pages/login`, `lib/services/auth_service.dart` | Spec existente |
+| 2 | Academic Profile | `specs/features/academic-profile/academic-profile.spec.md` | US05 | R12, R13 | `lib/pages/setup_carrera` | Spec existente |
+| 3 | Curriculum | `specs/features/curriculum/curriculum.spec.md` | US03, US04 | R4, R5, R10, R11 | `lib/pages/malla` | Spec existente |
+| 4 | Grades | `specs/features/grades/grades.spec.md` | US06, US07 | R6, R9 | `lib/pages/calculadora` | Spec existente |
+| 5 | Schedule | `specs/features/schedule/schedule.spec.md` | US09 | R19 | `lib/pages/horario` | Spec existente |
+| 6 | Course Detail | `specs/features/course-detail/course-detail.spec.md` | US13, US14, US17 | R20 | `lib/pages/descripcion_cursos` | Spec existente |
+| 7 | Alerts | `specs/features/alerts/alerts.spec.md` | US15 | R15, R16, R22, R23 | `lib/pages/home`, `lib/pages/perfil` | Spec existente |
+| 8 | Section Management | `specs/features/section-management/section-management.spec.md` | US16, US17, US18 | R14, R17, R18, R21 | services and delegate mockups | Spec existente |
+| 9 | Teacher / Advising | _(sin spec)_ | HU18 | Rol docente, asesorías extra | `lib/pages/teacher/**`, `lib/services/advising_service.dart` | Implementado sin spec |
+| 10 | Password Reset | _(sin spec)_ | HU20 | Restablecer contraseña vía OTP | `lib/pages/password_reset/**`, `lib/services/password_reset_service.dart` | Implementado sin spec |
+| 11 | Silabo Viewer | _(sin spec)_ | HU21 | Visualizar sílabo en PDF | `lib/pages/silabo/**`, `lib/services/silabo_service.dart` | Implementado sin spec |
+| 12 | Release Build | `specs/features/release-build/release-build.spec.md` | Infra | Build config | `android/`, `pubspec.yaml` | Documentado |
 
 ## Workflow
 

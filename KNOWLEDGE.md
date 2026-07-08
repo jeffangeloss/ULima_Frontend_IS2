@@ -8,7 +8,7 @@ ULima++ es una app Flutter para estudiantes de la Universidad de Lima. Centraliz
 
 - App centrada en estudiantes.
 - No hay admin screens.
-- No hay teacher login.
+- Hay login docente (HU18): un `app_user` vinculado a `teacher.user_id` puede iniciar sesión y gestionar asesorías extra.
 - Backend oficial: `../ULima_Backend_IS2`.
 - PostgreSQL definitivo es fuente de verdad a través del backend.
 - Los JSON en `assets/data` son mocks descartables.
@@ -65,8 +65,8 @@ ULima++ es una app Flutter para estudiantes de la Universidad de Lima. Centraliz
 
 ## Reglas De Dominio Para La UI
 
-- Roles válidos: `student`, `delegate`, `subdelegate`.
-- Docentes son datos académicos, no usuarios de app.
+- Roles válidos: `student`, `delegate`, `subdelegate`, `teacher`.
+- Docentes pueden iniciar sesión (HU18) para gestionar asesorías extra.
 - Solo cursos con matrícula activa deben mostrarse como actuales.
 - La malla debe distinguir progreso real y simulación visual.
 - Las notas son personales, no oficiales.

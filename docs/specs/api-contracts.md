@@ -12,10 +12,10 @@ Contrato REST local del frontend ULima++. Mantener alineado manualmente con `ULi
 
 ## Principios Globales
 
-- Todas las rutas, salvo `GET /`, `GET /health` y `POST /auth/login`, usan `Authorization: Bearer <token>`.
-- Usuario autenticado siempre es estudiante.
-- Roles permitidos: `student`, `delegate`, `subdelegate`.
-- `teacher` nunca produce sesión.
+- Todas las rutas, salvo `GET /`, `GET /health`, `POST /auth/login`, `POST /auth/google`, `POST /auth/password-reset/request` y `POST /auth/password-reset/confirm`, usan `Authorization: Bearer <token>`.
+- El usuario autenticado es estudiante **o docente** (HU18).
+- Roles permitidos: `student`, `delegate`, `subdelegate`, `teacher`.
+- `teacher` es el rol técnico compartido por profesor y jefe de práctica (JP); su etiqueta se deriva de `section.teacher_id` vs `section.jp_id`. El JWT docente lleva `teacherId` en vez de `studentId`.
 - IDs numéricos pueden viajar como number o string según DTO final aprobado; cada spec debe fijarlo antes de implementar.
 - Errores siguen forma general:
 
@@ -35,6 +35,9 @@ Contrato REST local del frontend ULima++. Mantener alineado manualmente con `ULi
 
 - `GET /`
   - Response: metadata básica del backend y módulos disponibles.
+- `GET /version`
+  - Response: `{ "commit": "string", "ref": "string|null", "deployment": "string|null" }`
+  - Expone el commit desplegado (Vercel inyecta `VERCEL_GIT_COMMIT_SHA`).
 - `GET /health`
   - Response: `{ "status": "ok", "timestamp": "ISO-8601 string" }`
 
@@ -43,10 +46,23 @@ Contrato REST local del frontend ULima++. Mantener alineado manualmente con `ULi
 - `POST /auth/login`
   - Request: `{ "code": "string", "password": "string" }`
   - Response: `{ "token": "string", "tokenType": "Bearer", "expiresIn": 86400, "user": User }`
+  - HU18: si el `code` no es de un `student` pero sí de un `teacher` (vía `teacher.user_id`), inicia sesión como docente. El `user` docente es `{ id, teacherId, code, fullName, institutionalEmail, role: "teacher", teacherLabel: "Profesor"|"Jefe de Práctica", setupComplete: true }` (sin `studentId`). No exige matrícula activa.
+- `POST /auth/google`
+  - Request: `{ "idToken": "string" }`
+  - Response: `{ "token": "string", "tokenType": "Bearer", "expiresIn": 86400, "user": User }`
 - `GET /auth/me`
   - Response: `{ "user": User }`
 - `POST /auth/logout`
   - Response: `{ "message": "Session closed" }`
+- `POST /auth/password-reset/request` (público)
+  - Request: `{ "identifier": "string" }` (código de alumno o correo institucional)
+  - Response (siempre `200`, exista o no la cuenta): `{ "message": "Si la cuenta existe, enviamos un código a tu correo institucional." }`
+- `POST /auth/password-reset/confirm` (público)
+  - Request: `{ "identifier": "string", "code": "string", "newPassword": "string" }`
+  - Response `200`: `{ "message": "Contraseña actualizada correctamente." }`
+  - Errores: `400 WEAK_PASSWORD` (menos de 8 caracteres), `400 INVALID_RESET_CODE` ("Código inválido o expirado.", genérico a propósito)
+- `POST /auth/password-reset/request-me` (Bearer token)
+  - Response `200`: `{ "message": "Enviamos un código a tu correo institucional.", "email": "2023****@aloe.ulima.edu.pe" }`
 
 `User` mínimo:
 
@@ -60,9 +76,15 @@ Contrato REST local del frontend ULima++. Mantener alineado manualmente con `ULi
   "role": "student",
   "careerId": 1,
   "curriculumId": 1,
-  "currentLevel": 5
+  "currentLevel": 5,
+  "setupComplete": false,
+  "specialties": [
+    { "specialtyId": 1, "name": "Ingeniería de Software", "selectionType": "primary" }
+  ]
 }
 ```
+
+Errores de login: `401 USER_NOT_FOUND`, `401 INVALID_PASSWORD`, `403 NOT_ENROLLED`.
 
 ## Academic Profile
 
@@ -169,15 +191,14 @@ Notas:
 
 ## Grades
 
-- `GET /grades/me/courses`
-- `PUT /grades/me/scores`
-- `GET /grades/me/courses/:sectionId/average`
+- `GET /grades/me/courses` — **IMPLEMENTADO**. Devuelve cursos + evaluaciones del sílabo con sus pesos.
+- ~~`PUT /grades/me/scores`~~ — **NO IMPLEMENTADO**. El guardado de notas es local en el cliente (`shared_preferences`, `NotasService`).
+- ~~`GET /grades/me/courses/:sectionId/average`~~ — **NO IMPLEMENTADO**. El cálculo del promedio ponderado ocurre en el frontend.
 
 Notas:
 
-- `student_score` almacena notas personales no oficiales.
-- `PUT /grades/me/scores` solo puede afectar scores del estudiante autenticado.
-- Assessment debe pertenecer al syllabus del `course_offering` de la sección matriculada.
+- `student_score` existe en el esquema (notas oficiales de referencia) pero la app no lo escribe.
+- Las notas son personales no oficiales; por eso no se persisten en backend desde la app.
 - `POST /grades/syllabi` queda fuera de v1 salvo spec aprobada; la tabla `syllabus` ya existe.
 
 ## Schedule
@@ -279,11 +300,17 @@ Notas:
 - `GET /course-detail/sections/:sectionId/announcements`
 - `GET /course-detail/sections/:sectionId/advising`
 - `GET /course-detail/sections/:sectionId/contacts`
+- `GET /course-detail/sections` (lista general)
+- `GET /course-detail/teachers`
+- `GET /course-detail/enrollments`
 
 Notas:
 
+- Solo roles de alumno (`requireRole('student','delegate','subdelegate')`); un token docente recibe `403 FORBIDDEN`.
 - El estudiante solo ve secciones donde está matriculado.
-- Asesorías visibles: `section_id IS NULL` para el curso ofertado o `section_id` igual a su sección.
+- Asesorías visibles: `section_id IS NULL` para el curso ofertado o `section_id` igual a su sección. Se incluyen las extras (`kind='extra'`) de la sección cuya `session_date` no sea pasada.
+- Cada asesoría agrega (HU18): `kind` (`recurring`/`extra`), `fecha` (`YYYY-MM-DD`, solo extras; `null` en recurrentes), `dictanteRol` (`"Profesor"` o `"JP"` según sea `section.teacher_id` o `section.jp_id`), `asistentes` (conteo de `advising_rsvp`).
+- Contactos agrega la clave top-level `jefePractica` (`{ code, lastName, firstName }` o `null`) desde `section.jp_id`, entre `docente` y `alumnos`.
 - Anuncios visibles solo si pertenecen a la sección del estudiante.
 
 ## Alerts
@@ -297,14 +324,24 @@ Notas:
 - Recalcular alertas es interno; no hay endpoint público de recalculo en v1.
 - `academic_risk` no compara contra promedio de sección.
 
+## Advising (HU18 — docentes)
+
+Rol requerido: `teacher`.
+
+- `GET /advising/me/sections` — secciones del docente (como profesor o JP) en el período activo.
+- `GET /advising/me/sessions` — asesorías del docente (recurrentes + extras) con `asistentes` y `rol`.
+- `POST /advising/me/sessions` — crea asesoría extra.
+- `DELETE /advising/me/sessions/:id` — elimina una extra propia.
+- `GET /advising/me/sessions/:id/attendees` — conteo + lista de confirmados.
+
 ## Section Management
 
-- `GET /section-management/me/sections`
-- `POST /section-management/sections/:sectionId/announcements`
-- `GET /section-management/sections/:sectionId/progress`
+- `GET /section-management/representatives` — **IMPLEMENTADO** (único endpoint real).
+- ~~`GET /section-management/me/sections`~~ — **NO IMPLEMENTADO**.
+- ~~`POST /section-management/sections/:sectionId/announcements`~~ — **NO IMPLEMENTADO** (HU10, pendiente).
+- ~~`GET /section-management/sections/:sectionId/progress`~~ — **NO IMPLEMENTADO** (HU11, pendiente).
 
 Notas:
 
-- Solo `delegate` o `subdelegate` activos en `section_representative`.
-- Anuncios escriben en `announcement`.
-- Métricas agregadas no deben exponer notas individuales.
+- **Estado real**: el módulo solo expone `GET /representatives`. Los endpoints de registro de anuncios y estadísticas están documentados pero no implementados.
+- Los anuncios reales en frontend se sirven actualmente desde el módulo `course-detail` (`GET /course-detail/sections/:sectionId/announcements`).

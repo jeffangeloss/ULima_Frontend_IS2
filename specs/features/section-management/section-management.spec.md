@@ -4,6 +4,8 @@ description: Delegate/subdelegate screens for announcements and anonymized secti
 targets:
   - ../../../lib/services/anuncio_service.dart
   - ../../../lib/services/seccion_service.dart
+  - ../../../lib/services/section_representative_service.dart
+  - ../../../lib/pages/home/** (delegate placeholder)
   - ../../../docs/images/UI/GestionCursosDelegado.png
   - ../../../docs/images/UI/GestionAnunciosDelegado.png
   - ../../../docs/images/UI/SeguimientoProgresoSeccion.png
@@ -26,9 +28,10 @@ targets:
 
 ## API Dependencies
 
-- `GET /section-management/me/sections`
-- `POST /section-management/sections/:sectionId/announcements`
-- `GET /section-management/sections/:sectionId/progress`
+- `GET /section-management/representatives` — **IMPLEMENTADO**.
+- ~~`GET /section-management/me/sections`~~ — **NO IMPLEMENTADO** (los anuncios reales se sirven desde `course-detail`).
+- ~~`POST /section-management/sections/:sectionId/announcements`~~ — **NO IMPLEMENTADO**.
+- ~~`GET /section-management/sections/:sectionId/progress`~~ — **NO IMPLEMENTADO**.
 
 ## Verification
 

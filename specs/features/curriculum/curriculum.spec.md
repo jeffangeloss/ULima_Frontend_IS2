@@ -5,7 +5,6 @@ targets:
   - ../../../lib/pages/malla/**
   - ../../../lib/services/malla_service.dart
   - ../../../lib/models/malla_models.dart
-  - ../../../assets/data/malla_sistemas.json
 ---
 
 # Curriculum
@@ -28,8 +27,8 @@ targets:
 ## API Dependencies
 
 - `GET /curriculum/me`
-- `PUT /curriculum/me/progress`
-- `GET /curriculum/me/eligible-courses`
+- `PUT /curriculum/me/simulation`
+- `DELETE /curriculum/me/simulation/:curriculumCourseId`
 
 ## Verification
 

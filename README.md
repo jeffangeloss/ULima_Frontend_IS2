@@ -4,9 +4,8 @@ App Flutter para estudiantes de la Universidad de Lima. Centraliza autenticació
 
 ## Estado Actual
 
-- La app todavía contiene archivos JSON en `assets/data`, pero esos datos son descartables.
-- Los JSON no se migran a PostgreSQL y no deben usarse como fuente final.
-- La fuente definitiva será el backend `ULima_Backend_IS2`, conectado a PostgreSQL.
+- La fuente de verdad es PostgreSQL a través del backend `ULima_Backend_IS2`.
+- No existen archivos `assets/data/` en el proyecto.
 - Toda integración con backend debe seguir el contrato local `docs/specs/api-contracts.md`, alineado con el contrato local del backend.
 - Las specs frontend viven en `specs/features/<feature>/<feature>.spec.md`.
 - No se debe reestructurar `lib/` sin spec aprobada.
@@ -76,8 +75,8 @@ Principios:
 ## Reglas De Dominio Para UI
 
 - Usuarios de app: estudiantes.
-- Docentes se muestran como datos académicos; no hay login docente.
-- Roles UI válidos: `student`, `delegate`, `subdelegate`.
+- Docentes pueden iniciar sesión (HU18) para gestionar asesorías extra.
+- Roles UI válidos: `student`, `delegate`, `subdelegate`, `teacher`.
 - La malla debe diferenciar progreso real de simulación visual.
 - Las notas son personales y no oficiales.
 - Las alertas de riesgo se basan en promedio personal, no en promedio de sección.

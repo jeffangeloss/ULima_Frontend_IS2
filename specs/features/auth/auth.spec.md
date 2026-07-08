@@ -106,9 +106,7 @@ targets:
 - Esto ya está implementado en `login_page.dart` vía `controller.submitting.value`.
 
 ### BR-AUTH-F-09: Single Active Session (Concurrency)
-- El sistema **no permite sesiones concurrentes** para evitar incongruencias de datos (ej. un usuario modificando su perfil desde celular y web simultáneamente).
-- El Backend implementará "Token Versioning" u otro mecanismo para asegurar que al generar un nuevo JWT por un Login, los tokens anteriores del mismo usuario queden invalidados.
-- Si un usuario inicia sesión en un dispositivo nuevo, el dispositivo antiguo recibirá un error HTTP `401`. Esto desencadenará el flujo descrito en la regla BR-AUTH-F-07, expulsando al usuario del dispositivo antiguo de forma segura.
+- ⚠️ **NO IMPLEMENTADO**: El backend soporta Token Versioning (el JWT incluye `tokenVersion` y el middleware verifica que coincida con `app_user.tokenVersion`) pero el frontend aún no implementa la intercepción global de 401 para detectar sesiones concurrentes. El `ApiClient` intercepta 401 genéricamente pero sin lógica específica de token versioning.
 
 ### BR-AUTH-F-10: Google sign-in flow (web + Android)
 - El login con Google canjea un `idToken` de Google por un JWT propio vía `POST /auth/google` con `{ idToken }`.
@@ -240,17 +238,4 @@ User action → AuthService.logout()
 
 ## Test Links
 
-- Login con credenciales válidas navega a `/home` o `/setup-carrera según setupComplete`
-  `[@test] ../../../test/auth/login_success_test.dart`
-- Login con credenciales inválidas muestra "Código o contraseña incorrectos."
-  `[@test] ../../../test/auth/login_invalid_credentials_test.dart`
-- Login con campos vacíos muestra validación local sin llamar API
-  `[@test] ../../../test/auth/login_empty_fields_test.dart`
-- Sesión guardada se restaura al iniciar la app
-  `[@test] ../../../test/auth/session_restore_test.dart`
-- Sesión expirada redirige a login sin crash
-  `[@test] ../../../test/auth/session_expired_test.dart`
-- Logout limpia token y redirige a login
-  `[@test] ../../../test/auth/logout_test.dart`
-- ApiClient inyecta Bearer token en requests autenticados
-  `[@test] ../../../test/services/api_client_auth_test.dart`
+*(Test links a ser agregados cuando existan tests de auth. Los `test/auth/` y `test/services/api_client_auth_test.dart` no existen actualmente.)*
