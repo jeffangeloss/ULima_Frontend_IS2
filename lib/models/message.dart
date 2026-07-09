@@ -2,26 +2,45 @@ class ChatMessage {
   final String id;
   final String senderId;
   final String senderName;
-  final String text;
-  final DateTime timestamp;
+  final String senderRole;
+  final String senderRoleLabel;
+  final bool isModerator;
+  final int weight;
+  final String body;
+  final DateTime createdAt;
 
   ChatMessage({
     required this.id,
     required this.senderId,
     required this.senderName,
-    required this.text,
-    required this.timestamp,
+    required this.senderRole,
+    required this.senderRoleLabel,
+    required this.isModerator,
+    required this.weight,
+    required this.body,
+    required this.createdAt,
   });
 
+  String get text => body;
+  DateTime get timestamp => createdAt;
+
   factory ChatMessage.fromMap(String id, Map<dynamic, dynamic> map) {
+    final role = (map['senderRole'] ?? map['role'] ?? 'student').toString();
+    final createdAt = _parseDateTime(map['createdAt'] ?? map['timestamp']);
+
     return ChatMessage(
       id: id,
       senderId: map['senderId'] ?? '',
-      senderName: map['senderName'] ?? 'Unknown',
-      text: map['text'] ?? '',
-      timestamp: map['timestamp'] != null 
-          ? DateTime.fromMillisecondsSinceEpoch(map['timestamp'])
-          : DateTime.now(),
+      senderName: (map['senderName'] ?? map['displayName'] ?? 'Participante')
+          .toString(),
+      senderRole: role,
+      senderRoleLabel:
+          (map['senderRoleLabel'] ?? map['roleLabel'] ?? _labelFor(role))
+              .toString(),
+      isModerator: map['moderator'] == true || _isModeratorRole(role),
+      weight: _parseInt(map['weight']) ?? _weightFor(role),
+      body: (map['body'] ?? map['text'] ?? '').toString(),
+      createdAt: createdAt,
     );
   }
 
@@ -29,8 +48,67 @@ class ChatMessage {
     return {
       'senderId': senderId,
       'senderName': senderName,
-      'text': text,
-      'timestamp': timestamp.millisecondsSinceEpoch,
+      'senderRole': senderRole,
+      'senderRoleLabel': senderRoleLabel,
+      'moderator': isModerator,
+      'weight': weight,
+      'body': body,
+      'createdAt': createdAt.millisecondsSinceEpoch,
     };
+  }
+
+  static DateTime _parseDateTime(dynamic value) {
+    if (value is int) {
+      return DateTime.fromMillisecondsSinceEpoch(value);
+    }
+    if (value is num) {
+      return DateTime.fromMillisecondsSinceEpoch(value.toInt());
+    }
+    if (value is String) {
+      return DateTime.tryParse(value) ?? DateTime.now();
+    }
+    return DateTime.now();
+  }
+
+  static int? _parseInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '');
+  }
+
+  static bool _isModeratorRole(String role) =>
+      role == 'teacher' ||
+      role == 'jp' ||
+      role == 'delegate' ||
+      role == 'subdelegate';
+
+  static int _weightFor(String role) {
+    switch (role) {
+      case 'teacher':
+        return 100;
+      case 'jp':
+        return 90;
+      case 'delegate':
+        return 70;
+      case 'subdelegate':
+        return 60;
+      default:
+        return 10;
+    }
+  }
+
+  static String _labelFor(String role) {
+    switch (role) {
+      case 'teacher':
+        return 'Profesor';
+      case 'jp':
+        return 'Jefe de Práctica';
+      case 'delegate':
+        return 'Delegado';
+      case 'subdelegate':
+        return 'Subdelegado';
+      default:
+        return 'Alumno';
+    }
   }
 }

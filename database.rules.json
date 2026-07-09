@@ -1,0 +1,57 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "members": {
+      "$sid": {
+        "$uid": {
+          ".read": "auth != null && auth.uid == $uid && data.child('expiresAt').val() > now",
+          ".write": false
+        }
+      }
+    },
+    "sections": {
+      "$sid": {
+        "messages": {
+          ".read": "auth != null && root.child('members').child($sid).child(auth.uid).child('expiresAt').val() > now",
+          ".indexOn": ["createdAt"],
+          "$msg": {
+            ".write": "auth != null && root.child('members').child($sid).child(auth.uid).child('expiresAt').val() > now && ((!data.exists() && newData.exists()) || (data.exists() && !newData.exists() && (data.child('senderId').val() == auth.uid || root.child('members').child($sid).child(auth.uid).child('moderator').val() == true)))",
+            ".validate": "newData.hasChildren(['senderId', 'senderName', 'senderRole', 'senderRoleLabel', 'moderator', 'weight', 'body', 'createdAt'])",
+            "senderId": {
+              ".validate": "newData.isString() && newData.val() == auth.uid"
+            },
+            "senderName": {
+              ".validate": "newData.isString() && newData.val() == root.child('members').child($sid).child(auth.uid).child('displayName').val()"
+            },
+            "senderRole": {
+              ".validate": "newData.isString() && newData.val() == root.child('members').child($sid).child(auth.uid).child('role').val()"
+            },
+            "senderRoleLabel": {
+              ".validate": "newData.isString() && newData.val() == root.child('members').child($sid).child(auth.uid).child('roleLabel').val()"
+            },
+            "moderator": {
+              ".validate": "newData.isBoolean() && newData.val() == root.child('members').child($sid).child(auth.uid).child('moderator').val()"
+            },
+            "weight": {
+              ".validate": "newData.isNumber() && newData.val() == root.child('members').child($sid).child(auth.uid).child('weight').val()"
+            },
+            "body": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 4000"
+            },
+            "createdAt": {
+              ".validate": "newData.isNumber() && newData.val() == now"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "$other": {
+          ".read": false,
+          ".write": false
+        }
+      }
+    }
+  }
+}
