@@ -1,0 +1,68 @@
+name: Build and Release APK
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v4
+
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Instalar Flutter
+        run: |
+          git clone https://github.com/flutter/flutter.git --depth 1 -b stable "$HOME/flutter"
+          echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
+
+      - name: Flutter Doctor
+        run: flutter doctor -v
+
+      - name: Instalar dependencias
+        run: flutter pub get
+
+      - name: Compilar APK
+        run: flutter build apk --release
+
+      - name: Preparar APKs
+        run: |
+          mkdir -p release
+
+          # APK estable para la landing
+          cp build/app/outputs/flutter-apk/app-release.apk release/ULimaPlus.apk
+
+          # APK versionado para historial
+          cp build/app/outputs/flutter-apk/app-release.apk release/ULimaPlus-build-${{ github.run_number }}.apk
+
+      - name: Crear o actualizar Release Latest
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: ULima++ Latest
+          body: |
+            Última versión compilada automáticamente.
+
+            Build: #${{ github.run_number }}
+            Commit: ${{ github.sha }}
+
+          files: |
+            release/ULimaPlus.apk
+            release/ULimaPlus-build-${{ github.run_number }}.apk
+
+          make_latest: true
+
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
