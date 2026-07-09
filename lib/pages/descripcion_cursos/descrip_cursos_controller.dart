@@ -9,6 +9,7 @@ import 'package:ulima_plus/services/anuncio_service.dart';
 import 'package:ulima_plus/services/asesoria_service.dart';
 import 'package:ulima_plus/services/contacto_service.dart';
 import 'package:ulima_plus/services/seccion_service.dart';
+import 'package:ulima_plus/pages/horario/horario_controller.dart';
 
 class DescripCursosController extends GetxController {
   final SeccionService _seccionService = SeccionService();
@@ -33,7 +34,23 @@ class DescripCursosController extends GetxController {
   Future<void> cargarDatosCurso(String idSeccion) async {
     try {
       isLoading.value = true;
-      final seccion = await _seccionService.findSectionById(idSeccion);
+      Seccion? seccion;
+
+      // 1. Primero intentamos rescatar la data desde el HorarioController
+      // porque contiene la asistencia REAL y específica del usuario autenticado.
+      if (Get.isRegistered<HorarioController>()) {
+        final hCtrl = Get.find<HorarioController>();
+        final courseData = hCtrl.uniqueEnrolledCourses.firstWhereOrNull(
+          (c) => c['idSeccion']?.toString() == idSeccion
+        );
+        if (courseData != null) {
+          seccion = Seccion.fromJson(courseData);
+        }
+      }
+
+      // 2. Fallback: Si no se encontró, llamamos al endpoint de detalle general.
+      seccion ??= await _seccionService.findSectionById(idSeccion);
+
       if (seccion == null) {
         throw Exception('No existe seccion con id $idSeccion');
       }

@@ -21,6 +21,7 @@ import '../../models/malla_models.dart';
 import '../../models/user_model.dart';
 import '../../services/api_client.dart';
 import '../../services/auth_service.dart';
+import '../../services/evaluations_service.dart';
 import '../../services/malla_service.dart';
 import '../../services/storage_service.dart';
 
@@ -101,7 +102,11 @@ class MallaListController extends GetxController {
     loading.value = true;
     error.value = null;
     try {
-      await _malla.load();
+      await Future.wait([
+        _malla.load(),
+        // HU21: Cargar sílabos para que el sheet muestre el botón
+        EvaluationSyllabusService().loadEvaluationData(),
+      ]);
       _rebuild();
       _initExpansion();
     } catch (_) {

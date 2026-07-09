@@ -51,3 +51,7 @@ app.*.map.json
 
 # Artefactos de Swift Package Manager (Xcode los regenera)
 ios/**/xcshareddata/swiftpm/
+
+node_modules/
+bun.lock
+package.json

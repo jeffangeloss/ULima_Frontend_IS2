@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../descripcion_cursos/descrip_cursos.dart';
 import 'horario_controller.dart';
+import 'horario_list_view.dart';
 import '../../components/skeleton.dart';
 
 class HorarioPage extends StatelessWidget {
@@ -111,6 +112,10 @@ class HorarioPage extends StatelessWidget {
           ? const Color(0xFF1E1E26)
           : const Color(0xFFF8F9FA),
       body: Obx(() {
+        if (controller.isListView.value) {
+          return HorarioListView();
+        }
+
         final activeDay = controller.currentDay;
         if (activeDay == null) {
           // Skeleton con la silueta del horario (selector de días + bloques

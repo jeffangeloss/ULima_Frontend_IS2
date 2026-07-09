@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "244053305794",
+    "firebase_url": "https://ulima-plus-chat-default-rtdb.firebaseio.com",
+    "project_id": "ulima-plus-chat",
+    "storage_bucket": "ulima-plus-chat.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:244053305794:android:60004763fd2e38cf888e5b",
+        "android_client_info": {
+          "package_name": "com.example.ulima_plus"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBZbgU2Le0eEdmbAhlj5TBnpgxsdMgAW2U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

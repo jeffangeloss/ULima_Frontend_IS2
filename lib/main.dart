@@ -1,14 +1,14 @@
 // TERMINAL - flutter pub get
 
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '/configs/themes.dart';
+import '/firebase_options.dart';
 import '/services/auth_service.dart';
 import '/services/alert_service.dart';
-import '/services/courses_service.dart';
-import 'services/evaluations_service.dart';
 import '/services/malla_service.dart';
 import '/services/post_login_route.dart';
 import '/services/storage_service.dart';
@@ -36,6 +36,7 @@ import 'pages/silabo/silabo_viewer_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   LucideIcons.info.codePoint;
 
   // Servicios globales permanentes.
@@ -47,10 +48,6 @@ void main() async {
   Get.put<AlertService>(AlertService(), permanent: true);
   Get.put<MallaService>(MallaService(), permanent: true);
 
-  await Future.wait([
-    EvaluationSyllabusService().loadEvaluationData(),
-    CoursesService().loadCoursesData(),
-  ]);
 
   // Intentar restaurar sesión guardada.
   final restored = await AuthService.to.tryRestoreSession();

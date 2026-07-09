@@ -18,6 +18,7 @@ import '../../domain/malla/malla_logic.dart' as malla_logic;
 import '../../models/malla_models.dart';
 import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
+import '../../services/evaluations_service.dart';
 import '../../services/malla_service.dart';
 import '../../services/storage_service.dart';
 
@@ -90,7 +91,11 @@ class MallaController extends GetxController {
   Future<void> _bootstrap() async {
     loading.value = true;
     try {
-      await _malla.load();
+      await Future.wait([
+        _malla.load(),
+        // HU21: Cargar sílabos para que el sheet muestre el botón
+        EvaluationSyllabusService().loadEvaluationData(),
+      ]);
       final code = user?.code;
 
       final backendStatuses = <String, CourseStatus>{};

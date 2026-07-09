@@ -20,6 +20,10 @@ class HorarioController extends GetxController {
   final assessmentsList = <Map<String, dynamic>>[].obs;
   final weeklyLoad = <Map<String, dynamic>>[].obs;
   final currentLimaTime = _nowInLima().obs;
+  
+  // Nuevos estados para el rediseño de Horario (Lista / Calendario)
+  final isListView = false.obs;
+  final showAttendance = false.obs;
 
   final _todasLasSecciones = <Map<String, dynamic>>[].obs;
   final ApiClient _api = ApiClient();
@@ -169,24 +173,11 @@ class HorarioController extends GetxController {
     final activeDay = currentDay;
     if (activeDay == null) return const [];
 
-    final user = AuthService.to.currentUser;
-    final List<dynamic> inscritas = user?.courseProgress?.currentCourses ?? [];
-
-    final idsInscritos = inscritas
-        .map((i) => (i['idSeccion']?.toString() ?? ''))
-        .where((id) => id.isNotEmpty)
-        .toList();
-
     final currentDayName = activeDay.dayName.toLowerCase();
-
     final courses = <Map<String, dynamic>>[];
 
     // 1. Agregar las clases regulares
     for (final section in _todasLasSecciones) {
-      final sectionIdStr = section['idSeccion']?.toString() ?? '';
-      final estaInscrito = idsInscritos.contains(sectionIdStr);
-      if (!estaInscrito) continue;
-
       final horarios = section['horarios'];
       if (horarios is List && horarios.isNotEmpty) {
         for (final rawHorario in horarios) {
@@ -258,5 +249,26 @@ class HorarioController extends GetxController {
     } else {
       currentDayIndex.value = 0;
     }
+  }
+
+  void toggleListView() {
+    isListView.value = !isListView.value;
+  }
+
+  void toggleAttendance() {
+    showAttendance.value = !showAttendance.value;
+  }
+
+  List<Map<String, dynamic>> get uniqueEnrolledCourses {
+    final uniqueCourses = <String, Map<String, dynamic>>{};
+
+    for (final section in _todasLasSecciones) {
+      final sectionIdStr = section['idSeccion']?.toString() ?? '';
+      if (sectionIdStr.isNotEmpty && !uniqueCourses.containsKey(sectionIdStr)) {
+        uniqueCourses[sectionIdStr] = section;
+      }
+    }
+    
+    return uniqueCourses.values.toList();
   }
 }

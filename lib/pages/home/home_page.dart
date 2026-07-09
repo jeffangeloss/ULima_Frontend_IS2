@@ -36,7 +36,7 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: colors.surface,
       body: Column(
         children: [
-          const AppHeader(),
+          AppHeader(showScheduleToggle: _currentIndex == 2),
           Expanded(child: _buildBody()),
         ],
       ),
