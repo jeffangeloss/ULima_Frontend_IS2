@@ -37,18 +37,32 @@ jobs:
       - name: Compilar APK
         run: flutter build apk --release
 
-      - name: Preparar APK
+      - name: Preparar APKs
         run: |
           mkdir -p release
+
+          # APK estable para la landing
           cp build/app/outputs/flutter-apk/app-release.apk release/ULimaPlus.apk
 
-      - name: Crear o actualizar Release latest
+          # APK versionado para historial
+          cp build/app/outputs/flutter-apk/app-release.apk release/ULimaPlus-build-${{ github.run_number }}.apk
+
+      - name: Crear o actualizar Release Latest
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
           name: ULima++ Latest
-          body: APK generado automáticamente desde la rama main.
-          files: release/ULimaPlus.apk
+          body: |
+            Última versión compilada automáticamente.
+
+            Build: #${{ github.run_number }}
+            Commit: ${{ github.sha }}
+
+          files: |
+            release/ULimaPlus.apk
+            release/ULimaPlus-build-${{ github.run_number }}.apk
+
           make_latest: true
+
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
