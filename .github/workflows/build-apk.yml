@@ -3,13 +3,8 @@ name: Build and Release APK
 on:
   push:
     branches:
-      - build-apk
+      - main
   workflow_dispatch:
-    inputs:
-      version:
-        description: "Versión del release"
-        required: true
-        default: "v0.0.1"
 
 permissions:
   contents: write
@@ -42,24 +37,18 @@ jobs:
       - name: Compilar APK
         run: flutter build apk --release
 
-      - name: Obtener versión
-        run: |
-          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-            echo "VERSION=${GITHUB_REF_NAME}" >> $GITHUB_ENV
-          else
-            echo "VERSION=${{ github.event.inputs.version || 'v0.0.1' }}" >> $GITHUB_ENV
-          fi
-
-      - name: Renombrar APK
+      - name: Preparar APK
         run: |
           mkdir -p release
           cp build/app/outputs/flutter-apk/app-release.apk release/ULimaPlus.apk
 
-      - name: Crear GitHub Release
+      - name: Crear o actualizar Release latest
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ env.VERSION }}
-          name: ULima++ ${{ env.VERSION }}
+          tag_name: latest
+          name: ULima++ Latest
+          body: APK generado automáticamente desde la rama main.
           files: release/ULimaPlus.apk
+          make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
