@@ -13,18 +13,35 @@ jobs:
   build-android:
     runs-on: ubuntu-latest
 
-    # Credenciales de firma (se leen de los Secrets del repo). Si no están
-    # configuradas, el paso de firma se salta y el release se firma con debug
-    # (comportamiento anterior), sin romper el workflow.
-    env:
-      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-
     steps:
       - name: Descargar código
         uses: actions/checkout@v4
+
+      - name: Validar secretos de firma
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          missing=()
+          for name in \
+            ANDROID_KEYSTORE_BASE64 \
+            ANDROID_KEYSTORE_PASSWORD \
+            ANDROID_KEY_ALIAS \
+            ANDROID_KEY_PASSWORD
+          do
+            if [[ -z "${!name:-}" ]]; then
+              missing+=("$name")
+            fi
+          done
+
+          if (( ${#missing[@]} > 0 )); then
+            echo "::error::Faltan GitHub Secrets de firma: ${missing[*]}"
+            exit 1
+          fi
 
       - name: Configurar Java
         uses: actions/setup-java@v4
@@ -44,19 +61,97 @@ jobs:
         run: flutter pub get
 
       - name: Configurar firma de release (keystore desde Secrets)
-        if: env.ANDROID_KEYSTORE_BASE64 != ''
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/upload-keystore.jks
+          set -euo pipefail
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/upload-keystore.jks
           cat > android/key.properties <<EOF
           storePassword=$ANDROID_KEYSTORE_PASSWORD
           keyPassword=$ANDROID_KEY_PASSWORD
           keyAlias=$ANDROID_KEY_ALIAS
           storeFile=upload-keystore.jks
           EOF
+
+          keytool -list \
+            -keystore android/app/upload-keystore.jks \
+            -storepass "$ANDROID_KEYSTORE_PASSWORD" \
+            -alias "$ANDROID_KEY_ALIAS" > /dev/null
           echo "✅ Firmando el release con la keystore estable."
 
       - name: Compilar APK
         run: flutter build apk --release
+
+      - name: Verificar firma y autorización de Firebase Auth
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          apk="build/app/outputs/flutter-apk/app-release.apk"
+          build_tools_version="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort -V | tail -n 1)"
+          apksigner="$ANDROID_HOME/build-tools/$build_tools_version/apksigner"
+          aapt="$ANDROID_HOME/build-tools/$build_tools_version/aapt"
+
+          "$apksigner" verify "$apk"
+          cert_sha1="$("$apksigner" verify --print-certs "$apk" | sed -n 's/^Signer #1 certificate SHA-1 digest: //p' | head -n 1)"
+          cert_sha1_upper="$(printf '%s' "$cert_sha1" | tr '[:lower:]' '[:upper:]')"
+          cert_sha1_display="$(printf '%s' "$cert_sha1_upper" | sed 's/../&:/g; s/:$//')"
+          package_name="$("$aapt" dump badging "$apk" | sed -n "s/^package: name='\([^']*\)'.*/\1/p" | head -n 1)"
+
+          if [[ -z "$cert_sha1" || -z "$package_name" ]]; then
+            echo "::error::No se pudo obtener package name o SHA-1 del APK."
+            exit 1
+          fi
+
+          config_api_key="$(jq -r --arg package "$package_name" '
+            .client[]
+            | select(.client_info.android_client_info.package_name == $package)
+            | .api_key[0].current_key // empty
+          ' android/app/google-services.json)"
+          runtime_api_key="$(sed -n "/static const FirebaseOptions android =/,/);/ s/^[[:space:]]*apiKey: '\([^']*\)'.*/\1/p" lib/firebase_options.dart)"
+
+          if [[ -z "$config_api_key" || -z "$runtime_api_key" ]]; then
+            echo "::error::No se encontró la API key Android en google-services.json o firebase_options.dart."
+            exit 1
+          fi
+
+          if [[ "$config_api_key" != "$runtime_api_key" ]]; then
+            echo "::error::Las API keys Android de google-services.json y firebase_options.dart no coinciden. Ejecuta flutterfire configure."
+            exit 1
+          fi
+
+          response_file="$RUNNER_TEMP/firebase-auth-signature-check.json"
+          http_code="$(curl --silent --show-error \
+            --connect-timeout 10 \
+            --max-time 30 \
+            --retry 2 \
+            --output "$response_file" \
+            --write-out '%{http_code}' \
+            "https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=$runtime_api_key" \
+            --header 'Content-Type: application/json' \
+            --header "X-Android-Package: $package_name" \
+            --header "X-Android-Cert: $cert_sha1" \
+            --data '{"token":"ci-signature-check","returnSecureToken":true}')"
+
+          if jq -e '
+            .error.details[]?
+            | select(.reason == "API_KEY_ANDROID_APP_BLOCKED")
+          ' "$response_file" > /dev/null; then
+            echo "::error::Google Cloud bloquea Firebase Auth para $package_name con SHA-1 $cert_sha1_display. Agrega esta combinación a las restricciones Android de la API key."
+            exit 1
+          fi
+
+          error_message="$(jq -r '.error.message // empty' "$response_file")"
+          if [[ "$http_code" != "400" || "$error_message" != INVALID_CUSTOM_TOKEN* ]]; then
+            echo "::error::La comprobación de Firebase Auth devolvió HTTP $http_code: $error_message"
+            exit 1
+          fi
+
+          echo "✅ Firebase Auth autoriza $package_name con SHA-1 $cert_sha1_display."
 
       - name: Preparar APKs
         run: |
