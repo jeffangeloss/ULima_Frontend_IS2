@@ -163,10 +163,21 @@ class HorarioPage extends StatelessWidget {
             currentHour <= endHour;
         final currentLineTop = (currentHour - startHour) * hourHeight + 6.0;
 
-        return Column(
-          children: [
-            Container(
-              color: isDark ? const Color(0xFF262630) : const Color(0xFFFFF2EC),
+        return GestureDetector(
+          onHorizontalDragEnd: (details) {
+            if (details.primaryVelocity != null) {
+              if (details.primaryVelocity! < 0) {
+                controller.nextDay();
+              } else if (details.primaryVelocity! > 0) {
+                controller.previousDay();
+              }
+            }
+          },
+          behavior: HitTestBehavior.translucent,
+          child: Column(
+            children: [
+              Container(
+                color: isDark ? const Color(0xFF262630) : const Color(0xFFFFF2EC),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -557,8 +568,9 @@ class HorarioPage extends StatelessWidget {
               ),
             ),
           ],
-        );
-      }),
+        ),
+      );
+    }),
     );
   }
 }
