@@ -84,7 +84,7 @@ jobs:
           echo "✅ Firmando el release con la keystore estable."
 
       - name: Compilar APK
-        run: flutter build apk --release
+        run: flutter build apk --release --dart-define=API_BASE_URL=https://u-lima-backend-is-2-tau.vercel.app
 
       - name: Verificar firma y autorización de Firebase Auth
         shell: bash
