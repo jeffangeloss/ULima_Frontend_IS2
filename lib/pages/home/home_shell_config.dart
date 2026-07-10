@@ -26,11 +26,13 @@ class HomeShellConfig {
     return const HomeShellConfig(
       pages: [
         TeacherSectionsPage(),
+        HorarioPage(),
         TeacherHomePage(embedded: true),
         ProfilePage(),
       ],
       footerItems: [
         AppFooterItem(icon: LucideIcons.layers, label: 'Secciones'),
+        AppFooterItem(icon: LucideIcons.calendar, label: 'Horario'),
         AppFooterItem(icon: LucideIcons.calendarPlus, label: 'Asesorias'),
         AppFooterItem(icon: LucideIcons.user, label: 'Perfil'),
       ],

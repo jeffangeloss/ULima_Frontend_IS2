@@ -5,6 +5,9 @@ import '../descripcion_cursos/descrip_cursos.dart';
 import 'horario_controller.dart';
 import 'horario_list_view.dart';
 import '../../components/skeleton.dart';
+import '../../services/contacto_service.dart';
+import '../../services/api_client.dart';
+import '../../services/auth_service.dart';
 
 class HorarioPage extends StatelessWidget {
   const HorarioPage({super.key});
@@ -301,10 +304,109 @@ class HorarioPage extends StatelessWidget {
                           child: InkWell(
                             onTap: () {
                               final String idSeccion = course['idSeccion']?.toString() ?? '';
-                              if (idSeccion.isNotEmpty) {
-                                Get.to(
-                                  () => DescripCursosPage(idSeccion: idSeccion),
-                                );
+                              final isTeacher = AuthService.to.currentUser?.isTeacher ?? false;
+
+                              if (isTeacher) {
+                                if (course['isAdvising'] == true) {
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) {
+                                      return AlertDialog(
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(16),
+                                        ),
+                                        title: Text(
+                                          course['codigoSeccion'] ?? 'Asesoría',
+                                          style: const TextStyle(fontWeight: FontWeight.w800),
+                                        ),
+                                        content: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              course['curso'] ?? '',
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w800,
+                                                fontSize: 15,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 12),
+                                            Row(
+                                              children: [
+                                                Icon(Icons.schedule, size: 18, color: colors.primary),
+                                                const SizedBox(width: 8),
+                                                Expanded(
+                                                  child: Text(
+                                                    "Horario: $startStr - $endStr",
+                                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Row(
+                                              children: [
+                                                Icon(Icons.place, size: 18, color: colors.primary),
+                                                const SizedBox(width: 8),
+                                                Expanded(
+                                                  child: Text(
+                                                    "Aula/Canal: $aulaStr",
+                                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            if (course['fecha'] != null) ...[
+                                              const SizedBox(height: 8),
+                                              Row(
+                                                children: [
+                                                  Icon(Icons.calendar_month, size: 18, color: colors.primary),
+                                                  const SizedBox(width: 8),
+                                                  Expanded(
+                                                    child: Text(
+                                                      "Fecha: ${course['fecha']}",
+                                                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Get.back(),
+                                            child: const Text(
+                                              "Cerrar",
+                                              style: TextStyle(fontWeight: FontWeight.w700),
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  );
+                                } else {
+                                  showModalBottomSheet(
+                                    context: context,
+                                    isScrollControlled: true,
+                                    shape: const RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.vertical(
+                                        top: Radius.circular(24),
+                                      ),
+                                    ),
+                                    builder: (context) => _TeacherCourseDetailSheet(
+                                      idSeccion: idSeccion,
+                                      courseName: course['curso'] ?? '',
+                                      sectionCode: course['codigoSeccion'] ?? '',
+                                    ),
+                                  );
+                                }
+                              } else {
+                                if (idSeccion.isNotEmpty) {
+                                  Get.to(
+                                    () => DescripCursosPage(idSeccion: idSeccion),
+                                  );
+                                }
                               }
                             },
                             borderRadius: BorderRadius.circular(16),
@@ -326,51 +428,56 @@ class HorarioPage extends StatelessWidget {
                                 children: [
                                   Center(
                                     child: Padding(
-                                      padding: const EdgeInsets.symmetric(
+                                      padding: EdgeInsets.symmetric(
                                         horizontal: 16,
-                                        vertical: 12,
+                                        vertical: heightVal < 80 ? 4.0 : 12.0,
                                       ),
-                                      child: Column(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.center,
-                                        children: [
-                                          Text(
-                                            nombreStr,
-                                            textAlign: TextAlign.center,
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w800,
-                                              letterSpacing: 0.3,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            "Sección: ${course['codigoSeccion'] ?? 'Sin sección'}",
-                                            style: TextStyle(
-                                              color: Colors.white.withValues(
-                                                alpha: 0.9,
+                                      child: SingleChildScrollView(
+                                        physics: const NeverScrollableScrollPhysics(),
+                                        child: Column(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.center,
+                                          children: [
+                                            Text(
+                                              nombreStr,
+                                              textAlign: TextAlign.center,
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w800,
+                                                letterSpacing: 0.3,
                                               ),
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w600,
                                             ),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            aulaStr,
-                                            style: TextStyle(
-                                              color: Colors.white.withValues(
-                                                alpha: 0.9,
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              course['isAdvising'] == true
+                                                  ? (course['codigoSeccion'] ?? 'Asesoría')
+                                                  : "Sección: ${course['codigoSeccion'] ?? 'Sin sección'}",
+                                              style: TextStyle(
+                                                color: Colors.white.withValues(
+                                                  alpha: 0.9,
+                                                ),
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w600,
                                               ),
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w600,
                                             ),
-                                          ),
-                                        ],
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              aulaStr,
+                                              style: TextStyle(
+                                                color: Colors.white.withValues(
+                                                  alpha: 0.9,
+                                                ),
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -400,6 +507,32 @@ class HorarioPage extends StatelessWidget {
                                         ),
                                       ),
                                     ),
+                                  if (course['isAdvising'] == true)
+                                    Positioned(
+                                      top: 8,
+                                      right: 8,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 3,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withValues(
+                                            alpha: 0.25,
+                                          ),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: const Text(
+                                          "🤝 ASESORÍA",
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 8,
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: 0.3,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
                                 ],
                               ),
                             ),
@@ -421,6 +554,275 @@ class HorarioPage extends StatelessWidget {
           ],
         );
       }),
+    );
+  }
+}
+
+class _TeacherCourseDetailSheet extends StatefulWidget {
+  final String idSeccion;
+  final String courseName;
+  final String sectionCode;
+
+  const _TeacherCourseDetailSheet({
+    required this.idSeccion,
+    required this.courseName,
+    required this.sectionCode,
+  });
+
+  @override
+  State<_TeacherCourseDetailSheet> createState() => _TeacherCourseDetailSheetState();
+}
+
+class _TeacherCourseDetailSheetState extends State<_TeacherCourseDetailSheet> {
+  bool _isLoading = true;
+  String? _errorMessage;
+  String _delegateName = 'No asignado';
+  String _subdelegateName = 'No asignado';
+  List<dynamic> _assessments = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDetails();
+  }
+
+  Future<void> _loadDetails() async {
+    try {
+      final contactsFuture = ContactoService().fetchContactos(widget.idSeccion);
+      final assessmentsFuture = ApiClient().getJson('/schedule/teacher/sections/${widget.idSeccion}/assessments-status');
+
+      final results = await Future.wait([contactsFuture, assessmentsFuture]);
+      final contacts = results[0];
+      final assessmentsData = results[1];
+
+      final List<dynamic> alumnos = contacts['alumnos'] ?? [];
+      for (final a in alumnos) {
+        final role = a['roleInSection']?.toString() ?? '';
+        final fullName = a['user']?['fullName']?.toString() ?? '';
+        if (role == 'delegado') {
+          _delegateName = fullName;
+        } else if (role == 'subdelegado') {
+          _subdelegateName = fullName;
+        }
+      }
+
+      _assessments = assessmentsData['assessments'] ?? [];
+
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Error al cargar detalles de la sección';
+        });
+      }
+      debugPrint('Error loading teacher course details: $e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF262630) : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF4C4C5C) : const Color(0xFFE0E0E0),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              widget.courseName,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: isDark ? Colors.white : const Color(0xFF2D2D2D),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Sección ${widget.sectionCode}',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: colors.primary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 12),
+            if (_isLoading)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 32),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else if (_errorMessage != null)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 32),
+                  child: Text(
+                    _errorMessage!,
+                    style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              )
+            else ...[
+              _infoRow(context, Icons.person, 'Delegado', _delegateName),
+              const SizedBox(height: 8),
+              _infoRow(context, Icons.person_outline, 'Subdelegado', _subdelegateName),
+              const SizedBox(height: 18),
+              Text(
+                'Estado de carga de notas:',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: isDark ? Colors.white : const Color(0xFF2D2D2D),
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (_assessments.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Text(
+                    'No hay evaluaciones programadas en el sílabo.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDark ? const Color(0xFF9090A0) : const Color(0xFF666666),
+                    ),
+                  ),
+                )
+              else
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 200),
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    physics: const BouncingScrollPhysics(),
+                    itemCount: _assessments.length,
+                    itemBuilder: (context, index) {
+                      final ass = _assessments[index];
+                      final code = ass['code'] ?? '';
+                      final name = ass['name'] ?? '';
+                      final status = ass['status'] ?? 'Sin cargar';
+                      final loaded = ass['loadedCount'] ?? 0;
+                      final total = ass['totalCount'] ?? 0;
+
+                      Color badgeColor;
+                      Color textColor = Colors.white;
+                      if (status == 'Completo') {
+                        badgeColor = Colors.green;
+                      } else if (status == 'Carga parcial') {
+                        badgeColor = Colors.orange;
+                      } else {
+                        badgeColor = isDark ? const Color(0xFF4C4C5C) : const Color(0xFFE0E0E0);
+                        textColor = isDark ? Colors.white : const Color(0xFF666666);
+                      }
+
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '$code: $name',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: isDark ? Colors.white : const Color(0xFF2D2D2D),
+                                    ),
+                                  ),
+                                  if (total > 0)
+                                    Text(
+                                      'Avance: $loaded / $total alumnos',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: isDark ? const Color(0xFF9090A0) : const Color(0xFF666666),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: badgeColor,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                status,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: textColor,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              const SizedBox(height: 16),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _infoRow(BuildContext context, IconData icon, String title, String value) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
+        const SizedBox(width: 8),
+        Text(
+          '$title: ',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
+            color: isDark ? const Color(0xFFB0B0C0) : const Color(0xFF666666),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white : const Color(0xFF2D2D2D),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

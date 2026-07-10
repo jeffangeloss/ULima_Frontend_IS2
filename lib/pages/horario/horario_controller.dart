@@ -54,13 +54,16 @@ class HorarioController extends GetxController {
   void onInit() {
     super.onInit();
     _startClock();
-    // El horario es de alumno: sus endpoints /schedule|/sections/me devuelven
-    // 403 para un docente. Evitamos disparar esas cargas si hay docente logueado.
-    if (AuthService.to.currentUser?.isTeacher ?? false) return;
-    _loadDays();
-    _loadSecciones();
-    _loadAssessments();
-    _loadWeeklyLoad();
+    final isTeacher = AuthService.to.currentUser?.isTeacher ?? false;
+    if (isTeacher) {
+      _loadTeacherDaysAndSessions();
+      _loadTeacherAssessments();
+    } else {
+      _loadDays();
+      _loadSecciones();
+      _loadAssessments();
+      _loadWeeklyLoad();
+    }
   }
 
   @override
@@ -160,6 +163,53 @@ class HorarioController extends GetxController {
     }
   }
 
+  Future<void> _loadTeacherDaysAndSessions() async {
+    try {
+      final data = await _api.getJson('/schedule/teacher/sessions');
+      final List<dynamic> decoded = data['days'] ?? [];
+      daysList.assignAll(
+        decoded
+            .map(
+              (d) => DaySchedule(
+                d['dayName'] as String,
+                d['dateText'] as String,
+                d['weekText'] as String,
+              ),
+            )
+            .toList(),
+      );
+
+      _todasLasSecciones.assignAll(
+        (data['secciones'] as List? ?? [])
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList(),
+      );
+
+      final todayStr = _dateTextFor(currentLimaTime.value);
+      int idx = daysList.indexWhere(
+        (d) => d.dateText.toLowerCase() == todayStr.toLowerCase(),
+      );
+      if (idx == -1) {
+        idx = daysList.indexWhere((d) => d.dayName == 'Viernes');
+      }
+      currentDayIndex.value = idx != -1 ? idx : 0;
+    } catch (e) {
+      debugPrint('Error al cargar dias y sesiones del docente: $e');
+    }
+  }
+
+  Future<void> _loadTeacherAssessments() async {
+    try {
+      final data = await _api.getJson('/schedule/teacher/assessments');
+      assessmentsList.assignAll(
+        List<Map<String, dynamic>>.from(data['assessments'] ?? []),
+      );
+      update();
+    } catch (e) {
+      debugPrint('Error al cargar evaluaciones del docente: $e');
+    }
+  }
+
   DaySchedule? get currentDay =>
       daysList.isEmpty ? null : daysList[currentDayIndex.value];
 
@@ -189,19 +239,45 @@ class HorarioController extends GetxController {
           final courseDay = (horario['dia'] as String? ?? '').toLowerCase();
           if (courseDay != currentDayName) continue;
 
-          courses.add({...section, ...horario, 'isEvaluation': false});
+          // Si tiene una fecha (asesorías extra), verificar que coincida con el día activo
+          final dateStr = horario['fecha'] as String?;
+          if (dateStr != null && dateStr.isNotEmpty) {
+            final parsedDate = DateTime.tryParse(dateStr);
+            if (parsedDate != null) {
+              final dayNum = parsedDate.day;
+              final monthIdx = parsedDate.month - 1;
+              if (monthIdx >= 0 && monthIdx < 12) {
+                final formattedDate = "$dayNum de ${_months[monthIdx]}";
+                if (formattedDate.toLowerCase().trim() != activeDay.dateText.toLowerCase().trim()) {
+                  continue;
+                }
+              }
+            }
+          }
+
+          courses.add({
+            ...section,
+            ...horario,
+            'isEvaluation': false,
+            'isAdvising': section['isAdvising'] == true
+          });
         }
         continue;
       }
 
       final courseDay = (section['dia'] as String? ?? '').toLowerCase();
       if (courseDay == currentDayName) {
-        courses.add({...section, 'isEvaluation': false});
+        courses.add({
+          ...section,
+          'isEvaluation': false,
+          'isAdvising': section['isAdvising'] == true
+        });
       }
     }
 
     // 2. Buscar evaluaciones para este dia y asociarlas a las clases regulares
     for (var course in courses) {
+      if (course['isAdvising'] == true) continue;
       final sectionCode = course['codigoSeccion']?.toString().trim() ?? '';
       final courseName = course['curso']?.toString().toLowerCase().trim() ?? '';
 
@@ -266,6 +342,7 @@ class HorarioController extends GetxController {
     final uniqueCourses = <String, Map<String, dynamic>>{};
 
     for (final section in _todasLasSecciones) {
+      if (section['isAdvising'] == true) continue;
       final sectionIdStr = section['idSeccion']?.toString() ?? '';
       if (sectionIdStr.isNotEmpty && !uniqueCourses.containsKey(sectionIdStr)) {
         uniqueCourses[sectionIdStr] = section;
