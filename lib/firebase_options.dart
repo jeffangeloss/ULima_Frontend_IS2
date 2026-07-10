@@ -17,10 +17,7 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -66,5 +63,14 @@ class DefaultFirebaseOptions {
     databaseURL: 'https://ulima-plus-chat-default-rtdb.firebaseio.com',
     storageBucket: 'ulima-plus-chat.firebasestorage.app',
     iosBundleId: 'com.grupo5.ulimaplus',
+  );
+
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyBZbgU2Le0eEdmbAhlj5TBnpgxsdMgAW2U',
+    appId: '1:244053305794:web:0000000000000000000000',
+    messagingSenderId: '244053305794',
+    projectId: 'ulima-plus-chat',
+    databaseURL: 'https://ulima-plus-chat-default-rtdb.firebaseio.com',
+    storageBucket: 'ulima-plus-chat.firebasestorage.app',
   );
 }
