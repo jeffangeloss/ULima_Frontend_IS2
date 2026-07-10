@@ -275,9 +275,14 @@ class HorarioPage extends StatelessWidget {
                         final bool isEvaluation =
                             course['isEvaluation'] == true;
 
-                        final nombreStr =
+                        String nombreStr =
                             (course['curso'] as String? ?? 'CURSO')
                                 .toUpperCase();
+                        if (nombreStr.contains(' / ')) {
+                          nombreStr = nombreStr.split(' / ').first.trim();
+                        } else if (nombreStr.contains('/')) {
+                          nombreStr = nombreStr.split('/').first.trim();
+                        }
                         final aulaStr =
                             course['salon'] as String? ?? 'Sin salón';
                         final colorStr = course['color'] as String? ?? 'blue';
@@ -429,7 +434,7 @@ class HorarioPage extends StatelessWidget {
                                   Center(
                                     child: Padding(
                                       padding: EdgeInsets.symmetric(
-                                        horizontal: 16,
+                                        horizontal: (isEvaluation || course['isAdvising'] == true) ? 24.0 : 12.0,
                                         vertical: heightVal < 80 ? 4.0 : 12.0,
                                       ),
                                       child: SingleChildScrollView(
@@ -443,7 +448,7 @@ class HorarioPage extends StatelessWidget {
                                             Text(
                                               nombreStr,
                                               textAlign: TextAlign.center,
-                                              maxLines: 2,
+                                              maxLines: heightVal < 80 ? 1 : 2,
                                               overflow: TextOverflow.ellipsis,
                                               style: const TextStyle(
                                                 color: Colors.white,
