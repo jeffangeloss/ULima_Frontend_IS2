@@ -19,12 +19,29 @@ class LoginPage extends StatelessWidget {
       backgroundColor: palette.background,
       resizeToAvoidBottomInset: true,
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-            child: _LoginCard(controller: controller, palette: palette),
-          ),
+        // Login fijo: la tarjeta se centra y NO se puede arrastrar/rebotar
+        // cuando cabe en pantalla (ClampingScrollPhysics evita el bounce de
+        // iOS). Solo scrollea si el teclado reduce el alto por debajo del
+        // contenido, para no cortar los campos en pantallas chicas.
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              physics: const ClampingScrollPhysics(),
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 24,
+                  ),
+                  child: Center(
+                    child: _LoginCard(controller: controller, palette: palette),
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -75,8 +92,11 @@ class _LoginCard extends StatelessWidget {
               _BoxedField(
                 controller: controller.codeController,
                 palette: palette,
-                hint: 'Tu código de alumno',
-                keyboardType: TextInputType.number,
+                // El alumno usa su código numérico y el docente/JP un usuario
+                // alfanumérico (p.ej. "hquintan"), así que el teclado debe ser
+                // de texto, no numérico.
+                hint: 'Tu código o usuario',
+                keyboardType: TextInputType.text,
                 textInputAction: TextInputAction.next,
                 autofillHints: const [AutofillHints.username],
               ),
