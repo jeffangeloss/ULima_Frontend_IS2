@@ -94,13 +94,17 @@ jobs:
           apk="build/app/outputs/flutter-apk/app-release.apk"
           build_tools_version="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort -V | tail -n 1)"
           apksigner="$ANDROID_HOME/build-tools/$build_tools_version/apksigner"
-          aapt="$ANDROID_HOME/build-tools/$build_tools_version/aapt"
+          aapt2="$ANDROID_HOME/build-tools/$build_tools_version/aapt2"
 
           "$apksigner" verify "$apk"
-          cert_sha1="$("$apksigner" verify --print-certs "$apk" | sed -n 's/^Signer #1 certificate SHA-1 digest: //p' | head -n 1)"
-          cert_sha1_upper="$(printf '%s' "$cert_sha1" | tr '[:lower:]' '[:upper:]')"
-          cert_sha1_display="$(printf '%s' "$cert_sha1_upper" | sed 's/../&:/g; s/:$//')"
-          package_name="$("$aapt" dump badging "$apk" | sed -n "s/^package: name='\([^']*\)'.*/\1/p" | head -n 1)"
+          cert_sha1_display="$(
+            "$apksigner" verify --print-certs-pem "$apk" \
+              | sed -n '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/p' \
+              | openssl x509 -noout -fingerprint -sha1 \
+              | sed 's/^[^=]*=//'
+          )"
+          cert_sha1="$(printf '%s' "$cert_sha1_display" | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+          package_name="$("$aapt2" dump packagename "$apk" | tr -d '\r\n')"
 
           if [[ -z "$cert_sha1" || -z "$package_name" ]]; then
             echo "::error::No se pudo obtener package name o SHA-1 del APK."
