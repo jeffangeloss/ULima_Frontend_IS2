@@ -5,7 +5,7 @@ This index connects real user stories, product requirements, Flutter files, mock
 | Priority | Feature | Spec | User Stories | Requirements | Flutter target | Status |
 | --- | --- | --- | --- | --- | --- | --- |
 | 0 | Platform Runtime | `specs/features/platform-runtime/platform-runtime.spec.md` | Infra | Runtime config | `lib/services/api_client.dart` | Activo |
-| 1 | Auth | `specs/features/auth/auth.spec.md` | US01, US02 | R1, R2, RNF7 | `lib/pages/login`, `lib/services/auth_service.dart` | Spec existente |
+| 1 | Auth | `specs/features/auth/auth.spec.md` | US01, US02, US03, HU18 | R1, R2, RNF7 | `lib/pages/login`, `lib/services/auth_service.dart` | Implementado (incluye Google SSO docente) |
 | 2 | Academic Profile | `specs/features/academic-profile/academic-profile.spec.md` | US05 | R12, R13 | `lib/pages/setup_carrera` | Spec existente |
 | 3 | Curriculum | `specs/features/curriculum/curriculum.spec.md` | US03, US04 | R4, R5, R10, R11 | `lib/pages/malla` | Spec existente |
 | 4 | Grades | `specs/features/grades/grades.spec.md` | US06, US07 | R6, R9 | `lib/pages/calculadora` | Spec existente |

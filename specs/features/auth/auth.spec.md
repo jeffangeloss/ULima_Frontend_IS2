@@ -19,7 +19,7 @@ targets:
 | --- | --- |
 | US01 | Iniciar sesión con código y contraseña. |
 | US02 | Cerrar sesión. |
-| US03 | Iniciar sesión con Google (correo institucional `@aloe.ulima.edu.pe`) en web y Android. |
+| US03 | Iniciar sesión con Google usando correo institucional de alumno (`@aloe.ulima.edu.pe`) o docente (`@ulima.edu.pe`) en web y Android. |
 
 ## Business Rules
 
@@ -110,10 +110,15 @@ targets:
 
 ### BR-AUTH-F-10: Google sign-in flow (web + Android)
 - El login con Google canjea un `idToken` de Google por un JWT propio vía `POST /auth/google` con `{ idToken }`.
-- El backend valida que el correo termine en `@aloe.ulima.edu.pe` y que el usuario exista; el resto del flujo (token, navegación) es idéntico a BR-AUTH-F-01.
+- El backend acepta `@aloe.ulima.edu.pe` para alumnos y `@ulima.edu.pe` para docentes. La cuenta y el perfil correspondiente deben existir previamente; no hay autoaprovisionamiento.
+- Tras una respuesta exitosa, `finishGoogleLogin` construye primero el `UserModel` y diferencia el rol:
+  - alumno: carga catálogos de carrera/especialidad y continúa con su navegación habitual;
+  - docente: omite esos catálogos porque sus endpoints son exclusivos de alumno, conserva la sesión y navega a `/home`, donde el shell docente ya existente toma el control.
+- El guard docente debe ejecutarse tanto en web como en Android porque ambos caminos terminan en `finishGoogleLogin`.
 - **Configuración de Google OAuth** (`lib/configs/google_auth_config.dart` → `googleWebClientId`):
   - El `GoogleSignIn` se construye con `clientId` solo en web y `serverClientId` solo en móvil; ambos usan el **mismo client ID web**.
-  - `serverClientId` es obligatorio en Android: sin él, `account.authentication.idToken` es `null` y el login falla con `"No se obtuvo información de Google."`. El `idToken` resultante lleva `aud = client web`, que es el que el backend verifica.
+  - `serverClientId` es obligatorio en Android: sin él, `account.authentication.idToken` es `null` y el login falla con `"No se obtuvo información de Google."`. El `idToken` resultante lleva `aud = client web` y se envía al backend.
+  - ⚠️ **Deuda de seguridad preexistente, fuera de este cambio**: el backend actual no pasa un `audience` a `verifyIdToken`; la validación explícita contra el client web debe evaluarse como hardening separado con su configuración de despliegue.
 - **Web** (`kIsWeb == true`):
   - Se renderiza el botón oficial de Google Identity Services (`renderButton`, ver `google_sign_in_button_web.dart`); `signIn()` no se usa en web en `google_sign_in` 6.x.
   - La cuenta seleccionada llega por `googleSignIn.onCurrentUserChanged` y `LoginController` la completa con `AuthService.finishGoogleLogin(account)`.
@@ -122,7 +127,7 @@ targets:
   - Requiere un **OAuth Client de tipo Android** registrado en el mismo proyecto de Google Cloud que el client web, con `package name = com.example.ulima_plus` y la huella **SHA-1** del certificado de firma (debug para desarrollo, release para producción). Este client NO se versiona ni se embebe: Google Play Services lo resuelve en runtime por package name + SHA-1. Sin él, `signIn()` falla con `ApiException: 10` (DEVELOPER_ERROR).
   - No requiere `google-services.json` ni Firebase (`google_sign_in` no depende de Firebase).
 - **Errores mapeados** (`finishGoogleLogin`):
-  - `403 INVALID_DOMAIN` → `"Debes usar tu correo @aloe.ulima.edu.pe."`
+  - `403 INVALID_DOMAIN` → mensaje que indique ambos dominios admitidos: `@aloe.ulima.edu.pe` y `@ulima.edu.pe`.
   - `401 USER_NOT_FOUND` → `"Tu correo no está registrado en el sistema."`
   - Cancelación del usuario (`account == null`) → sin error, no navega.
 
