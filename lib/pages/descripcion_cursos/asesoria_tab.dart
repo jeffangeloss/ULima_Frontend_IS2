@@ -40,7 +40,11 @@ class AsesoriasTab extends StatelessWidget {
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
-              child: CardAsesoria(asesoria: asesoria),
+              child: CardAsesoria(
+                asesoria: asesoria,
+                // HU17: confirmar/cancelar asistencia (actualización optimista).
+                onToggleRsvp: () => control.toggleRsvp(asesoria),
+              ),
             );
           },
         ),
