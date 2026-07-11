@@ -9,6 +9,8 @@ class AlertModel {
   final String message;
   bool isRead;
   final DateTime createdAt;
+  final String? courseName;
+  final String? sectionCode;
 
   AlertModel({
     required this.id,
@@ -18,6 +20,8 @@ class AlertModel {
     required this.message,
     required this.isRead,
     required this.createdAt,
+    this.courseName,
+    this.sectionCode,
   });
 
   factory AlertModel.fromJson(Map<String, dynamic> json) {
@@ -31,6 +35,8 @@ class AlertModel {
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'].toString()) ?? DateTime.now()
           : DateTime.now(),
+      courseName: json['courseName'] as String?,
+      sectionCode: json['sectionCode'] as String?,
     );
   }
 
@@ -43,6 +49,8 @@ class AlertModel {
       'message': message,
       'isRead': isRead,
       'createdAt': createdAt.toIso8601String(),
+      'courseName': courseName,
+      'sectionCode': sectionCode,
     };
   }
 }
