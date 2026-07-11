@@ -10,6 +10,7 @@ import '../../services/contacto_service.dart';
 import '../../services/api_client.dart';
 import '../../services/auth_service.dart';
 import '../../services/attendance_risk_service.dart';
+import '../../models/contacto_model.dart';
 
 class HorarioPage extends StatelessWidget {
   const HorarioPage({super.key});
@@ -620,12 +621,14 @@ class _TeacherCourseDetailSheetState extends State<_TeacherCourseDetailSheet> {
 
       final List<dynamic> alumnos = contacts['alumnos'] ?? [];
       for (final a in alumnos) {
-        final role = a['roleInSection']?.toString() ?? '';
-        final fullName = a['user']?['fullName']?.toString() ?? '';
-        if (role == 'delegado') {
-          _delegateName = fullName;
-        } else if (role == 'subdelegado') {
-          _subdelegateName = fullName;
+        if (a is ContactoCurso) {
+          final role = a.roleInSection;
+          final fullName = a.user.fullName;
+          if (role == 'delegado') {
+            _delegateName = fullName;
+          } else if (role == 'subdelegado') {
+            _subdelegateName = fullName;
+          }
         }
       }
 
