@@ -252,27 +252,67 @@ class _AlertasPageState extends State<AlertasPage> {
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        Expanded(
-                                          child: Text(
-                                            alert.title,
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      alert.title,
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: alert.isRead
+                                            ? FontWeight.normal
+                                            : FontWeight.bold,
+                                        color: colors.onSurface,
+                                      ),
+                                    ),
+                                    if (alert.courseName != null) ...[
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          Icon(LucideIcons.bookOpen, size: 12, color: colors.onSurface.withOpacity(0.5)),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            alert.courseName!,
                                             style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: alert.isRead
-                                                  ? FontWeight.normal
-                                                  : FontWeight.bold,
-                                              color: colors.onSurface,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: colors.onSurface.withOpacity(0.6),
                                             ),
                                           ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          _formatDateTime(alert.createdAt),
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: colors.onSurface
-                                                .withOpacity(0.5),
-                                          ),
-                                        ),
+                                          if (alert.sectionCode != null && alert.sectionCode!.isNotEmpty) ...[
+                                            const SizedBox(width: 8),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                              decoration: BoxDecoration(
+                                                color: colors.primary.withOpacity(0.1),
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: Text(
+                                                'Sec ${alert.sectionCode}',
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: colors.primary,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                _formatDateTime(alert.createdAt),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: colors.onSurface
+                                      .withOpacity(0.5),
+                                ),
+                              ),
                                       ],
                                     ),
                                     const SizedBox(height: 8),

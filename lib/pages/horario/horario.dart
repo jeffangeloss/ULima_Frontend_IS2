@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../descripcion_cursos/descrip_cursos.dart';
+import '../teacher/at_risk_students_page.dart';
 import 'horario_controller.dart';
 import 'horario_list_view.dart';
 import '../../components/skeleton.dart';
 import '../../services/contacto_service.dart';
 import '../../services/api_client.dart';
 import '../../services/auth_service.dart';
+import '../../services/attendance_risk_service.dart';
 
 class HorarioPage extends StatelessWidget {
   const HorarioPage({super.key});
@@ -596,6 +598,7 @@ class _TeacherCourseDetailSheetState extends State<_TeacherCourseDetailSheet> {
   String _delegateName = 'No asignado';
   String _subdelegateName = 'No asignado';
   List<dynamic> _assessments = [];
+  int _atRiskCount = 0;
 
   @override
   void initState() {
@@ -607,10 +610,13 @@ class _TeacherCourseDetailSheetState extends State<_TeacherCourseDetailSheet> {
     try {
       final contactsFuture = ContactoService().fetchContactos(widget.idSeccion);
       final assessmentsFuture = ApiClient().getJson('/schedule/teacher/sections/${widget.idSeccion}/assessments-status');
+      final atRiskFuture = AttendanceRiskService().fetchSummary(widget.idSeccion);
 
-      final results = await Future.wait([contactsFuture, assessmentsFuture]);
+      final results = await Future.wait([contactsFuture, assessmentsFuture, atRiskFuture]);
       final contacts = results[0];
       final assessmentsData = results[1];
+      final atRiskData = results[2];
+      _atRiskCount = (atRiskData['summary']?['total'] as num?)?.toInt() ?? 0;
 
       final List<dynamic> alumnos = contacts['alumnos'] ?? [];
       for (final a in alumnos) {
@@ -668,13 +674,48 @@ class _TeacherCourseDetailSheetState extends State<_TeacherCourseDetailSheet> {
               ),
             ),
             const SizedBox(height: 18),
-            Text(
-              widget.courseName,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: isDark ? Colors.white : const Color(0xFF2D2D2D),
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    widget.courseName,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: isDark ? Colors.white : const Color(0xFF2D2D2D),
+                    ),
+                  ),
+                ),
+                _isLoading
+                    ? const SizedBox(width: 48, height: 48)
+                    : Badge(
+                        isLabelVisible: _atRiskCount > 0,
+                        label: Text(
+                          '$_atRiskCount',
+                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800),
+                        ),
+                        backgroundColor: Colors.red,
+                        textColor: Colors.white,
+                        smallSize: 20,
+                        child: IconButton(
+                          icon: Icon(
+                            Icons.warning_amber_rounded,
+                            color: _atRiskCount > 0 ? Colors.orange : Colors.grey,
+                            size: 24,
+                          ),
+                          tooltip: 'Alumnos impedidos y en riesgo',
+                          onPressed: () {
+                            Get.to(
+                              () => AtRiskStudentsPage(
+                                sectionId: widget.idSeccion,
+                                courseName: widget.courseName,
+                                sectionCode: widget.sectionCode,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+              ],
             ),
             const SizedBox(height: 4),
             Text(
