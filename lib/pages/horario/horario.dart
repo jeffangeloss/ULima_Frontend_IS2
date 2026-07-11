@@ -10,6 +10,7 @@ import '../../services/contacto_service.dart';
 import '../../services/api_client.dart';
 import '../../services/auth_service.dart';
 import '../../services/attendance_risk_service.dart';
+import '../../models/contacto_model.dart';
 
 class HorarioPage extends StatelessWidget {
   const HorarioPage({super.key});
@@ -599,6 +600,70 @@ class _TeacherCourseDetailSheetState extends State<_TeacherCourseDetailSheet> {
   String _subdelegateName = 'No asignado';
   List<dynamic> _assessments = [];
   int _atRiskCount = 0;
+  final Set<String> _notifiedAssessments = {};
+
+  Future<void> _confirmAndNotify(String assessmentId, String assessmentName) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Notificar Publicación Total'),
+        content: Text('¿Deseas enviar una alerta a los alumnos inscritos indicando que las notas de "$assessmentName" han sido publicadas en su totalidad?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Sí, notificar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        final res = await ApiClient().postJson(
+          '/schedule/teacher/sections/${widget.idSeccion}/assessments/$assessmentId/notify-grades',
+          body: {},
+        );
+        if (res['ok'] == true) {
+          setState(() {
+            _notifiedAssessments.add(assessmentId);
+            // Actualizar localmente el estado de esta evaluación para reflejarlo en la UI
+            final index = _assessments.indexWhere((ass) => ass['id']?.toString() == assessmentId);
+            if (index != -1) {
+              _assessments[index]['status'] = 'Completo';
+            }
+          });
+          Get.snackbar(
+            'Notificación enviada',
+            'Se alertó a los alumnos matriculados en la sección.',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.green,
+            colorText: Colors.white,
+          );
+        } else {
+          Get.snackbar(
+            'Error',
+            'No se pudo enviar la notificación.',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.red,
+            colorText: Colors.white,
+          );
+        }
+      } catch (e) {
+        debugPrint('Error notifying grades: $e');
+        Get.snackbar(
+          'Error',
+          'Ocurrió un error al intentar notificar.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -620,12 +685,14 @@ class _TeacherCourseDetailSheetState extends State<_TeacherCourseDetailSheet> {
 
       final List<dynamic> alumnos = contacts['alumnos'] ?? [];
       for (final a in alumnos) {
-        final role = a['roleInSection']?.toString() ?? '';
-        final fullName = a['user']?['fullName']?.toString() ?? '';
-        if (role == 'delegado') {
-          _delegateName = fullName;
-        } else if (role == 'subdelegado') {
-          _subdelegateName = fullName;
+        if (a is ContactoCurso) {
+          final role = a.roleInSection;
+          final fullName = a.user.fullName;
+          if (role == 'delegado') {
+            _delegateName = fullName;
+          } else if (role == 'subdelegado') {
+            _subdelegateName = fullName;
+          }
         }
       }
 
@@ -842,6 +909,20 @@ class _TeacherCourseDetailSheetState extends State<_TeacherCourseDetailSheet> {
                                 ),
                               ),
                             ),
+                            if (status == 'Carga parcial') ...[
+                              const SizedBox(width: 8),
+                              Transform.scale(
+                                scale: 0.8,
+                                child: Switch(
+                                  value: _notifiedAssessments.contains(ass['id']?.toString()),
+                                  onChanged: (val) {
+                                    if (val) {
+                                      _confirmAndNotify(ass['id']?.toString() ?? '', name);
+                                    }
+                                  },
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       );
