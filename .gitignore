@@ -58,3 +58,6 @@ ios/**/xcshareddata/swiftpm/
 node_modules/
 bun.lock
 package.json
+
+# Scripts ad-hoc que tocan la BD (NO versionar: pueden llevar credenciales)
+/list_users.js
