@@ -3,6 +3,7 @@ class AtRiskStudent {
   final String firstName;
   final String lastName;
   final int? currentLevel;
+  final int? cycle;
   final int absentHours;
   final int totalHours;
   final double absencePercentage;
@@ -14,6 +15,7 @@ class AtRiskStudent {
     required this.firstName,
     required this.lastName,
     this.currentLevel,
+    this.cycle,
     required this.absentHours,
     required this.totalHours,
     required this.absencePercentage,
@@ -25,11 +27,14 @@ class AtRiskStudent {
 
   bool get isEnRiesgo => status == 'en_riesgo';
 
+  bool get isNormal => status == 'normal';
+
   String get statusLabel {
     if (isImpedido) return 'Impedido';
     if (isEnRiesgo && missingFaltas != null) {
       return 'En Riesgo: a $missingFaltas faltas';
     }
+    if (isNormal) return 'Normal';
     return status;
   }
 
@@ -41,6 +46,7 @@ class AtRiskStudent {
       firstName: json['firstName']?.toString() ?? '',
       lastName: json['lastName']?.toString() ?? '',
       currentLevel: (json['currentLevel'] as num?)?.toInt(),
+      cycle: (json['cycle'] as num?)?.toInt(),
       absentHours: (json['absentHours'] as num?)?.toInt() ?? 0,
       totalHours: (json['totalHours'] as num?)?.toInt() ?? 0,
       absencePercentage: (json['absencePercentage'] as num?)?.toDouble() ?? 0,

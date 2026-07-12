@@ -195,13 +195,16 @@ Notas:
 ## Grades
 
 - `GET /grades/me/courses` — **IMPLEMENTADO**. Devuelve cursos + evaluaciones del sílabo con sus pesos.
-- ~~`PUT /grades/me/scores`~~ — **NO IMPLEMENTADO**. El guardado de notas es local en el cliente (`shared_preferences`, `NotasService`).
-- ~~`GET /grades/me/courses/:sectionId/average`~~ — **NO IMPLEMENTADO**. El cálculo del promedio ponderado ocurre en el frontend.
+- `POST /grades/me/calculate` — **IMPLEMENTADO**. Calcula el promedio ponderado en el backend.
+- `GET /grades/me/notes` — **IMPLEMENTADO**. Recupera notas guardadas del alumno desde `student_score`.
+- `POST /grades/me/notes` — **IMPLEMENTADO**. Guarda notas del alumno en `student_score` (upsert).
+- ~~`PUT /grades/me/scores`~~ — **NO IMPLEMENTADO** (reemplazado por `POST /grades/me/notes`).
+- ~~`GET /grades/me/courses/:sectionId/average`~~ — **NO IMPLEMENTADO** (el cálculo se hace vía `POST /grades/me/calculate`).
 
 Notas:
 
-- `student_score` existe en el esquema (notas oficiales de referencia) pero la app no lo escribe.
-- Las notas son personales no oficiales; por eso no se persisten en backend desde la app.
+- `student_score` es la tabla de persistencia de notas personales del alumno.
+- El cálculo de promedio ponderado y la persistencia de notas se delegan al backend.
 - `POST /grades/syllabi` queda fuera de v1 salvo spec aprobada; la tabla `syllabus` ya existe.
 
 ## Schedule

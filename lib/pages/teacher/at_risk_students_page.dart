@@ -190,7 +190,7 @@ class _AtRiskStudentsPageState extends State<AtRiskStudentsPage> {
                 return _EmptyState(
                   message: controller.searchQuery.value.isNotEmpty
                       ? 'No se encontraron alumnos con ese codigo o apellido'
-                      : 'No hay alumnos impedidos o en riesgo en esta seccion',
+                      : 'No se encontraron alumnos en esta seccion',
                   isDark: isDark,
                 );
               }
@@ -370,31 +370,42 @@ class _FilterChips extends StatelessWidget {
     return Obx(() {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        child: Row(
-          children: [
-            _FilterChip(
-              label: 'Todos',
-              count: controller.allStudents.length,
-              isSelected: controller.filterMode.value == FilterMode.all,
-              onTap: () => controller.setFilterMode(FilterMode.all),
-            ),
-            const SizedBox(width: 8),
-            _FilterChip(
-              label: 'Impedidos',
-              count: controller.impedidoCount,
-              color: _AtRiskStudentsPageState.impedidoRed,
-              isSelected: controller.filterMode.value == FilterMode.impedido,
-              onTap: () => controller.setFilterMode(FilterMode.impedido),
-            ),
-            const SizedBox(width: 8),
-            _FilterChip(
-              label: 'En riesgo',
-              count: controller.enRiesgoCount,
-              color: _AtRiskStudentsPageState.riesgoOrange,
-              isSelected: controller.filterMode.value == FilterMode.enRiesgo,
-              onTap: () => controller.setFilterMode(FilterMode.enRiesgo),
-            ),
-          ],
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              _FilterChip(
+                label: 'Todos',
+                count: controller.allStudents.length,
+                isSelected: controller.filterMode.value == FilterMode.all,
+                onTap: () => controller.setFilterMode(FilterMode.all),
+              ),
+              const SizedBox(width: 8),
+              _FilterChip(
+                label: 'Impedidos',
+                count: controller.impedidoCount,
+                color: _AtRiskStudentsPageState.impedidoRed,
+                isSelected: controller.filterMode.value == FilterMode.impedido,
+                onTap: () => controller.setFilterMode(FilterMode.impedido),
+              ),
+              const SizedBox(width: 8),
+              _FilterChip(
+                label: 'En riesgo',
+                count: controller.enRiesgoCount,
+                color: _AtRiskStudentsPageState.riesgoOrange,
+                isSelected: controller.filterMode.value == FilterMode.enRiesgo,
+                onTap: () => controller.setFilterMode(FilterMode.enRiesgo),
+              ),
+              const SizedBox(width: 8),
+              _FilterChip(
+                label: 'Normal',
+                count: controller.normalCount,
+                color: Colors.green,
+                isSelected: controller.filterMode.value == FilterMode.normal,
+                onTap: () => controller.setFilterMode(FilterMode.normal),
+              ),
+            ],
+          ),
         ),
       );
     });
@@ -453,12 +464,27 @@ class _StudentCard extends StatelessWidget {
   void _showDetail(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final brightness = isDark ? Brightness.dark : Brightness.light;
-    final limitLabel = student.currentLevel != null && student.currentLevel! >= 6
+    final cycle = student.cycle;
+    final limitLabel = cycle != null && cycle >= 6
         ? '35% (6° ciclo+)'
         : '25% (1°-5° ciclo)';
-    final limiteHoras = student.currentLevel != null && student.currentLevel! >= 6
+    final limiteHoras = cycle != null && cycle >= 6
         ? (student.totalHours * 0.35).toStringAsFixed(1)
         : (student.totalHours * 0.25).toStringAsFixed(1);
+
+    final Color statusColor;
+    if (student.isImpedido) {
+      statusColor = _AtRiskStudentsPageState.impedidoRed;
+    } else if (student.isEnRiesgo) {
+      statusColor = _AtRiskStudentsPageState.riesgoOrange;
+    } else {
+      statusColor = Colors.green;
+    }
+    final IconData statusIcon = student.isImpedido
+        ? Icons.cancel
+        : student.isEnRiesgo
+            ? Icons.warning_amber_rounded
+            : Icons.check_circle;
 
     showDialog(
       context: context,
@@ -467,10 +493,8 @@ class _StudentCard extends StatelessWidget {
         title: Row(
           children: [
             Icon(
-              student.isImpedido ? Icons.cancel : Icons.warning_amber_rounded,
-              color: student.isImpedido
-                  ? _AtRiskStudentsPageState.impedidoRed
-                  : _AtRiskStudentsPageState.riesgoOrange,
+              statusIcon,
+              color: statusColor,
               size: 24,
             ),
             const SizedBox(width: 8),
@@ -508,9 +532,7 @@ class _StudentCard extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: student.isImpedido
-                    ? _AtRiskStudentsPageState.impedidoRed.withValues(alpha: 0.12)
-                    : _AtRiskStudentsPageState.riesgoOrange.withValues(alpha: 0.12),
+                color: statusColor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -519,9 +541,7 @@ class _StudentCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
-                  color: student.isImpedido
-                      ? _AtRiskStudentsPageState.impedidoRed
-                      : _AtRiskStudentsPageState.riesgoOrange,
+                  color: statusColor,
                 ),
               ),
             ),
@@ -558,6 +578,14 @@ class _StudentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final brightness = isDark ? Brightness.dark : Brightness.light;
+    final Color statusColor;
+    if (student.isImpedido) {
+      statusColor = _AtRiskStudentsPageState.impedidoRed;
+    } else if (student.isEnRiesgo) {
+      statusColor = _AtRiskStudentsPageState.riesgoOrange;
+    } else {
+      statusColor = Colors.green;
+    }
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -632,18 +660,14 @@ class _StudentCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w900,
-                          color: student.isImpedido
-                              ? _AtRiskStudentsPageState.impedidoRed
-                              : _AtRiskStudentsPageState.riesgoOrange,
+                          color: statusColor,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: student.isImpedido
-                              ? _AtRiskStudentsPageState.impedidoRed.withValues(alpha: 0.12)
-                              : _AtRiskStudentsPageState.riesgoOrange.withValues(alpha: 0.12),
+                          color: statusColor.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -651,9 +675,7 @@ class _StudentCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w800,
-                            color: student.isImpedido
-                                ? _AtRiskStudentsPageState.impedidoRed
-                                : _AtRiskStudentsPageState.riesgoOrange,
+                            color: statusColor,
                           ),
                         ),
                       ),
@@ -679,11 +701,13 @@ class _ProgressBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final limitPct = student.currentLevel != null && student.currentLevel! >= 6 ? 35.0 : 25.0;
+    final limitPct = (student.cycle != null && student.cycle! >= 6) ? 35.0 : 25.0;
     final fraction = (student.absencePercentage / limitPct).clamp(0.0, 1.0);
     final barColor = student.isImpedido
         ? _AtRiskStudentsPageState.impedidoRed
-        : _AtRiskStudentsPageState.riesgoOrange;
+        : student.isEnRiesgo
+            ? _AtRiskStudentsPageState.riesgoOrange
+            : Colors.green;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
