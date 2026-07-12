@@ -663,13 +663,15 @@ class _TeacherCourseDetailSheetState extends State<_TeacherCourseDetailSheet> {
   Future<void> _confirmAndNotify(
     String assessmentId,
     String assessmentName,
+    int loadedCount,
+    int totalCount,
   ) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Notificar Publicación Total'),
+        title: const Text('Notificar Publicación de Notas'),
         content: Text(
-          '¿Deseas enviar una alerta a los alumnos inscritos indicando que las notas de "$assessmentName" han sido publicadas en su totalidad?',
+          '¿Deseas enviar una alerta a todos los alumnos de la sección indicando que las notas de "$assessmentName" han sido publicadas?\n\nAlumnos calificados: $loadedCount / $totalCount',
         ),
         actions: [
           TextButton(
@@ -691,24 +693,24 @@ class _TeacherCourseDetailSheetState extends State<_TeacherCourseDetailSheet> {
           body: {},
         );
         if (res['ok'] == true) {
-          setState(() {
-            _notifiedAssessments.add(assessmentId);
-            // Actualizar localmente el estado de esta evaluación para reflejarlo en la UI
-            final index = _assessments.indexWhere(
-              (ass) => ass['id']?.toString() == assessmentId,
-            );
-            if (index != -1) {
-              _assessments[index]['status'] = 'Completo';
-            }
-          });
+          if (mounted) {
+            setState(() {
+              _notifiedAssessments.add(assessmentId);
+            });
+          }
           Get.snackbar(
             'Notificación enviada',
-            'Se alertó a los alumnos matriculados en la sección.',
+            'Se alertó a los ${res['notifiedCount'] ?? 'todos los'} alumnos de la sección.',
             snackPosition: SnackPosition.BOTTOM,
             backgroundColor: Colors.green,
             colorText: Colors.white,
           );
         } else {
+          if (mounted) {
+            setState(() {
+              _notifiedAssessments.remove(assessmentId);
+            });
+          }
           Get.snackbar(
             'Error',
             'No se pudo enviar la notificación.',
@@ -718,6 +720,11 @@ class _TeacherCourseDetailSheetState extends State<_TeacherCourseDetailSheet> {
           );
         }
       } catch (e) {
+        if (mounted) {
+          setState(() {
+            _notifiedAssessments.remove(assessmentId);
+          });
+        }
         debugPrint('Error notifying grades: $e');
         Get.snackbar(
           'Error',
@@ -726,6 +733,12 @@ class _TeacherCourseDetailSheetState extends State<_TeacherCourseDetailSheet> {
           backgroundColor: Colors.red,
           colorText: Colors.white,
         );
+      }
+    } else {
+      if (mounted) {
+        setState(() {
+          _notifiedAssessments.remove(assessmentId);
+        });
       }
     }
   }
@@ -771,8 +784,19 @@ class _TeacherCourseDetailSheetState extends State<_TeacherCourseDetailSheet> {
 
       _assessments = assessmentsData['assessments'] ?? [];
 
+      // Inicializar el estado de notificaci\u00f3n desde el backend
+      // (persiste aunque el alumno cierre sesi\u00f3n y vuelva a abrir la vista)
+      final notified = <String>{};
+      for (final ass in _assessments) {
+        if (ass['isNotified'] == true) {
+          final id = ass['id']?.toString();
+          if (id != null) notified.add(id);
+        }
+      }
+
       if (mounted) {
         setState(() {
+          _notifiedAssessments.addAll(notified);
           _isLoading = false;
         });
       }
@@ -973,11 +997,19 @@ class _TeacherCourseDetailSheetState extends State<_TeacherCourseDetailSheet> {
                                   ass['id']?.toString(),
                                 ),
                                 onChanged: (val) {
+                                  final assId = ass['id']?.toString() ?? '';
                                   if (val) {
+                                    // Activar: marcar optimistamente y pedir confirmaci\u00f3n
+                                    setState(() => _notifiedAssessments.add(assId));
                                     _confirmAndNotify(
-                                      ass['id']?.toString() ?? '',
-                                      name,
+                                      assId,
+                                      ass['name'] ?? '',
+                                      (ass['loadedCount'] as num?)?.toInt() ?? 0,
+                                      (ass['totalCount'] as num?)?.toInt() ?? 0,
                                     );
+                                  } else {
+                                    // Desactivar: solo visual, sin llamada al backend
+                                    setState(() => _notifiedAssessments.remove(assId));
                                   }
                                 },
                               ),
