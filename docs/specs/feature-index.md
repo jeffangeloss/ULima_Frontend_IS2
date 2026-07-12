@@ -17,6 +17,7 @@ This index connects real user stories, product requirements, Flutter files, mock
 | 10 | Password Reset | _(sin spec)_ | HU20 | Restablecer contraseña vía OTP | `lib/pages/password_reset/**`, `lib/services/password_reset_service.dart` | Implementado sin spec |
 | 11 | Silabo Viewer | _(sin spec)_ | HU21 | Visualizar sílabo en PDF | `lib/pages/silabo/**`, `lib/services/silabo_service.dart` | Implementado sin spec |
 | 12 | Release Build | `specs/features/release-build/release-build.spec.md` | Infra | Build config | `android/`, `pubspec.yaml` | Documentado |
+| 13 | Chatbot Asistente Académico | `specs/features/chatbot/chatbot.spec.md` | HU-CHATBOT-01, HU-CHATBOT-02 | Chatbot con IA para consultas académicas | `lib/pages/chatbot/**`, `lib/services/chatbot_service.dart`, `lib/components/chatbot_fab.dart`, `lib/models/chatbot_models.dart` | **Diseñada — pendiente de implementar** |
 
 ## Workflow
 
