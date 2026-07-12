@@ -100,13 +100,13 @@ class CalculadoraPage extends GetView<CalculadoraController> {
                 itemCount: cursosConNotas.length,
                 itemBuilder: (context, index) {
                   final curso = cursosConNotas[index];
-                  final notas = curso['notas'] as List;
 
+                  final cursoIndex = controller.cursos.indexOf(curso);
                   return CursoCard(
                     curso: curso,
-                    cursoIndex: controller.cursos.indexOf(curso),
-                    promedio: controller.calcularPromedio(notas),
-                    sumaPesos: controller.sumaPesos(notas),
+                    cursoIndex: cursoIndex,
+                    promedio: controller.calcularPromedio(cursoIndex),
+                    sumaPesos: controller.sumaPesos(cursoIndex),
                     onDeleteNota: controller.eliminarNota,
                   );
                 },

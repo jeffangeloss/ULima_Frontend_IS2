@@ -272,12 +272,15 @@ class _AlertasPageState extends State<AlertasPage> {
                                         children: [
                                           Icon(LucideIcons.bookOpen, size: 12, color: colors.onSurface.withOpacity(0.5)),
                                           const SizedBox(width: 4),
-                                          Text(
-                                            alert.courseName!,
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w600,
-                                              color: colors.onSurface.withOpacity(0.6),
+                                          Flexible(
+                                            child: Text(
+                                              alert.courseName!,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600,
+                                                color: colors.onSurface.withOpacity(0.6),
+                                              ),
                                             ),
                                           ),
                                           if (alert.sectionCode != null && alert.sectionCode!.isNotEmpty) ...[

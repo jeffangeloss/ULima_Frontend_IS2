@@ -4,7 +4,7 @@ import 'package:ulima_plus/models/at_risk_student_model.dart';
 import 'package:ulima_plus/services/attendance_risk_service.dart';
 
 enum SortMode { absenceDesc, absenceAsc, lastNameAsc }
-enum FilterMode { all, impedido, enRiesgo }
+enum FilterMode { all, impedido, enRiesgo, normal }
 
 class AtRiskStudentsController extends GetxController {
   final AttendanceRiskService _service = AttendanceRiskService();
@@ -21,6 +21,7 @@ class AtRiskStudentsController extends GetxController {
 
   int get impedidoCount => allStudents.where((s) => s.isImpedido).length;
   int get enRiesgoCount => allStudents.where((s) => s.isEnRiesgo).length;
+  int get normalCount => allStudents.where((s) => s.isNormal).length;
 
   @override
   void onInit() {
@@ -113,6 +114,8 @@ class AtRiskStudentsController extends GetxController {
         result = result.where((s) => s.isImpedido).toList();
       case FilterMode.enRiesgo:
         result = result.where((s) => s.isEnRiesgo).toList();
+      case FilterMode.normal:
+        result = result.where((s) => s.isNormal).toList();
       case FilterMode.all:
         break;
     }

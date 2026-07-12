@@ -616,7 +616,10 @@ class _TeacherCourseDetailSheetState extends State<_TeacherCourseDetailSheet> {
       final contacts = results[0];
       final assessmentsData = results[1];
       final atRiskData = results[2];
-      _atRiskCount = (atRiskData['summary']?['total'] as num?)?.toInt() ?? 0;
+      final summary = atRiskData['summary'] as Map<String, dynamic>?;
+      final impedido = (summary?['impedido'] as num?)?.toInt() ?? 0;
+      final enRiesgo = (summary?['en_riesgo'] as num?)?.toInt() ?? 0;
+      _atRiskCount = impedido + enRiesgo;
 
       final List<dynamic> alumnos = contacts['alumnos'] ?? [];
       for (final a in alumnos) {
