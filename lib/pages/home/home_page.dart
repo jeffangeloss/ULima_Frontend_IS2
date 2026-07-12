@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:ulima_plus/components/footer/app_footer.dart';
 import 'package:ulima_plus/components/header/app_header.dart';
 import 'package:ulima_plus/services/auth_service.dart';
+import 'package:ulima_plus/components/chatbot_fab.dart';
 
 import '../horario/horario_controller.dart';
 import 'home_controller.dart';
@@ -51,8 +52,10 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
+    final u = user;
     return Scaffold(
       backgroundColor: colors.surface,
+      floatingActionButton: u != null && !u.isTeacher ? const ChatbotFab() : null,
       body: Column(
         children: [
           AppHeader(showScheduleToggle: _currentIndex == _horarioTabIndex),

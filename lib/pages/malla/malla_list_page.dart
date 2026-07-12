@@ -30,61 +30,65 @@ class MallaListPage extends GetView<MallaListController> {
 
     return Scaffold(
       backgroundColor: MaterialTheme.pageBg(brightness),
-      floatingActionButton: Obx(() {
-        final hidden = controller.loading.value ||
-            controller.error.value != null ||
-            controller.simulationMode.value;
-        if (hidden) return const SizedBox.shrink();
-        return FloatingActionButton.extended(
-          onPressed: controller.enterSimulation,
-          backgroundColor: MaterialTheme.primaryColor,
-          foregroundColor: Colors.white,
-          icon: const Icon(Icons.science_outlined),
-          label: const Text(
-            'Simular mi avance',
-            style: TextStyle(fontWeight: FontWeight.w800),
-          ),
-        );
-      }),
-      body: Column(
+      body: Stack(
         children: [
-          Obx(
-            () => controller.simulationMode.value
-                ? const _SimulationBanner()
-                : const SizedBox.shrink(),
+          Column(
+            children: [
+              Obx(
+                () => controller.simulationMode.value
+                    ? const _SimulationBanner()
+                    : const SizedBox.shrink(),
+              ),
+              _ProgressHeader(controller: controller),
+              Obx(
+                () => controller.filter.value == MallaListFilter.todos
+                    ? _CycleStepper(controller: controller)
+                    : _ActiveFilterBar(controller: controller),
+              ),
+              Expanded(
+                child: Obx(() {
+                  if (controller.loading.value) {
+                    return const SkeletonCardList(count: 6, showAvatar: false);
+                  }
+                  final errorMsg = controller.error.value;
+                  if (errorMsg != null) {
+                    return _ErrorState(
+                      message: errorMsg,
+                      onRetry: controller.retry,
+                    );
+                  }
+                  return controller.filter.value == MallaListFilter.todos
+                      ? _FocusedCycle(controller: controller)
+                      : _FilteredList(controller: controller);
+                }),
+              ),
+              Obx(
+                () => controller.simulationMode.value
+                    ? _SimulationPanel(controller: controller)
+                    : const SizedBox.shrink(),
+              ),
+            ],
           ),
-          _ProgressHeader(controller: controller),
-          // Filtro = Todos → rail de ciclos (navegación por ciclo, un ciclo a la
-          // vez). Filtro activo → barra con el filtro y opción de limpiarlo.
-          Obx(
-            () => controller.filter.value == MallaListFilter.todos
-                ? _CycleStepper(controller: controller)
-                : _ActiveFilterBar(controller: controller),
-          ),
-          Expanded(
-            child: Obx(() {
-              if (controller.loading.value) {
-                return const SkeletonCardList(count: 6, showAvatar: false);
-              }
-              final errorMsg = controller.error.value;
-              if (errorMsg != null) {
-                return _ErrorState(
-                  message: errorMsg,
-                  onRetry: controller.retry,
-                );
-              }
-              // Filtro = Todos → ciclo enfocado. Filtro activo → resultados
-              // planos a través de todos los ciclos.
-              return controller.filter.value == MallaListFilter.todos
-                  ? _FocusedCycle(controller: controller)
-                  : _FilteredList(controller: controller);
-            }),
-          ),
-          Obx(
-            () => controller.simulationMode.value
-                ? _SimulationPanel(controller: controller)
-                : const SizedBox.shrink(),
-          ),
+          Obx(() {
+            final hidden = controller.loading.value ||
+                controller.error.value != null ||
+                controller.simulationMode.value;
+            if (hidden) return const SizedBox.shrink();
+            return Positioned(
+              right: 16,
+              bottom: 80,
+              child: FloatingActionButton.extended(
+                onPressed: controller.enterSimulation,
+                backgroundColor: MaterialTheme.primaryColor,
+                foregroundColor: Colors.white,
+                icon: const Icon(Icons.science_outlined),
+                label: const Text(
+                  'Simular mi avance',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+            );
+          }),
         ],
       ),
     );
