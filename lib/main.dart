@@ -84,6 +84,10 @@ class MyApp extends StatelessWidget {
       darkTheme: materialTheme.dark(),
       themeMode: ThemeMode.system,
       debugShowCheckedModeBanner: false,
+      // Física de scroll uniforme en TODA la app: clamped (sin el rebote /
+      // overscroll "infinito" de iOS). Las listas se detienen en los bordes del
+      // contenido y no scrollean si todo cabe en pantalla.
+      scrollBehavior: const AppScrollBehavior(),
       initialRoute: initialRoute,
       getPages: [
         // Bindings por ruta: asocian cada controller a SU ruta de forma
@@ -167,4 +171,16 @@ class MyApp extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Física de scroll uniforme para toda la app: `ClampingScrollPhysics` (sin el
+/// rebote/overscroll de iOS). Blinda el "scroll infinito" en TODAS las pantallas:
+/// cualquier lista/scroll se detiene en los bordes del contenido y no scrollea
+/// si el contenido cabe en pantalla. Se instala vía `GetMaterialApp.scrollBehavior`.
+class AppScrollBehavior extends MaterialScrollBehavior {
+  const AppScrollBehavior();
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) =>
+      const ClampingScrollPhysics();
 }
