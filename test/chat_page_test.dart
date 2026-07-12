@@ -14,6 +14,7 @@ class _FakeChatRepo implements ChatRepositoryContract {
   final Object? error;
   final List<ChatMessage> messages;
   final List<String> sent = [];
+  final List<String> deleted = [];
 
   @override
   Future<ChatSession> signInWithCustomToken(String sectionId) async {
@@ -28,6 +29,11 @@ class _FakeChatRepo implements ChatRepositoryContract {
   @override
   Future<void> sendMessage(String sectionId, String text, ChatSession s) async {
     sent.add(text);
+  }
+
+  @override
+  Future<void> deleteMessage(String sectionId, String messageId) async {
+    deleted.add(messageId);
   }
 }
 
@@ -108,7 +114,7 @@ void main() {
     await tester.pumpWidget(_wrap(repo));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('protegidos'), findsOneWidget);
+    expect(find.textContaining('miembros de esta sección'), findsOneWidget);
     // Con sesión válida sí hay caja de input.
     expect(find.byType(TextField), findsOneWidget);
   });
@@ -148,5 +154,29 @@ void main() {
 
     // La burbuja del profesor muestra el badge "Profesor".
     expect(find.text('Profesor'), findsOneWidget);
+  });
+
+  testWidgets('HU23: un mensaje eliminado muestra la lápida y oculta el cuerpo',
+      (tester) async {
+    final deletedMsg = ChatMessage.fromMap('300', {
+      'senderId': '6',
+      'senderName': 'Alumno X',
+      'senderRole': 'student',
+      'body': 'texto original que no debe verse',
+      'createdAt': 300,
+      'deleted': true,
+      'deletedBy': 'Quintana Cruz, Hernan',
+      'deletedByRole': 'teacher',
+    });
+    final repo = _FakeChatRepo(session: _teacher, messages: [deletedMsg]);
+    await tester.pumpWidget(_wrap(repo));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Mensaje eliminado por Quintana Cruz, Hernan'),
+      findsOneWidget,
+    );
+    // El cuerpo original no se renderiza.
+    expect(find.text('texto original que no debe verse'), findsNothing);
   });
 }
