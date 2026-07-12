@@ -356,3 +356,26 @@ Notas:
 
 - **Estado real**: el módulo solo expone `GET /representatives`. Los endpoints de registro de anuncios y estadísticas están documentados pero no implementados.
 - Los anuncios reales en frontend se sirven actualmente desde el módulo `course-detail` (`GET /course-detail/sections/:sectionId/announcements`).
+
+## Chatbot (Asistente Académico con IA)
+
+Asistente conversacional con IA (Cohere) para alumnos. Detalle en `specs/features/chatbot/chatbot.spec.md`.
+
+Roles requeridos: `student`, `delegate`, `subdelegate`.
+
+### Sesiones
+
+| Método | Endpoint | Descripción |
+| --- | --- | --- |
+| `POST` | `/chatbot/sessions` | Crear nueva sesión. Response `201`: `{ "session": { "id", "title", "createdAt", "updatedAt" } }` |
+| `GET` | `/chatbot/sessions` | Listar sesiones del alumno. Response `200`: `{ "sessions": [...] }` |
+| `GET` | `/chatbot/sessions/:id` | Obtener sesión con mensajes. Response `200`: `{ "session": {...}, "messages": [...] }` |
+| `DELETE` | `/chatbot/sessions/:id` | Eliminar sesión. Response `200`: `{ "message": "..." }` |
+
+### Preguntas
+
+- `POST /chatbot/sessions/:id/ask`
+  - Request: `{ "question": "string<=500", "localGrades?": [...] }`
+  - Response `200`: `{ "answer": "string", "sessionId": "uuid" }`
+  - `localGrades` (opcional): `[{ "id": "sectionId", "nombre": "string", "notas": [{ "titulo": "string", "peso": 0-100, "valor": 0-20 }] }]`
+  - Errores: `400 INVALID_QUESTION`, `404 SESSION_NOT_FOUND`, `429 RATE_LIMITED`, `503 CHATBOT_UNAVAILABLE`

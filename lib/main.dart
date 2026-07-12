@@ -33,6 +33,7 @@ import 'pages/password_reset/reset_password_page.dart';
 import 'pages/setup_carrera/setup_carrera_page.dart';
 import 'pages/silabo/silabo_viewer_controller.dart';
 import 'pages/silabo/silabo_viewer_page.dart';
+import 'pages/chatbot/chatbot_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -167,6 +168,10 @@ class MyApp extends StatelessWidget {
           name: '/teacher-advising-attendees',
           page: () => const AttendeesPage(),
           binding: AttendeesBinding(),
+        ),
+        GetPage(
+          name: '/chatbot',
+          page: () => const ChatbotPage(),
         ),
       ],
     );
