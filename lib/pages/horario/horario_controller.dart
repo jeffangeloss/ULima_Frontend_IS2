@@ -66,6 +66,25 @@ class HorarioController extends GetxController {
     }
   }
 
+  /// Recarga los datos del horario (sesiones + evaluaciones).
+  /// Llamado por [HomePage] al cambiar al tab del horario para reflejar
+  /// asesorías o cambios recientes sin destruir el controller.
+  Future<void> reload() async {
+    final isTeacher = AuthService.to.currentUser?.isTeacher ?? false;
+    if (isTeacher) {
+      await Future.wait([
+        _loadTeacherDaysAndSessions(),
+        _loadTeacherAssessments(),
+      ]);
+    } else {
+      await Future.wait([
+        _loadDays(),
+        _loadSecciones(),
+        _loadAssessments(),
+      ]);
+    }
+  }
+
   @override
   void onClose() {
     _clockTimer?.cancel();
