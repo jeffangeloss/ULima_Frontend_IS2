@@ -10,6 +10,7 @@ import '../../services/contacto_service.dart';
 import '../../services/api_client.dart';
 import '../../services/auth_service.dart';
 import '../../services/attendance_risk_service.dart';
+import '../../models/contacto_model.dart';
 
 class HorarioPage extends StatelessWidget {
   const HorarioPage({super.key});
@@ -21,7 +22,7 @@ class HorarioPage extends StatelessWidget {
   double _timeToHours(String timeStr) {
     try {
       final cleanStr = timeStr.trim().toLowerCase();
-      
+
       // If it contains am/pm, use the 12-hour parser
       if (cleanStr.contains('am') || cleanStr.contains('pm')) {
         final parts = cleanStr.split(' ');
@@ -179,400 +180,457 @@ class HorarioPage extends StatelessWidget {
           child: Column(
             children: [
               Container(
-                color: isDark ? const Color(0xFF262630) : const Color(0xFFFFF2EC),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  IconButton(
-                    icon: Icon(
-                      Icons.arrow_back_ios_new_rounded,
-                      color: colors.primary,
-                      size: 20,
+                color: isDark
+                    ? const Color(0xFF262630)
+                    : const Color(0xFFFFF2EC),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    IconButton(
+                      icon: Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        color: colors.primary,
+                        size: 20,
+                      ),
+                      onPressed: controller.previousDay,
                     ),
-                    onPressed: controller.previousDay,
-                  ),
-                  Text(
-                    '${activeDay.dayName}, ${activeDay.dateText}',
-                    style: TextStyle(
-                      color: isDark ? Colors.white : const Color(0xFF2D2D2D),
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
+                    Text(
+                      '${activeDay.dayName}, ${activeDay.dateText}',
+                      style: TextStyle(
+                        color: isDark ? Colors.white : const Color(0xFF2D2D2D),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
-                  ),
-                  IconButton(
-                    icon: Icon(
-                      Icons.arrow_forward_ios_rounded,
-                      color: colors.primary,
-                      size: 20,
+                    IconButton(
+                      icon: Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        color: colors.primary,
+                        size: 20,
+                      ),
+                      onPressed: controller.nextDay,
                     ),
-                    onPressed: controller.nextDay,
-                  ),
-                ],
-              ),
-            ),
-            const Divider(height: 1, thickness: 1, color: Color(0xFFE5E5E5)),
-            Container(
-              width: double.infinity,
-              color: isDark ? const Color(0xFF1B1B22) : Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              alignment: Alignment.center,
-              child: Text(
-                activeDay.weekText,
-                style: TextStyle(
-                  color: isDark
-                      ? const Color(0xFFB0B0C0)
-                      : const Color(0xFF666666),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
+                  ],
                 ),
               ),
-            ),
-            const Divider(height: 1, thickness: 1, color: Color(0xFFE5E5E5)),
+              const Divider(height: 1, thickness: 1, color: Color(0xFFE5E5E5)),
+              Container(
+                width: double.infinity,
+                color: isDark ? const Color(0xFF1B1B22) : Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                alignment: Alignment.center,
+                child: Text(
+                  activeDay.weekText,
+                  style: TextStyle(
+                    color: isDark
+                        ? const Color(0xFFB0B0C0)
+                        : const Color(0xFF666666),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const Divider(height: 1, thickness: 1, color: Color(0xFFE5E5E5)),
 
-            Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  child: Stack(
-                    children: [
-                      Column(
-                        children: List.generate(totalHours, (index) {
-                          final hourVal = startHour + index;
-                          final isPm = hourVal >= 12;
-                          final displayHour = hourVal > 12
-                              ? (hourVal - 12).toInt()
-                              : hourVal.toInt();
-                          final amPm = isPm ? 'pm' : 'am';
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Stack(
+                      children: [
+                        Column(
+                          children: List.generate(totalHours, (index) {
+                            final hourVal = startHour + index;
+                            final isPm = hourVal >= 12;
+                            final displayHour = hourVal > 12
+                                ? (hourVal - 12).toInt()
+                                : hourVal.toInt();
+                            final amPm = isPm ? 'pm' : 'am';
 
-                          return SizedBox(
-                            height: hourHeight,
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                SizedBox(
-                                  width: 65,
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(
-                                      left: 16,
-                                      top: 4,
-                                    ),
-                                    child: Text(
-                                      '$displayHour $amPm',
-                                      style: TextStyle(
-                                        color: isDark
-                                            ? const Color(0xFF9090A0)
-                                            : const Color(0xFF9E9E9E),
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
+                            return SizedBox(
+                              height: hourHeight,
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  SizedBox(
+                                    width: 65,
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(
+                                        left: 16,
+                                        top: 4,
+                                      ),
+                                      child: Text(
+                                        '$displayHour $amPm',
+                                        style: TextStyle(
+                                          color: isDark
+                                              ? const Color(0xFF9090A0)
+                                              : const Color(0xFF9E9E9E),
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                                Expanded(
-                                  child: Container(
-                                    margin: const EdgeInsets.only(top: 12),
-                                    height: 1.2,
-                                    color: isDark
-                                        ? const Color(0xFF2C2C38)
-                                        : const Color(0xFFECECEC),
+                                  Expanded(
+                                    child: Container(
+                                      margin: const EdgeInsets.only(top: 12),
+                                      height: 1.2,
+                                      color: isDark
+                                          ? const Color(0xFF2C2C38)
+                                          : const Color(0xFFECECEC),
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
+                                ],
+                              ),
+                            );
+                          }),
+                        ),
+                        ...courses.map((course) {
+                          final bool isEvaluation =
+                              course['isEvaluation'] == true;
+
+                          String nombreStr =
+                              (course['curso'] as String? ?? 'CURSO')
+                                  .toUpperCase();
+                          if (nombreStr.contains(' / ')) {
+                            nombreStr = nombreStr.split(' / ').first.trim();
+                          } else if (nombreStr.contains('/')) {
+                            nombreStr = nombreStr.split('/').first.trim();
+                          }
+                          final aulaStr =
+                              course['salon'] as String? ?? 'Sin salón';
+                          final colorStr = course['color'] as String? ?? 'blue';
+                          final startStr =
+                              course['hora_inicio'] as String? ?? '07:00 am';
+                          final endStr =
+                              course['hora_fin'] as String? ?? '09:00 am';
+
+                          final startVal = _timeToHours(startStr);
+                          final endVal = _timeToHours(endStr);
+
+                          final double topPosition =
+                              (startVal - startHour) * hourHeight + 12.0;
+                          final double heightVal =
+                              (endVal - startVal) * hourHeight - 8.0;
+
+                          final courseColor = _resolveScheduleColor(
+                            colorStr,
+                            colors,
                           );
-                        }),
-                      ),
-                      ...courses.map((course) {
-                        final bool isEvaluation =
-                            course['isEvaluation'] == true;
 
-                        String nombreStr =
-                            (course['curso'] as String? ?? 'CURSO')
-                                .toUpperCase();
-                        if (nombreStr.contains(' / ')) {
-                          nombreStr = nombreStr.split(' / ').first.trim();
-                        } else if (nombreStr.contains('/')) {
-                          nombreStr = nombreStr.split('/').first.trim();
-                        }
-                        final aulaStr =
-                            course['salon'] as String? ?? 'Sin salón';
-                        final colorStr = course['color'] as String? ?? 'blue';
-                        final startStr =
-                            course['hora_inicio'] as String? ?? '07:00 am';
-                        final endStr =
-                            course['hora_fin'] as String? ?? '09:00 am';
+                          return Positioned(
+                            top: topPosition,
+                            left: 75,
+                            right: 20,
+                            height: heightVal,
+                            child: InkWell(
+                              onTap: () {
+                                final String idSeccion =
+                                    course['idSeccion']?.toString() ?? '';
+                                final isTeacher =
+                                    AuthService.to.currentUser?.isTeacher ??
+                                    false;
 
-                        final startVal = _timeToHours(startStr);
-                        final endVal = _timeToHours(endStr);
-
-                        final double topPosition =
-                            (startVal - startHour) * hourHeight + 12.0;
-                        final double heightVal =
-                            (endVal - startVal) * hourHeight - 8.0;
-
-                        final courseColor = _resolveScheduleColor(colorStr, colors);
-
-                        return Positioned(
-                          top: topPosition,
-                          left: 75,
-                          right: 20,
-                          height: heightVal,
-                          child: InkWell(
-                            onTap: () {
-                              final String idSeccion = course['idSeccion']?.toString() ?? '';
-                              final isTeacher = AuthService.to.currentUser?.isTeacher ?? false;
-
-                              if (isTeacher) {
-                                if (course['isAdvising'] == true) {
-                                  showDialog(
-                                    context: context,
-                                    builder: (context) {
-                                      return AlertDialog(
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(16),
-                                        ),
-                                        title: Text(
-                                          course['codigoSeccion'] ?? 'Asesoría',
-                                          style: const TextStyle(fontWeight: FontWeight.w800),
-                                        ),
-                                        content: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              course['curso'] ?? '',
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.w800,
-                                                fontSize: 15,
+                                if (isTeacher) {
+                                  if (course['isAdvising'] == true) {
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) {
+                                        return AlertDialog(
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              16,
+                                            ),
+                                          ),
+                                          title: Text(
+                                            course['codigoSeccion'] ??
+                                                'Asesoría',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                          ),
+                                          content: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                course['curso'] ?? '',
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.w800,
+                                                  fontSize: 15,
+                                                ),
                                               ),
-                                            ),
-                                            const SizedBox(height: 12),
-                                            Row(
-                                              children: [
-                                                Icon(Icons.schedule, size: 18, color: colors.primary),
-                                                const SizedBox(width: 8),
-                                                Expanded(
-                                                  child: Text(
-                                                    "Horario: $startStr - $endStr",
-                                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Row(
-                                              children: [
-                                                Icon(Icons.place, size: 18, color: colors.primary),
-                                                const SizedBox(width: 8),
-                                                Expanded(
-                                                  child: Text(
-                                                    "Aula/Canal: $aulaStr",
-                                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            if (course['fecha'] != null) ...[
-                                              const SizedBox(height: 8),
+                                              const SizedBox(height: 12),
                                               Row(
                                                 children: [
-                                                  Icon(Icons.calendar_month, size: 18, color: colors.primary),
+                                                  Icon(
+                                                    Icons.schedule,
+                                                    size: 18,
+                                                    color: colors.primary,
+                                                  ),
                                                   const SizedBox(width: 8),
                                                   Expanded(
                                                     child: Text(
-                                                      "Fecha: ${course['fecha']}",
-                                                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                                                      "Horario: $startStr - $endStr",
+                                                      style: const TextStyle(
+                                                        fontSize: 13,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                      ),
                                                     ),
                                                   ),
                                                 ],
                                               ),
+                                              const SizedBox(height: 8),
+                                              Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.place,
+                                                    size: 18,
+                                                    color: colors.primary,
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Expanded(
+                                                    child: Text(
+                                                      "Aula/Canal: $aulaStr",
+                                                      style: const TextStyle(
+                                                        fontSize: 13,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              if (course['fecha'] != null) ...[
+                                                const SizedBox(height: 8),
+                                                Row(
+                                                  children: [
+                                                    Icon(
+                                                      Icons.calendar_month,
+                                                      size: 18,
+                                                      color: colors.primary,
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Expanded(
+                                                      child: Text(
+                                                        "Fecha: ${course['fecha']}",
+                                                        style: const TextStyle(
+                                                          fontSize: 13,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
                                             ],
-                                          ],
-                                        ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () => Get.back(),
-                                            child: const Text(
-                                              "Cerrar",
-                                              style: TextStyle(fontWeight: FontWeight.w700),
-                                            ),
                                           ),
-                                        ],
-                                      );
-                                    },
-                                  );
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Get.back(),
+                                              child: const Text(
+                                                "Cerrar",
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                    );
+                                  } else {
+                                    showModalBottomSheet(
+                                      context: context,
+                                      isScrollControlled: true,
+                                      shape: const RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.vertical(
+                                          top: Radius.circular(24),
+                                        ),
+                                      ),
+                                      builder: (context) =>
+                                          _TeacherCourseDetailSheet(
+                                            idSeccion: idSeccion,
+                                            courseName: course['curso'] ?? '',
+                                            sectionCode:
+                                                course['codigoSeccion'] ?? '',
+                                          ),
+                                    );
+                                  }
                                 } else {
-                                  showModalBottomSheet(
-                                    context: context,
-                                    isScrollControlled: true,
-                                    shape: const RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.vertical(
-                                        top: Radius.circular(24),
+                                  if (idSeccion.isNotEmpty) {
+                                    Get.to(
+                                      () => DescripCursosPage(
+                                        idSeccion: idSeccion,
                                       ),
-                                    ),
-                                    builder: (context) => _TeacherCourseDetailSheet(
-                                      idSeccion: idSeccion,
-                                      courseName: course['curso'] ?? '',
-                                      sectionCode: course['codigoSeccion'] ?? '',
-                                    ),
-                                  );
+                                    );
+                                  }
                                 }
-                              } else {
-                                if (idSeccion.isNotEmpty) {
-                                  Get.to(
-                                    () => DescripCursosPage(idSeccion: idSeccion),
-                                  );
-                                }
-                              }
-                            },
-                            borderRadius: BorderRadius.circular(16),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: courseColor,
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: courseColor.withValues(
-                                      alpha: 0.35,
-                                    ),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Stack(
-                                children: [
-                                  Center(
-                                    child: Padding(
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: (isEvaluation || course['isAdvising'] == true) ? 24.0 : 12.0,
-                                        vertical: heightVal < 80 ? 4.0 : 12.0,
+                              },
+                              borderRadius: BorderRadius.circular(16),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: courseColor,
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: courseColor.withValues(
+                                        alpha: 0.35,
                                       ),
-                                      child: SingleChildScrollView(
-                                        physics: const NeverScrollableScrollPhysics(),
-                                        child: Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.center,
-                                          children: [
-                                            Text(
-                                              nombreStr,
-                                              textAlign: TextAlign.center,
-                                              maxLines: heightVal < 80 ? 1 : 2,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w800,
-                                                letterSpacing: 0.3,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              course['isAdvising'] == true
-                                                  ? (course['codigoSeccion'] ?? 'Asesoría')
-                                                  : "Sección: ${course['codigoSeccion'] ?? 'Sin sección'}",
-                                              style: TextStyle(
-                                                color: Colors.white.withValues(
-                                                  alpha: 0.9,
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Stack(
+                                  children: [
+                                    Center(
+                                      child: Padding(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal:
+                                              (isEvaluation ||
+                                                  course['isAdvising'] == true)
+                                              ? 24.0
+                                              : 12.0,
+                                          vertical: heightVal < 80 ? 4.0 : 12.0,
+                                        ),
+                                        child: SingleChildScrollView(
+                                          physics:
+                                              const NeverScrollableScrollPhysics(),
+                                          child: Column(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.center,
+                                            children: [
+                                              Text(
+                                                nombreStr,
+                                                textAlign: TextAlign.center,
+                                                maxLines: heightVal < 80
+                                                    ? 1
+                                                    : 2,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w800,
+                                                  letterSpacing: 0.3,
                                                 ),
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w600,
                                               ),
-                                            ),
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              aulaStr,
-                                              style: TextStyle(
-                                                color: Colors.white.withValues(
-                                                  alpha: 0.9,
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                course['isAdvising'] == true
+                                                    ? (course['codigoSeccion'] ??
+                                                          'Asesoría')
+                                                    : "Sección: ${course['codigoSeccion'] ?? 'Sin sección'}",
+                                                style: TextStyle(
+                                                  color: Colors.white
+                                                      .withValues(alpha: 0.9),
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w600,
                                                 ),
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w600,
                                               ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                aulaStr,
+                                                style: TextStyle(
+                                                  color: Colors.white
+                                                      .withValues(alpha: 0.9),
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    if (isEvaluation)
+                                      Positioned(
+                                        top: 8,
+                                        right: 8,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 3,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.black.withValues(
+                                              alpha: 0.25,
                                             ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  if (isEvaluation)
-                                    Positioned(
-                                      top: 8,
-                                      right: 8,
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 6,
-                                          vertical: 3,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: Colors.black.withValues(
-                                            alpha: 0.25,
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
                                           ),
-                                          borderRadius: BorderRadius.circular(6),
-                                        ),
-                                        child: Text(
-                                          "📝 EVAL: ${course['evalSigla']}",
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 8,
-                                            fontWeight: FontWeight.w900,
-                                            letterSpacing: 0.3,
+                                          child: Text(
+                                            "📝 EVAL: ${course['evalSigla']}",
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 8,
+                                              fontWeight: FontWeight.w900,
+                                              letterSpacing: 0.3,
+                                            ),
                                           ),
                                         ),
                                       ),
-                                    ),
-                                  if (course['isAdvising'] == true)
-                                    Positioned(
-                                      top: 8,
-                                      right: 8,
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 6,
-                                          vertical: 3,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: Colors.black.withValues(
-                                            alpha: 0.25,
+                                    if (course['isAdvising'] == true)
+                                      Positioned(
+                                        top: 8,
+                                        right: 8,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 3,
                                           ),
-                                          borderRadius: BorderRadius.circular(6),
-                                        ),
-                                        child: const Text(
-                                          "🤝 ASESORÍA",
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 8,
-                                            fontWeight: FontWeight.w900,
-                                            letterSpacing: 0.3,
+                                          decoration: BoxDecoration(
+                                            color: Colors.black.withValues(
+                                              alpha: 0.25,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
+                                          ),
+                                          child: const Text(
+                                            "🤝 ASESORÍA",
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 8,
+                                              fontWeight: FontWeight.w900,
+                                              letterSpacing: 0.3,
+                                            ),
                                           ),
                                         ),
                                       ),
-                                    ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
+                          );
+                        }),
+                        if (showCurrentTimeLine)
+                          Positioned(
+                            top: currentLineTop,
+                            left: 75,
+                            right: 0,
+                            child: _currentTimeLine(),
                           ),
-                        );
-                      }),
-                      if (showCurrentTimeLine)
-                        Positioned(
-                          top: currentLineTop,
-                          left: 75,
-                          right: 0,
-                          child: _currentTimeLine(),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
-        ),
-      );
-    }),
+            ],
+          ),
+        );
+      }),
     );
   }
 }
@@ -589,7 +647,8 @@ class _TeacherCourseDetailSheet extends StatefulWidget {
   });
 
   @override
-  State<_TeacherCourseDetailSheet> createState() => _TeacherCourseDetailSheetState();
+  State<_TeacherCourseDetailSheet> createState() =>
+      _TeacherCourseDetailSheetState();
 }
 
 class _TeacherCourseDetailSheetState extends State<_TeacherCourseDetailSheet> {
@@ -599,6 +658,90 @@ class _TeacherCourseDetailSheetState extends State<_TeacherCourseDetailSheet> {
   String _subdelegateName = 'No asignado';
   List<dynamic> _assessments = [];
   int _atRiskCount = 0;
+  final Set<String> _notifiedAssessments = {};
+
+  Future<void> _confirmAndNotify(
+    String assessmentId,
+    String assessmentName,
+    int loadedCount,
+    int totalCount,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Notificar Publicación de Notas'),
+        content: Text(
+          '¿Deseas enviar una alerta a todos los alumnos de la sección indicando que las notas de "$assessmentName" han sido publicadas?\n\nAlumnos calificados: $loadedCount / $totalCount',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Aceptar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        final res = await ApiClient().postJson(
+          '/schedule/teacher/sections/${widget.idSeccion}/assessments/$assessmentId/notify-grades',
+          body: {},
+        );
+        if (res['ok'] == true) {
+          if (mounted) {
+            setState(() {
+              _notifiedAssessments.add(assessmentId);
+            });
+          }
+          Get.snackbar(
+            'Notificación enviada',
+            'Se alertó a los ${res['notifiedCount'] ?? 'todos los'} alumnos de la sección.',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.green,
+            colorText: Colors.white,
+          );
+        } else {
+          if (mounted) {
+            setState(() {
+              _notifiedAssessments.remove(assessmentId);
+            });
+          }
+          Get.snackbar(
+            'Error',
+            'No se pudo enviar la notificación.',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.red,
+            colorText: Colors.white,
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _notifiedAssessments.remove(assessmentId);
+          });
+        }
+        debugPrint('Error notifying grades: $e');
+        Get.snackbar(
+          'Error',
+          'Ocurrió un error al intentar notificar.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      }
+    } else {
+      if (mounted) {
+        setState(() {
+          _notifiedAssessments.remove(assessmentId);
+        });
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -609,10 +752,18 @@ class _TeacherCourseDetailSheetState extends State<_TeacherCourseDetailSheet> {
   Future<void> _loadDetails() async {
     try {
       final contactsFuture = ContactoService().fetchContactos(widget.idSeccion);
-      final assessmentsFuture = ApiClient().getJson('/schedule/teacher/sections/${widget.idSeccion}/assessments-status');
-      final atRiskFuture = AttendanceRiskService().fetchSummary(widget.idSeccion);
+      final assessmentsFuture = ApiClient().getJson(
+        '/schedule/teacher/sections/${widget.idSeccion}/assessments-status',
+      );
+      final atRiskFuture = AttendanceRiskService().fetchSummary(
+        widget.idSeccion,
+      );
 
-      final results = await Future.wait([contactsFuture, assessmentsFuture, atRiskFuture]);
+      final results = await Future.wait([
+        contactsFuture,
+        assessmentsFuture,
+        atRiskFuture,
+      ]);
       final contacts = results[0];
       final assessmentsData = results[1];
       final atRiskData = results[2];
@@ -623,19 +774,32 @@ class _TeacherCourseDetailSheetState extends State<_TeacherCourseDetailSheet> {
 
       final List<dynamic> alumnos = contacts['alumnos'] ?? [];
       for (final a in alumnos) {
-        final role = a['roleInSection']?.toString() ?? '';
-        final fullName = a['user']?['fullName']?.toString() ?? '';
-        if (role == 'delegado') {
-          _delegateName = fullName;
-        } else if (role == 'subdelegado') {
-          _subdelegateName = fullName;
+        if (a is ContactoCurso) {
+          final role = a.roleInSection;
+          final fullName = a.user.fullName;
+          if (role == 'delegado') {
+            _delegateName = fullName;
+          } else if (role == 'subdelegado') {
+            _subdelegateName = fullName;
+          }
         }
       }
 
       _assessments = assessmentsData['assessments'] ?? [];
 
+      // Inicializar el estado de notificaci\u00f3n desde el backend
+      // (persiste aunque el alumno cierre sesi\u00f3n y vuelva a abrir la vista)
+      final notified = <String>{};
+      for (final ass in _assessments) {
+        if (ass['isNotified'] == true) {
+          final id = ass['id']?.toString();
+          if (id != null) notified.add(id);
+        }
+      }
+
       if (mounted) {
         setState(() {
+          _notifiedAssessments.addAll(notified);
           _isLoading = false;
         });
       }
@@ -671,7 +835,9 @@ class _TeacherCourseDetailSheetState extends State<_TeacherCourseDetailSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF4C4C5C) : const Color(0xFFE0E0E0),
+                  color: isDark
+                      ? const Color(0xFF4C4C5C)
+                      : const Color(0xFFE0E0E0),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -695,7 +861,10 @@ class _TeacherCourseDetailSheetState extends State<_TeacherCourseDetailSheet> {
                         isLabelVisible: _atRiskCount > 0,
                         label: Text(
                           '$_atRiskCount',
-                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800),
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                         backgroundColor: Colors.red,
                         textColor: Colors.white,
@@ -703,7 +872,9 @@ class _TeacherCourseDetailSheetState extends State<_TeacherCourseDetailSheet> {
                         child: IconButton(
                           icon: Icon(
                             Icons.warning_amber_rounded,
-                            color: _atRiskCount > 0 ? Colors.orange : Colors.grey,
+                            color: _atRiskCount > 0
+                                ? Colors.orange
+                                : Colors.grey,
                             size: 24,
                           ),
                           tooltip: 'Alumnos impedidos y en riesgo',
@@ -745,14 +916,22 @@ class _TeacherCourseDetailSheetState extends State<_TeacherCourseDetailSheet> {
                   padding: const EdgeInsets.symmetric(vertical: 32),
                   child: Text(
                     _errorMessage!,
-                    style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      color: Colors.red,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               )
             else ...[
               _infoRow(context, Icons.person, 'Delegado', _delegateName),
               const SizedBox(height: 8),
-              _infoRow(context, Icons.person_outline, 'Subdelegado', _subdelegateName),
+              _infoRow(
+                context,
+                Icons.person_outline,
+                'Subdelegado',
+                _subdelegateName,
+              ),
               const SizedBox(height: 18),
               Text(
                 'Estado de carga de notas:',
@@ -770,7 +949,9 @@ class _TeacherCourseDetailSheetState extends State<_TeacherCourseDetailSheet> {
                     'No hay evaluaciones programadas en el sílabo.',
                     style: TextStyle(
                       fontSize: 13,
-                      color: isDark ? const Color(0xFF9090A0) : const Color(0xFF666666),
+                      color: isDark
+                          ? const Color(0xFF9090A0)
+                          : const Color(0xFF666666),
                     ),
                   ),
                 )
@@ -785,20 +966,8 @@ class _TeacherCourseDetailSheetState extends State<_TeacherCourseDetailSheet> {
                       final ass = _assessments[index];
                       final code = ass['code'] ?? '';
                       final name = ass['name'] ?? '';
-                      final status = ass['status'] ?? 'Sin cargar';
-                      final loaded = ass['loadedCount'] ?? 0;
-                      final total = ass['totalCount'] ?? 0;
 
-                      Color badgeColor;
-                      Color textColor = Colors.white;
-                      if (status == 'Completo') {
-                        badgeColor = Colors.green;
-                      } else if (status == 'Carga parcial') {
-                        badgeColor = Colors.orange;
-                      } else {
-                        badgeColor = isDark ? const Color(0xFF4C4C5C) : const Color(0xFFE0E0E0);
-                        textColor = isDark ? Colors.white : const Color(0xFF666666);
-                      }
+
 
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 4),
@@ -815,34 +984,37 @@ class _TeacherCourseDetailSheetState extends State<_TeacherCourseDetailSheet> {
                                     style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w700,
-                                      color: isDark ? Colors.white : const Color(0xFF2D2D2D),
+                                      color: isDark
+                                          ? Colors.white
+                                          : const Color(0xFF2D2D2D),
                                     ),
                                   ),
-                                  if (total > 0)
-                                    Text(
-                                      'Avance: $loaded / $total alumnos',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: isDark ? const Color(0xFF9090A0) : const Color(0xFF666666),
-                                      ),
-                                    ),
                                 ],
                               ),
                             ),
                             const SizedBox(width: 12),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: badgeColor,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                status,
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w800,
-                                  color: textColor,
+                            Transform.scale(
+                              scale: 0.8,
+                              child: Switch(
+                                value: _notifiedAssessments.contains(
+                                  ass['id']?.toString(),
                                 ),
+                                onChanged: (val) {
+                                  final assId = ass['id']?.toString() ?? '';
+                                  if (val) {
+                                    // Activar: marcar optimistamente y pedir confirmaci\u00f3n
+                                    setState(() => _notifiedAssessments.add(assId));
+                                    _confirmAndNotify(
+                                      assId,
+                                      ass['name'] ?? '',
+                                      (ass['loadedCount'] as num?)?.toInt() ?? 0,
+                                      (ass['totalCount'] as num?)?.toInt() ?? 0,
+                                    );
+                                  } else {
+                                    // Desactivar: solo visual, sin llamada al backend
+                                    setState(() => _notifiedAssessments.remove(assId));
+                                  }
+                                },
                               ),
                             ),
                           ],
@@ -859,7 +1031,12 @@ class _TeacherCourseDetailSheetState extends State<_TeacherCourseDetailSheet> {
     );
   }
 
-  Widget _infoRow(BuildContext context, IconData icon, String title, String value) {
+  Widget _infoRow(
+    BuildContext context,
+    IconData icon,
+    String title,
+    String value,
+  ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [

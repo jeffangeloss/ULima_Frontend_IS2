@@ -1,6 +1,7 @@
 // lib/services/alert_service.dart
 // Servicio para obtener y actualizar alertas de riesgo académico.
 
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import '../models/alert_model.dart';
 import 'api_client.dart';
@@ -31,7 +32,7 @@ class AlertService extends GetxService {
       }).toList();
       _alerts.assignAll(loadedAlerts);
     } catch (e) {
-      print('Error fetching alerts: $e');
+      debugPrint('Error fetching alerts: $e');
     } finally {
       _loading.value = false;
     }
@@ -49,7 +50,7 @@ class AlertService extends GetxService {
         _alerts.refresh();
       }
     } catch (e) {
-      print('Error marking alert as read: $e');
+      debugPrint('Error marking alert as read: $e');
     }
   }
 }

@@ -98,4 +98,23 @@ void main() {
 
     expect(msgs.map((m) => m.body).toList(), ['1', '2', '3']);
   });
+
+  test('HU23: parsea el borrado suave (deleted + deletedBy)', () {
+    final m = ChatMessage.fromMap('x', {
+      'senderId': '6',
+      'body': 'texto original',
+      'deleted': true,
+      'deletedBy': 'Quintana Cruz, Hernan',
+      'deletedByRole': 'teacher',
+    });
+    expect(m.deleted, isTrue);
+    expect(m.deletedBy, 'Quintana Cruz, Hernan');
+    expect(m.deletedByRole, 'teacher');
+  });
+
+  test('HU23: sin campos de borrado ⇒ deleted=false', () {
+    final m = ChatMessage.fromMap('y', {'body': 'hola'});
+    expect(m.deleted, isFalse);
+    expect(m.deletedBy, isNull);
+  });
 }

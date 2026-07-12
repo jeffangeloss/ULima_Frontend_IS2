@@ -21,8 +21,20 @@ class AttendeesController extends GetxController {
   void onInit() {
     super.onInit();
     final args = (Get.arguments as Map?) ?? const {};
-    sessionId = (args['sessionId'] as int?) ?? 0;
+    // El sessionId puede llegar como int, num o String dependiendo de cómo
+    // GetX serializa los argumentos en distintas plataformas. Se normaliza
+    // siempre a int para evitar que quede en 0 y se llame /sessions/0/attendees.
+    final rawId = args['sessionId'];
+    sessionId = rawId is int
+        ? rawId
+        : int.tryParse(rawId?.toString() ?? '') ?? 0;
     title = (args['title'] as String?) ?? 'Asesoría';
+    debugPrint('[AttendeesController] sessionId=$sessionId title=$title');
+    if (sessionId == 0) {
+      loadError.value = 'No se pudo identificar la asesoría. Vuelve atrás e inténtalo de nuevo.';
+      isLoading.value = false;
+      return;
+    }
     load();
   }
 

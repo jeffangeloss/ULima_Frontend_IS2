@@ -42,7 +42,7 @@ class _AlertasPageState extends State<AlertasPage> {
       return Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: Colors.red.withOpacity(0.12),
+          color: Colors.red.withValues(alpha: 0.12),
           shape: BoxShape.circle,
         ),
         child: const Icon(
@@ -55,7 +55,7 @@ class _AlertasPageState extends State<AlertasPage> {
       return Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: Colors.amber.withOpacity(0.12),
+          color: Colors.amber.withValues(alpha: 0.12),
           shape: BoxShape.circle,
         ),
         child: const Icon(
@@ -68,7 +68,7 @@ class _AlertasPageState extends State<AlertasPage> {
       return Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: Colors.blue.withOpacity(0.12),
+          color: Colors.blue.withValues(alpha: 0.12),
           shape: BoxShape.circle,
         ),
         child: const Icon(
@@ -156,7 +156,7 @@ class _AlertasPageState extends State<AlertasPage> {
                   Container(
                     padding: const EdgeInsets.all(32),
                     decoration: BoxDecoration(
-                      color: colors.primary.withOpacity(0.08),
+                      color: colors.primary.withValues(alpha: 0.08),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -180,7 +180,7 @@ class _AlertasPageState extends State<AlertasPage> {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 16,
-                      color: colors.onSurface.withOpacity(0.6),
+                      color: colors.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                 ],
@@ -204,7 +204,7 @@ class _AlertasPageState extends State<AlertasPage> {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(isDark ? 0.2 : 0.05),
+                      color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -270,17 +270,14 @@ class _AlertasPageState extends State<AlertasPage> {
                                       const SizedBox(height: 4),
                                       Row(
                                         children: [
-                                          Icon(LucideIcons.bookOpen, size: 12, color: colors.onSurface.withOpacity(0.5)),
+                                          Icon(LucideIcons.bookOpen, size: 12, color: colors.onSurface.withValues(alpha: 0.5)),
                                           const SizedBox(width: 4),
-                                          Flexible(
-                                            child: Text(
-                                              alert.courseName!,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w600,
-                                                color: colors.onSurface.withOpacity(0.6),
-                                              ),
+                                          Text(
+                                            alert.courseName!,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: colors.onSurface.withValues(alpha: 0.6),
                                             ),
                                           ),
                                           if (alert.sectionCode != null && alert.sectionCode!.isNotEmpty) ...[
@@ -288,7 +285,7 @@ class _AlertasPageState extends State<AlertasPage> {
                                             Container(
                                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                                               decoration: BoxDecoration(
-                                                color: colors.primary.withOpacity(0.1),
+                                                color: colors.primary.withValues(alpha: 0.1),
                                                 borderRadius: BorderRadius.circular(6),
                                               ),
                                               child: Text(
@@ -312,8 +309,7 @@ class _AlertasPageState extends State<AlertasPage> {
                                 _formatDateTime(alert.createdAt),
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: colors.onSurface
-                                      .withOpacity(0.5),
+                                  color: colors.onSurface.withValues(alpha: 0.5),
                                 ),
                               ),
                                       ],
@@ -323,8 +319,8 @@ class _AlertasPageState extends State<AlertasPage> {
                                       alert.message,
                                       style: TextStyle(
                                         fontSize: 14,
-                                        color: colors.onSurface.withOpacity(
-                                          alert.isRead ? 0.6 : 0.85,
+                                        color: colors.onSurface.withValues(
+                                          alpha: alert.isRead ? 0.6 : 0.85,
                                         ),
                                         height: 1.3,
                                       ),

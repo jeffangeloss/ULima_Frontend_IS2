@@ -17,14 +17,12 @@ import 'package:get/get.dart';
 import '../../components/skeleton.dart';
 import '../../configs/themes.dart';
 import '../../models/malla_models.dart';
+import '../../services/evaluations_service.dart';
 import 'malla_list_controller.dart';
 import 'widgets/course_detail_sheet.dart';
 
 class MallaListPage extends GetView<MallaListController> {
   const MallaListPage({super.key});
-
-  static const Color _prereqColor = Color(0xFF8B5CF6);
-  static const Color _unlocksColor = Color(0xFF14B8A6);
 
   @override
   Widget build(BuildContext context) {
@@ -32,51 +30,65 @@ class MallaListPage extends GetView<MallaListController> {
 
     return Scaffold(
       backgroundColor: MaterialTheme.pageBg(brightness),
-      floatingActionButton: Obx(() {
-        final hidden = controller.loading.value ||
-            controller.error.value != null ||
-            controller.simulationMode.value;
-        if (hidden) return const SizedBox.shrink();
-        return FloatingActionButton.extended(
-          onPressed: controller.enterSimulation,
-          backgroundColor: MaterialTheme.primaryColor,
-          foregroundColor: Colors.white,
-          icon: const Icon(Icons.science_outlined),
-          label: const Text(
-            'Simular mi avance',
-            style: TextStyle(fontWeight: FontWeight.w800),
-          ),
-        );
-      }),
-      body: Column(
+      body: Stack(
         children: [
-          Obx(
-            () => controller.simulationMode.value
-                ? const _SimulationBanner()
-                : const SizedBox.shrink(),
+          Column(
+            children: [
+              Obx(
+                () => controller.simulationMode.value
+                    ? const _SimulationBanner()
+                    : const SizedBox.shrink(),
+              ),
+              _ProgressHeader(controller: controller),
+              Obx(
+                () => controller.filter.value == MallaListFilter.todos
+                    ? _CycleStepper(controller: controller)
+                    : _ActiveFilterBar(controller: controller),
+              ),
+              Expanded(
+                child: Obx(() {
+                  if (controller.loading.value) {
+                    return const SkeletonCardList(count: 6, showAvatar: false);
+                  }
+                  final errorMsg = controller.error.value;
+                  if (errorMsg != null) {
+                    return _ErrorState(
+                      message: errorMsg,
+                      onRetry: controller.retry,
+                    );
+                  }
+                  return controller.filter.value == MallaListFilter.todos
+                      ? _FocusedCycle(controller: controller)
+                      : _FilteredList(controller: controller);
+                }),
+              ),
+              Obx(
+                () => controller.simulationMode.value
+                    ? _SimulationPanel(controller: controller)
+                    : const SizedBox.shrink(),
+              ),
+            ],
           ),
-          _ProgressHeader(controller: controller),
-          _FilterChipsRow(controller: controller),
-          Expanded(
-            child: Obx(() {
-              if (controller.loading.value) {
-                return const SkeletonCardList(count: 6, showAvatar: false);
-              }
-              final errorMsg = controller.error.value;
-              if (errorMsg != null) {
-                return _ErrorState(
-                  message: errorMsg,
-                  onRetry: controller.retry,
-                );
-              }
-              return _CourseList(controller: controller);
-            }),
-          ),
-          Obx(
-            () => controller.simulationMode.value
-                ? _SimulationPanel(controller: controller)
-                : const SizedBox.shrink(),
-          ),
+          Obx(() {
+            final hidden = controller.loading.value ||
+                controller.error.value != null ||
+                controller.simulationMode.value;
+            if (hidden) return const SizedBox.shrink();
+            return Positioned(
+              right: 16,
+              bottom: 80,
+              child: FloatingActionButton.extended(
+                onPressed: controller.enterSimulation,
+                backgroundColor: MaterialTheme.primaryColor,
+                foregroundColor: Colors.white,
+                icon: const Icon(Icons.science_outlined),
+                label: const Text(
+                  'Simular mi avance',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+            );
+          }),
         ],
       ),
     );
@@ -130,7 +142,8 @@ class _ProgressHeader extends StatelessWidget {
       final sim = controller.simulationMode.value;
       return Container(
         width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+        // Compacto para dar el mayor alto posible a la lista (Parte 5).
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
         decoration: BoxDecoration(
           color: MaterialTheme.cardBg(brightness),
           border: Border(
@@ -144,7 +157,7 @@ class _ProgressHeader extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    'Mi malla',
+                    'Malla curricular',
                     style: TextStyle(
                       color: MaterialTheme.textPrimary(brightness),
                       fontSize: 16,
@@ -152,6 +165,10 @@ class _ProgressHeader extends StatelessWidget {
                     ),
                   ),
                 ),
+                // Filtros movidos a un botón que abre un bottom sheet (antes
+                // eran 5 chips en 2 líneas). Muestra el filtro activo.
+                _FiltersButton(controller: controller),
+                const SizedBox(width: 8),
                 // TT07: acceso de solo lectura a la vista mapa (clásica).
                 // Deshabilitado durante TODO el modo simulación: el mapa solo
                 // muestra estado persistido y lo que se ve en pantalla durante
@@ -159,7 +176,7 @@ class _ProgressHeader extends StatelessWidget {
                 _MapViewButton(enabled: !sim),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 7),
             // Barra de progreso: real (naranja sólido) y, en simulación,
             // proyección (naranja translúcido) detrás.
             ClipRRect(
@@ -195,7 +212,7 @@ class _ProgressHeader extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 5),
             Text(
               '${controller.approvedCredits}/${controller.totalCredits} '
               'créditos · ${controller.approvedPercent}% de la carrera',
@@ -295,33 +312,279 @@ class _MapViewButton extends StatelessWidget {
   }
 }
 
-// ── Chips de filtro ────────────────────────────────────────────────────────────
-class _FilterChipsRow extends StatelessWidget {
-  const _FilterChipsRow({required this.controller});
+// ── Botón de filtros (abre bottom sheet) ───────────────────────────────────────
+class _FiltersButton extends StatelessWidget {
+  const _FiltersButton({required this.controller});
   final MallaListController controller;
 
   @override
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
-    final bg = MaterialTheme.cardBg(brightness);
+    return Obx(() {
+      final active = controller.filter.value != MallaListFilter.todos;
+      final fg = active
+          ? Colors.white
+          : MaterialTheme.textSecondary(brightness);
+      return Material(
+        color: active
+            ? MaterialTheme.primaryColor
+            : MaterialTheme.tagBg(brightness),
+        borderRadius: BorderRadius.circular(99),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(99),
+          onTap: () => _openFilterSheet(context, controller),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(99),
+              border: Border.all(
+                color: active
+                    ? Colors.transparent
+                    : MaterialTheme.borderColor(brightness),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.tune, size: 15, color: fg),
+                const SizedBox(width: 6),
+                Text(
+                  active ? controller.filter.value.label : 'Filtros',
+                  style: TextStyle(
+                    color: fg,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    });
+  }
+}
+
+void _openFilterSheet(BuildContext context, MallaListController controller) {
+  final brightness = Theme.of(context).brightness;
+  showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: MaterialTheme.sheetBg(brightness),
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (ctx) => SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(8, 12, 8, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+              child: Text(
+                'Filtrar cursos',
+                style: TextStyle(
+                  color: MaterialTheme.textPrimary(brightness),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            Obx(() {
+              final active = controller.filter.value;
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (final f in MallaListFilter.values)
+                    _FilterOptionTile(
+                      label: f.label,
+                      selected: f == active,
+                      onTap: () {
+                        controller.setFilter(f);
+                        Navigator.of(ctx).pop();
+                      },
+                    ),
+                ],
+              );
+            }),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+class _FilterOptionTile extends StatelessWidget {
+  const _FilterOptionTile({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return ListTile(
+      onTap: onTap,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      leading: Icon(
+        selected ? Icons.radio_button_checked : Icons.radio_button_off,
+        color: selected
+            ? MaterialTheme.primaryColor
+            : MaterialTheme.textMuted(brightness),
+      ),
+      title: Text(
+        label,
+        style: TextStyle(
+          color: MaterialTheme.textPrimary(brightness),
+          fontSize: 14,
+          fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+// ── Barra de filtro activo (reemplaza al rail cuando hay filtro) ────────────────
+class _ActiveFilterBar extends StatelessWidget {
+  const _ActiveFilterBar({required this.controller});
+  final MallaListController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return Obx(() {
+      final f = controller.filter.value;
+      final count = controller.filteredAll.length;
+      return Container(
+        width: double.infinity,
+        color: MaterialTheme.cardBg(brightness),
+        padding: const EdgeInsets.fromLTRB(16, 2, 12, 10),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                '${f.label} · $count ${count == 1 ? 'curso' : 'cursos'}',
+                style: TextStyle(
+                  color: MaterialTheme.textSecondary(brightness),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            InkWell(
+              borderRadius: BorderRadius.circular(99),
+              onTap: () => controller.setFilter(MallaListFilter.todos),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.close, size: 14,
+                        color: MaterialTheme.textMuted(brightness)),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Quitar filtro',
+                      style: TextStyle(
+                        color: MaterialTheme.textMuted(brightness),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+}
+
+// ── Selector de ciclo: stepper "◀ Ciclo N ▶" + popup ────────────────────────────
+// Reemplaza al rail scrollable (mismo patrón que el header de días del horario).
+// Las flechas mueven al ciclo anterior/siguiente; tocar el centro abre un popup
+// con la lista vertical de ciclos y sus cursos para saltar rápido.
+class _CycleStepper extends StatelessWidget {
+  const _CycleStepper({required this.controller});
+  final MallaListController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    final colors = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
-      color: bg,
-      padding: const EdgeInsets.fromLTRB(20, 2, 20, 12),
-      // Wrap en lugar de fila desplazable: los cinco filtros siempre
-      // visibles (en dos líneas si hace falta), sin chips cortados.
+      decoration: BoxDecoration(
+        color: MaterialTheme.cardBg(brightness),
+        border: Border(
+          bottom: BorderSide(color: colors.outline.withValues(alpha: 0.4)),
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
       child: Obx(() {
-        final active = controller.filter.value;
-        return Wrap(
-          spacing: 8,
-          runSpacing: 8,
+        final key = controller.focusedKey.value;
+        final canPrev = controller.canFocusPrev;
+        final canNext = controller.canFocusNext;
+        return Row(
           children: [
-            for (final f in MallaListFilter.values)
-              _FilterPill(
-                label: f.label,
-                active: f == active,
-                onTap: () => controller.setFilter(f),
+            _StepArrow(
+              icon: Icons.chevron_left,
+              enabled: canPrev,
+              onTap: controller.focusPrev,
+            ),
+            Expanded(
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => _openCyclePicker(context, controller),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            controller.labelForKey(key),
+                            style: TextStyle(
+                              color: MaterialTheme.textPrimary(brightness),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.unfold_more,
+                            size: 16,
+                            color: MaterialTheme.textMuted(brightness),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        controller.summaryForKey(key),
+                        style: TextStyle(
+                          color: MaterialTheme.textMuted(brightness),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
+            ),
+            _StepArrow(
+              icon: Icons.chevron_right,
+              enabled: canNext,
+              onTap: controller.focusNext,
+            ),
           ],
         );
       }),
@@ -329,45 +592,170 @@ class _FilterChipsRow extends StatelessWidget {
   }
 }
 
-class _FilterPill extends StatelessWidget {
-  const _FilterPill({
-    required this.label,
-    required this.active,
+class _StepArrow extends StatelessWidget {
+  const _StepArrow({
+    required this.icon,
+    required this.enabled,
     required this.onTap,
   });
-
-  final String label;
-  final bool active;
+  final IconData icon;
+  final bool enabled;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final brightness = Theme.of(context).brightness;
-    return Material(
-      color: active ? MaterialTheme.primaryColor : Colors.transparent,
-      borderRadius: BorderRadius.circular(99),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(99),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(99),
-            border: Border.all(
-              color: active
-                  ? Colors.transparent
-                  : MaterialTheme.borderColor(brightness),
-            ),
+    final colors = Theme.of(context).colorScheme;
+    return IconButton(
+      onPressed: enabled ? onTap : null,
+      icon: Icon(icon, size: 26),
+      color: colors.primary,
+      disabledColor: colors.outline.withValues(alpha: 0.5),
+      visualDensity: VisualDensity.compact,
+    );
+  }
+}
+
+// Popup: lista vertical de ciclos (y sus cursos) para saltar rápido de ciclo.
+void _openCyclePicker(BuildContext context, MallaListController controller) {
+  final brightness = Theme.of(context).brightness;
+  showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: MaterialTheme.sheetBg(brightness),
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (ctx) {
+      // Altura acotada (hasta ~72% de pantalla) con scroll vertical interno.
+      final maxH = MediaQuery.of(ctx).size.height * 0.72;
+      return SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxH),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 10),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: MaterialTheme.borderColor(brightness),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+                child: Row(
+                  children: [
+                    Text(
+                      'Ir a un ciclo',
+                      style: TextStyle(
+                        color: MaterialTheme.textPrimary(brightness),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Flexible(
+                child: Obx(() {
+                  final keys = controller.railKeys;
+                  final focused = controller.focusedKey.value;
+                  return ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                    itemCount: keys.length,
+                    itemBuilder: (_, i) => _CyclePickerSection(
+                      controller: controller,
+                      cycleKey: keys[i],
+                      selected: keys[i] == focused,
+                      onPick: () {
+                        controller.focus(keys[i]);
+                        Navigator.of(ctx).pop();
+                      },
+                    ),
+                  );
+                }),
+              ),
+            ],
           ),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: active
-                  ? Colors.white
-                  : MaterialTheme.chipInactiveText(brightness),
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-            ),
+        ),
+      );
+    },
+  );
+}
+
+class _CyclePickerSection extends StatelessWidget {
+  const _CyclePickerSection({
+    required this.controller,
+    required this.cycleKey,
+    required this.selected,
+    required this.onPick,
+  });
+
+  final MallaListController controller;
+  final int cycleKey;
+  final bool selected;
+  final VoidCallback onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    final complete = cycleKey == MallaListController.electivesRailKey
+        ? controller.isElectivesComplete
+        : controller.isLevelComplete(cycleKey);
+
+    // Fila simple por ciclo: solo para saltar rápido; sin listar los cursos.
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: selected
+            ? MaterialTheme.primaryColor.withValues(alpha: 0.10)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: selected
+              ? MaterialTheme.primaryColor.withValues(alpha: 0.5)
+              : MaterialTheme.borderColor(brightness),
+        ),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onPick,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          child: Row(
+            children: [
+              if (complete)
+                const Padding(
+                  padding: EdgeInsets.only(right: 6),
+                  child: Icon(Icons.check_circle,
+                      size: 16, color: Color(0xFF16A34A)),
+                ),
+              Text(
+                controller.labelForKey(cycleKey),
+                style: TextStyle(
+                  color: MaterialTheme.textPrimary(brightness),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '— ${controller.summaryForKey(cycleKey)}',
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: MaterialTheme.textMuted(brightness),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              if (selected)
+                Icon(Icons.my_location,
+                    size: 16, color: MaterialTheme.primaryColor),
+            ],
           ),
         ),
       ),
@@ -375,138 +763,88 @@ class _FilterPill extends StatelessWidget {
   }
 }
 
-// ── Lista de ciclos ────────────────────────────────────────────────────────────
-class _CourseList extends StatelessWidget {
-  const _CourseList({required this.controller});
+// ── Ciclo enfocado (filtro = Todos) ─────────────────────────────────────────────
+// Muestra un único ciclo (el seleccionado en el rail) o la pestaña Electivos,
+// sin acordeones: la navegación por ciclo la da el rail de arriba.
+class _FocusedCycle extends StatelessWidget {
+  const _FocusedCycle({required this.controller});
   final MallaListController controller;
 
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final filterActive = controller.filter.value != MallaListFilter.todos;
-      final sections = <Widget>[];
+      final key = controller.focusedKey.value;
+      final isElectives = key == MallaListController.electivesRailKey;
 
-      for (final level in controller.mandatoryLevels) {
-        final group = controller.mandatoryForLevel(level);
-        final visible = controller.filtered(group);
-        if (visible.isEmpty) continue; // ciclos sin resultados se ocultan
-        sections.add(
-          _CycleSection(
-            title: 'Ciclo $level',
-            summary:
-                '${controller.approvedIn(group)}/${group.length} aprobados',
-            expanded:
-                filterActive || controller.expandedLevels.contains(level),
-            onToggle: () => controller.toggleLevel(level),
-            children: [
-              for (final course in visible)
-                _CourseListCard(controller: controller, course: course),
-            ],
-          ),
-        );
+      final children = <Widget>[];
+
+      if (isElectives) {
+        for (final entry in controller.electiveGroups.entries) {
+          children.add(_SpecialtyLabel(text: entry.key));
+          for (final course in entry.value) {
+            children
+                .add(_CourseListCard(controller: controller, course: course));
+          }
+        }
+      } else {
+        for (final course in controller.mandatoryForLevel(key)) {
+          children.add(_CourseListCard(controller: controller, course: course));
+        }
       }
 
-      final electiveGroups = controller.electiveGroups;
-      final visibleElectives = controller.filtered(controller.electives);
-      if (visibleElectives.isNotEmpty) {
-        final allElectives = controller.electives;
-        sections.add(
-          _CycleSection(
-            title: 'Electivos',
-            summary: '${controller.approvedIn(allElectives)}/'
-                '${allElectives.length} aprobados',
-            expanded: filterActive || controller.electivesExpanded.value,
-            onToggle: controller.toggleElectives,
-            children: [
-              for (final entry in electiveGroups.entries)
-                if (controller.filtered(entry.value).isNotEmpty) ...[
-                  _SpecialtyLabel(text: entry.key),
-                  for (final course in controller.filtered(entry.value))
-                    _CourseListCard(controller: controller, course: course),
-                ],
-            ],
-          ),
-        );
+      if (children.isEmpty) {
+        return const _EmptyState(filterActive: false);
       }
 
-      if (sections.isEmpty) {
-        return _EmptyState(filterActive: filterActive);
-      }
-
-      // Tap en el vacío de la lista → quita el resaltado.
-      return GestureDetector(
-        behavior: HitTestBehavior.translucent,
-        onTap: controller.clearHighlight,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
-          children: sections,
-        ),
+      // El ciclo y su resumen ya los muestra el stepper de arriba.
+      // (La física clamped es global — ver AppScrollBehavior en main.dart.)
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 96),
+        children: children,
       );
     });
   }
 }
 
-class _CycleSection extends StatelessWidget {
-  const _CycleSection({
-    required this.title,
-    required this.summary,
-    required this.expanded,
-    required this.onToggle,
-    required this.children,
-  });
-
-  final String title;
-  final String summary;
-  final bool expanded;
-  final VoidCallback onToggle;
-  final List<Widget> children;
+// ── Resultados de filtro (filtro activo) ────────────────────────────────────────
+// Lista plana a través de todos los ciclos, con una etiqueta por ciclo para no
+// perder el contexto de dónde cae cada curso.
+class _FilteredList extends StatelessWidget {
+  const _FilteredList({required this.controller});
+  final MallaListController controller;
 
   @override
   Widget build(BuildContext context) {
-    final brightness = Theme.of(context).brightness;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        InkWell(
-          borderRadius: BorderRadius.circular(10),
-          onTap: onToggle,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-            child: Row(
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: MaterialTheme.textPrimary(brightness),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '— $summary',
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: MaterialTheme.textMuted(brightness),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                Icon(
-                  expanded ? Icons.expand_less : Icons.expand_more,
-                  size: 20,
-                  color: MaterialTheme.textMuted(brightness),
-                ),
-              ],
-            ),
-          ),
-        ),
-        if (expanded) ...children,
-        const SizedBox(height: 6),
-      ],
-    );
+    return Obx(() {
+      final children = <Widget>[];
+
+      for (final level in controller.mandatoryLevels) {
+        final visible = controller.filtered(controller.mandatoryForLevel(level));
+        if (visible.isEmpty) continue;
+        children.add(_SpecialtyLabel(text: 'Ciclo $level'));
+        for (final course in visible) {
+          children.add(_CourseListCard(controller: controller, course: course));
+        }
+      }
+
+      for (final entry in controller.electiveGroups.entries) {
+        final visible = controller.filtered(entry.value);
+        if (visible.isEmpty) continue;
+        children.add(_SpecialtyLabel(text: 'Electivos · ${entry.key}'));
+        for (final course in visible) {
+          children.add(_CourseListCard(controller: controller, course: course));
+        }
+      }
+
+      if (children.isEmpty) {
+        return const _EmptyState(filterActive: true);
+      }
+
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
+        children: children,
+      );
+    });
   }
 }
 
@@ -568,64 +906,35 @@ class _CourseListCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
-    // Obx propio por card: las lecturas reactivas (resaltado, estado,
-    // simulación) deben ocurrir DENTRO del closure de un Obx para que GetX
-    // registre la suscripción. Este build corre FUERA del closure del Obx de
-    // _CourseList (get solo trackea lecturas síncronas dentro del builder),
-    // así que leerlas aquí "a secas" dejaría el resaltado on-demand de HU19
-    // sin repintar. Además mejora la granularidad: cada tap de resaltado
-    // repinta las cards afectadas y no la lista entera.
+    // Obx propio por card: las lecturas reactivas (estado, simulación, versión
+    // de sílabos) deben ocurrir DENTRO del closure de un Obx para que GetX
+    // registre la suscripción y la card se repinte al cambiar.
     return Obx(() {
       final status = controller.statusOf(course.id);
-      final role = controller.highlightRoleOf(course.id);
       final simChanged = controller.isSimulatedChange(course.id);
+      // Depende de la precarga de sílabos (no reactiva): al leer la versión, la
+      // card se repinta cuando los datos llegan y aparece el ícono de sílabo.
+      controller.syllabusVersion.value;
+      final silaboUrl = EvaluationSyllabusService().getSilaboUrl(course.id);
+      // En modo simulación la card es tappable (cicla el estado); en modo normal
+      // no reacciona al tap (el detalle va por ⓘ y el sílabo por el ícono PDF).
+      final simulating = controller.simulationMode.value;
 
-      final Color borderColor;
-      final double borderWidth;
-      final List<BoxShadow> shadows;
-      switch (role) {
-        case CourseHighlightRole.selected:
-          borderColor = MaterialTheme.primaryColor;
-          borderWidth = 2.5;
-          shadows = [
-            BoxShadow(
-              color: MaterialTheme.primaryColor.withValues(alpha: 0.35),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
-          ];
-        case CourseHighlightRole.prerequisite:
-          borderColor = MallaListPage._prereqColor;
-          borderWidth = 2;
-          shadows = const [];
-        case CourseHighlightRole.unlocks:
-          borderColor = MallaListPage._unlocksColor;
-          borderWidth = 2;
-          shadows = const [];
-        case CourseHighlightRole.none:
-        case CourseHighlightRole.dimmed:
-          borderColor = MaterialTheme.borderColor(brightness);
-          borderWidth = 1;
-          shadows = const [];
-      }
-
-      return AnimatedOpacity(
-        duration: const Duration(milliseconds: 150),
-        opacity: role == CourseHighlightRole.dimmed ? 0.35 : 1,
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          decoration: BoxDecoration(
-            color: MaterialTheme.cardBg(brightness),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: borderColor, width: borderWidth),
-            boxShadow: shadows,
+      return Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          color: MaterialTheme.cardBg(brightness),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: MaterialTheme.borderColor(brightness),
           ),
-          clipBehavior: Clip.antiAlias,
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: () => controller.onCourseTap(course),
-              child: IntrinsicHeight(
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: simulating ? () => controller.onCourseTap(course) : null,
+            child: IntrinsicHeight(
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -661,20 +970,6 @@ class _CourseListCard extends StatelessWidget {
                                         ? MaterialTheme.primaryDark
                                         : const Color(0xFFFFB380),
                                   ),
-                                if (role == CourseHighlightRole.prerequisite)
-                                  _SmallChip(
-                                    label: 'REQUISITO',
-                                    background: MallaListPage._prereqColor
-                                        .withValues(alpha: 0.15),
-                                    foreground: MallaListPage._prereqColor,
-                                  ),
-                                if (role == CourseHighlightRole.unlocks)
-                                  _SmallChip(
-                                    label: 'DESBLOQUEA',
-                                    background: MallaListPage._unlocksColor
-                                        .withValues(alpha: 0.15),
-                                    foreground: MallaListPage._unlocksColor,
-                                  ),
                               ],
                             ),
                             const SizedBox(height: 6),
@@ -705,6 +1000,28 @@ class _CourseListCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                    // Acceso directo al sílabo (solo si el curso tiene uno):
+                    // antes estaba enterrado dentro del bottom sheet de detalle.
+                    if (silaboUrl != null)
+                      Center(
+                        child: IconButton(
+                          tooltip: 'Ver sílabo',
+                          icon: Icon(
+                            Icons.picture_as_pdf_outlined,
+                            size: 20,
+                            color: brightness == Brightness.light
+                                ? const Color(0xFF0369A1)
+                                : const Color(0xFF38BDF8),
+                          ),
+                          onPressed: () => Get.toNamed<void>(
+                            '/silabo',
+                            arguments: {
+                              'url': silaboUrl,
+                              'titulo': course.name,
+                            },
+                          ),
+                        ),
+                      ),
                     // Botón explícito de detalles (abre el bottom sheet).
                     Center(
                       child: IconButton(
@@ -722,8 +1039,7 @@ class _CourseListCard extends StatelessWidget {
               ),
             ),
           ),
-        ),
-      );
+        );
     });
   }
 

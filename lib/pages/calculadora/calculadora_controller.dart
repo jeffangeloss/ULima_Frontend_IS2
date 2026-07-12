@@ -3,6 +3,8 @@ import 'package:get/get.dart';
 import '../../models/evaluation_model.dart';
 import '../../services/evaluations_service.dart';
 import '../../services/courses_service.dart';
+import '../../services/notas_service.dart';
+import '../../services/simulated_grades_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/api_client.dart';
 
@@ -21,7 +23,7 @@ class CalculadoraController extends GetxController {
     _api = ApiClient();
     _syllabusService = EvaluationSyllabusService();
     _coursesService = CoursesService();
-
+    
     _cargarDatosSyllabus();
     _inicializarCursos();
   }
@@ -100,6 +102,10 @@ class CalculadoraController extends GetxController {
       debugPrint(
         'Cursos y secciones cargados correctamente: ${cursos.length} secciones.',
       );
+
+      // Sincroniza con el backend (fuente de verdad entre dispositivos). Si el
+      // backend no responde, se conservan las notas locales ya cargadas.
+      await _sincronizarConBackend();
     } catch (e) {
       debugPrint('Error al inicializar cursos: $e');
     }

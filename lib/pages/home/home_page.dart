@@ -5,7 +5,9 @@ import 'package:get/get.dart';
 import 'package:ulima_plus/components/footer/app_footer.dart';
 import 'package:ulima_plus/components/header/app_header.dart';
 import 'package:ulima_plus/services/auth_service.dart';
+import 'package:ulima_plus/components/chatbot_fab.dart';
 
+import '../horario/horario_controller.dart';
 import 'home_controller.dart';
 import 'home_shell_config.dart';
 
@@ -24,31 +26,48 @@ class _HomePageState extends State<HomePage> {
 
   late final HomeShellConfig _config = HomeShellConfig.forUser(user);
 
+  /// Índice del tab de Horario según el rol del usuario.
+  int get _horarioTabIndex => (user?.isTeacher ?? false) ? 1 : 2;
+
   Widget _buildBody() {
     return _config.pages[_currentIndex];
+  }
+
+  void _onTabTap(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
+    // Si el usuario cambia al tab de Horario, recargamos los datos
+    // para reflejar asesorías creadas o modificadas recientemente.
+    if (index == _horarioTabIndex) {
+      try {
+        Get.find<HorarioController>().reload();
+      } catch (_) {
+        // El controller aún no existe (primera visita): onInit lo cargará.
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
+    final u = user;
     return Scaffold(
       backgroundColor: colors.surface,
+      floatingActionButton: u != null && !u.isTeacher ? const ChatbotFab() : null,
       body: Column(
         children: [
-          AppHeader(showScheduleToggle: _currentIndex == 2),
+          AppHeader(showScheduleToggle: _currentIndex == _horarioTabIndex),
           Expanded(child: _buildBody()),
         ],
       ),
       bottomNavigationBar: AppFooter(
         currentIndex: _currentIndex,
         items: _config.footerItems,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
+        onTap: _onTabTap,
       ),
     );
   }
 }
+

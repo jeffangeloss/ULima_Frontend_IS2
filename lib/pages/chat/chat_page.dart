@@ -91,6 +91,52 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
+  /// HU23: el profesor confirma y elimina un mensaje (borrado suave). El backend
+  /// valida que sea el profesor de la sección; el stream de RTDB refleja la
+  /// lápida "eliminado por…".
+  Future<void> _confirmDelete(ChatMessage msg) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          '¿Eliminar mensaje?',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
+        content: Text(
+          'El mensaje quedará marcado como "eliminado por ${msg.senderName == _session?.displayName ? 'ti' : 'el profesor'}". '
+          'Esta acción no se puede deshacer.',
+          style: const TextStyle(fontSize: 13.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red[600]),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await _chatRepository.deleteMessage(widget.sectionId, msg.id);
+    } catch (_) {
+      if (!mounted) return;
+      Get.snackbar(
+        'No se pudo eliminar',
+        'Inténtalo de nuevo en unos segundos.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
+    }
+  }
+
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
       Future.delayed(const Duration(milliseconds: 100), () {
@@ -241,12 +287,12 @@ class _ChatPageState extends State<ChatPage> {
                               margin: const EdgeInsets.symmetric(
                                 horizontal: 40,
                               ),
-                              padding: const EdgeInsets.all(16),
+                              padding: const EdgeInsets.all(18),
                               decoration: BoxDecoration(
                                 color: isDark
                                     ? const Color(0xFF1F2C34)
-                                    : const Color(0xFFFFFFE0),
-                                borderRadius: BorderRadius.circular(8),
+                                    : Colors.white,
+                                borderRadius: BorderRadius.circular(14),
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black.withValues(alpha: 0.05),
@@ -254,15 +300,40 @@ class _ChatPageState extends State<ChatPage> {
                                   ),
                                 ],
                               ),
-                              child: Text(
-                                '🔒 Los mensajes de este grupo están protegidos. Solo los miembros de esta sección pueden leer y escribir.',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: isDark
-                                      ? Colors.white70
-                                      : Colors.brown[700],
-                                ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.lock_outline_rounded,
+                                    color: isDark
+                                        ? Colors.white54
+                                        : const Color(0xFFFF5722),
+                                    size: 30,
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    'Chat privado de la sección',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w800,
+                                      color: isDark
+                                          ? Colors.white
+                                          : Colors.black87,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Solo los miembros de esta sección pueden leer y escribir. Sé el primero en saludar 👋',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 12.5,
+                                      color: isDark
+                                          ? Colors.white70
+                                          : Colors.black54,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           );
@@ -282,6 +353,9 @@ class _ChatPageState extends State<ChatPage> {
                           itemBuilder: (context, index) {
                             final msg = messages[index];
                             final isMe = msg.senderId == _session!.uid;
+                            // Solo el PROFESOR de la sección puede eliminar.
+                            final canDelete =
+                                _session!.role == 'teacher' && !msg.deleted;
 
                             return _MessageBubble(
                               message: msg,
@@ -289,6 +363,8 @@ class _ChatPageState extends State<ChatPage> {
                               showSender: true,
                               timeText: _formatTime(msg.timestamp),
                               isDark: isDark,
+                              onDelete:
+                                  canDelete ? () => _confirmDelete(msg) : null,
                             );
                           },
                         );
@@ -379,12 +455,17 @@ class _MessageBubble extends StatelessWidget {
   final String timeText;
   final bool isDark;
 
+  /// Solo se pasa cuando el usuario actual es el profesor y el mensaje no está
+  /// eliminado: habilita el long-press para eliminar.
+  final VoidCallback? onDelete;
+
   const _MessageBubble({
     required this.message,
     required this.isMe,
     required this.showSender,
     required this.timeText,
     required this.isDark,
+    this.onDelete,
   });
 
   /// Generates a consistent color from a sender name
@@ -426,6 +507,11 @@ class _MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // HU23: mensaje eliminado → lápida "eliminado por…".
+    if (message.deleted) {
+      return _DeletedTombstone(message: message, isMe: isMe, isDark: isDark);
+    }
+
     // Bubble colors
     final myBubbleColor = isDark
         ? const Color(0xFF005C4B)
@@ -448,7 +534,10 @@ class _MessageBubble extends StatelessWidget {
 
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
+      // Long-press: solo el profesor (onDelete != null) puede eliminar.
+      child: GestureDetector(
+        onLongPress: onDelete,
+        child: Container(
         constraints: BoxConstraints(
           maxWidth: MediaQuery.of(context).size.width * 0.78,
         ),
@@ -544,6 +633,71 @@ class _MessageBubble extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ],
+        ),
+        ),
+      ),
+    );
+  }
+}
+
+/// HU23: lápida de un mensaje eliminado por el profesor. Reemplaza al bubble
+/// normal; mantiene el lado (izq/der) del emisor original pero en tono apagado.
+class _DeletedTombstone extends StatelessWidget {
+  const _DeletedTombstone({
+    required this.message,
+    required this.isMe,
+    required this.isDark,
+  });
+
+  final ChatMessage message;
+  final bool isMe;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final by = (message.deletedBy != null && message.deletedBy!.isNotEmpty)
+        ? message.deletedBy!
+        : 'el profesor';
+    final fg = isDark ? Colors.white54 : Colors.black45;
+
+    return Align(
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.78,
+        ),
+        margin: EdgeInsets.only(
+          top: 8,
+          bottom: 2,
+          left: isMe ? 48 : 0,
+          right: isMe ? 0 : 48,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.05)
+              : Colors.black.withValues(alpha: 0.04),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDark ? Colors.white12 : Colors.black12,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.do_not_disturb_on_outlined, size: 15, color: fg),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                'Mensaje eliminado por $by',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontStyle: FontStyle.italic,
+                  color: fg,
+                ),
+              ),
             ),
           ],
         ),

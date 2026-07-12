@@ -96,7 +96,10 @@ class LoginController extends GetxController {
       return;
     }
 
-    final user = _auth.currentUser!;
+    // `loginWithGoogle` devuelve null tanto en éxito como cuando el usuario
+    // cancela el selector. En cancelación no hay sesión ni navegación.
+    final user = _auth.currentUser;
+    if (user == null) return;
     Get.offAllNamed(postLoginRoute(user));
   }
 

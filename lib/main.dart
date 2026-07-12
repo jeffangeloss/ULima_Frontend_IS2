@@ -21,6 +21,11 @@ import 'pages/teacher/create_advising_binding.dart';
 import 'pages/teacher/create_advising_page.dart';
 import 'pages/teacher/attendees_binding.dart';
 import 'pages/teacher/attendees_page.dart';
+import 'pages/teacher/teacher_grades_controller.dart';
+import 'pages/teacher/teacher_grade_section_binding.dart';
+import 'pages/teacher/teacher_grade_section_page.dart';
+import 'pages/mis_notas/mis_notas_binding.dart';
+import 'pages/mis_notas/mis_notas_page.dart';
 import 'pages/login/login_page.dart';
 import 'pages/malla/malla_controller.dart';
 import 'pages/malla/malla_list_controller.dart';
@@ -33,6 +38,7 @@ import 'pages/password_reset/reset_password_page.dart';
 import 'pages/setup_carrera/setup_carrera_page.dart';
 import 'pages/silabo/silabo_viewer_controller.dart';
 import 'pages/silabo/silabo_viewer_page.dart';
+import 'pages/chatbot/chatbot_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -84,6 +90,10 @@ class MyApp extends StatelessWidget {
       darkTheme: materialTheme.dark(),
       themeMode: ThemeMode.system,
       debugShowCheckedModeBanner: false,
+      // Física de scroll uniforme en TODA la app: clamped (sin el rebote /
+      // overscroll "infinito" de iOS). Las listas se detienen en los bordes del
+      // contenido y no scrollean si todo cabe en pantalla.
+      scrollBehavior: const AppScrollBehavior(),
       initialRoute: initialRoute,
       getPages: [
         // Bindings por ruta: asocian cada controller a SU ruta de forma
@@ -124,6 +134,7 @@ class MyApp extends StatelessWidget {
             Get.lazyPut(() => MallaListController());
             Get.lazyPut(() => TeacherSectionsController());
             Get.lazyPut(() => TeacherHomeController());
+            Get.lazyPut(() => TeacherGradesController());
           }),
         ),
         // TT07 (#103): la malla clásica vuelve como "Vista mapa (clásica)" de
@@ -164,7 +175,35 @@ class MyApp extends StatelessWidget {
           page: () => const AttendeesPage(),
           binding: AttendeesBinding(),
         ),
+        // Calificación oficial: grilla de una sección (docente). Binding por ruta.
+        GetPage(
+          name: '/teacher-grade-section',
+          page: () => const TeacherGradeSectionPage(),
+          binding: TeacherGradeSectionBinding(),
+        ),
+        // Notas oficiales del alumno (solo lectura). Binding por ruta.
+        GetPage(
+          name: '/mis-notas',
+          page: () => const MisNotasPage(),
+          binding: MisNotasBinding(),
+        ),
+        GetPage(
+          name: '/chatbot',
+          page: () => const ChatbotPage(),
+        ),
       ],
     );
   }
+}
+
+/// Física de scroll uniforme para toda la app: `ClampingScrollPhysics` (sin el
+/// rebote/overscroll de iOS). Blinda el "scroll infinito" en TODAS las pantallas:
+/// cualquier lista/scroll se detiene en los bordes del contenido y no scrollea
+/// si el contenido cabe en pantalla. Se instala vía `GetMaterialApp.scrollBehavior`.
+class AppScrollBehavior extends MaterialScrollBehavior {
+  const AppScrollBehavior();
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) =>
+      const ClampingScrollPhysics();
 }

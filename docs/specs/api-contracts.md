@@ -49,7 +49,10 @@ Contrato REST local del frontend ULima++. Mantener alineado manualmente con `ULi
   - HU18: si el `code` no es de un `student` pero sí de un `teacher` (vía `teacher.user_id`), inicia sesión como docente. El `user` docente es `{ id, teacherId, code, fullName, institutionalEmail, role: "teacher", teacherLabel: "Profesor"|"Jefe de Práctica", setupComplete: true }` (sin `studentId`). No exige matrícula activa.
 - `POST /auth/google`
   - Request: `{ "idToken": "string" }`
-  - Response: `{ "token": "string", "tokenType": "Bearer", "expiresIn": 86400, "user": User }`
+  - Acepta `@aloe.ulima.edu.pe` para cuentas vinculadas a `student.user_id` y `@ulima.edu.pe` para cuentas vinculadas a `teacher.user_id`. No crea cuentas ni perfiles.
+  - Response: `{ "token": "string", "tokenType": "Bearer", "expiresIn": 86400, "user": User }`. El alumno conserva su shape y reglas de matrícula/representación. El docente recibe el mismo shape y JWT docente de `POST /auth/login`, sin exigir matrícula.
+  - En ambos casos se vincula `app_user.google_id` y se incrementa `tokenVersion`; el login con código/contraseña sigue disponible.
+  - Errores: `401 INVALID_TOKEN`, `401 USER_NOT_FOUND`, `403 INVALID_DOMAIN`; `403 NOT_ENROLLED` solo para alumnos.
 - `GET /auth/me`
   - Response: `{ "user": User }`
 - `POST /auth/logout`
@@ -84,7 +87,7 @@ Contrato REST local del frontend ULima++. Mantener alineado manualmente con `ULi
 }
 ```
 
-Errores de login: `401 USER_NOT_FOUND`, `401 INVALID_PASSWORD`, `403 NOT_ENROLLED`.
+Errores de login con código: `401 USER_NOT_FOUND`, `401 INVALID_PASSWORD`, `403 NOT_ENROLLED`. Errores adicionales de Google: `401 INVALID_TOKEN`, `403 INVALID_DOMAIN`.
 
 ## Academic Profile
 
@@ -301,7 +304,6 @@ Notas:
 
 - `GET /course-detail/sections/:sectionId`
 - `GET /course-detail/sections/:sectionId/announcements`
-- `GET /course-detail/sections/:sectionId/advising`
 - `GET /course-detail/sections/:sectionId/contacts`
 - `GET /course-detail/sections` (lista general)
 - `GET /course-detail/teachers`
@@ -311,10 +313,9 @@ Notas:
 
 - Solo roles de alumno (`requireRole('student','delegate','subdelegate')`); un token docente recibe `403 FORBIDDEN`.
 - El estudiante solo ve secciones donde está matriculado.
-- Asesorías visibles: `section_id IS NULL` para el curso ofertado o `section_id` igual a su sección. Se incluyen las extras (`kind='extra'`) de la sección cuya `session_date` no sea pasada.
-- Cada asesoría agrega (HU18): `kind` (`recurring`/`extra`), `fecha` (`YYYY-MM-DD`, solo extras; `null` en recurrentes), `dictanteRol` (`"Profesor"` o `"JP"` según sea `section.teacher_id` o `section.jp_id`), `asistentes` (conteo de `advising_rsvp`).
 - Contactos agrega la clave top-level `jefePractica` (`{ code, lastName, firstName }` o `null`) desde `section.jp_id`, entre `docente` y `alumnos`.
 - Anuncios visibles solo si pertenecen a la sección del estudiante.
+- El listado de asesorías y RSVP del alumno migraron a `advising-student` (ver abajo).
 
 ## Alerts
 
@@ -326,6 +327,16 @@ Notas:
 - Tipos válidos: `academic_risk`, `high_load`.
 - Recalcular alertas es interno; no hay endpoint público de recalculo en v1.
 - `academic_risk` no compara contra promedio de sección.
+
+## Advising Student — RSVP del alumno (HU17)
+
+Sub-módulo `student/` dentro de `src/modules/advising/`.
+
+- `GET /advising/section/:sectionId` — listado de asesorías (recurrentes + extras, excluye pasadas).
+- `POST /advising/:sessionId/rsvp` — confirmar asistencia.
+- `DELETE /advising/:sessionId/rsvp` — cancelar asistencia.
+
+Detalle en `specs/features/advising-student/advising-student.spec.md`.
 
 ## Advising (HU18 — docentes)
 
@@ -348,3 +359,26 @@ Notas:
 
 - **Estado real**: el módulo solo expone `GET /representatives`. Los endpoints de registro de anuncios y estadísticas están documentados pero no implementados.
 - Los anuncios reales en frontend se sirven actualmente desde el módulo `course-detail` (`GET /course-detail/sections/:sectionId/announcements`).
+
+## Chatbot (Asistente Académico con IA)
+
+Asistente conversacional con IA (Cohere) para alumnos. Detalle en `specs/features/chatbot/chatbot.spec.md`.
+
+Roles requeridos: `student`, `delegate`, `subdelegate`.
+
+### Sesiones
+
+| Método | Endpoint | Descripción |
+| --- | --- | --- |
+| `POST` | `/chatbot/sessions` | Crear nueva sesión. Response `201`: `{ "session": { "id", "title", "createdAt", "updatedAt" } }` |
+| `GET` | `/chatbot/sessions` | Listar sesiones del alumno. Response `200`: `{ "sessions": [...] }` |
+| `GET` | `/chatbot/sessions/:id` | Obtener sesión con mensajes. Response `200`: `{ "session": {...}, "messages": [...] }` |
+| `DELETE` | `/chatbot/sessions/:id` | Eliminar sesión. Response `200`: `{ "message": "..." }` |
+
+### Preguntas
+
+- `POST /chatbot/sessions/:id/ask`
+  - Request: `{ "question": "string<=500", "localGrades?": [...] }`
+  - Response `200`: `{ "answer": "string", "sessionId": "uuid" }`
+  - `localGrades` (opcional): `[{ "id": "sectionId", "nombre": "string", "notas": [{ "titulo": "string", "peso": 0-100, "valor": 0-20 }] }]`
+  - Errores: `400 INVALID_QUESTION`, `404 SESSION_NOT_FOUND`, `429 RATE_LIMITED`, `503 CHATBOT_UNAVAILABLE`

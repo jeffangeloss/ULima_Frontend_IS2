@@ -1,0 +1,162 @@
+import 'package:flutter/foundation.dart';
+import 'package:get/get.dart';
+import '../../models/chatbot_models.dart';
+import '../../services/chatbot_service.dart';
+import '../../services/notas_service.dart';
+
+class ChatbotController extends GetxController {
+  final ChatbotService _service = ChatbotService();
+  final NotasService _notasService = NotasService();
+
+  final RxList<ChatbotSession> sessions = <ChatbotSession>[].obs;
+  final RxList<ChatbotMessage> messages = <ChatbotMessage>[].obs;
+
+  final Rx<String?> activeSessionId = Rx<String?>(null);
+  final RxBool loadingSessions = false.obs;
+  final RxBool loadingMessages = false.obs;
+  final RxBool sendingQuestion = false.obs;
+
+  final RxBool isTyping = false.obs;
+
+  @override
+  void onInit() {
+    super.onInit();
+    loadSessions();
+  }
+
+  Future<void> loadSessions() async {
+    loadingSessions.value = true;
+    try {
+      final result = await _service.listSessions();
+      sessions.assignAll(result);
+      if (result.isNotEmpty && activeSessionId.value == null) {
+        activeSessionId.value = result.first.id;
+        await loadMessages(result.first.id);
+      }
+    } catch (e) {
+      debugPrint('Error loading sessions: $e');
+    } finally {
+      loadingSessions.value = false;
+    }
+  }
+
+  Future<void> loadMessages(String sessionId) async {
+    loadingMessages.value = true;
+    try {
+      final data = await _service.getSession(sessionId);
+      final List<dynamic> msgsRaw = data['messages'] ?? [];
+      final List<ChatbotMessage> msgs = msgsRaw
+          .map((item) => ChatbotMessage.fromJson(Map<String, dynamic>.from(item as Map)))
+          .toList();
+      messages.assignAll(msgs);
+    } catch (e) {
+      debugPrint('Error loading messages: $e');
+    } finally {
+      loadingMessages.value = false;
+    }
+  }
+
+  Future<void> selectSession(String sessionId) async {
+    activeSessionId.value = sessionId;
+    await loadMessages(sessionId);
+  }
+
+  Future<void> createSession() async {
+    try {
+      final session = await _service.createSession();
+      sessions.insert(0, session);
+      activeSessionId.value = session.id;
+      messages.clear();
+    } catch (e) {
+      debugPrint('Error creating session: $e');
+    }
+  }
+
+  Future<void> deleteSession(String sessionId) async {
+    try {
+      await _service.deleteSession(sessionId);
+      sessions.removeWhere((s) => s.id == sessionId);
+      if (activeSessionId.value == sessionId) {
+        if (sessions.isNotEmpty) {
+          await selectSession(sessions.first.id);
+        } else {
+          activeSessionId.value = null;
+          messages.clear();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error deleting session: $e');
+    }
+  }
+
+  Future<void> sendQuestion(String question) async {
+    final sessionId = activeSessionId.value;
+    if (sessionId == null || question.trim().isEmpty) return;
+
+    isTyping.value = true;
+
+    try {
+      final localGrades = await _loadLocalGrades();
+      final answer = await _service.ask(
+        sessionId,
+        question,
+        localGrades: localGrades,
+      );
+
+      final now = DateTime.now();
+      messages.add(ChatbotMessage(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        role: 'user',
+        content: question,
+        createdAt: now,
+      ));
+      messages.add(ChatbotMessage(
+        id: (DateTime.now().millisecondsSinceEpoch + 1).toString(),
+        role: 'assistant',
+        content: answer,
+        createdAt: now,
+      ));
+    } catch (e) {
+      debugPrint('Error sending question: $e');
+      final msg = _extractErrorMessage(e);
+      Get.snackbar('Error', msg, snackPosition: SnackPosition.BOTTOM);
+    } finally {
+      isTyping.value = false;
+    }
+
+    await loadSessions();
+  }
+
+  Future<List<Map<String, dynamic>>?> _loadLocalGrades() async {
+    try {
+      final studentId = await _notasService.obtenerIdEstudianteActual();
+      if (studentId == null) return null;
+      final notas = await _notasService.cargarNotas(studentId);
+      if (notas.isEmpty) return null;
+
+      return notas.map((curso) {
+        return {
+          'id': curso['id']?.toString() ?? '',
+          'nombre': curso['nombre']?.toString() ?? '',
+          'notas': (curso['notas'] as List?)?.map((nota) {
+            return {
+              'titulo': nota['titulo']?.toString() ?? '',
+              'peso': (nota['peso'] is int) ? nota['peso'] : int.tryParse(nota['peso']?.toString() ?? '0') ?? 0,
+              'valor': (nota['valor'] is double) ? nota['valor'] : double.tryParse(nota['valor']?.toString() ?? '0') ?? 0.0,
+            };
+          }).toList() ?? [],
+        };
+      }).toList();
+    } catch (e) {
+      debugPrint('Error loading local grades: $e');
+      return null;
+    }
+  }
+
+  String _extractErrorMessage(dynamic e) {
+    if (e is Map && e.containsKey('error')) {
+      return e['error']?['message']?.toString() ?? 'No se pudo obtener respuesta. Intenta de nuevo.';
+    }
+    return 'No se pudo obtener respuesta. Intenta de nuevo.';
+  }
+}

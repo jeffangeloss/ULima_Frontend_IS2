@@ -168,13 +168,17 @@ class AuthService extends GetxService {
       final user = UserModel.fromJson(_mapFrom(response['user']));
       await _storage.saveToken(token);
       await _storage.saveCode(user.code);
-      await _loadCatalogs(token: token, careerId: user.careerId);
+      // Los catálogos son endpoints exclusivos de alumno. Un docente que entra
+      // con Google debe omitirlos, igual que en el login con código/contraseña.
+      if (!user.isTeacher) {
+        await _loadCatalogs(token: token, careerId: user.careerId);
+      }
       _currentUser.value = user;
       return null;
     } on ApiException catch (e) {
       await _resetGoogleAccount();
       if (e.code == 'INVALID_DOMAIN') {
-        return 'Debes usar tu correo @aloe.ulima.edu.pe.';
+        return 'Debes usar tu correo @aloe.ulima.edu.pe o @ulima.edu.pe.';
       }
       if (e.code == 'USER_NOT_FOUND') {
         return 'Tu correo no está registrado en el sistema.';

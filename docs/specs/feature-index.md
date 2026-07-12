@@ -5,7 +5,7 @@ This index connects real user stories, product requirements, Flutter files, mock
 | Priority | Feature | Spec | User Stories | Requirements | Flutter target | Status |
 | --- | --- | --- | --- | --- | --- | --- |
 | 0 | Platform Runtime | `specs/features/platform-runtime/platform-runtime.spec.md` | Infra | Runtime config | `lib/services/api_client.dart` | Activo |
-| 1 | Auth | `specs/features/auth/auth.spec.md` | US01, US02 | R1, R2, RNF7 | `lib/pages/login`, `lib/services/auth_service.dart` | Spec existente |
+| 1 | Auth | `specs/features/auth/auth.spec.md` | US01, US02, US03, HU18 | R1, R2, RNF7 | `lib/pages/login`, `lib/services/auth_service.dart` | Implementado (incluye Google SSO docente) |
 | 2 | Academic Profile | `specs/features/academic-profile/academic-profile.spec.md` | US05 | R12, R13 | `lib/pages/setup_carrera` | Spec existente |
 | 3 | Curriculum | `specs/features/curriculum/curriculum.spec.md` | US03, US04 | R4, R5, R10, R11 | `lib/pages/malla` | Spec existente |
 | 4 | Grades | `specs/features/grades/grades.spec.md` | US06, US07 | R6, R9 | `lib/pages/calculadora` | Spec existente |
@@ -17,6 +17,7 @@ This index connects real user stories, product requirements, Flutter files, mock
 | 10 | Password Reset | _(sin spec)_ | HU20 | Restablecer contraseña vía OTP | `lib/pages/password_reset/**`, `lib/services/password_reset_service.dart` | Implementado sin spec |
 | 11 | Silabo Viewer | _(sin spec)_ | HU21 | Visualizar sílabo en PDF | `lib/pages/silabo/**`, `lib/services/silabo_service.dart` | Implementado sin spec |
 | 12 | Release Build | `specs/features/release-build/release-build.spec.md` | Infra | Build config | `android/`, `pubspec.yaml` | Documentado |
+| 13 | Chatbot Asistente Académico | `specs/features/chatbot/chatbot.spec.md` | HU-CHATBOT-01, HU-CHATBOT-02 | Chatbot con IA para consultas académicas | `lib/pages/chatbot/**`, `lib/services/chatbot_service.dart`, `lib/components/chatbot_fab.dart`, `lib/models/chatbot_models.dart` | **Diseñada — pendiente de implementar** |
 
 ## Workflow
 

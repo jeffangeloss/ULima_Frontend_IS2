@@ -445,33 +445,32 @@ class _SilaboLink extends StatelessWidget {
     if (url == null) return const SizedBox.shrink();
 
     final brightness = Theme.of(context).brightness;
-    final linkColor = brightness == Brightness.light
+    final accent = brightness == Brightness.light
         ? const Color(0xFF0369A1)
         : const Color(0xFF38BDF8);
 
-    return GestureDetector(
-      // HU21: abre el visor de PDF in-app ('/silabo') en vez de expulsar a
-      // Drive; el launchUrl externo vive ahora solo como fallback del visor.
-      onTap: () => Get.toNamed<void>(
-        '/silabo',
-        arguments: {'url': url, 'titulo': courseName},
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.picture_as_pdf_outlined, size: 14, color: linkColor),
-          const SizedBox(width: 5),
-          Text(
-            'Ver Sílabo',
-            style: TextStyle(
-              color: linkColor,
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              decoration: TextDecoration.underline,
-              decorationColor: linkColor,
-            ),
+    // HU21: botón tonal notorio (antes un text-link chico y escondido). Abre el
+    // visor de PDF in-app ('/silabo'); el launchUrl externo queda como fallback.
+    return SizedBox(
+      width: double.infinity,
+      child: FilledButton.tonalIcon(
+        onPressed: () => Get.toNamed<void>(
+          '/silabo',
+          arguments: {'url': url, 'titulo': courseName},
+        ),
+        icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+        label: const Text(
+          'Ver sílabo (PDF)',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
+        style: FilledButton.styleFrom(
+          backgroundColor: accent.withValues(alpha: 0.14),
+          foregroundColor: accent,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
-        ],
+        ),
       ),
     );
   }

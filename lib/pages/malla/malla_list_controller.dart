@@ -45,9 +45,6 @@ extension MallaListFilterX on MallaListFilter {
   }
 }
 
-/// Rol de una card cuando hay un curso resaltado.
-enum CourseHighlightRole { none, selected, prerequisite, unlocks, dimmed }
-
 class MallaListController extends GetxController {
   static const String otherElectivesGroup = 'Otros electivos';
 
@@ -68,10 +65,19 @@ class MallaListController extends GetxController {
   Map<String, CourseStatus> _simEntrySnapshot = <String, CourseStatus>{};
 
   // ── Estado de UI ────────────────────────────────────────────────────────────
+  /// Clave de rail que representa la pestaña "Electivos".
+  static const int electivesRailKey = -1;
+
   final filter = MallaListFilter.todos.obs;
-  final expandedLevels = <int>{}.obs;
-  final electivesExpanded = false.obs;
-  final highlightedCourseId = RxnString();
+
+  /// Rail de ciclos: nivel (ciclo) enfocado; `electivesRailKey` = Electivos.
+  /// Reemplaza a los acordeones: se muestra un solo ciclo a la vez.
+  final focusedKey = 0.obs;
+
+  /// Se incrementa cuando termina la precarga de sílabos (best-effort). Las
+  /// cards lo leen dentro de su Obx para repintar y mostrar el ícono de sílabo
+  /// una vez que los datos llegan (el servicio de sílabos no es reactivo).
+  final syllabusVersion = 0.obs;
 
   late final MallaService _malla;
   late final AuthService _auth;
@@ -107,7 +113,7 @@ class MallaListController extends GetxController {
       // bloquear ni tumbar el render de la malla si el endpoint tarda o falla.
       _preloadSyllabus();
       _rebuild();
-      _initExpansion();
+      _initFocus();
     } catch (_) {
       error.value =
           'No pudimos cargar tu malla. Revisa tu conexión e inténtalo de nuevo.';
@@ -121,6 +127,9 @@ class MallaListController extends GetxController {
       await EvaluationSyllabusService().loadEvaluationData();
     } catch (_) {
       // Silencioso: la precarga de sílabos es opcional para el sheet de curso.
+    } finally {
+      // Repinta las cards para que aparezca el ícono de sílabo donde exista.
+      syllabusVersion.value++;
     }
   }
 
@@ -171,10 +180,26 @@ class MallaListController extends GetxController {
     return userSaved ?? StorageService.to.savedStatuses;
   }
 
-  void _initExpansion() {
-    expandedLevels.clear();
+  /// Foco inicial: el ciclo más bajo donde el alumno está **cursando** un curso;
+  /// si no cursa nada, el ciclo actual (menor con obligatorios pendientes); si no
+  /// hay obligatorios pendientes, el primer ciclo; y si no hay ciclos, Electivos.
+  void _initFocus() {
+    final cursando = cards
+        .where((c) =>
+            !c.isElective && realStatuses[c.id] == CourseStatus.current)
+        .map((c) => c.level);
+    if (cursando.isNotEmpty) {
+      focusedKey.value = cursando.reduce((a, b) => a < b ? a : b);
+      return;
+    }
     final lvl = currentStudentLevel;
-    if (lvl != null) expandedLevels.add(lvl);
+    if (lvl != null && mandatoryLevels.contains(lvl)) {
+      focusedKey.value = lvl;
+    } else if (mandatoryLevels.isNotEmpty) {
+      focusedKey.value = mandatoryLevels.first;
+    } else {
+      focusedKey.value = electivesRailKey;
+    }
   }
 
   /// Ciclo "actual" del alumno: el menor nivel con obligatorios pendientes
@@ -244,15 +269,56 @@ class MallaListController extends GetxController {
     return {for (final k in keys) k: groups[k]!};
   }
 
-  void toggleLevel(int level) {
-    if (expandedLevels.contains(level)) {
-      expandedLevels.remove(level);
-    } else {
-      expandedLevels.add(level);
-    }
+  /// Rail: los ciclos con obligatorios + la pestaña Electivos al final.
+  List<int> get railKeys =>
+      [...mandatoryLevels, if (electives.isNotEmpty) electivesRailKey];
+
+  void focus(int key) {
+    focusedKey.value = key;
   }
 
-  void toggleElectives() => electivesExpanded.value = !electivesExpanded.value;
+  // ── Navegación del stepper (◀ Ciclo N ▶) y del popup ─────────────────────────
+
+  String labelForKey(int key) =>
+      key == electivesRailKey ? 'Electivos' : 'Ciclo $key';
+
+  List<CourseNode> coursesForKey(int key) =>
+      key == electivesRailKey ? electives : mandatoryForLevel(key);
+
+  String summaryForKey(int key) {
+    final g = coursesForKey(key);
+    return '${approvedIn(g)}/${g.length} aprobados';
+  }
+
+  int get _focusIndex => railKeys.indexOf(focusedKey.value);
+  bool get canFocusPrev => _focusIndex > 0;
+  bool get canFocusNext =>
+      _focusIndex >= 0 && _focusIndex < railKeys.length - 1;
+
+  void focusPrev() {
+    final i = _focusIndex;
+    if (i > 0) focus(railKeys[i - 1]);
+  }
+
+  void focusNext() {
+    final i = _focusIndex;
+    if (i >= 0 && i < railKeys.length - 1) focus(railKeys[i + 1]);
+  }
+
+  bool isLevelComplete(int level) {
+    final group = mandatoryForLevel(level);
+    return group.isNotEmpty && approvedIn(group) == group.length;
+  }
+
+  bool get isElectivesComplete {
+    final e = electives;
+    return e.isNotEmpty && approvedIn(e) == e.length;
+  }
+
+  /// Cursos que cumplen el filtro activo en TODOS los ciclos (para la vista de
+  /// resultados de filtro, que ignora el foco por ciclo). `cards` ya viene
+  /// ordenado por nivel/fila.
+  List<CourseNode> get filteredAll => cards.where(matchesFilter).toList();
 
   // ── Filtros ─────────────────────────────────────────────────────────────────
 
@@ -315,53 +381,16 @@ class MallaListController extends GetxController {
       )
       .length;
 
-  // ── Resaltado de prerrequisitos ─────────────────────────────────────────────
+  // ── Cursos por id ───────────────────────────────────────────────────────────
 
   Map<String, CourseNode> get _byId => {for (final c in cards) c.id: c};
 
-  Set<String> get highlightPrerequisites {
-    final id = highlightedCourseId.value;
-    final course = id == null ? null : _byId[id];
-    if (course == null) return const <String>{};
-    return course.coursePrerequisites.toSet();
-  }
-
-  Set<String> get highlightUnlocks {
-    final id = highlightedCourseId.value;
-    if (id == null) return const <String>{};
-    return cards
-        .where((c) => c.coursePrerequisites.contains(id))
-        .map((c) => c.id)
-        .toSet();
-  }
-
-  CourseHighlightRole highlightRoleOf(String courseId) {
-    final selected = highlightedCourseId.value;
-    if (selected == null) return CourseHighlightRole.none;
-    if (courseId == selected) return CourseHighlightRole.selected;
-    if (highlightPrerequisites.contains(courseId)) {
-      return CourseHighlightRole.prerequisite;
-    }
-    if (highlightUnlocks.contains(courseId)) {
-      return CourseHighlightRole.unlocks;
-    }
-    return CourseHighlightRole.dimmed;
-  }
-
-  void toggleHighlight(String courseId) {
-    highlightedCourseId.value =
-        highlightedCourseId.value == courseId ? null : courseId;
-  }
-
-  void clearHighlight() => highlightedCourseId.value = null;
-
-  /// Tap en una card: en modo normal resalta; en simulación cicla el estado.
+  /// Tap en una card: SOLO cicla el estado en modo simulación. En modo normal no
+  /// hace nada (antes resaltaba prerrequisitos, pero con la vista por-ciclo esos
+  /// cursos están en otros ciclos y el resaltado no se veía). El detalle se abre
+  /// con el botón ⓘ y el sílabo con el ícono PDF.
   void onCourseTap(CourseNode course) {
-    if (simulationMode.value) {
-      cycleSimStatus(course.id);
-    } else {
-      toggleHighlight(course.id);
-    }
+    if (simulationMode.value) cycleSimStatus(course.id);
   }
 
   // ── Modo simulación ─────────────────────────────────────────────────────────
@@ -372,7 +401,6 @@ class MallaListController extends GetxController {
       .toSet();
 
   void enterSimulation() {
-    clearHighlight();
     final base = Map<String, CourseStatus>.from(realStatuses);
 
     // Baseline: la simulación persistida en backend; si no hay, los estados

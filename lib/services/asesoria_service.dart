@@ -23,4 +23,37 @@ class AsesoriaService {
       return [];
     }
   }
+
+  // HU17: confirma la asistencia del alumno a una asesoría.
+  // Devuelve el conteo autoritativo y el estado tras la operación.
+  Future<RsvpResult> confirmarAsistencia(String sessionId) async {
+    final data = await _api.postJson(
+      '/course-detail/advising/$sessionId/rsvp',
+      body: const {},
+    );
+    return RsvpResult.fromJson(data);
+  }
+
+  // HU17: cancela la asistencia del alumno a una asesoría.
+  Future<RsvpResult> cancelarAsistencia(String sessionId) async {
+    final data = await _api.deleteJson('/course-detail/advising/$sessionId/rsvp');
+    return RsvpResult.fromJson(data);
+  }
+}
+
+/// HU17: respuesta de confirmar/cancelar asistencia (`{ id, asistentes, myRsvp }`).
+class RsvpResult {
+  final int asistentes;
+  final bool myRsvp;
+
+  const RsvpResult({required this.asistentes, required this.myRsvp});
+
+  factory RsvpResult.fromJson(Map<String, dynamic> json) {
+    return RsvpResult(
+      asistentes: json['asistentes'] is int
+          ? json['asistentes'] as int
+          : int.tryParse(json['asistentes']?.toString() ?? '') ?? 0,
+      myRsvp: json['myRsvp'] == true,
+    );
+  }
 }
