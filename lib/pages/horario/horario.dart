@@ -306,12 +306,15 @@ class HorarioPage extends StatelessWidget {
                             course['hora_fin'] as String? ?? '09:00 am';
 
                         final startVal = _timeToHours(startStr);
-                        final endVal = _timeToHours(endStr);
+                        // Clamp endVal to a max of startVal + 6 hours to defend against bad data
+                        final rawEndVal = _timeToHours(endStr);
+                        final endVal = rawEndVal > startVal + 6 ? startVal + 6 : rawEndVal;
 
                         final double topPosition =
                             (startVal - startHour) * hourHeight + 12.0;
+                        // Ensure height is at least 40px (visible) and at most 6h worth
                         final double heightVal =
-                            (endVal - startVal) * hourHeight - 8.0;
+                            ((endVal - startVal) * hourHeight - 8.0).clamp(40.0, 6 * hourHeight);
 
                         final courseColor = _resolveScheduleColor(colorStr, colors);
 
