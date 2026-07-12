@@ -27,10 +27,10 @@ targets:
 
 - `GET /course-detail/sections/:sectionId`
 - `GET /course-detail/sections/:sectionId/announcements`
-- `GET /course-detail/sections/:sectionId/advising`
 - `GET /course-detail/sections/:sectionId/contacts`
 - `GET /course-detail/teachers`
 - `GET /course-detail/enrollments`
+- Asesorías: `GET /advising/section/:sectionId` + RSVP endpoints (ver `specs/features/advising-student/advising-student.spec.md`).
 
 ## Verification
 

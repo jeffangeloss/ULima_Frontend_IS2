@@ -301,7 +301,6 @@ Notas:
 
 - `GET /course-detail/sections/:sectionId`
 - `GET /course-detail/sections/:sectionId/announcements`
-- `GET /course-detail/sections/:sectionId/advising`
 - `GET /course-detail/sections/:sectionId/contacts`
 - `GET /course-detail/sections` (lista general)
 - `GET /course-detail/teachers`
@@ -311,10 +310,9 @@ Notas:
 
 - Solo roles de alumno (`requireRole('student','delegate','subdelegate')`); un token docente recibe `403 FORBIDDEN`.
 - El estudiante solo ve secciones donde está matriculado.
-- Asesorías visibles: `section_id IS NULL` para el curso ofertado o `section_id` igual a su sección. Se incluyen las extras (`kind='extra'`) de la sección cuya `session_date` no sea pasada.
-- Cada asesoría agrega (HU18): `kind` (`recurring`/`extra`), `fecha` (`YYYY-MM-DD`, solo extras; `null` en recurrentes), `dictanteRol` (`"Profesor"` o `"JP"` según sea `section.teacher_id` o `section.jp_id`), `asistentes` (conteo de `advising_rsvp`).
 - Contactos agrega la clave top-level `jefePractica` (`{ code, lastName, firstName }` o `null`) desde `section.jp_id`, entre `docente` y `alumnos`.
 - Anuncios visibles solo si pertenecen a la sección del estudiante.
+- El listado de asesorías y RSVP del alumno migraron a `advising-student` (ver abajo).
 
 ## Alerts
 
@@ -326,6 +324,16 @@ Notas:
 - Tipos válidos: `academic_risk`, `high_load`.
 - Recalcular alertas es interno; no hay endpoint público de recalculo en v1.
 - `academic_risk` no compara contra promedio de sección.
+
+## Advising Student — RSVP del alumno (HU17)
+
+Sub-módulo `student/` dentro de `src/modules/advising/`.
+
+- `GET /advising/section/:sectionId` — listado de asesorías (recurrentes + extras, excluye pasadas).
+- `POST /advising/:sessionId/rsvp` — confirmar asistencia.
+- `DELETE /advising/:sessionId/rsvp` — cancelar asistencia.
+
+Detalle en `specs/features/advising-student/advising-student.spec.md`.
 
 ## Advising (HU18 — docentes)
 
