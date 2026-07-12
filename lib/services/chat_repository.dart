@@ -45,6 +45,11 @@ abstract class ChatRepositoryContract {
   Future<ChatSession> signInWithCustomToken(String sectionId);
   Stream<List<ChatMessage>> getMessages(String sectionId);
   Future<void> sendMessage(String sectionId, String text, ChatSession session);
+
+  /// HU23: elimina (borrado suave) un mensaje. Va por el backend (teacher-only,
+  /// escribe la lápida con Admin SDK); las reglas RTDB no permiten borrar desde
+  /// el cliente. Autorización real: solo el profesor titular de la sección.
+  Future<void> deleteMessage(String sectionId, String messageId);
 }
 
 class ChatRepository implements ChatRepositoryContract {
@@ -130,5 +135,12 @@ class ChatRepository implements ChatRepositoryContract {
       debugPrint("Error sending message: $e");
       rethrow;
     }
+  }
+
+  @override
+  Future<void> deleteMessage(String sectionId, String messageId) async {
+    // El borrado lo hace el backend (verifica que sea el profesor de la sección
+    // y escribe la lápida con Admin SDK). El stream de RTDB refleja el cambio.
+    await _apiClient.deleteJson('/chat/sections/$sectionId/messages/$messageId');
   }
 }

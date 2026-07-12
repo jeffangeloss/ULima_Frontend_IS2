@@ -9,6 +9,12 @@ class ChatMessage {
   final String body;
   final DateTime createdAt;
 
+  // HU23: borrado suave por el profesor. Cuando `deleted` es true, el mensaje se
+  // muestra como lápida "eliminado por <deletedBy>".
+  final bool deleted;
+  final String? deletedBy;
+  final String? deletedByRole;
+
   ChatMessage({
     required this.id,
     required this.senderId,
@@ -19,6 +25,9 @@ class ChatMessage {
     required this.weight,
     required this.body,
     required this.createdAt,
+    this.deleted = false,
+    this.deletedBy,
+    this.deletedByRole,
   });
 
   String get text => body;
@@ -41,6 +50,9 @@ class ChatMessage {
       weight: _parseInt(map['weight']) ?? _weightFor(role),
       body: (map['body'] ?? map['text'] ?? '').toString(),
       createdAt: createdAt,
+      deleted: map['deleted'] == true,
+      deletedBy: map['deletedBy']?.toString(),
+      deletedByRole: map['deletedByRole']?.toString(),
     );
   }
 
