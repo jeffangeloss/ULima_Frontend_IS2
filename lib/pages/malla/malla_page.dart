@@ -41,7 +41,6 @@ class MallaPage extends GetView<MallaController> {
       ),
       body: Column(
         children: [
-          const _ReadOnlyBanner(),
           _ProgressBar(controller: c, colors: colors),
           _ZoomToolbar(controller: c),
           Expanded(
@@ -61,38 +60,6 @@ class MallaPage extends GetView<MallaController> {
   }
 }
 
-// ── Banner de solo lectura ─────────────────────────────────────────────────────
-class _ReadOnlyBanner extends StatelessWidget {
-  const _ReadOnlyBanner();
-
-  @override
-  Widget build(BuildContext context) {
-    final brightness = Theme.of(context).brightness;
-    final fg = MaterialTheme.textSecondary(brightness);
-    return Container(
-      width: double.infinity,
-      color: MaterialTheme.tagBg(brightness),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        children: [
-          Icon(Icons.visibility_outlined, size: 16, color: fg),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'Vista clásica — solo lectura',
-              style: TextStyle(
-                color: fg,
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 // ── Barra de progreso ──────────────────────────────────────────────────────────
 class _ProgressBar extends StatelessWidget {
   const _ProgressBar({required this.controller, required this.colors});
@@ -104,7 +71,8 @@ class _ProgressBar extends StatelessWidget {
     final brightness = Theme.of(context).brightness;
     return Obx(() {
       return Container(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+        // Compacto para dar más alto al árbol/canvas (Parte 5).
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
         decoration: BoxDecoration(
           color: MaterialTheme.cardBg(brightness),
           border: Border(

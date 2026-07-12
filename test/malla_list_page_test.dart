@@ -6,11 +6,9 @@
 // suscripción y el tap no producía ningún cambio visual. El fix envuelve
 // cada card en su propio Obx.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:ulima_plus/configs/themes.dart';
 import 'package:ulima_plus/models/malla_models.dart';
 import 'package:ulima_plus/models/user_model.dart';
 import 'package:ulima_plus/pages/malla/malla_list_controller.dart';
@@ -18,9 +16,6 @@ import 'package:ulima_plus/pages/malla/malla_list_page.dart';
 import 'package:ulima_plus/services/auth_service.dart';
 import 'package:ulima_plus/services/malla_service.dart';
 import 'package:ulima_plus/services/storage_service.dart';
-
-/// Mismo color privado que MallaListPage._prereqColor.
-const Color _prereqColor = Color(0xFF8B5CF6);
 
 CourseNode _course(String id, {List<String> prerequisites = const []}) {
   return CourseNode(
@@ -112,58 +107,63 @@ void main() {
 
   tearDown(Get.reset);
 
-  BoxDecoration cardDecorationOf(WidgetTester tester, String courseName) {
-    final container = tester.widget<Container>(
-      find
-          .ancestor(
-            of: find.text(courseName),
-            matching: find.byWidgetPredicate(
-              (w) =>
-                  w is Container &&
-                  w.decoration is BoxDecoration &&
-                  (w.decoration as BoxDecoration).border != null,
-            ),
-          )
-          .first,
-    );
-    return container.decoration! as BoxDecoration;
-  }
-
+  // Parte 2 del rediseño: el resaltado de prerrequisitos se eliminó de la lista
+  // (no tenía sentido en la vista por-ciclo). El tap en una card en modo normal
+  // no hace nada: no aparecen chips REQUISITO/DESBLOQUEA ni cambia la card.
   testWidgets(
-    'HU19: tap en una card resalta requisito/desbloqueo al instante '
-    'y el segundo tap lo quita',
+    'modo normal: el tap en una card no resalta prerrequisitos',
     (tester) async {
       await tester.pumpWidget(const GetMaterialApp(home: MallaListPage()));
       await tester.pumpAndSettle();
 
-      // Sin resaltado inicial.
       expect(find.text('REQUISITO'), findsNothing);
       expect(find.text('DESBLOQUEA'), findsNothing);
 
-      // Tap en 'b' (modo normal): sin tocar ningún otro observable, la UI
-      // debe repintarse sola.
-      await tester.tap(find.text('Curso b'));
-      await tester.pumpAndSettle();
-
-      // 'a' es requisito de 'b'; 'c' se desbloquea con 'b'.
-      expect(find.text('REQUISITO'), findsOneWidget);
-      expect(find.text('DESBLOQUEA'), findsOneWidget);
-
-      // Bordes: la card tocada usa el color primario y la del requisito el
-      // morado de prerrequisitos.
-      final selectedBorder = cardDecorationOf(tester, 'Curso b').border!;
-      expect((selectedBorder as Border).top.color, MaterialTheme.primaryColor);
-      expect(selectedBorder.top.width, 2.5);
-
-      final prereqBorder = cardDecorationOf(tester, 'Curso a').border!;
-      expect((prereqBorder as Border).top.color, _prereqColor);
-
-      // Segundo tap en la misma card: quita el resaltado.
+      // Tap en 'b' (modo normal): no debe producir resaltado alguno.
       await tester.tap(find.text('Curso b'));
       await tester.pumpAndSettle();
 
       expect(find.text('REQUISITO'), findsNothing);
       expect(find.text('DESBLOQUEA'), findsNothing);
+      // La card sigue visible (el tap no navega ni rompe nada).
+      expect(find.text('Curso b'), findsOneWidget);
+    },
+  );
+
+  // Rediseño malla: stepper de ciclo + ciclo enfocado + filtros en un botón.
+  testWidgets(
+    'rediseño: stepper de ciclo, ciclo enfocado y filtros en botón',
+    (tester) async {
+      await tester.pumpWidget(const GetMaterialApp(home: MallaListPage()));
+      await tester.pumpAndSettle();
+
+      // Stepper: muestra "Ciclo 1" y su resumen "1/3 aprobados".
+      expect(find.text('Ciclo 1'), findsOneWidget);
+      expect(find.text('1/3 aprobados'), findsOneWidget);
+      // Las 3 cards del ciclo enfocado se ven sin desplegar nada.
+      expect(find.text('Curso a'), findsOneWidget);
+      expect(find.text('Curso c'), findsOneWidget);
+
+      // Filtros ahora es un botón; abre un bottom sheet con las 5 opciones.
+      expect(find.text('Filtros'), findsOneWidget);
+      await tester.tap(find.text('Filtros'));
+      await tester.pumpAndSettle();
+      expect(find.text('Filtrar cursos'), findsOneWidget);
+      expect(find.text('Disponibles'), findsOneWidget);
+
+      // Elegir "Disponibles": el sheet se cierra y aparece la barra de filtro
+      // activo con "Quitar filtro"; solo queda visible el curso 'b' (unlocked).
+      await tester.tap(find.text('Disponibles'));
+      await tester.pumpAndSettle();
+      expect(find.text('Quitar filtro'), findsOneWidget);
+      expect(find.text('Curso b'), findsOneWidget);
+      expect(find.text('Curso a'), findsNothing); // approved, no es "Disponible"
+
+      // Quitar el filtro vuelve a "Todos" (rail visible de nuevo).
+      await tester.tap(find.text('Quitar filtro'));
+      await tester.pumpAndSettle();
+      expect(find.text('Curso a'), findsOneWidget);
+      expect(find.text('Quitar filtro'), findsNothing);
     },
   );
 }
