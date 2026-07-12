@@ -14,8 +14,12 @@ import 'package:ulima_plus/pages/horario/horario_controller.dart';
 class DescripCursosController extends GetxController {
   final SeccionService _seccionService = SeccionService();
   final AnuncioService _anuncioService = AnuncioService();
-  final AsesoriaService _asesoriaService = AsesoriaService();
+  final AsesoriaService _asesoriaService;
   final ContactoService _contactoService = ContactoService();
+
+  // HU17: `asesoriaService` es inyectable para pruebas (por defecto la real).
+  DescripCursosController({AsesoriaService? asesoriaService})
+      : _asesoriaService = asesoriaService ?? AsesoriaService();
 
   RxList<Seccion> secciones = <Seccion>[].obs;
   Rxn<Seccion> seccionActual = Rxn<Seccion>();
@@ -79,6 +83,55 @@ class DescripCursosController extends GetxController {
   Future<void> fetchAsesorias(String idSeccion) async {
     final data = await _asesoriaService.fetchAsesorias(idSeccion);
     asesorias.value = data;
+  }
+
+  // HU17: confirma/cancela la asistencia con actualización optimista del contador.
+  // Si el backend falla, revierte al estado previo y avisa. Idempotente: si otra
+  // request ya está en curso para esa asesoría, se ignora el tap.
+  final RxSet<String> rsvpEnCurso = <String>{}.obs;
+
+  Future<void> toggleRsvp(Asesoria asesoria) async {
+    if (rsvpEnCurso.contains(asesoria.id)) return;
+
+    final index = asesorias.indexWhere((a) => a.id == asesoria.id);
+    if (index == -1) return;
+
+    final previa = asesorias[index];
+    final quiereAsistir = !previa.myRsvp;
+
+    // 1) Optimista: reflejar el cambio en la UI de inmediato.
+    final asistentesOptimista =
+        (previa.asistentes + (quiereAsistir ? 1 : -1)).clamp(0, 1 << 31);
+    asesorias[index] =
+        previa.copyWith(myRsvp: quiereAsistir, asistentes: asistentesOptimista);
+    rsvpEnCurso.add(asesoria.id);
+
+    try {
+      final res = quiereAsistir
+          ? await _asesoriaService.confirmarAsistencia(asesoria.id)
+          : await _asesoriaService.cancelarAsistencia(asesoria.id);
+
+      // 2) Reconciliar con el conteo autoritativo del backend.
+      final actual = asesorias.indexWhere((a) => a.id == asesoria.id);
+      if (actual != -1) {
+        asesorias[actual] = asesorias[actual]
+            .copyWith(myRsvp: res.myRsvp, asistentes: res.asistentes);
+      }
+    } catch (e) {
+      // 3) Rollback al estado previo.
+      final actual = asesorias.indexWhere((a) => a.id == asesoria.id);
+      if (actual != -1) asesorias[actual] = previa;
+      debugPrint('Error en RSVP de asesoría ${asesoria.id}: $e');
+      Get.snackbar(
+        'No se pudo actualizar',
+        quiereAsistir
+            ? 'No pudimos confirmar tu asistencia. Inténtalo de nuevo.'
+            : 'No pudimos cancelar tu asistencia. Inténtalo de nuevo.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } finally {
+      rsvpEnCurso.remove(asesoria.id);
+    }
   }
 
   Future<void> fetchContactos(String idSeccion) async {

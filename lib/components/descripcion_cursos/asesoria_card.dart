@@ -4,8 +4,11 @@ import '../../models/asesoria_model.dart';
 
 class CardAsesoria extends StatefulWidget {
   final Asesoria asesoria;
+  // HU17: callback para confirmar/cancelar asistencia. Si es null, no se muestra
+  // el botón (p.ej. usos de solo-lectura o tests que no ejercitan el RSVP).
+  final Future<void> Function()? onToggleRsvp;
 
-  const CardAsesoria({super.key, required this.asesoria});
+  const CardAsesoria({super.key, required this.asesoria, this.onToggleRsvp});
 
   @override
   State<CardAsesoria> createState() => _CardAsesoriaState();
@@ -13,6 +16,17 @@ class CardAsesoria extends StatefulWidget {
 
 class _CardAsesoriaState extends State<CardAsesoria> {
   bool expanded = false;
+  bool _rsvpBusy = false; // HU17: deshabilita el botón mientras corre la request.
+
+  Future<void> _onRsvpPressed() async {
+    if (_rsvpBusy || widget.onToggleRsvp == null) return;
+    setState(() => _rsvpBusy = true);
+    try {
+      await widget.onToggleRsvp!();
+    } finally {
+      if (mounted) setState(() => _rsvpBusy = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -87,6 +101,15 @@ class _CardAsesoriaState extends State<CardAsesoria> {
                           ),
                         ],
                       ),
+                      // HU17: botón para confirmar/cancelar asistencia.
+                      if (widget.onToggleRsvp != null) ...[
+                        const SizedBox(height: 8),
+                        _RsvpButton(
+                          asistira: widget.asesoria.myRsvp,
+                          busy: _rsvpBusy,
+                          onPressed: _onRsvpPressed,
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -202,6 +225,67 @@ class _CardAsesoriaState extends State<CardAsesoria> {
           style: TextStyle(color: colors.onSurface.withValues(alpha: 0.9)),
         ),
       ],
+    );
+  }
+}
+
+/// HU17: botón compacto para confirmar/cancelar asistencia a la asesoría.
+/// Confirmado → botón "outlined" con check y opción de cancelar; sin confirmar →
+/// botón "filled" que invita a asistir. Muestra spinner mientras corre la request.
+class _RsvpButton extends StatelessWidget {
+  const _RsvpButton({
+    required this.asistira,
+    required this.busy,
+    required this.onPressed,
+  });
+
+  final bool asistira;
+  final bool busy;
+  final Future<void> Function() onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    final Widget child = busy
+        ? const SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          )
+        : Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(asistira ? Icons.check_circle : Icons.add, size: 16),
+              const SizedBox(width: 6),
+              Text(asistira ? 'Asistiré · Cancelar' : 'Asistiré'),
+            ],
+          );
+
+    final onTap = busy ? null : onPressed;
+    final style = ButtonStyle(
+      visualDensity: VisualDensity.compact,
+      padding: WidgetStatePropertyAll(
+        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      ),
+    );
+
+    return Semantics(
+      button: true,
+      label: asistira ? 'Cancelar asistencia' : 'Confirmar asistencia',
+      child: asistira
+          ? OutlinedButton(
+              onPressed: onTap,
+              style: style.copyWith(
+                foregroundColor: WidgetStatePropertyAll(colors.primary),
+              ),
+              child: child,
+            )
+          : FilledButton(
+              onPressed: onTap,
+              style: style,
+              child: child,
+            ),
     );
   }
 }

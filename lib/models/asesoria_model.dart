@@ -17,6 +17,9 @@ class Asesoria {
   final String dictanteRol; // 'Profesor' | 'JP'
   final int asistentes;
 
+  // HU17: ¿el alumno autenticado ya confirmó su asistencia a esta asesoría?
+  final bool myRsvp;
+
   Asesoria({
     required this.id,
     required this.courseId,
@@ -31,9 +34,30 @@ class Asesoria {
     this.fecha,
     this.dictanteRol = 'Profesor',
     this.asistentes = 0,
+    this.myRsvp = false,
   });
 
   bool get esExtra => kind == 'extra';
+
+  // HU17: copia inmutable para la actualización optimista del contador/estado.
+  Asesoria copyWith({int? asistentes, bool? myRsvp}) {
+    return Asesoria(
+      id: id,
+      courseId: courseId,
+      docenteCode: docenteCode,
+      docente: docente,
+      dia: dia,
+      inicio: inicio,
+      fin: fin,
+      aula: aula,
+      zoom: zoom,
+      kind: kind,
+      fecha: fecha,
+      dictanteRol: dictanteRol,
+      asistentes: asistentes ?? this.asistentes,
+      myRsvp: myRsvp ?? this.myRsvp,
+    );
+  }
 
   factory Asesoria.fromJson(
     Map<String, dynamic> json, {
@@ -56,6 +80,7 @@ class Asesoria {
       asistentes: json['asistentes'] is int
           ? json['asistentes'] as int
           : int.tryParse(json['asistentes']?.toString() ?? '') ?? 0,
+      myRsvp: json['myRsvp'] == true,
     );
   }
 }

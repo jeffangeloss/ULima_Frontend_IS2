@@ -364,10 +364,25 @@ class HorarioController extends GetxController {
       if (section['isAdvising'] == true) continue;
       final sectionIdStr = section['idSeccion']?.toString() ?? '';
       if (sectionIdStr.isNotEmpty && !uniqueCourses.containsKey(sectionIdStr)) {
-        uniqueCourses[sectionIdStr] = section;
+        // El color real del curso vive en cada horario (schedule_session.color_hex),
+        // no a nivel de sección (ahí suele venir un default naranja). El calendario
+        // ya usa el del horario; aquí replicamos eso para que la lista tenga los
+        // mismos colores por curso.
+        final entry = Map<String, dynamic>.from(section);
+        final horarios = section['horarios'];
+        if (horarios is List) {
+          for (final h in horarios) {
+            final hColor = (h is Map ? h['color']?.toString() : null)?.trim();
+            if (hColor != null && hColor.isNotEmpty) {
+              entry['color'] = hColor;
+              break;
+            }
+          }
+        }
+        uniqueCourses[sectionIdStr] = entry;
       }
     }
-    
+
     return uniqueCourses.values.toList();
   }
 }

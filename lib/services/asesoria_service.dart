@@ -9,7 +9,7 @@ class AsesoriaService {
   Future<List<Asesoria>> fetchAsesorias(String idSeccion) async {
     try {
       final data = await _api.getJson(
-        '/course-detail/sections/$idSeccion/advising',
+        '/advising/section/$idSeccion',
       );
       final List<dynamic> asesoriasRaw = data['asesorias'] ?? [];
 
@@ -22,5 +22,38 @@ class AsesoriaService {
       debugPrint('Error cargando asesorias: $e');
       return [];
     }
+  }
+
+  // HU17: confirma la asistencia del alumno a una asesoría.
+  // Devuelve el conteo autoritativo y el estado tras la operación.
+  Future<RsvpResult> confirmarAsistencia(String sessionId) async {
+    final data = await _api.postJson(
+      '/advising/$sessionId/rsvp',
+      body: const {},
+    );
+    return RsvpResult.fromJson(data);
+  }
+
+  // HU17: cancela la asistencia del alumno a una asesoría.
+  Future<RsvpResult> cancelarAsistencia(String sessionId) async {
+    final data = await _api.deleteJson('/advising/$sessionId/rsvp');
+    return RsvpResult.fromJson(data);
+  }
+}
+
+/// HU17: respuesta de confirmar/cancelar asistencia (`{ id, asistentes, myRsvp }`).
+class RsvpResult {
+  final int asistentes;
+  final bool myRsvp;
+
+  const RsvpResult({required this.asistentes, required this.myRsvp});
+
+  factory RsvpResult.fromJson(Map<String, dynamic> json) {
+    return RsvpResult(
+      asistentes: json['asistentes'] is int
+          ? json['asistentes'] as int
+          : int.tryParse(json['asistentes']?.toString() ?? '') ?? 0,
+      myRsvp: json['myRsvp'] == true,
+    );
   }
 }
