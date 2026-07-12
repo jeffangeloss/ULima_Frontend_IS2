@@ -9,7 +9,7 @@ class AsesoriaService {
   Future<List<Asesoria>> fetchAsesorias(String idSeccion) async {
     try {
       final data = await _api.getJson(
-        '/advising/section/$idSeccion',
+        '/course-detail/sections/$idSeccion/advising',
       );
       final List<dynamic> asesoriasRaw = data['asesorias'] ?? [];
 
@@ -28,7 +28,7 @@ class AsesoriaService {
   // Devuelve el conteo autoritativo y el estado tras la operación.
   Future<RsvpResult> confirmarAsistencia(String sessionId) async {
     final data = await _api.postJson(
-      '/advising/$sessionId/rsvp',
+      '/course-detail/advising/$sessionId/rsvp',
       body: const {},
     );
     return RsvpResult.fromJson(data);
@@ -36,7 +36,7 @@ class AsesoriaService {
 
   // HU17: cancela la asistencia del alumno a una asesoría.
   Future<RsvpResult> cancelarAsistencia(String sessionId) async {
-    final data = await _api.deleteJson('/advising/$sessionId/rsvp');
+    final data = await _api.deleteJson('/course-detail/advising/$sessionId/rsvp');
     return RsvpResult.fromJson(data);
   }
 }
