@@ -78,6 +78,13 @@ flutter_launcher_icons:
 # The following section is specific to Flutter packages.
 flutter:
 
+  # Swift Package Manager desactivado a propósito: Flutter 3.44 genera el paquete
+  # SPM raíz con un piso de iOS 13.0 hardcodeado, y Firebase (auth/core/database)
+  # exige 15.0, lo que rompe el build de iOS. Con SPM apagado los plugins pasan por
+  # CocoaPods, que respeta `platform :ios, '15.0'` del Podfile. Ver ios/Podfile.
+  config:
+    enable-swift-package-manager: false
+
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.

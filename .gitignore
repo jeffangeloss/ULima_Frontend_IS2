@@ -52,6 +52,16 @@ app.*.map.json
 # secreta, pass "android"). Da un SHA-1 único para todos los builds debug.
 !/android/app/debug.keystore
 
+# Environment files y secretos (NO versionar)
+.env
+.env.*
+!.env.example
+service-account*.json
+*-firebase-adminsdk-*.json
+**/key.properties
+# Scripts que vuelcan un .env — nunca versionar
+**/test_env.js
+
 # Artefactos de Swift Package Manager (Xcode los regenera)
 ios/**/xcshareddata/swiftpm/
 
