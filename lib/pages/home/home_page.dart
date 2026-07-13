@@ -27,19 +27,23 @@ class _HomePageState extends State<HomePage> {
   late final HomeShellConfig _config = HomeShellConfig.forUser(user);
 
   /// Índice del tab de Horario según el rol del usuario.
-  int get _horarioTabIndex => (user?.isTeacher ?? false) ? 1 : 2;
+  int get _horarioTabIndex => (user?.isTeacher ?? false) ? 2 : 2;
 
   Widget _buildBody() {
     return _config.pages[_currentIndex];
   }
 
   void _onTabTap(int index) {
+    final previous = _currentIndex;
     setState(() {
       _currentIndex = index;
     });
     // Si el usuario cambia al tab de Horario, recargamos los datos
     // para reflejar asesorías creadas o modificadas recientemente.
-    if (index == _horarioTabIndex) {
+    // Para docentes: también recargamos si venían del tab de Asesorías (índice 3).
+    final isTeacher = user?.isTeacher ?? false;
+    final comingFromAsesorias = isTeacher && previous == 3;
+    if (index == _horarioTabIndex || comingFromAsesorias) {
       try {
         Get.find<HorarioController>().reload();
       } catch (_) {
