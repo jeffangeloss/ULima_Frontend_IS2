@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../components/descripcion_cursos/anuncio_card.dart';
+import '../../../components/error_retry.dart';
 import '../../../components/skeleton.dart';
 import '../../../configs/themes.dart';
 import '../../../models/anuncio_model.dart';
@@ -301,12 +302,21 @@ class _StatisticsSection extends StatelessWidget {
               );
             }
 
+            // Falló la carga (no es lo mismo que "sin notas todavía").
+            if (controller.statsError.value && controller.statistics.value == null) {
+              return ErrorRetry(
+                compact: true,
+                title: 'No se pudieron cargar las estadísticas',
+                onRetry: controller.fetchStatistics,
+              );
+            }
+
             final stats = controller.statistics.value;
             if (stats == null || stats.isEmpty) {
               return _InlineEmptyState(
                 icon: LucideIcons.chartColumn,
                 message:
-                    'Aún no hay estadísticas disponibles para esta sección.',
+                    'Aún no hay notas oficiales cargadas para esta sección.',
                 brightness: brightness,
               );
             }

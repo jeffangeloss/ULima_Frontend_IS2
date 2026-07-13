@@ -3,12 +3,15 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import '../../components/skeleton.dart';
+import '../../configs/course_colors.dart';
 import '../../configs/themes.dart';
 import '../../models/official_grades_models.dart';
 import 'teacher_grade_section_controller.dart';
 
 /// Grilla de calificación de una sección: el profesor toca un alumno y pone
 /// sus notas por evaluación. La nota final se calcula por ponderación.
+/// Header con el nombre del curso completo (sin cortes) + color por curso, y
+/// buscador por código/apellido para ubicar al alumno rápido.
 class TeacherGradeSectionPage extends StatelessWidget {
   const TeacherGradeSectionPage({super.key});
 
@@ -16,62 +19,81 @@ class TeacherGradeSectionPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = Get.find<TeacherGradeSectionController>();
     final brightness = Theme.brightnessOf(context);
+    final accent = courseAccentColor(controller.sectionId);
 
     return Scaffold(
       backgroundColor: MaterialTheme.pageBg(brightness),
-      appBar: AppBar(title: Text(controller.title)),
-      body: RefreshIndicator(
-        onRefresh: controller.load,
-        color: MaterialTheme.primaryColor,
-        child: Obx(() {
-          final loading = controller.isLoading.value;
-          final grid = controller.grid.value;
+      appBar: AppBar(title: const Text('Calificar')),
+      body: Obx(() {
+        final loading = controller.isLoading.value;
+        final grid = controller.grid.value;
 
-          if (loading && grid == null) {
-            return const Padding(
-              padding: EdgeInsets.all(16),
-              child: SkeletonCardList(count: 6, showAvatar: true),
-            );
-          }
-          if (controller.loadError.value != null && grid == null) {
-            return _fill(_Empty(icon: Icons.wifi_off, message: controller.loadError.value!, brightness: brightness));
-          }
-          if (grid == null || grid.students.isEmpty) {
-            return _fill(_Empty(
-              icon: Icons.group_outlined,
-              message: 'No hay alumnos matriculados en esta sección.',
+        if (loading && grid == null) {
+          return const Padding(
+            padding: EdgeInsets.all(16),
+            child: SkeletonCardList(count: 6, showAvatar: true),
+          );
+        }
+        if (controller.loadError.value != null && grid == null) {
+          return _fill(_Empty(icon: Icons.wifi_off, message: controller.loadError.value!, brightness: brightness));
+        }
+        if (grid == null || grid.students.isEmpty) {
+          return _fill(_Empty(
+            icon: Icons.group_outlined,
+            message: 'No hay alumnos matriculados en esta sección.',
+            brightness: brightness,
+          ));
+        }
+
+        return Column(
+          children: [
+            _CourseHeader(
+              courseName: controller.courseName,
+              sectionCode: controller.sectionCode,
+              studentCount: grid.students.length,
+              assessmentCount: grid.assessments.length,
+              accent: accent,
               brightness: brightness,
-            ));
-          }
-          return ListView.builder(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
-            itemCount: grid.students.length + 1,
-            itemBuilder: (_, i) {
-              if (i == 0) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Text(
-                    '${grid.students.length} alumnos · ${grid.assessments.length} evaluaciones',
-                    style: TextStyle(fontSize: 13, color: MaterialTheme.textSecondary(brightness)),
+            ),
+            _SearchBar(onChanged: controller.setSearch, brightness: brightness),
+            Expanded(
+              child: Obx(() {
+                final visible = controller.visibleStudents;
+                if (visible.isEmpty) {
+                  return _fill(_Empty(
+                    icon: Icons.search_off,
+                    message: 'Sin resultados para "${controller.search.value}".',
+                    brightness: brightness,
+                  ));
+                }
+                return RefreshIndicator(
+                  onRefresh: controller.load,
+                  color: MaterialTheme.primaryColor,
+                  child: ListView.builder(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 88),
+                    itemCount: visible.length,
+                    itemBuilder: (_, i) {
+                      final student = visible[i];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: _StudentTile(
+                          student: student,
+                          accent: accent,
+                          finalGrade: controller.finalFor(student.enrollmentId),
+                          calificado: controller.hasAnyScore(student.enrollmentId),
+                          brightness: brightness,
+                          onTap: () => _openSheet(context, controller, student, brightness),
+                        ),
+                      );
+                    },
                   ),
                 );
-              }
-              final student = grid.students[i - 1];
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: _StudentTile(
-                  student: student,
-                  finalGrade: controller.finalFor(student.enrollmentId),
-                  calificado: controller.hasAnyScore(student.enrollmentId),
-                  brightness: brightness,
-                  onTap: () => _openSheet(context, controller, student, brightness),
-                ),
-              );
-            },
-          );
-        }),
-      ),
+              }),
+            ),
+          ],
+        );
+      }),
     );
   }
 
@@ -109,9 +131,130 @@ class TeacherGradeSectionPage extends StatelessWidget {
       );
 }
 
+/// Banner del curso: nombre COMPLETO (se ajusta en varias líneas, sin recorte),
+/// sección y conteos. Acento por color del curso.
+class _CourseHeader extends StatelessWidget {
+  const _CourseHeader({
+    required this.courseName,
+    required this.sectionCode,
+    required this.studentCount,
+    required this.assessmentCount,
+    required this.accent,
+    required this.brightness,
+  });
+
+  final String courseName;
+  final String sectionCode;
+  final int studentCount;
+  final int assessmentCount;
+  final Color accent;
+  final Brightness brightness;
+
+  @override
+  Widget build(BuildContext context) {
+    final subtitle = [
+      if (sectionCode.isNotEmpty) 'Sección $sectionCode',
+      '$studentCount alumnos',
+      '$assessmentCount evaluaciones',
+    ].join(' · ');
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: accent.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(Icons.school_rounded, color: accent, size: 24),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  courseName,
+                  // Sin recorte: el nombre largo se ajusta en hasta 3 líneas.
+                  maxLines: 3,
+                  softWrap: true,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    height: 1.2,
+                    color: MaterialTheme.textPrimary(brightness),
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: MaterialTheme.textSecondary(brightness),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Buscador por código o apellido/nombre. Filtra la lista al escribir.
+class _SearchBar extends StatelessWidget {
+  const _SearchBar({required this.onChanged, required this.brightness});
+
+  final ValueChanged<String> onChanged;
+  final Brightness brightness;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: TextField(
+        onChanged: onChanged,
+        textInputAction: TextInputAction.search,
+        style: TextStyle(color: MaterialTheme.textPrimary(brightness)),
+        decoration: InputDecoration(
+          hintText: 'Buscar por código o apellido',
+          prefixIcon: Icon(Icons.search, color: MaterialTheme.textMuted(brightness)),
+          isDense: true,
+          filled: true,
+          fillColor: MaterialTheme.cardBg(brightness),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: MaterialTheme.borderColor(brightness)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: MaterialTheme.primaryColor, width: 1.5),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _StudentTile extends StatelessWidget {
   const _StudentTile({
     required this.student,
+    required this.accent,
     required this.finalGrade,
     required this.calificado,
     required this.brightness,
@@ -119,10 +262,18 @@ class _StudentTile extends StatelessWidget {
   });
 
   final GradingStudent student;
+  final Color accent;
   final double finalGrade;
   final bool calificado;
   final Brightness brightness;
   final VoidCallback onTap;
+
+  String get _initials {
+    final parts = student.fullName.trim().split(RegExp(r'\s+'));
+    if (parts.isEmpty || parts.first.isEmpty) return '?';
+    if (parts.length == 1) return parts.first.characters.first.toUpperCase();
+    return (parts[0].characters.first + parts[1].characters.first).toUpperCase();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -140,9 +291,24 @@ class _StudentTile extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: MaterialTheme.borderColor(brightness)),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           child: Row(
             children: [
+              // Avatar con iniciales en el color del curso (correlación cromática).
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.16),
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  _initials,
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: accent),
+                ),
+              ),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

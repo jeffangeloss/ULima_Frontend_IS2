@@ -562,9 +562,11 @@ class MallaListController extends GetxController {
       discardSimulation();
       Get.snackbar(
         'Simulación guardada',
-        'Tu escenario "¿y si...?" quedó guardado. Tu avance real no cambió.',
+        'Se guardó correctamente.',
         snackPosition: SnackPosition.BOTTOM,
         margin: const EdgeInsets.all(12),
+        duration: const Duration(seconds: 2),
+        icon: const Icon(Icons.check_circle, color: Color(0xFF16A34A)),
       );
     } finally {
       saving.value = false;

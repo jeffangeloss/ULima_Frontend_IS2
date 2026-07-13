@@ -14,19 +14,57 @@ class TeacherGradeSectionController extends GetxController {
 
   late final int sectionId;
   late final String title;
+  late final String courseName;
+  late final String sectionCode;
 
   final grid = Rxn<SectionGrid>();
   final isLoading = false.obs;
   final loadError = RxnString();
   final isSaving = false.obs;
 
+  /// Texto de búsqueda (por código o apellido/nombre del alumno).
+  final search = ''.obs;
+
   @override
   void onInit() {
     super.onInit();
     final args = Get.arguments;
-    sectionId = (args is Map && args['sectionId'] is int) ? args['sectionId'] as int : 0;
-    title = (args is Map && args['title'] is String) ? args['title'] as String : 'Calificar';
+    final map = args is Map ? args : const {};
+    sectionId = map['sectionId'] is int ? map['sectionId'] as int : 0;
+    title = map['title'] is String ? map['title'] as String : 'Calificar';
+    // Nombre y sección por separado; si no vinieran, se derivan del `title`
+    // ("CURSO · SECCION") para no romper llamadas antiguas.
+    final parts = title.split('·');
+    courseName = map['courseName'] is String
+        ? map['courseName'] as String
+        : parts.first.trim();
+    sectionCode = map['sectionCode'] is String
+        ? map['sectionCode'] as String
+        : (parts.length > 1 ? parts.last.trim() : '');
     load();
+  }
+
+  void setSearch(String q) => search.value = q;
+
+  /// Normaliza para comparar sin tildes ni mayúsculas (apellidos con acentos).
+  static String _norm(String s) => s
+      .toLowerCase()
+      .replaceAll(RegExp('[áàä]'), 'a')
+      .replaceAll(RegExp('[éèë]'), 'e')
+      .replaceAll(RegExp('[íìï]'), 'i')
+      .replaceAll(RegExp('[óòö]'), 'o')
+      .replaceAll(RegExp('[úùü]'), 'u')
+      .replaceAll('ñ', 'n');
+
+  /// Alumnos visibles según la búsqueda (código o apellido/nombre).
+  List<GradingStudent> get visibleStudents {
+    final g = grid.value;
+    if (g == null) return const [];
+    final q = _norm(search.value.trim());
+    if (q.isEmpty) return g.students;
+    return g.students
+        .where((s) => _norm(s.fullName).contains(q) || _norm(s.code).contains(q))
+        .toList();
   }
 
   Future<void> load() async {

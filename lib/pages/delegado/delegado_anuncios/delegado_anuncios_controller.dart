@@ -26,6 +26,9 @@ class DelegadoAnunciosController extends GetxController {
   final loadingAnnouncements = false.obs;
   final anunciosPublicados = <Anuncio>[].obs;
   final statistics = Rxn<EstadisticasSeccion>();
+  // Distingue "falló la carga" de "sin datos": la vista muestra un estado de
+  // error con reintentar en vez de estadísticas falsas (ya no hay mock).
+  final statsError = false.obs;
 
   @override
   void onInit() {
@@ -54,6 +57,13 @@ class DelegadoAnunciosController extends GetxController {
       statistics.value = await _statisticsService.fetchSectionStatistics(
         curso.idSeccion,
       );
+      statsError.value = false;
+    } catch (e) {
+      // No relanza: onInit lo llama fire-and-forget. Se marca el error para que
+      // la vista lo muestre en vez de dejar la tarjeta vacía o rota.
+      debugPrint('estadísticas falló: $e');
+      statistics.value = null;
+      statsError.value = true;
     } finally {
       loadingStats.value = false;
     }

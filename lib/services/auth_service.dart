@@ -18,6 +18,20 @@ class AuthService extends GetxService {
   static const String invalidCredentialsMessage =
       'Código o contraseña incorrectos.';
 
+  /// Mapea el código de error del backend (HU01) al mensaje que ve el usuario
+  /// en el login. Puro y testeable: `USER_NOT_FOUND`/`INVALID_PASSWORD` ocultan
+  /// cuál falló (anti-enumeración de cuentas); `NOT_ENROLLED` es específico; y
+  /// cualquier otro código propaga el mensaje del backend.
+  static String loginErrorMessage(String code, String backendMessage) {
+    if (code == 'USER_NOT_FOUND' || code == 'INVALID_PASSWORD') {
+      return invalidCredentialsMessage;
+    }
+    if (code == 'NOT_ENROLLED') {
+      return 'No tienes una matrícula activa.';
+    }
+    return backendMessage;
+  }
+
   final ApiClient _api = ApiClient();
   final Rx<UserModel?> _currentUser = Rx<UserModel?>(null);
   final RxList<Map<String, dynamic>> _carreras = <Map<String, dynamic>>[].obs;
@@ -112,13 +126,7 @@ class AuthService extends GetxService {
       _currentUser.value = user;
       return null;
     } on ApiException catch (e) {
-      if (e.code == 'USER_NOT_FOUND' || e.code == 'INVALID_PASSWORD') {
-        return invalidCredentialsMessage;
-      }
-      if (e.code == 'NOT_ENROLLED') {
-        return 'No tienes una matrícula activa.';
-      }
-      return e.message;
+      return loginErrorMessage(e.code, e.message);
     } finally {
       _loading.value = false;
     }

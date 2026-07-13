@@ -51,16 +51,21 @@ class AppHeader extends StatelessWidget {
                     Obx(() {
                       final hControl = Get.put(HorarioController());
 
-                      return IconButton(
-                        icon: Icon(
-                          hControl.isListView.value
-                              ? Icons.calendar_today
-                              : Icons.format_list_bulleted,
-                          color: colors.onPrimary,
+                      // Mismo formato que la campana (InkWell + icono 28) para
+                      // que el header NO cambie de alto en Horario. Un IconButton
+                      // mide 48 y hacía este header ~18px más alto que los demás.
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 18),
+                        child: InkWell(
+                          onTap: hControl.toggleListView,
+                          child: Icon(
+                            hControl.isListView.value
+                                ? Icons.calendar_today
+                                : Icons.format_list_bulleted,
+                            color: colors.onPrimary,
+                            size: 28,
+                          ),
                         ),
-                        onPressed: () {
-                          hControl.toggleListView();
-                        },
                       );
                     }),
                   if (showAlerts)

@@ -23,7 +23,6 @@ class HorarioController extends GetxController {
   
   // Nuevos estados para el rediseño de Horario (Lista / Calendario)
   final isListView = false.obs;
-  final showAttendance = false.obs;
 
   final _todasLasSecciones = <Map<String, dynamic>>[].obs;
   final ApiClient _api = ApiClient();
@@ -351,10 +350,6 @@ class HorarioController extends GetxController {
 
   void toggleListView() {
     isListView.value = !isListView.value;
-  }
-
-  void toggleAttendance() {
-    showAttendance.value = !showAttendance.value;
   }
 
   List<Map<String, dynamic>> get uniqueEnrolledCourses {

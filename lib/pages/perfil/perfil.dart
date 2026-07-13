@@ -652,6 +652,40 @@ class _ResetPasswordCard extends StatefulWidget {
 class _ResetPasswordCardState extends State<_ResetPasswordCard> {
   bool _sending = false;
 
+  /// Pide confirmación (mismo patrón que "Cerrar sesión") antes de disparar el
+  /// envío del código, para evitar toques accidentales.
+  Future<void> _confirmAndStart(BuildContext context) async {
+    if (_sending) return;
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Restablecer contraseña'),
+        content: const Text(
+          'Te enviaremos un código de verificación a tu correo institucional '
+          'para restablecer tu contraseña. ¿Deseas continuar?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text(
+              'Enviar código',
+              style: TextStyle(
+                color: MaterialTheme.primaryColor,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmar != true) return;
+    await _start();
+  }
+
   Future<void> _start() async {
     final user = AuthService.to.currentUser;
     if (user == null || _sending) return;
@@ -684,7 +718,7 @@ class _ResetPasswordCardState extends State<_ResetPasswordCard> {
     final brightness = Theme.of(context).brightness;
 
     return GestureDetector(
-      onTap: _start,
+      onTap: () => _confirmAndStart(context),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(

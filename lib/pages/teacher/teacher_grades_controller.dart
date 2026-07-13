@@ -37,6 +37,9 @@ class TeacherGradesController extends GetxController {
   void openSection(GradingSection section) {
     Get.toNamed('/teacher-grade-section', arguments: {
       'sectionId': section.sectionId,
+      'courseName': section.courseName,
+      'sectionCode': section.sectionCode,
+      // Se conserva `title` por compatibilidad (fallback en el controller).
       'title': '${section.courseName} · ${section.sectionCode}',
     });
   }

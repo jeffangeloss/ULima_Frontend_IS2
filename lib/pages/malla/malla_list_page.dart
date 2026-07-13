@@ -74,22 +74,101 @@ class MallaListPage extends GetView<MallaListController> {
                 controller.error.value != null ||
                 controller.simulationMode.value;
             if (hidden) return const SizedBox.shrink();
+            // Solo el ícono (matraz), con latido para llamar la atención. Va en
+            // la esquina inferior derecha; la burbuja del chatbot queda a la izq.
             return Positioned(
-              right: 16,
-              bottom: 80,
-              child: FloatingActionButton.extended(
-                onPressed: controller.enterSimulation,
-                backgroundColor: MaterialTheme.primaryColor,
-                foregroundColor: Colors.white,
-                icon: const Icon(Icons.science_outlined),
-                label: const Text(
-                  'Simular mi avance',
-                  style: TextStyle(fontWeight: FontWeight.w800),
-                ),
-              ),
+              right: 18,
+              bottom: 20,
+              child: _PulsingSimFab(onPressed: controller.enterSimulation),
             );
           }),
         ],
+      ),
+    );
+  }
+}
+
+// ── FAB "Simular mi avance" (solo ícono, con latido) ───────────────────────────
+/// Botón compacto: solo el matraz, con un latido suave + halo que crece y se
+/// desvanece para llamar la atención. Respeta el "reduce motion" del sistema.
+class _PulsingSimFab extends StatefulWidget {
+  const _PulsingSimFab({required this.onPressed});
+  final VoidCallback onPressed;
+
+  @override
+  State<_PulsingSimFab> createState() => _PulsingSimFabState();
+}
+
+class _PulsingSimFabState extends State<_PulsingSimFab>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1600))
+      ..repeat();
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final fab = FloatingActionButton(
+      heroTag: 'sim_fab',
+      onPressed: widget.onPressed,
+      backgroundColor: MaterialTheme.primaryColor,
+      foregroundColor: Colors.white,
+      tooltip: 'Simular mi avance',
+      child: const Icon(Icons.science_outlined),
+    );
+
+    // Reduce motion: FAB estático, sin latido.
+    if (MediaQuery.of(context).disableAnimations) return fab;
+
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (context, child) {
+        final t = _c.value; // 0..1
+        final beat = 1.0 + 0.06 * (0.5 - (t - 0.5).abs()) * 2;
+        return SizedBox(
+          width: 56,
+          height: 56,
+          child: Stack(
+            alignment: Alignment.center,
+            clipBehavior: Clip.none,
+            children: [
+              _ring(t),
+              Transform.scale(scale: beat, child: child),
+            ],
+          ),
+        );
+      },
+      child: fab,
+    );
+  }
+
+  Widget _ring(double t) {
+    final scale = 1.0 + t * 0.6;
+    final opacity = ((1.0 - t) * 0.45).clamp(0.0, 1.0);
+    return IgnorePointer(
+      child: Opacity(
+        opacity: opacity,
+        child: Transform.scale(
+          scale: scale,
+          child: Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: MaterialTheme.primaryColor, width: 3),
+            ),
+          ),
+        ),
       ),
     );
   }

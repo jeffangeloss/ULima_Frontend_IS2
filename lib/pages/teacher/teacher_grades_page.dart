@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../components/skeleton.dart';
+import '../../configs/course_colors.dart';
 import '../../configs/themes.dart';
 import '../../models/official_grades_models.dart';
 import 'teacher_grades_controller.dart';
@@ -95,6 +96,8 @@ class _SectionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final textPrimary = MaterialTheme.textPrimary(brightness);
     final textSecondary = MaterialTheme.textSecondary(brightness);
+    // Color por-curso (misma correlación cromática que el horario).
+    final accent = courseAccentColor(section.sectionId);
 
     return Material(
       color: MaterialTheme.cardBg(brightness),
@@ -110,6 +113,16 @@ class _SectionCard extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.menu_book_rounded, color: accent, size: 21),
+              ),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
