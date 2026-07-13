@@ -6,6 +6,7 @@ import 'package:ulima_plus/models/contacto_model.dart';
 import 'package:ulima_plus/models/docente_model.dart';
 import 'package:ulima_plus/models/seccion_model.dart';
 import 'package:ulima_plus/services/anuncio_service.dart';
+import 'package:ulima_plus/services/api_client.dart';
 import 'package:ulima_plus/services/asesoria_service.dart';
 import 'package:ulima_plus/services/contacto_service.dart';
 import 'package:ulima_plus/services/seccion_service.dart';
@@ -30,6 +31,13 @@ class DescripCursosController extends GetxController {
   Rxn<Docente> jpContacto = Rxn<Docente>(); // HU18: jefe de práctica (0 o 1)
   RxInt selectedTab = 0.obs;
   RxBool isLoading = false.obs;
+
+  // Error por-pestaña: distingue "falló la carga" de "sin datos" (antes un
+  // fallo del endpoint se veía como pestaña vacía, sin pista del error).
+  // Cada tab muestra un ErrorRetry cuando su flag es true y su lista está vacía.
+  final RxBool anunciosError = false.obs;
+  final RxBool asesoriasError = false.obs;
+  final RxBool contactosError = false.obs;
 
   Seccion? getSeccionPorId(String id) {
     return secciones.firstWhereOrNull((s) => s.idSeccion == id);
@@ -62,29 +70,57 @@ class DescripCursosController extends GetxController {
       seccionActual.value = seccion;
       secciones.value = [seccion];
 
-      // Cada tab se carga por separado: si UNO falla, los otros igual cargan
-      // (antes un fallo en cualquiera disparaba limpiarDatos y borraba todo).
+      // Cada tab se carga por separado y captura su propio error: si UNO falla,
+      // los otros igual cargan y el que falló muestra su ErrorRetry. Ninguno
+      // relanza, así que el Future.wait nunca rechaza por un tab caído.
       await Future.wait([
-        fetchAnuncios(idSeccion).catchError((e) => debugPrint('anuncios falló: $e')),
-        fetchAsesorias(idSeccion).catchError((e) => debugPrint('asesorías falló: $e')),
-        fetchContactos(idSeccion).catchError((e) => debugPrint('contactos falló: $e')),
+        fetchAnuncios(idSeccion),
+        fetchAsesorias(idSeccion),
+        fetchContactos(idSeccion),
       ]);
     } catch (e) {
+      // Sólo llega aquí un fallo de la carga PRINCIPAL (la sección en sí), no
+      // de las pestañas. Mostrar una pista en vez de una pantalla vacía muda.
       debugPrint('Error cargando datos del curso: $e');
       limpiarDatos();
+      Get.snackbar(
+        'No se pudo abrir el curso',
+        'Hubo un problema al cargar el detalle. Revisa tu conexión e inténtalo de nuevo.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
     } finally {
       isLoading.value = false;
     }
   }
 
+  // Un 403 es un límite de permisos (p.ej. un docente que abre una pantalla de
+  // alumno), no un fallo que tenga sentido reintentar → se trata como "sin datos"
+  // en vez de un error con "Reintentar". El resto (404 por drift de endpoint,
+  // 5xx, red) SÍ se surfacea con ErrorRetry para no volver a ocultar fallos.
+  bool _debeMostrarError(Object e) =>
+      !(e is ApiException && e.statusCode == 403);
+
+  // El flag de error se limpia al ÉXITO (no antes del await): así, durante un
+  // reintento, se mantiene el ErrorRetry visible en vez de parpadear al estado
+  // vacío engañoso y luego volver al error.
   Future<void> fetchAnuncios(String idSeccion) async {
-    final data = await _anuncioService.fetchAnuncios(idSeccion);
-    anuncios.value = data;
+    try {
+      anuncios.value = await _anuncioService.fetchAnuncios(idSeccion);
+      anunciosError.value = false;
+    } catch (e) {
+      debugPrint('anuncios falló: $e');
+      anunciosError.value = _debeMostrarError(e);
+    }
   }
 
   Future<void> fetchAsesorias(String idSeccion) async {
-    final data = await _asesoriaService.fetchAsesorias(idSeccion);
-    asesorias.value = data;
+    try {
+      asesorias.value = await _asesoriaService.fetchAsesorias(idSeccion);
+      asesoriasError.value = false;
+    } catch (e) {
+      debugPrint('asesorías falló: $e');
+      asesoriasError.value = _debeMostrarError(e);
+    }
   }
 
   // HU17: confirma/cancela la asistencia con actualización optimista del contador.
@@ -137,10 +173,16 @@ class DescripCursosController extends GetxController {
   }
 
   Future<void> fetchContactos(String idSeccion) async {
-    final data = await _contactoService.fetchContactos(idSeccion);
-    docenteContacto.value = data['docente'] as Docente?;
-    jpContacto.value = data['jefePractica'] as Docente?;
-    alumnosContacto.value = List<ContactoCurso>.from(data['alumnos'] ?? []);
+    try {
+      final data = await _contactoService.fetchContactos(idSeccion);
+      docenteContacto.value = data['docente'] as Docente?;
+      jpContacto.value = data['jefePractica'] as Docente?;
+      alumnosContacto.value = List<ContactoCurso>.from(data['alumnos'] ?? []);
+      contactosError.value = false;
+    } catch (e) {
+      debugPrint('contactos falló: $e');
+      contactosError.value = _debeMostrarError(e);
+    }
   }
 
   void limpiarDatos() {
@@ -151,5 +193,8 @@ class DescripCursosController extends GetxController {
     alumnosContacto.clear();
     docenteContacto.value = null;
     jpContacto.value = null;
+    anunciosError.value = false;
+    asesoriasError.value = false;
+    contactosError.value = false;
   }
 }

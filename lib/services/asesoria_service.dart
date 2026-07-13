@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import '../models/asesoria_model.dart';
 import '../models/docente_model.dart';
 import 'api_client.dart';
@@ -6,22 +5,21 @@ import 'api_client.dart';
 class AsesoriaService {
   final ApiClient _api = ApiClient();
 
+  // No atrapa el error: si la petición falla, propaga la ApiException para que
+  // el controller la distinga de "sin asesorías" y muestre un estado de error
+  // con reintentar (antes un fallo se veía como lista vacía). El caller la
+  // maneja por-pestaña sin tumbar el resto del detalle.
   Future<List<Asesoria>> fetchAsesorias(String idSeccion) async {
-    try {
-      final data = await _api.getJson(
-        '/advising/section/$idSeccion',
-      );
-      final List<dynamic> asesoriasRaw = data['asesorias'] ?? [];
+    final data = await _api.getJson(
+      '/advising/section/$idSeccion',
+    );
+    final List<dynamic> asesoriasRaw = data['asesorias'] ?? [];
 
-      return asesoriasRaw.map((a) {
-        final json = Map<String, dynamic>.from(a as Map);
-        final docenteJson = Map<String, dynamic>.from(json['docente'] as Map);
-        return Asesoria.fromJson(json, docente: Docente.fromJson(docenteJson));
-      }).toList();
-    } catch (e) {
-      debugPrint('Error cargando asesorias: $e');
-      return [];
-    }
+    return asesoriasRaw.map((a) {
+      final json = Map<String, dynamic>.from(a as Map);
+      final docenteJson = Map<String, dynamic>.from(json['docente'] as Map);
+      return Asesoria.fromJson(json, docente: Docente.fromJson(docenteJson));
+    }).toList();
   }
 
   // HU17: confirma la asistencia del alumno a una asesoría.

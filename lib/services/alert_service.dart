@@ -13,9 +13,15 @@ class AlertService extends GetxService {
   final ApiClient _api = ApiClient();
   final RxList<AlertModel> _alerts = <AlertModel>[].obs;
   final RxBool _loading = false.obs;
+  // Distingue "falló la carga" de "sin alertas": el buzón mostraba "¡Todo al
+  // día!" incluso cuando la petición fallaba (ver docs/AUDITORIA_TECNICA.md §6.1).
+  // Se mantiene el catch (fetchAlerts se llama fire-and-forget desde el home,
+  // así que nunca debe propagar) y se expone el estado de error a la vista.
+  final RxBool _hasError = false.obs;
 
   List<AlertModel> get alerts => _alerts;
   bool get isLoading => _loading.value;
+  bool get hasError => _hasError.value;
   int get unreadCount => _alerts.where((a) => !a.isRead).length;
 
   Future<void> fetchAlerts() async {
@@ -24,6 +30,7 @@ class AlertService extends GetxService {
     if (user == null || user.isTeacher) return;
 
     _loading.value = true;
+    _hasError.value = false;
     try {
       final response = await _api.getJson('/alerts/me');
       final List<dynamic> listRaw = response['alerts'] ?? [];
@@ -33,6 +40,7 @@ class AlertService extends GetxService {
       _alerts.assignAll(loadedAlerts);
     } catch (e) {
       debugPrint('Error fetching alerts: $e');
+      _hasError.value = true;
     } finally {
       _loading.value = false;
     }

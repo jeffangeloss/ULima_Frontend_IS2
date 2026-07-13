@@ -27,25 +27,24 @@ class CoursesService {
   bool _isLoaded = false;
   String? _loadedForCode;
 
+  // No atrapa el error: propaga la ApiException para que el controller distinga
+  // "falló la carga" de "no tienes cursos" y muestre una pista, en vez de una
+  // calculadora vacía sin explicación (ver docs/AUDITORIA_TECNICA.md §6.1). Si
+  // falla, `_isLoaded` queda en false, así que la próxima llamada reintenta.
   Future<void> loadCoursesData() async {
-    try {
-      final code = AuthService.to.currentUser?.code;
-      if (_isLoaded && code == _loadedForCode) return;
+    final code = AuthService.to.currentUser?.code;
+    if (_isLoaded && code == _loadedForCode) return;
 
-      final jsonData = await apiClient.getJson(
-        '/grades/me/courses${code == null ? '' : '?code=$code'}',
-      );
-      final cursosList = jsonData['cursos'] as List<dynamic>? ?? [];
+    final jsonData = await apiClient.getJson(
+      '/grades/me/courses${code == null ? '' : '?code=$code'}',
+    );
+    final cursosList = jsonData['cursos'] as List<dynamic>? ?? [];
 
-      _coursesData = List<Map<String, dynamic>>.from(cursosList);
-      _loadedForCode = code;
+    _coursesData = List<Map<String, dynamic>>.from(cursosList);
+    _loadedForCode = code;
 
-      _isLoaded = true;
-      debugPrint('Datos de cursos cargados: ${_coursesData.length} cursos');
-    } catch (e) {
-      debugPrint('Error al cargar datos de cursos: $e');
-      clear();
-    }
+    _isLoaded = true;
+    debugPrint('Datos de cursos cargados: ${_coursesData.length} cursos');
   }
 
   void clear() {

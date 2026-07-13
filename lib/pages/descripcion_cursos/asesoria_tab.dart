@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../../components/descripcion_cursos/asesoria_card.dart';
 import '../../components/descripcion_cursos/empty_tab_state.dart';
+import '../../components/error_retry.dart';
 import '../../components/skeleton.dart';
 import 'descrip_cursos_controller.dart';
 
@@ -19,6 +20,15 @@ class AsesoriasTab extends StatelessWidget {
           count: 3,
           padding: EdgeInsets.fromLTRB(16, 4, 16, 16),
           showAvatar: false,
+        );
+      }
+      // Un fallo de carga se muestra como error con reintentar, no como
+      // "no hay asesorías" (que engañaba: parecía que la sección no tenía).
+      if (control.asesoriasError.value && control.asesorias.isEmpty) {
+        return ErrorRetry(
+          compact: true,
+          title: 'No se pudieron cargar las asesorías',
+          onRetry: () => control.fetchAsesorias(idSeccion),
         );
       }
       if (control.asesorias.isEmpty) {

@@ -4,6 +4,7 @@ import 'package:ulima_plus/pages/descripcion_cursos/descrip_cursos_controller.da
 
 import '../../components/descripcion_cursos/anuncio_card.dart';
 import '../../components/descripcion_cursos/empty_tab_state.dart';
+import '../../components/error_retry.dart';
 import '../../components/skeleton.dart';
 
 class AnunciosTab extends StatelessWidget {
@@ -19,6 +20,13 @@ class AnunciosTab extends StatelessWidget {
           count: 3,
           padding: EdgeInsets.fromLTRB(16, 4, 16, 16),
           showAvatar: false,
+        );
+      }
+      if (control.anunciosError.value && control.anuncios.isEmpty) {
+        return ErrorRetry(
+          compact: true,
+          title: 'No se pudieron cargar los anuncios',
+          onRetry: () => control.fetchAnuncios(idSeccion),
         );
       }
       if (control.anuncios.isEmpty) {
