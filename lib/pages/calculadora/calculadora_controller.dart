@@ -9,6 +9,12 @@ import '../../services/api_client.dart';
 class CalculadoraController extends GetxController {
   late var cursos = <Map<String, dynamic>>[].obs;
 
+  // Distingue "falló la carga de cursos" de "aún no registras notas": antes un
+  // fallo del endpoint se veía igual que la calculadora vacía, sin pista del
+  // error (ver docs/AUDITORIA_TECNICA.md §6.1). La vista muestra un ErrorRetry
+  // cuando esto es true y no hay cursos cargados.
+  final RxBool cargaError = false.obs;
+
   late EvaluationSyllabusService _syllabusService;
   late CoursesService _coursesService;
   late ApiClient _api;
@@ -37,6 +43,9 @@ class CalculadoraController extends GetxController {
       debugPrint('Error al cargar datos del silabo: $e');
     }
   }
+
+  /// Reintenta la carga de cursos (botón "Reintentar" del estado de error).
+  void recargar() => _inicializarCursos();
 
   void _inicializarCursos() async {
     try {
@@ -97,11 +106,15 @@ class CalculadoraController extends GetxController {
       for (int i = 0; i < cursos.length; i++) {
         await _calcularPromedio(i);
       }
+      // Limpiar el error al ÉXITO (no antes del await): durante un reintento se
+      // mantiene el ErrorRetry hasta que la carga vuelve a completar bien.
+      cargaError.value = false;
       debugPrint(
         'Cursos y secciones cargados correctamente: ${cursos.length} secciones.',
       );
     } catch (e) {
       debugPrint('Error al inicializar cursos: $e');
+      cargaError.value = true;
     }
   }
 

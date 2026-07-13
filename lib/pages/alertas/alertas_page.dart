@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:ulima_plus/components/error_retry.dart';
 import 'package:ulima_plus/components/skeleton.dart';
 import 'package:ulima_plus/configs/themes.dart';
 import 'package:ulima_plus/models/alert_model.dart';
@@ -145,6 +146,16 @@ class _AlertasPageState extends State<AlertasPage> {
         }
 
         final alerts = AlertService.to.alerts;
+
+        // Un fallo de carga se muestra como error con reintentar, no como
+        // "¡Todo al día!" (que hacía parecer que no había alertas cuando en
+        // realidad la petición falló).
+        if (AlertService.to.hasError && alerts.isEmpty) {
+          return ErrorRetry(
+            title: 'No se pudieron cargar tus alertas',
+            onRetry: () => AlertService.to.fetchAlerts(),
+          );
+        }
 
         if (alerts.isEmpty) {
           return Center(

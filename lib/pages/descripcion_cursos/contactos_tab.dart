@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../components/descripcion_cursos/contacto_card.dart';
+import '../../components/error_retry.dart';
 import '../../components/networking/networking_card_preview.dart';
 import '../../components/skeleton.dart';
 import '../../models/networking_model.dart';
@@ -24,6 +25,17 @@ class ContactosTab extends StatelessWidget {
           control.docenteContacto.value == null &&
           control.alumnosContacto.isEmpty) {
         return const SkeletonCardList(count: 4, padding: EdgeInsets.all(16));
+      }
+      // Un fallo de carga se muestra como error con reintentar, no como una
+      // lista de contactos vacía (que parecía una sección sin alumnos/docente).
+      if (control.contactosError.value &&
+          control.docenteContacto.value == null &&
+          control.alumnosContacto.isEmpty) {
+        return ErrorRetry(
+          compact: true,
+          title: 'No se pudieron cargar los contactos',
+          onRetry: () => control.fetchContactos(idSeccion),
+        );
       }
       return ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),

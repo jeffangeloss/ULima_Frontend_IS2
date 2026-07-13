@@ -17,7 +17,25 @@ class MisNotasPage extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: MaterialTheme.pageBg(brightness),
-      appBar: AppBar(title: const Text('Notas oficiales')),
+      appBar: AppBar(
+        title: const Text('Notas oficiales'),
+        // Botón de refrescar: reconsulta al backend por si el profesor acaba de
+        // publicar una nota (además del pull-to-refresh). Muestra un spinner
+        // mientras carga para dar feedback de que está actualizando.
+        actions: [
+          Obx(() => IconButton(
+                icon: controller.isLoading.value
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh),
+                tooltip: 'Actualizar notas',
+                onPressed: controller.isLoading.value ? null : controller.load,
+              )),
+        ],
+      ),
       body: RefreshIndicator(
         onRefresh: controller.load,
         color: MaterialTheme.primaryColor,

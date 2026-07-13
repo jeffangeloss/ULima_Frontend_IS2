@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../components/calculadora/curso_card.dart';
 import '../../components/calculadora/add_score.dart';
+import '../../components/error_retry.dart';
 import 'calculadora_controller.dart';
 
 class CalculadoraPage extends GetView<CalculadoraController> {
@@ -65,6 +66,15 @@ class CalculadoraPage extends GetView<CalculadoraController> {
 
           Expanded(
             child: Obx(() {
+              // Si la carga de cursos falló y no hay nada cargado, mostrar el
+              // error con reintentar en vez del vacío "No hay notas".
+              if (controller.cargaError.value && controller.cursos.isEmpty) {
+                return ErrorRetry(
+                  title: 'No se pudieron cargar tus cursos',
+                  onRetry: controller.recargar,
+                );
+              }
+
               final cursosConNotas = controller.cursos
                   .where(
                     (curso) => (curso['notas'] as List?)?.isNotEmpty ?? false,

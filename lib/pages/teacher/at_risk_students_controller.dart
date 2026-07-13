@@ -12,6 +12,9 @@ class AtRiskStudentsController extends GetxController {
   final RxList<AtRiskStudent> allStudents = <AtRiskStudent>[].obs;
   final RxList<AtRiskStudent> filteredStudents = <AtRiskStudent>[].obs;
   final RxBool isLoading = true.obs;
+  // Distingue "falló la carga" de "sección sin alumnos" (HU22): antes un fallo
+  // del endpoint se veía como "No se encontraron alumnos" (falso negativo).
+  final RxBool loadError = false.obs;
   final RxString searchQuery = ''.obs;
   final RxString courseName = ''.obs;
   final RxString sectionCode = ''.obs;
@@ -40,12 +43,17 @@ class AtRiskStudentsController extends GetxController {
       final students = await _service.fetchAttendanceRisk(sectionId);
       allStudents.value = students;
       _applyFilter();
+      loadError.value = false;
     } catch (e) {
       debugPrint('Error loading at-risk students: $e');
+      loadError.value = true;
     } finally {
       isLoading.value = false;
     }
   }
+
+  /// Reintenta la carga (botón "Reintentar" del estado de error).
+  Future<void> retry() => loadData(_sectionId);
 
   @override
   Future<void> refresh() async {

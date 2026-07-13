@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:ulima_plus/components/error_retry.dart';
 import 'package:ulima_plus/configs/themes.dart';
 import 'package:ulima_plus/models/at_risk_student_model.dart';
 import 'package:ulima_plus/pages/teacher/at_risk_students_controller.dart';
@@ -182,6 +183,16 @@ class _AtRiskStudentsPageState extends State<AtRiskStudentsPage> {
             child: Obx(() {
               if (controller.isLoading.value && controller.allStudents.isEmpty) {
                 return const Center(child: CircularProgressIndicator());
+              }
+
+              // Un fallo del endpoint se muestra como error con reintentar, no
+              // como "No se encontraron alumnos" (falso negativo: parecía una
+              // sección sin alumnos cuando en realidad la carga HU22 falló).
+              if (controller.loadError.value && controller.allStudents.isEmpty) {
+                return ErrorRetry(
+                  title: 'No se pudo cargar la lista de alumnos',
+                  onRetry: controller.retry,
+                );
               }
 
               final displayStudents = controller.filteredStudents;

@@ -14,7 +14,12 @@ class AppHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final showAlerts = !(AuthService.to.currentUser?.isTeacher ?? false);
+    // El header ULIMA++ (campana de alertas y toggle de horario lista/calendario)
+    // es propio del ALUMNO. El docente reusa este shell, así que ambos controles
+    // se ocultan para él (el docente recibe 403 en /alerts/me y su horario es otra
+    // vista): así no le aparecen íconos de alumno arriba a la derecha.
+    final isTeacher = AuthService.to.currentUser?.isTeacher ?? false;
+    final showAlerts = !isTeacher;
 
     return Container(
       padding: const EdgeInsets.only(top: 50, left: 20, right: 20, bottom: 20),
@@ -42,7 +47,7 @@ class AppHeader extends StatelessWidget {
 
               Row(
                 children: [
-                  if (showScheduleToggle)
+                  if (showScheduleToggle && !isTeacher)
                     Obx(() {
                       final hControl = Get.put(HorarioController());
 

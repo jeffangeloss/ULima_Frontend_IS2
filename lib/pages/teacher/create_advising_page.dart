@@ -143,10 +143,29 @@ class CreateAdvisingPage extends StatelessWidget {
               // 5. Modalidad
               label('Modalidad'),
               SegmentedButton<String>(
+                // Sin el check de selección (el fondo naranja ya indica la
+                // opción elegida): así "Presencial" + ✓ deja de desbordar y
+                // partirse en dos líneas. Padding/densidad reducidos y softWrap
+                // desactivado para que las 3 etiquetas quepan en una sola línea.
+                showSelectedIcon: false,
+                style: SegmentedButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 12),
+                  textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
                 segments: const [
-                  ButtonSegment(value: 'classroom', label: Text('Presencial')),
-                  ButtonSegment(value: 'virtual', label: Text('Virtual')),
-                  ButtonSegment(value: 'hybrid', label: Text('Híbrida')),
+                  ButtonSegment(
+                    value: 'classroom',
+                    label: Text('Presencial', softWrap: false, overflow: TextOverflow.fade),
+                  ),
+                  ButtonSegment(
+                    value: 'virtual',
+                    label: Text('Virtual', softWrap: false, overflow: TextOverflow.fade),
+                  ),
+                  ButtonSegment(
+                    value: 'hybrid',
+                    label: Text('Híbrida', softWrap: false, overflow: TextOverflow.fade),
+                  ),
                 ],
                 selected: {c.modality.value},
                 onSelectionChanged: (s) => c.modality.value = s.first,
