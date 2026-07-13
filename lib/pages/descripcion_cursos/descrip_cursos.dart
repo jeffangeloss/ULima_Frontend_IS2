@@ -233,7 +233,10 @@ class DescripCursosPage extends StatelessWidget {
       bool isSelected = control.selectedTab.value == index;
       return Expanded(
         child: InkWell(
-          onTap: () => control.selectedTab.value = index,
+          onTap: () {
+            control.selectedTab.value = index;
+            if (index == 2) control.fetchContactos(idSeccion);
+          },
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 12),
             decoration: BoxDecoration(
@@ -350,17 +353,37 @@ class DescripCursosPage extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: const [
-                              SkeletonBox(width: 140, height: 20, borderRadius: 6),
+                              SkeletonBox(
+                                width: 140,
+                                height: 20,
+                                borderRadius: 6,
+                              ),
                               SizedBox(height: 14),
-                              SkeletonBox(width: 110, height: 14, borderRadius: 6),
+                              SkeletonBox(
+                                width: 110,
+                                height: 14,
+                                borderRadius: 6,
+                              ),
                               SizedBox(height: 10),
-                              SkeletonBox(width: 110, height: 14, borderRadius: 6),
+                              SkeletonBox(
+                                width: 110,
+                                height: 14,
+                                borderRadius: 6,
+                              ),
                               SizedBox(height: 14),
-                              SkeletonBox(width: 90, height: 16, borderRadius: 6),
+                              SkeletonBox(
+                                width: 90,
+                                height: 16,
+                                borderRadius: 6,
+                              ),
                             ],
                           ),
                         ),
-                        const SkeletonBox(width: 90, height: 90, borderRadius: 45),
+                        const SkeletonBox(
+                          width: 90,
+                          height: 90,
+                          borderRadius: 45,
+                        ),
                       ],
                     ),
                   ),
@@ -368,11 +391,17 @@ class DescripCursosPage extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Row(
                       children: const [
-                        Expanded(child: SkeletonBox(height: 28, borderRadius: 8)),
+                        Expanded(
+                          child: SkeletonBox(height: 28, borderRadius: 8),
+                        ),
                         SizedBox(width: 12),
-                        Expanded(child: SkeletonBox(height: 28, borderRadius: 8)),
+                        Expanded(
+                          child: SkeletonBox(height: 28, borderRadius: 8),
+                        ),
                         SizedBox(width: 12),
-                        Expanded(child: SkeletonBox(height: 28, borderRadius: 8)),
+                        Expanded(
+                          child: SkeletonBox(height: 28, borderRadius: 8),
+                        ),
                       ],
                     ),
                   ),

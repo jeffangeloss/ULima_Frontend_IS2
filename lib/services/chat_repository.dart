@@ -2,7 +2,9 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import '../models/message.dart';
+import '../models/networking_model.dart';
 import 'api_client.dart';
+import 'networking_service.dart';
 
 class ChatSession {
   const ChatSession({
@@ -45,6 +47,8 @@ abstract class ChatRepositoryContract {
   Future<ChatSession> signInWithCustomToken(String sectionId);
   Stream<List<ChatMessage>> getMessages(String sectionId);
   Future<void> sendMessage(String sectionId, String text, ChatSession session);
+  Future<void> sendNetworkingCard(String sectionId, ChatSession session);
+  Future<PublicNetworkingCardDto> fetchNetworkingCard(int userId);
 
   /// HU23: elimina (borrado suave) un mensaje. Va por el backend (teacher-only,
   /// escribe la lápida con Admin SDK); las reglas RTDB no permiten borrar desde
@@ -56,6 +60,7 @@ class ChatRepository implements ChatRepositoryContract {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseDatabase _database = FirebaseDatabase.instance;
   final ApiClient _apiClient = ApiClient();
+  final NetworkingService _networkingService = NetworkingService();
 
   @override
   Future<ChatSession> signInWithCustomToken(String sectionId) async {
@@ -138,9 +143,46 @@ class ChatRepository implements ChatRepositoryContract {
   }
 
   @override
+  Future<void> sendNetworkingCard(String sectionId, ChatSession session) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null || user.uid != session.uid) {
+        throw Exception("No authenticated Firebase chat user.");
+      }
+
+      final ownerId = int.tryParse(session.uid);
+      if (ownerId == null) {
+        throw Exception("Invalid networking owner.");
+      }
+
+      final ref = _database.ref('sections/$sectionId/messages').push();
+      await ref.set({
+        'senderId': user.uid,
+        'senderName': session.displayName,
+        'senderRole': session.role,
+        'senderRoleLabel': session.roleLabel,
+        'moderator': session.isModerator,
+        'weight': session.weight,
+        'body': '${ChatMessage.networkingBodyPrefix}$ownerId',
+        'createdAt': ServerValue.timestamp,
+      });
+    } catch (e) {
+      debugPrint("Error sending networking card: $e");
+      rethrow;
+    }
+  }
+
+  @override
+  Future<PublicNetworkingCardDto> fetchNetworkingCard(int userId) {
+    return _networkingService.fetchVisibleByUserId(userId);
+  }
+
+  @override
   Future<void> deleteMessage(String sectionId, String messageId) async {
     // El borrado lo hace el backend (verifica que sea el profesor de la sección
     // y escribe la lápida con Admin SDK). El stream de RTDB refleja el cambio.
-    await _apiClient.deleteJson('/chat/sections/$sectionId/messages/$messageId');
+    await _apiClient.deleteJson(
+      '/chat/sections/$sectionId/messages/$messageId',
+    );
   }
 }

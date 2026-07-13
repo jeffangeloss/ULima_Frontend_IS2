@@ -1,5 +1,6 @@
 import 'package:ulima_plus/models/contacto_model.dart';
 import 'package:ulima_plus/models/docente_model.dart';
+import 'package:ulima_plus/models/networking_model.dart';
 import 'package:ulima_plus/models/user_model.dart';
 
 import 'api_client.dart';
@@ -9,7 +10,7 @@ class ContactoService {
 
   // No atrapa el error: propaga la ApiException para que el caller distinga
   // "falló la carga" de "sin contactos" (ver docs/AUDITORIA_TECNICA.md §6.1).
-  // Los callers (detalle de curso, horario) ya la manejan por-sección.
+  // Incluye el carnet de networking (opt-in) de cada contacto.
   Future<Map<String, dynamic>> fetchContactos(String idSeccion) async {
     final data = await _api.getJson(
       '/course-detail/sections/$idSeccion/contacts',
@@ -31,6 +32,7 @@ class ContactoService {
           Map<String, dynamic>.from(json['user'] as Map),
         ),
         roleInSection: json['roleInSection']?.toString() ?? 'estudiante',
+        networking: _parseNetworking(json['networking']),
       );
     }).toList();
 
@@ -46,7 +48,11 @@ class ContactoService {
       return compare;
     });
 
-    return {'docente': docente, 'jefePractica': jefePractica, 'alumnos': contactos};
+    return {
+      'docente': docente,
+      'jefePractica': jefePractica,
+      'alumnos': contactos,
+    };
   }
 
   int _rolePriority(String role) {
@@ -57,6 +63,15 @@ class ContactoService {
         return 1;
       default:
         return 2;
+    }
+  }
+
+  NetworkingCardDto? _parseNetworking(dynamic value) {
+    if (value is! Map) return null;
+    try {
+      return NetworkingCardDto.fromJson(Map<String, dynamic>.from(value));
+    } on FormatException {
+      return null;
     }
   }
 }

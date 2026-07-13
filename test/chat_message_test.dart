@@ -37,20 +37,36 @@ void main() {
     expect(message.text, 'Mensaje antiguo');
   });
 
-  test('deriva label/peso/moderador de cada rol cuando no vienen en el mapa', () {
-    ChatMessage soloRol(String role) =>
-        ChatMessage.fromMap('x', {'senderRole': role, 'body': 'hola'});
+  test('parsea mensaje especial de carnet de networking', () {
+    final message = ChatMessage.fromMap('m3', {
+      'senderId': '4',
+      'senderName': 'Melissa Ruiz',
+      'body': '${ChatMessage.networkingBodyPrefix}4',
+      'createdAt': 1783573983742,
+    });
 
-    expect(soloRol('teacher').senderRoleLabel, 'Profesor');
-    expect(soloRol('teacher').weight, 100);
-    expect(soloRol('jp').weight, 90);
-    expect(soloRol('jp').isModerator, isTrue);
-    expect(soloRol('delegate').weight, 70);
-    expect(soloRol('subdelegate').weight, 60);
-    expect(soloRol('subdelegate').isModerator, isTrue);
-    expect(soloRol('student').weight, 10);
-    expect(soloRol('student').isModerator, isFalse);
+    expect(message.isNetworkingCard, isTrue);
+    expect(message.networkingOwnerId, 4);
+    expect(message.messageType, 'networking_card');
   });
+
+  test(
+    'deriva label/peso/moderador de cada rol cuando no vienen en el mapa',
+    () {
+      ChatMessage soloRol(String role) =>
+          ChatMessage.fromMap('x', {'senderRole': role, 'body': 'hola'});
+
+      expect(soloRol('teacher').senderRoleLabel, 'Profesor');
+      expect(soloRol('teacher').weight, 100);
+      expect(soloRol('jp').weight, 90);
+      expect(soloRol('jp').isModerator, isTrue);
+      expect(soloRol('delegate').weight, 70);
+      expect(soloRol('subdelegate').weight, 60);
+      expect(soloRol('subdelegate').isModerator, isTrue);
+      expect(soloRol('student').weight, 10);
+      expect(soloRol('student').isModerator, isFalse);
+    },
+  );
 
   test('el flag moderator explícito manda aunque el rol sea alumno', () {
     final m = ChatMessage.fromMap('x', {
@@ -69,25 +85,40 @@ void main() {
     expect(m.senderRoleLabel, 'Alumno');
   });
 
-  test('createdAt: acepta epoch millis, ISO string y cae a "ahora" si falta', () {
-    final ms = ChatMessage.fromMap('a', {'body': 'x', 'createdAt': 1783573983742});
-    expect(ms.createdAt, DateTime.fromMillisecondsSinceEpoch(1783573983742));
+  test(
+    'createdAt: acepta epoch millis, ISO string y cae a "ahora" si falta',
+    () {
+      final ms = ChatMessage.fromMap('a', {
+        'body': 'x',
+        'createdAt': 1783573983742,
+      });
+      expect(ms.createdAt, DateTime.fromMillisecondsSinceEpoch(1783573983742));
 
-    final iso = ChatMessage.fromMap('b', {'body': 'x', 'createdAt': '2026-07-09T12:00:00.000Z'});
-    expect(iso.createdAt, DateTime.parse('2026-07-09T12:00:00.000Z'));
+      final iso = ChatMessage.fromMap('b', {
+        'body': 'x',
+        'createdAt': '2026-07-09T12:00:00.000Z',
+      });
+      expect(iso.createdAt, DateTime.parse('2026-07-09T12:00:00.000Z'));
 
-    final antes = DateTime.now();
-    final sinFecha = ChatMessage.fromMap('c', {'body': 'x'});
-    expect(sinFecha.createdAt.isBefore(antes.subtract(const Duration(seconds: 1))), isFalse);
-  });
+      final antes = DateTime.now();
+      final sinFecha = ChatMessage.fromMap('c', {'body': 'x'});
+      expect(
+        sinFecha.createdAt.isBefore(antes.subtract(const Duration(seconds: 1))),
+        isFalse,
+      );
+    },
+  );
 
-  test('campos ausentes usan defaults seguros (senderName, body, senderId)', () {
-    final m = ChatMessage.fromMap('vacio', {});
-    expect(m.senderName, 'Participante');
-    expect(m.body, '');
-    expect(m.senderId, '');
-    expect(m.senderRole, 'student');
-  });
+  test(
+    'campos ausentes usan defaults seguros (senderName, body, senderId)',
+    () {
+      final m = ChatMessage.fromMap('vacio', {});
+      expect(m.senderName, 'Participante');
+      expect(m.body, '');
+      expect(m.senderId, '');
+      expect(m.senderRole, 'student');
+    },
+  );
 
   test('los mensajes se ordenan cronológicamente por timestamp', () {
     final msgs = [

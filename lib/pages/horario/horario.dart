@@ -750,6 +750,7 @@ class _TeacherCourseDetailSheetState extends State<_TeacherCourseDetailSheet> {
   }
 
   Future<void> _loadDetails() async {
+    final isTeacher = AuthService.to.currentUser?.isTeacher ?? false;
     try {
       // Cada llamada se blinda por separado: si UNA falla, devuelve vacío y la
       // pantalla igual carga lo que sí pudo (antes un solo 404 tumbaba todo el
@@ -760,20 +761,25 @@ class _TeacherCourseDetailSheetState extends State<_TeacherCourseDetailSheet> {
         debugPrint('detalle: contactos falló: $e');
         return <String, dynamic>{};
       });
-      final assessmentsFuture = ApiClient()
-          .getJson(
-            '/schedule/teacher/sections/${widget.idSeccion}/assessments-status',
-          )
-          .catchError((e) {
-        debugPrint('detalle: assessments-status falló: $e');
-        return <String, dynamic>{};
-      });
-      final atRiskFuture = AttendanceRiskService()
-          .fetchSummary(widget.idSeccion)
-          .catchError((e) {
-        debugPrint('detalle: attendance-risk falló: $e');
-        return <String, dynamic>{};
-      });
+      // Endpoints exclusivos para docentes: no se llaman si el usuario es alumno.
+      final assessmentsFuture = isTeacher
+          ? ApiClient()
+              .getJson(
+                '/schedule/teacher/sections/${widget.idSeccion}/assessments-status',
+              )
+              .catchError((e) {
+              debugPrint('detalle: assessments-status falló: $e');
+              return <String, dynamic>{};
+            })
+          : Future.value(<String, dynamic>{});
+      final atRiskFuture = isTeacher
+          ? AttendanceRiskService()
+              .fetchSummary(widget.idSeccion)
+              .catchError((e) {
+              debugPrint('detalle: attendance-risk falló: $e');
+              return <String, dynamic>{};
+            })
+          : Future.value(<String, dynamic>{});
 
       final results = await Future.wait([
         contactsFuture,

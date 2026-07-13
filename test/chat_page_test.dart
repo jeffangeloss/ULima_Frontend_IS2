@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:ulima_plus/models/message.dart';
+import 'package:ulima_plus/models/networking_model.dart';
 import 'package:ulima_plus/pages/chat/chat_page.dart';
 import 'package:ulima_plus/services/chat_repository.dart';
 
@@ -14,6 +15,7 @@ class _FakeChatRepo implements ChatRepositoryContract {
   final Object? error;
   final List<ChatMessage> messages;
   final List<String> sent = [];
+  final List<String> sentNetworking = [];
   final List<String> deleted = [];
 
   @override
@@ -32,6 +34,15 @@ class _FakeChatRepo implements ChatRepositoryContract {
   }
 
   @override
+  Future<void> sendNetworkingCard(String sectionId, ChatSession session) async {
+    sentNetworking.add(sectionId);
+  }
+
+  @override
+  Future<PublicNetworkingCardDto> fetchNetworkingCard(int userId) async =>
+      _publicCard(userId);
+
+  @override
   Future<void> deleteMessage(String sectionId, String messageId) async {
     deleted.add(messageId);
   }
@@ -46,29 +57,51 @@ const _teacher = ChatSession(
   weight: 100,
 );
 
-ChatMessage _msg(String id, String senderId, String body, {String role = 'student'}) =>
-    ChatMessage.fromMap(id, {
-      'senderId': senderId,
-      'senderName': senderId == '292' ? 'Quintana Cruz, Hernan' : 'Alumno X',
-      'senderRole': role,
-      'body': body,
-      'createdAt': int.parse(id),
-    });
+PublicNetworkingCardDto _publicCard(int userId) => PublicNetworkingCardDto(
+  owner: NetworkingOwnerDto(
+    userId: userId,
+    fullName: 'Alumno X',
+    primaryDetail: 'Ingenieria de Sistemas',
+    secondaryDetail: '$userId - Alumno',
+    roleLabel: 'Alumno',
+  ),
+  card: const NetworkingCardDto(
+    optIn: true,
+    links: [
+      SocialLinkDto(platform: 'github', url: 'https://github.com/alumno'),
+    ],
+  ),
+);
+
+ChatMessage _msg(
+  String id,
+  String senderId,
+  String body, {
+  String role = 'student',
+}) => ChatMessage.fromMap(id, {
+  'senderId': senderId,
+  'senderName': senderId == '292' ? 'Quintana Cruz, Hernan' : 'Alumno X',
+  'senderRole': role,
+  'body': body,
+  'createdAt': int.parse(id),
+});
 
 Widget _wrap(_FakeChatRepo repo) => GetMaterialApp(
-      home: ChatPage(
-        sectionId: '1',
-        courseName: 'INGENIERÍA DE SOFTWARE II',
-        repository: repo,
-      ),
-    );
+  home: ChatPage(
+    sectionId: '1',
+    courseName: 'INGENIERÍA DE SOFTWARE II',
+    repository: repo,
+  ),
+);
 
 void main() {
   // GetX usa estado global (snackbars/controllers); se resetea entre tests
   // para aislarlos y no arrastrar tickers de un snackbar al siguiente.
   tearDown(Get.reset);
 
-  testWidgets('muestra spinner mientras conecta y luego los mensajes', (tester) async {
+  testWidgets('muestra spinner mientras conecta y luego los mensajes', (
+    tester,
+  ) async {
     final repo = _FakeChatRepo(
       session: _teacher,
       messages: [
@@ -88,7 +121,9 @@ void main() {
     expect(find.byType(CircularProgressIndicator), findsNothing);
   });
 
-  testWidgets('error al conectar → placeholder "chat no disponible"', (tester) async {
+  testWidgets('error al conectar → placeholder "chat no disponible"', (
+    tester,
+  ) async {
     final repo = _FakeChatRepo(error: Exception('403'));
     await tester.pumpWidget(_wrap(repo));
     await tester.pump(); // resuelve el future con error
@@ -119,7 +154,9 @@ void main() {
     expect(find.byType(TextField), findsOneWidget);
   });
 
-  testWidgets('enviar mensaje → el repo lo recibe y el campo se limpia', (tester) async {
+  testWidgets('enviar mensaje → el repo lo recibe y el campo se limpia', (
+    tester,
+  ) async {
     final repo = _FakeChatRepo(session: _teacher, messages: const []);
     await tester.pumpWidget(_wrap(repo));
     await tester.pumpAndSettle();
@@ -144,7 +181,43 @@ void main() {
     expect(repo.sent, isEmpty);
   });
 
-  testWidgets('un mensaje de moderador muestra su etiqueta de rol', (tester) async {
+  testWidgets('enviar carnet usa el mensaje especial del repo', (tester) async {
+    final repo = _FakeChatRepo(session: _teacher, messages: const []);
+    await tester.pumpWidget(_wrap(repo));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.contact_page_outlined));
+    await tester.pump();
+
+    expect(repo.sentNetworking, ['1']);
+    expect(repo.sent, isEmpty);
+  });
+
+  testWidgets('mensaje carnet se renderiza como burbuja especial', (
+    tester,
+  ) async {
+    final repo = _FakeChatRepo(
+      session: _teacher,
+      messages: [
+        ChatMessage.fromMap('400', {
+          'senderId': '6',
+          'senderName': 'Alumno X',
+          'senderRole': 'student',
+          'body': '${ChatMessage.networkingBodyPrefix}6',
+          'createdAt': 400,
+        }),
+      ],
+    );
+    await tester.pumpWidget(_wrap(repo));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Envio su carnet de networking'), findsOneWidget);
+    expect(find.byIcon(Icons.contact_page_outlined), findsWidgets);
+  });
+
+  testWidgets('un mensaje de moderador muestra su etiqueta de rol', (
+    tester,
+  ) async {
     final repo = _FakeChatRepo(
       session: _teacher,
       messages: [_msg('100', '292', 'Bienvenidos', role: 'teacher')],
@@ -156,27 +229,29 @@ void main() {
     expect(find.text('Profesor'), findsOneWidget);
   });
 
-  testWidgets('HU23: un mensaje eliminado muestra la lápida y oculta el cuerpo',
-      (tester) async {
-    final deletedMsg = ChatMessage.fromMap('300', {
-      'senderId': '6',
-      'senderName': 'Alumno X',
-      'senderRole': 'student',
-      'body': 'texto original que no debe verse',
-      'createdAt': 300,
-      'deleted': true,
-      'deletedBy': 'Quintana Cruz, Hernan',
-      'deletedByRole': 'teacher',
-    });
-    final repo = _FakeChatRepo(session: _teacher, messages: [deletedMsg]);
-    await tester.pumpWidget(_wrap(repo));
-    await tester.pumpAndSettle();
+  testWidgets(
+    'HU23: un mensaje eliminado muestra la lápida y oculta el cuerpo',
+    (tester) async {
+      final deletedMsg = ChatMessage.fromMap('300', {
+        'senderId': '6',
+        'senderName': 'Alumno X',
+        'senderRole': 'student',
+        'body': 'texto original que no debe verse',
+        'createdAt': 300,
+        'deleted': true,
+        'deletedBy': 'Quintana Cruz, Hernan',
+        'deletedByRole': 'teacher',
+      });
+      final repo = _FakeChatRepo(session: _teacher, messages: [deletedMsg]);
+      await tester.pumpWidget(_wrap(repo));
+      await tester.pumpAndSettle();
 
-    expect(
-      find.text('Mensaje eliminado por Quintana Cruz, Hernan'),
-      findsOneWidget,
-    );
-    // El cuerpo original no se renderiza.
-    expect(find.text('texto original que no debe verse'), findsNothing);
-  });
+      expect(
+        find.text('Mensaje eliminado por Quintana Cruz, Hernan'),
+        findsOneWidget,
+      );
+      // El cuerpo original no se renderiza.
+      expect(find.text('texto original que no debe verse'), findsNothing);
+    },
+  );
 }

@@ -1,4 +1,6 @@
 class ChatMessage {
+  static const networkingBodyPrefix = '__ULIMA_NETWORKING_CARD__:';
+
   final String id;
   final String senderId;
   final String senderName;
@@ -8,6 +10,8 @@ class ChatMessage {
   final int weight;
   final String body;
   final DateTime createdAt;
+  final String messageType;
+  final int? networkingOwnerId;
 
   // HU23: borrado suave por el profesor. Cuando `deleted` es true, el mensaje se
   // muestra como lápida "eliminado por <deletedBy>".
@@ -25,6 +29,8 @@ class ChatMessage {
     required this.weight,
     required this.body,
     required this.createdAt,
+    this.messageType = 'text',
+    this.networkingOwnerId,
     this.deleted = false,
     this.deletedBy,
     this.deletedByRole,
@@ -32,10 +38,14 @@ class ChatMessage {
 
   String get text => body;
   DateTime get timestamp => createdAt;
+  bool get isNetworkingCard => messageType == 'networking_card';
 
   factory ChatMessage.fromMap(String id, Map<dynamic, dynamic> map) {
     final role = (map['senderRole'] ?? map['role'] ?? 'student').toString();
     final createdAt = _parseDateTime(map['createdAt'] ?? map['timestamp']);
+    final body = (map['body'] ?? map['text'] ?? '').toString();
+    final networkingOwnerFromBody = _parseNetworkingOwnerId(body);
+    final rawMessageType = (map['messageType'] ?? map['type'])?.toString();
 
     return ChatMessage(
       id: id,
@@ -48,8 +58,13 @@ class ChatMessage {
               .toString(),
       isModerator: map['moderator'] == true || _isModeratorRole(role),
       weight: _parseInt(map['weight']) ?? _weightFor(role),
-      body: (map['body'] ?? map['text'] ?? '').toString(),
+      body: body,
       createdAt: createdAt,
+      messageType:
+          rawMessageType ??
+          (networkingOwnerFromBody == null ? 'text' : 'networking_card'),
+      networkingOwnerId:
+          _parseInt(map['networkingOwnerId']) ?? networkingOwnerFromBody,
       deleted: map['deleted'] == true,
       deletedBy: map['deletedBy']?.toString(),
       deletedByRole: map['deletedByRole']?.toString(),
@@ -66,6 +81,8 @@ class ChatMessage {
       'weight': weight,
       'body': body,
       'createdAt': createdAt.millisecondsSinceEpoch,
+      'messageType': messageType,
+      if (networkingOwnerId != null) 'networkingOwnerId': networkingOwnerId,
     };
   }
 
@@ -86,6 +103,11 @@ class ChatMessage {
     if (value is int) return value;
     if (value is num) return value.toInt();
     return int.tryParse(value?.toString() ?? '');
+  }
+
+  static int? _parseNetworkingOwnerId(String body) {
+    if (!body.startsWith(networkingBodyPrefix)) return null;
+    return int.tryParse(body.substring(networkingBodyPrefix.length).trim());
   }
 
   static bool _isModeratorRole(String role) =>

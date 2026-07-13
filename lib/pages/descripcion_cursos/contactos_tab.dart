@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../components/descripcion_cursos/contacto_card.dart';
 import '../../components/error_retry.dart';
+import '../../components/networking/networking_card_preview.dart';
 import '../../components/skeleton.dart';
+import '../../models/networking_model.dart';
+import '../../services/auth_service.dart';
 import 'descrip_cursos_controller.dart';
 
 class ContactosTab extends StatelessWidget {
@@ -50,6 +54,16 @@ class ContactosTab extends StatelessWidget {
               nombres: control.docenteContacto.value!.firstName,
               apellidos: control.docenteContacto.value!.lastName,
               rol: 'docente',
+              networkingVisible:
+                  control.docenteContacto.value!.networking?.optIn ?? false,
+              onNetworkingTap: () => _showNetworkingCard(
+                context,
+                fullName: control.docenteContacto.value!.fullName,
+                primaryDetail:
+                    '${control.docenteContacto.value!.code} - Docente',
+                secondaryDetail: '',
+                networking: control.docenteContacto.value!.networking,
+              ),
             ),
           // HU18: grupo Jefe de Práctica (solo si la sección tiene JP).
           if (control.jpContacto.value != null) ...[
@@ -67,6 +81,16 @@ class ContactosTab extends StatelessWidget {
               nombres: control.jpContacto.value!.firstName,
               apellidos: control.jpContacto.value!.lastName,
               rol: 'jp',
+              networkingVisible:
+                  control.jpContacto.value!.networking?.optIn ?? false,
+              onNetworkingTap: () => _showNetworkingCard(
+                context,
+                fullName: control.jpContacto.value!.fullName,
+                primaryDetail:
+                    '${control.jpContacto.value!.code} - Jefe de Practica',
+                secondaryDetail: '',
+                networking: control.jpContacto.value!.networking,
+              ),
             ),
           ],
           const SizedBox(height: 22),
@@ -89,11 +113,79 @@ class ContactosTab extends StatelessWidget {
                 nombres: user.firstName,
                 apellidos: user.lastName,
                 rol: role,
+                networkingVisible: contacto.networking?.optIn ?? false,
+                onNetworkingTap: () => _showNetworkingCard(
+                  context,
+                  fullName: user.fullName,
+                  primaryDetail: _careerName(user.careerId),
+                  secondaryDetail: '${user.code} - ${_roleLabel(role)}',
+                  networking: contacto.networking,
+                ),
               ),
             );
           }),
         ],
       );
     });
+  }
+
+  String _careerName(int? careerId) {
+    if (!Get.isRegistered<AuthService>()) return '';
+    return AuthService.to.getCareerName(careerId);
+  }
+
+  String _roleLabel(String role) {
+    switch (role) {
+      case 'delegado':
+        return 'Delegado';
+      case 'subdelegado':
+        return 'Subdelegado';
+      default:
+        return 'Alumno';
+    }
+  }
+
+  void _showNetworkingCard(
+    BuildContext context, {
+    required String fullName,
+    required String primaryDetail,
+    required String secondaryDetail,
+    required NetworkingCardDto? networking,
+  }) {
+    if (networking?.optIn != true) return;
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) {
+        final link = networking!.link;
+
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 22,
+            vertical: 24,
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 380),
+            child: NetworkingCardPreview(
+              fullName: fullName,
+              primaryDetail: primaryDetail,
+              secondaryDetail: secondaryDetail,
+              optIn: networking.optIn,
+              link: link,
+              emptyLinkText: 'Carnet visible sin red compartida',
+              onOpenLink: () => _openLink(link),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _openLink(SocialLinkDto? link) async {
+    final uri = Uri.tryParse(link?.url ?? '');
+    if (uri == null) return;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 }

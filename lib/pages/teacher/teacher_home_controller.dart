@@ -7,6 +7,7 @@ import '../../models/advising_models.dart';
 import '../../services/advising_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/session_navigation.dart';
+import '../horario/horario_controller.dart';
 
 class TeacherHomeController extends GetxController {
   final AdvisingService _service = AdvisingService();
@@ -41,17 +42,32 @@ class TeacherHomeController extends GetxController {
   /// Abre el formulario de creación y recarga si se creó una asesoría.
   Future<void> openCreate() async {
     final created = await Get.toNamed('/teacher-advising-create');
-    if (created == true) await loadSessions();
+    if (created == true) {
+      await loadSessions();
+      // Sincronizar el horario para que el bloque extra aparezca en tiempo real.
+      _reloadHorario();
+    }
   }
 
   Future<void> deleteSession(AdvisingSession session) async {
     try {
       await _service.deleteSession(session.id);
       sessions.removeWhere((s) => s.id == session.id);
+      // Sincronizar el horario para que el bloque desaparezca en tiempo real.
+      _reloadHorario();
       Get.snackbar('Listo', 'Asesoría eliminada.');
     } catch (e) {
       debugPrint('Error eliminando asesoría: $e');
       Get.snackbar('No se pudo eliminar', 'Vuelve a intentarlo.');
+    }
+  }
+
+  /// Recarga el HorarioController si está activo en memoria.
+  void _reloadHorario() {
+    try {
+      Get.find<HorarioController>().reload();
+    } catch (_) {
+      // El controller no está registrado (usuario no visitó el tab de Horario).
     }
   }
 
