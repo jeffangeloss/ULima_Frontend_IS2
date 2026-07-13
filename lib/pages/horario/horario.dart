@@ -751,13 +751,29 @@ class _TeacherCourseDetailSheetState extends State<_TeacherCourseDetailSheet> {
 
   Future<void> _loadDetails() async {
     try {
-      final contactsFuture = ContactoService().fetchContactos(widget.idSeccion);
-      final assessmentsFuture = ApiClient().getJson(
-        '/schedule/teacher/sections/${widget.idSeccion}/assessments-status',
-      );
-      final atRiskFuture = AttendanceRiskService().fetchSummary(
-        widget.idSeccion,
-      );
+      // Cada llamada se blinda por separado: si UNA falla, devuelve vacío y la
+      // pantalla igual carga lo que sí pudo (antes un solo 404 tumbaba todo el
+      // detalle con "Error al cargar detalles de la sección").
+      final contactsFuture = ContactoService()
+          .fetchContactos(widget.idSeccion)
+          .catchError((e) {
+        debugPrint('detalle: contactos falló: $e');
+        return <String, dynamic>{};
+      });
+      final assessmentsFuture = ApiClient()
+          .getJson(
+            '/schedule/teacher/sections/${widget.idSeccion}/assessments-status',
+          )
+          .catchError((e) {
+        debugPrint('detalle: assessments-status falló: $e');
+        return <String, dynamic>{};
+      });
+      final atRiskFuture = AttendanceRiskService()
+          .fetchSummary(widget.idSeccion)
+          .catchError((e) {
+        debugPrint('detalle: attendance-risk falló: $e');
+        return <String, dynamic>{};
+      });
 
       final results = await Future.wait([
         contactsFuture,
