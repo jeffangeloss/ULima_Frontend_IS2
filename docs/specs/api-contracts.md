@@ -382,3 +382,63 @@ Roles requeridos: `student`, `delegate`, `subdelegate`.
   - Response `200`: `{ "answer": "string", "sessionId": "uuid" }`
   - `localGrades` (opcional): `[{ "id": "sectionId", "nombre": "string", "notas": [{ "titulo": "string", "peso": 0-100, "valor": 0-20 }] }]`
   - Errores: `400 INVALID_QUESTION`, `404 SESSION_NOT_FOUND`, `429 RATE_LIMITED`, `503 CHATBOT_UNAVAILABLE`
+
+## Networking (HU25 — Escenario 1)
+
+Aplica a cualquier usuario autenticado. El propietario se deriva del JWT; el
+frontend no envía un `userId` ni decide permisos. PostgreSQL sigue siendo la
+fuente de verdad y no se modifica el esquema para este escenario.
+
+### GET /networking/me
+
+- **Auth**: Bearer token.
+- **Response** `200 OK`:
+
+  ```json
+  {
+    "optIn": true,
+    "links": [
+      {
+        "platform": "linkedin",
+        "url": "https://www.linkedin.com/in/usuario",
+        "label": null
+      }
+    ]
+  }
+  ```
+
+- `links` contiene cero o un elemento.
+- Plataformas: `linkedin|instagram|github|x|website|other`.
+- El propietario recibe su enlace aunque `optIn` sea `false`.
+
+### PUT /networking/me
+
+- **Auth**: Bearer token.
+- **Request body**:
+
+  ```json
+  {
+    "optIn": true,
+    "links": [
+      {
+        "platform": "linkedin",
+        "url": "https://www.linkedin.com/in/usuario",
+        "label": null
+      }
+    ]
+  }
+  ```
+
+- Reemplaza el conjunto del carnet propio y persiste el opt-in en una sola
+  operación de backend.
+- Máximo una red total. La URL debe ser HTTP(S) válida y de hasta 255
+  caracteres. `label` admite hasta 80 caracteres y el backend determina su
+  obligatoriedad para `website|other`.
+- `optIn:false` oculta el carnet sin borrar un enlace incluido en `links`.
+- **Response** `200 OK`: el mismo shape actualizado de `GET /networking/me`.
+- `label` se envía y recibe como `string|null`.
+- Errores: `400 INVALID_REQUEST_BODY`, `401 MISSING_TOKEN`, `401 INVALID_TOKEN` y los
+  errores de validación específicos definidos por backend. El cliente muestra
+  el mensaje del backend sin reinterpretar autorización o reglas de negocio.
+
+La consulta pública y el uso en contactos/chat quedan fuera del Escenario 1.

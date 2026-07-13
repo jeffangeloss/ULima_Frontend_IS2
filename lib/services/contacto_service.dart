@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:ulima_plus/models/contacto_model.dart';
 import 'package:ulima_plus/models/docente_model.dart';
+import 'package:ulima_plus/models/networking_model.dart';
 import 'package:ulima_plus/models/user_model.dart';
 
 import 'api_client.dart';
@@ -30,6 +31,7 @@ class ContactoService {
             Map<String, dynamic>.from(json['user'] as Map),
           ),
           roleInSection: json['roleInSection']?.toString() ?? 'estudiante',
+          networking: _parseNetworking(json['networking']),
         );
       }).toList();
 
@@ -45,11 +47,19 @@ class ContactoService {
         return compare;
       });
 
-      return {'docente': docente, 'jefePractica': jefePractica, 'alumnos': contactos};
+      return {
+        'docente': docente,
+        'jefePractica': jefePractica,
+        'alumnos': contactos,
+      };
     } catch (e) {
       debugPrint('Error cargando contactos: $e');
 
-      return {'docente': null, 'jefePractica': null, 'alumnos': <ContactoCurso>[]};
+      return {
+        'docente': null,
+        'jefePractica': null,
+        'alumnos': <ContactoCurso>[],
+      };
     }
   }
 
@@ -61,6 +71,15 @@ class ContactoService {
         return 1;
       default:
         return 2;
+    }
+  }
+
+  NetworkingCardDto? _parseNetworking(dynamic value) {
+    if (value is! Map) return null;
+    try {
+      return NetworkingCardDto.fromJson(Map<String, dynamic>.from(value));
+    } on FormatException {
+      return null;
     }
   }
 }

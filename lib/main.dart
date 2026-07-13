@@ -39,6 +39,8 @@ import 'pages/setup_carrera/setup_carrera_page.dart';
 import 'pages/silabo/silabo_viewer_controller.dart';
 import 'pages/silabo/silabo_viewer_page.dart';
 import 'pages/chatbot/chatbot_page.dart';
+import 'pages/networking/networking_binding.dart';
+import 'pages/networking/networking_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -190,6 +192,11 @@ class MyApp extends StatelessWidget {
         GetPage(
           name: '/chatbot',
           page: () => const ChatbotPage(),
+        ),
+        GetPage(
+          name: '/networking',
+          page: () => const NetworkingPage(),
+          binding: NetworkingBinding(),
         ),
       ],
     );
