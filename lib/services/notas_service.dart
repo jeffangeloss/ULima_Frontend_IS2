@@ -1,69 +1,86 @@
-import '../models/user_model.dart';
-import 'api_client.dart';
-import 'auth_service.dart';
-import 'courses_service.dart';
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class NotasService {
-  final ApiClient _api = ApiClient();
+  static final NotasService _instance = NotasService._internal();
+  static const String _notasKey = 'notas_estudiante';
+
+  factory NotasService() {
+    return _instance;
+  }
+
+  NotasService._internal();
+
+  Future<void> guardarNotas(
+    String idEstudiante,
+    List<Map<String, dynamic>> cursos,
+  ) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      final cursosSerializables = cursos.map((curso) {
+        return {
+          'id': curso['id'],
+          'nombre': curso['nombre'],
+          'ciclo': curso['ciclo'],
+          'idSeccion': curso['idSeccion'],
+          'notas': (curso['notas'] as List).toList(),
+        };
+      }).toList();
+
+      final jsonString = jsonEncode(cursosSerializables);
+      await prefs.setString('${_notasKey}_$idEstudiante', jsonString);
+      debugPrint('✓ Notas guardadas para estudiante: $idEstudiante');
+    } catch (e) {
+      debugPrint('✗ Error al guardar notas: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> cargarNotas(String idEstudiante) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final jsonString = prefs.getString('${_notasKey}_$idEstudiante');
+
+      if (jsonString == null) {
+        debugPrint('No hay notas guardadas para: $idEstudiante');
+        return [];
+      }
+
+      final List<dynamic> cursosJson = jsonDecode(jsonString);
+      return List<Map<String, dynamic>>.from(cursosJson);
+    } catch (e) {
+      debugPrint('✗ Error al cargar notas: $e');
+      return [];
+    }
+  }
+
+  Future<void> eliminarNotas(String idEstudiante) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('${_notasKey}_$idEstudiante');
+      debugPrint('✓ Notas eliminadas para: $idEstudiante');
+    } catch (e) {
+      debugPrint('✗ Error al eliminar notas: $e');
+    }
+  }
 
   Future<String?> obtenerIdEstudianteActual() async {
-    final user = AuthService.to.currentUser;
-    if (user == null) return null;
-    return user.code;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString('currentStudentId');
+    } catch (e) {
+      debugPrint('✗ Error al obtener ID del estudiante: $e');
+      return null;
+    }
   }
 
-  Future<List<Map<String, dynamic>>> cargarNotas(String studentId) async {
-    final currentUser = AuthService.to.currentUser;
-    if (currentUser == null || currentUser.code != studentId) {
-      return const [];
+  Future<void> guardarIdEstudianteActual(String idEstudiante) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('currentStudentId', idEstudiante);
+    } catch (e) {
+      debugPrint('✗ Error al guardar ID del estudiante: $e');
     }
-
-    final coursesService = CoursesService();
-    await coursesService.loadCoursesData();
-
-    final notesResponse = await _api.getJson('/grades/me/notes');
-    final coursesWithNotes = (notesResponse['cursos'] as List?) ?? const [];
-
-    final notesBySection = <String, List<Map<String, dynamic>>>{};
-    for (final course in coursesWithNotes) {
-      final courseMap = Map<String, dynamic>.from(course as Map);
-      final sectionId = courseMap['sectionId']?.toString() ?? '';
-      final notes = (courseMap['notas'] as List?) ?? const [];
-      notesBySection[sectionId] = notes
-          .map((note) => Map<String, dynamic>.from(note as Map))
-          .toList();
-    }
-
-    final result = <Map<String, dynamic>>[];
-    for (final course in coursesService.allCourses) {
-      final sectionId = course['id']?.toString() ?? '';
-      final notes = notesBySection[sectionId] ?? const [];
-      if (notes.isEmpty) continue;
-
-      result.add({
-        'id': sectionId,
-        'nombre': course['nombre']?.toString() ?? course['name']?.toString() ?? '',
-        'notas': notes.map((note) {
-          return {
-            'titulo': note['titulo']?.toString() ?? '',
-            'peso': _asInt(note['peso']),
-            'valor': _asDouble(note['valor']),
-          };
-        }).toList(),
-      });
-    }
-
-    return result;
-  }
-
-  int _asInt(dynamic value) {
-    if (value is int) return value;
-    if (value is num) return value.toInt();
-    return int.tryParse(value?.toString() ?? '') ?? 0;
-  }
-
-  double _asDouble(dynamic value) {
-    if (value is num) return value.toDouble();
-    return double.tryParse(value?.toString() ?? '') ?? 0;
   }
 }

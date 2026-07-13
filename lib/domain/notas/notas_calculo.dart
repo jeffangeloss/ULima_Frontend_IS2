@@ -1,21 +1,17 @@
-double calcularPromedioPonderado(List<Map<String, dynamic>> entries) {
-  double sumaPonderada = 0;
-  double sumaPesos = 0;
-
-  for (final entry in entries) {
-    final valor = _asDouble(entry['valor']);
-    final peso = _asDouble(entry['peso']);
-    if (peso <= 0) continue;
-
-    sumaPonderada += valor * peso;
-    sumaPesos += peso;
+double calcularPromedioPonderado(List notas) {
+  if (notas.isEmpty) return 0.0;
+  double suma = 0;
+  for (final n in notas) {
+    final valor = double.tryParse(n['valor']?.toString() ?? '') ?? 0.0;
+    final peso = double.tryParse(n['peso']?.toString() ?? '') ?? 0.0;
+    suma += valor * (peso / 100.0);
   }
-
-  if (sumaPesos <= 0) return 0;
-  return sumaPonderada / sumaPesos;
+  return suma;
 }
 
-double _asDouble(dynamic value) {
-  if (value is num) return value.toDouble();
-  return double.tryParse(value?.toString() ?? '') ?? 0;
+double sumaDePesos(List notas) {
+  return notas.fold(0.0, (sum, item) {
+    final peso = double.tryParse(item['peso']?.toString() ?? '') ?? 0.0;
+    return sum + peso;
+  });
 }

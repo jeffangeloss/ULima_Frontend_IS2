@@ -512,7 +512,9 @@ class _StudentCard extends StatelessWidget {
           children: [
             _detailRow('Codigo', student.code, brightness),
             const SizedBox(height: 6),
-            _detailRow('Ciclo', '${student.currentLevel ?? "-"}°', brightness),
+            _detailRow('Ciclo del alumno', '${student.currentLevel ?? "-"}°', brightness),
+            const SizedBox(height: 6),
+            _detailRow('Ciclo del curso', '${student.cycle ?? "-"}°', brightness),
             const SizedBox(height: 6),
             _detailRow('Horas ausentes', '${student.absentHours}h', brightness),
             const SizedBox(height: 6),
