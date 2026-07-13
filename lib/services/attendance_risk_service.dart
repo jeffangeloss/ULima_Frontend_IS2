@@ -12,7 +12,7 @@ class AttendanceRiskService {
 
   Future<List<AtRiskStudent>> fetchAttendanceRisk(String sectionId) async {
     final data = await _api.getJson(
-      '/course-detail/sections/$sectionId/attendance-risk',
+      '/attendance-risk/sections/$sectionId/attendance-risk',
     );
     final List<dynamic> rawStudents = data['students'] ?? [];
     return rawStudents
@@ -22,14 +22,14 @@ class AttendanceRiskService {
 
   Future<Map<String, dynamic>> fetchSummary(String sectionId) async {
     return await _api.getJson(
-      '/course-detail/sections/$sectionId/attendance-risk/summary',
+      '/attendance-risk/sections/$sectionId/attendance-risk/summary',
     );
   }
 
   Future<bool> notifyStudents(String sectionId) async {
     try {
       await _api.postJson(
-        '/course-detail/sections/$sectionId/attendance-risk/notify',
+        '/attendance-risk/sections/$sectionId/attendance-risk/notify',
         body: {},
       );
       return true;
