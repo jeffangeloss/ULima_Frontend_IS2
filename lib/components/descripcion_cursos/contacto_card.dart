@@ -4,12 +4,16 @@ class ContactoCard extends StatelessWidget {
   final String nombres;
   final String apellidos;
   final String rol;
+  final bool networkingVisible;
+  final VoidCallback? onNetworkingTap;
 
   const ContactoCard({
     super.key,
     required this.nombres,
     required this.apellidos,
     required this.rol,
+    this.networkingVisible = false,
+    this.onNetworkingTap,
   });
 
   @override
@@ -54,7 +58,7 @@ class ContactoCard extends StatelessWidget {
                   fontSize: 20,
 
                   fontWeight: FontWeight.w900,
-                )
+                ),
               ),
             ),
           ),
@@ -89,6 +93,21 @@ class ContactoCard extends StatelessWidget {
                     ),
                   ),
               ],
+            ),
+          ),
+
+          Tooltip(
+            message: networkingVisible
+                ? 'Ver carnet'
+                : 'Carnet oculto',
+            child: IconButton(
+              onPressed: networkingVisible ? onNetworkingTap : null,
+              icon: Icon(
+                Icons.contact_page_outlined,
+                color: networkingVisible
+                    ? const Color(0xFFFFA45B)
+                    : colors.onSurfaceVariant.withValues(alpha: 0.42),
+              ),
             ),
           ),
         ],

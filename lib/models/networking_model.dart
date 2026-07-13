@@ -89,3 +89,56 @@ class NetworkingCardDto {
     };
   }
 }
+
+class PublicNetworkingCardDto {
+  const PublicNetworkingCardDto({required this.owner, required this.card});
+
+  final NetworkingOwnerDto owner;
+  final NetworkingCardDto card;
+
+  SocialLinkDto? get link => card.link;
+
+  factory PublicNetworkingCardDto.fromJson(Map<String, dynamic> json) {
+    final owner = json['owner'];
+    if (owner is! Map) {
+      throw const FormatException('Networking owner is required.');
+    }
+    return PublicNetworkingCardDto(
+      owner: NetworkingOwnerDto.fromJson(Map<String, dynamic>.from(owner)),
+      card: NetworkingCardDto.fromJson(json),
+    );
+  }
+}
+
+class NetworkingOwnerDto {
+  const NetworkingOwnerDto({
+    required this.userId,
+    required this.fullName,
+    required this.primaryDetail,
+    required this.secondaryDetail,
+    required this.roleLabel,
+  });
+
+  final int userId;
+  final String fullName;
+  final String primaryDetail;
+  final String secondaryDetail;
+  final String roleLabel;
+
+  factory NetworkingOwnerDto.fromJson(Map<String, dynamic> json) {
+    final rawUserId = json['userId'];
+    final userId = rawUserId is int
+        ? rawUserId
+        : int.tryParse(rawUserId?.toString() ?? '');
+    if (userId == null) {
+      throw const FormatException('Invalid networking owner.');
+    }
+    return NetworkingOwnerDto(
+      userId: userId,
+      fullName: json['fullName']?.toString() ?? '',
+      primaryDetail: json['primaryDetail']?.toString() ?? '',
+      secondaryDetail: json['secondaryDetail']?.toString() ?? '',
+      roleLabel: json['roleLabel']?.toString() ?? '',
+    );
+  }
+}

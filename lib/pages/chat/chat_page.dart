@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../components/networking/networking_card_preview.dart';
+import '../../models/networking_model.dart';
+import '../../services/api_client.dart';
 import '../../services/chat_repository.dart';
 import '../../models/message.dart';
 
@@ -89,6 +93,99 @@ class _ChatPageState extends State<ChatPage> {
         colorText: Colors.white,
       );
     }
+  }
+
+  Future<void> _sendNetworkingCard() async {
+    final session = _session;
+    if (session == null) {
+      Get.snackbar(
+        'Chat no disponible',
+        'Vuelve a intentar en unos segundos.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    final ownerId = int.tryParse(session.uid);
+    if (ownerId == null) return;
+
+    try {
+      await _chatRepository.fetchNetworkingCard(ownerId);
+      await _chatRepository.sendNetworkingCard(widget.sectionId, session);
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      Get.snackbar(
+        'Carnet no disponible',
+        error.code == 'NETWORKING_CARD_HIDDEN'
+            ? 'Activa "Mostrar mi carnet" antes de enviarlo.'
+            : error.message,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      Get.snackbar(
+        'No se pudo enviar',
+        'Intenta de nuevo en unos segundos.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
+  Future<void> _openNetworkingCard(ChatMessage message) async {
+    final ownerId = message.networkingOwnerId ?? int.tryParse(message.senderId);
+    if (ownerId == null) return;
+
+    try {
+      final card = await _chatRepository.fetchNetworkingCard(ownerId);
+      if (!mounted) return;
+      _showNetworkingCardModal(card);
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      Get.snackbar(
+        'Carnet no disponible',
+        error.code == 'NETWORKING_CARD_HIDDEN'
+            ? 'Este usuario oculto su carnet.'
+            : error.message,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      Get.snackbar(
+        'Carnet no disponible',
+        'No se pudo abrir este carnet.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
+  void _showNetworkingCardModal(PublicNetworkingCardDto card) {
+    final link = card.link;
+    showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 380),
+          child: NetworkingCardPreview(
+            fullName: card.owner.fullName,
+            primaryDetail: card.owner.primaryDetail,
+            secondaryDetail: card.owner.secondaryDetail,
+            optIn: card.card.optIn,
+            link: link,
+            emptyLinkText: 'Carnet visible sin red compartida',
+            onOpenLink: () => _openNetworkingLink(link),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openNetworkingLink(SocialLinkDto? link) async {
+    final uri = Uri.tryParse(link?.url ?? '');
+    if (uri == null) return;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
   /// HU23: el profesor confirma y elimina un mensaje (borrado suave). El backend
@@ -363,8 +460,12 @@ class _ChatPageState extends State<ChatPage> {
                               showSender: true,
                               timeText: _formatTime(msg.timestamp),
                               isDark: isDark,
-                              onDelete:
-                                  canDelete ? () => _confirmDelete(msg) : null,
+                              onDelete: canDelete
+                                  ? () => _confirmDelete(msg)
+                                  : null,
+                              onOpenNetworkingCard: msg.isNetworkingCard
+                                  ? () => _openNetworkingCard(msg)
+                                  : null,
                             );
                           },
                         );
@@ -392,29 +493,51 @@ class _ChatPageState extends State<ChatPage> {
                                     : Colors.white,
                                 borderRadius: BorderRadius.circular(24),
                               ),
-                              child: TextField(
-                                controller: _textController,
-                                textCapitalization:
-                                    TextCapitalization.sentences,
-                                maxLines: 4,
-                                minLines: 1,
-                                decoration: InputDecoration(
-                                  hintText: 'Escribe un mensaje...',
-                                  hintStyle: TextStyle(
-                                    color: isDark
-                                        ? Colors.grey[500]
-                                        : Colors.grey[600],
+                              child: Row(
+                                children: [
+                                  Tooltip(
+                                    message: 'Enviar carnet',
+                                    child: IconButton(
+                                      onPressed: _sendNetworkingCard,
+                                      icon: const Icon(
+                                        Icons.contact_page_outlined,
+                                        size: 21,
+                                      ),
+                                      color: const Color(0xFFFF7A1A),
+                                      visualDensity: VisualDensity.compact,
+                                    ),
                                   ),
-                                  border: InputBorder.none,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 10,
+                                  Expanded(
+                                    child: TextField(
+                                      controller: _textController,
+                                      textCapitalization:
+                                          TextCapitalization.sentences,
+                                      maxLines: 4,
+                                      minLines: 1,
+                                      decoration: InputDecoration(
+                                        hintText: 'Escribe un mensaje...',
+                                        hintStyle: TextStyle(
+                                          color: isDark
+                                              ? Colors.grey[500]
+                                              : Colors.grey[600],
+                                        ),
+                                        border: InputBorder.none,
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                              horizontal: 4,
+                                              vertical: 10,
+                                            ),
+                                      ),
+                                      style: TextStyle(
+                                        color: isDark
+                                            ? Colors.white
+                                            : Colors.black87,
+                                      ),
+                                      onSubmitted: (_) => _sendMessage(),
+                                    ),
                                   ),
-                                ),
-                                style: TextStyle(
-                                  color: isDark ? Colors.white : Colors.black87,
-                                ),
-                                onSubmitted: (_) => _sendMessage(),
+                                  const SizedBox(width: 8),
+                                ],
                               ),
                             ),
                           ),
@@ -458,6 +581,7 @@ class _MessageBubble extends StatelessWidget {
   /// Solo se pasa cuando el usuario actual es el profesor y el mensaje no está
   /// eliminado: habilita el long-press para eliminar.
   final VoidCallback? onDelete;
+  final VoidCallback? onOpenNetworkingCard;
 
   const _MessageBubble({
     required this.message,
@@ -466,6 +590,7 @@ class _MessageBubble extends StatelessWidget {
     required this.timeText,
     required this.isDark,
     this.onDelete,
+    this.onOpenNetworkingCard,
   });
 
   /// Generates a consistent color from a sender name
@@ -537,107 +662,166 @@ class _MessageBubble extends StatelessWidget {
       // Long-press: solo el profesor (onDelete != null) puede eliminar.
       child: GestureDetector(
         onLongPress: onDelete,
+        onTap: message.isNetworkingCard ? onOpenNetworkingCard : null,
         child: Container(
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.78,
-        ),
-        margin: EdgeInsets.only(
-          top: showSender ? 8 : 2,
-          bottom: 2,
-          left: isMe ? 48 : 0,
-          right: isMe ? 0 : 48,
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: bubbleColor,
-          borderRadius: borderRadius,
-          border: message.isModerator
-              ? Border.all(
-                  color: accent.withValues(
-                    alpha: message.weight >= 90 ? 0.85 : 0.55,
-                  ),
-                  width: message.weight >= 90 ? 1.4 : 1,
-                )
-              : null,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 2,
-              offset: const Offset(0, 1),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Every bubble shows identity; moderator roles get a visible badge.
-            if (showSender)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 6,
-                  runSpacing: 4,
-                  children: [
-                    Text(
-                      message.senderName,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                        color: accent,
-                      ),
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.78,
+          ),
+          margin: EdgeInsets.only(
+            top: showSender ? 8 : 2,
+            bottom: 2,
+            left: isMe ? 48 : 0,
+            right: isMe ? 0 : 48,
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: bubbleColor,
+            borderRadius: borderRadius,
+            border: message.isNetworkingCard
+                ? Border.all(
+                    color: const Color(0xFFFFB16A).withValues(alpha: 0.85),
+                    width: 1.4,
+                  )
+                : message.isModerator
+                ? Border.all(
+                    color: accent.withValues(
+                      alpha: message.weight >= 90 ? 0.85 : 0.55,
                     ),
-                    if (message.isModerator)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
+                    width: message.weight >= 90 ? 1.4 : 1,
+                  )
+                : null,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 2,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Every bubble shows identity; moderator roles get a visible badge.
+              if (showSender)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
+                      Text(
+                        message.senderName,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                          color: accent,
                         ),
-                        decoration: BoxDecoration(
-                          color: accent.withValues(alpha: isDark ? 0.22 : 0.12),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          message.senderRoleLabel,
-                          style: TextStyle(
-                            color: accent,
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w800,
+                      ),
+                      if (message.isModerator)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: accent.withValues(
+                              alpha: isDark ? 0.22 : 0.12,
+                            ),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            message.senderRoleLabel,
+                            style: TextStyle(
+                              color: accent,
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                         ),
+                    ],
+                  ),
+                ),
+              if (message.isNetworkingCard)
+                _NetworkingCardMessage(timeText: timeText, isDark: isDark)
+              else
+                Wrap(
+                  alignment: WrapAlignment.end,
+                  crossAxisAlignment: WrapCrossAlignment.end,
+                  spacing: 8,
+                  children: [
+                    Text(
+                      message.text,
+                      style: TextStyle(
+                        fontSize: 15.5,
+                        color: isDark ? Colors.white : Colors.black87,
                       ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        timeText,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark ? Colors.white38 : Colors.black45,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
-              ),
-            // Message body + time
-            Wrap(
-              alignment: WrapAlignment.end,
-              crossAxisAlignment: WrapCrossAlignment.end,
-              spacing: 8,
-              children: [
-                Text(
-                  message.text,
-                  style: TextStyle(
-                    fontSize: 15.5,
-                    color: isDark ? Colors.white : Colors.black87,
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Text(
-                    timeText,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isDark ? Colors.white38 : Colors.black45,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+            ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+class _NetworkingCardMessage extends StatelessWidget {
+  const _NetworkingCardMessage({required this.timeText, required this.isDark});
+
+  final String timeText;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            color: const Color(0xFFFF7A1A),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(
+            Icons.contact_page_outlined,
+            color: Colors.white.withValues(alpha: 0.92),
+            size: 20,
+          ),
+        ),
+        const SizedBox(width: 9),
+        Flexible(
+          child: Text(
+            'Envio su carnet de networking',
+            style: TextStyle(
+              color: isDark ? Colors.white : Colors.black87,
+              fontSize: 14.5,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          timeText,
+          style: TextStyle(
+            fontSize: 11,
+            color: isDark ? Colors.white38 : Colors.black45,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -680,9 +864,7 @@ class _DeletedTombstone extends StatelessWidget {
               ? Colors.white.withValues(alpha: 0.05)
               : Colors.black.withValues(alpha: 0.04),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isDark ? Colors.white12 : Colors.black12,
-          ),
+          border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

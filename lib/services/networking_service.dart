@@ -5,6 +5,8 @@ abstract class NetworkingGateway {
   Future<NetworkingCardDto> fetchMine();
 
   Future<NetworkingCardDto> updateMine(NetworkingCardDto card);
+
+  Future<PublicNetworkingCardDto> fetchVisibleByUserId(int userId);
 }
 
 class NetworkingService implements NetworkingGateway {
@@ -22,5 +24,11 @@ class NetworkingService implements NetworkingGateway {
   Future<NetworkingCardDto> updateMine(NetworkingCardDto card) async {
     final response = await _api.putJson('/networking/me', body: card.toJson());
     return NetworkingCardDto.fromJson(response);
+  }
+
+  @override
+  Future<PublicNetworkingCardDto> fetchVisibleByUserId(int userId) async {
+    final response = await _api.getJson('/networking/users/$userId');
+    return PublicNetworkingCardDto.fromJson(response);
   }
 }

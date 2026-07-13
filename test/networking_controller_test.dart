@@ -15,6 +15,19 @@ class _FakeGateway implements NetworkingGateway {
   Future<NetworkingCardDto> fetchMine() async => card;
 
   @override
+  Future<PublicNetworkingCardDto> fetchVisibleByUserId(int userId) async =>
+      PublicNetworkingCardDto(
+        owner: NetworkingOwnerDto(
+          userId: userId,
+          fullName: 'Ana Torres',
+          primaryDetail: 'Ingenieria de Sistemas',
+          secondaryDetail: '$userId - Alumno',
+          roleLabel: 'Alumno',
+        ),
+        card: card,
+      );
+
+  @override
   Future<NetworkingCardDto> updateMine(NetworkingCardDto card) async {
     lastUpdate = card;
     this.card = card;

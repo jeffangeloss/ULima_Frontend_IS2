@@ -13,6 +13,7 @@ class NetworkingCardPreview extends StatelessWidget {
     required this.optIn,
     required this.link,
     required this.onOpenLink,
+    this.emptyLinkText = 'Agrega una red para compartir tu carnet',
   });
 
   final String fullName;
@@ -21,6 +22,7 @@ class NetworkingCardPreview extends StatelessWidget {
   final bool optIn;
   final SocialLinkDto? link;
   final VoidCallback onOpenLink;
+  final String emptyLinkText;
 
   @override
   Widget build(BuildContext context) {
@@ -179,18 +181,18 @@ class NetworkingCardPreview extends StatelessWidget {
                 Divider(color: Colors.white.withValues(alpha: 0.34)),
                 const SizedBox(height: 6),
                 if (link == null)
-                  const Row(
+                  Row(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.add_link_rounded,
                         color: Colors.white,
                         size: 20,
                       ),
-                      SizedBox(width: 9),
+                      const SizedBox(width: 9),
                       Expanded(
                         child: Text(
-                          'Agrega una red para compartir tu carnet',
-                          style: TextStyle(
+                          emptyLinkText,
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
