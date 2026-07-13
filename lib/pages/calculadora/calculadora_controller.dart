@@ -3,8 +3,6 @@ import 'package:get/get.dart';
 import '../../models/evaluation_model.dart';
 import '../../services/evaluations_service.dart';
 import '../../services/courses_service.dart';
-import '../../services/notas_service.dart';
-import '../../services/simulated_grades_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/api_client.dart';
 
@@ -23,7 +21,7 @@ class CalculadoraController extends GetxController {
     _api = ApiClient();
     _syllabusService = EvaluationSyllabusService();
     _coursesService = CoursesService();
-    
+
     _cargarDatosSyllabus();
     _inicializarCursos();
   }
@@ -102,10 +100,6 @@ class CalculadoraController extends GetxController {
       debugPrint(
         'Cursos y secciones cargados correctamente: ${cursos.length} secciones.',
       );
-
-      // Sincroniza con el backend (fuente de verdad entre dispositivos). Si el
-      // backend no responde, se conservan las notas locales ya cargadas.
-      await _sincronizarConBackend();
     } catch (e) {
       debugPrint('Error al inicializar cursos: $e');
     }
@@ -132,13 +126,25 @@ class CalculadoraController extends GetxController {
   Future<void> _guardarNotasRemotas() async {
     try {
       final payload = {
-        'cursos': cursos.map((curso) => {
-          'sectionId': int.tryParse(curso['id']?.toString() ?? '') ?? 0,
-          'notas': (curso['notas'] as List).map((nota) => {
-            'assessmentId': int.tryParse(nota['evaluacionId']?.toString() ?? '') ?? 0,
-            'valor': (nota['valor'] as num).toDouble(),
-          }).toList(),
-        }).toList(),
+        'cursos': cursos
+            .map(
+              (curso) => {
+                'sectionId': int.tryParse(curso['id']?.toString() ?? '') ?? 0,
+                'notas': (curso['notas'] as List)
+                    .map(
+                      (nota) => {
+                        'assessmentId':
+                            int.tryParse(
+                              nota['evaluacionId']?.toString() ?? '',
+                            ) ??
+                            0,
+                        'valor': (nota['valor'] as num).toDouble(),
+                      },
+                    )
+                    .toList(),
+              },
+            )
+            .toList(),
       };
       await _api.postJson('/grades/me/notes', body: payload);
     } catch (e) {
@@ -150,21 +156,26 @@ class CalculadoraController extends GetxController {
     if (cursoIndex < 0 || cursoIndex >= cursos.length) return;
     final notas = cursos[cursoIndex]['notas'] as List;
     try {
-      final notasClean = notas.map((n) => {
-        'valor': (n['valor'] is num)
-            ? (n['valor'] as num).toDouble()
-            : (double.tryParse(n['valor']?.toString() ?? '') ?? 0.0),
-        'peso': (n['peso'] is num)
-            ? (n['peso'] as num).toDouble()
-            : (double.tryParse(n['peso']?.toString() ?? '') ?? 0.0),
-      }).toList();
+      final notasClean = notas
+          .map(
+            (n) => {
+              'valor': (n['valor'] is num)
+                  ? (n['valor'] as num).toDouble()
+                  : (double.tryParse(n['valor']?.toString() ?? '') ?? 0.0),
+              'peso': (n['peso'] is num)
+                  ? (n['peso'] as num).toDouble()
+                  : (double.tryParse(n['peso']?.toString() ?? '') ?? 0.0),
+            },
+          )
+          .toList();
 
       final result = await _api.postJson(
         '/grades/me/calculate',
         body: {'notas': notasClean},
       );
       cursos[cursoIndex]['_promedio'] = (result['promedio'] as num).toDouble();
-      cursos[cursoIndex]['_sumaPesos'] = (result['sumaPesos'] as num).toDouble();
+      cursos[cursoIndex]['_sumaPesos'] = (result['sumaPesos'] as num)
+          .toDouble();
       cursos.refresh();
     } catch (e) {
       debugPrint('Error al calcular promedio via API: $e');
