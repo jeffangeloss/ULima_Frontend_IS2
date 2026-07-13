@@ -268,4 +268,8 @@ class CalculadoraController extends GetxController {
         .where((eval) => !registeredIds.contains(eval.id))
         .toList();
   }
+
+  Future<void> _sincronizarConBackend() async {
+    await _guardarNotasRemotas();
+  }
 }
