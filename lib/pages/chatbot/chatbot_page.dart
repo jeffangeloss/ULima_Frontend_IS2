@@ -633,15 +633,18 @@ class _BotAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Ulises — la mascota del asistente. La imagen ya trae su propio marco
-    // circular (badge naranja + anillo), así que se muestra tal cual, con las
-    // esquinas transparentes; funciona igual sobre el header y sobre las burbujas.
-    return Image.asset(
-      'assets/images/ulises_chatbot.png',
-      width: size,
-      height: size,
-      fit: BoxFit.contain,
-      filterQuality: FilterQuality.medium,
+    // Ulises — la mascota del asistente. El PNG tiene las esquinas BLANCAS
+    // (opacas), así que lo recortamos a círculo con ClipOval: sobre el header
+    // naranja ya no aparece el recuadro blanco, y en las burbujas queda igual de
+    // limpio. BoxFit.cover para que el badge llene el círculo sin bordes.
+    return ClipOval(
+      child: Image.asset(
+        'assets/images/ulises_chatbot.png',
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+        filterQuality: FilterQuality.medium,
+      ),
     );
   }
 }
