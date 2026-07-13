@@ -36,7 +36,19 @@ class _ChatbotBubbleState extends State<ChatbotBubble>
     _pulse = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1900),
-    )..repeat();
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // El latido solo corre con animaciones habilitadas (respeta "reduce motion"
+    // y no deja el ticker infinito corriendo sin efecto visible).
+    if (MediaQuery.of(context).disableAnimations) {
+      if (_pulse.isAnimating) _pulse.stop();
+    } else if (!_pulse.isAnimating) {
+      _pulse.repeat();
+    }
   }
 
   @override

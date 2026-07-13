@@ -6,6 +6,7 @@
 // suscripción y el tap no producía ningún cambio visual. El fix envuelve
 // cada card en su propio Obx.
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -77,6 +78,17 @@ class _FakeAuthService extends AuthService {
   Rx<UserModel?> get currentUserRx => _userRx;
 }
 
+/// Monta la página con las animaciones deshabilitadas: el FAB "Simular" tiene un
+/// latido infinito (repeat) que, de otro modo, haría timeout a pumpAndSettle.
+Widget _app() => GetMaterialApp(
+      home: Builder(
+        builder: (context) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(disableAnimations: true),
+          child: const MallaListPage(),
+        ),
+      ),
+    );
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -113,7 +125,7 @@ void main() {
   testWidgets(
     'modo normal: el tap en una card no resalta prerrequisitos',
     (tester) async {
-      await tester.pumpWidget(const GetMaterialApp(home: MallaListPage()));
+      await tester.pumpWidget(_app());
       await tester.pumpAndSettle();
 
       expect(find.text('REQUISITO'), findsNothing);
@@ -134,7 +146,7 @@ void main() {
   testWidgets(
     'rediseño: stepper de ciclo, ciclo enfocado y filtros en botón',
     (tester) async {
-      await tester.pumpWidget(const GetMaterialApp(home: MallaListPage()));
+      await tester.pumpWidget(_app());
       await tester.pumpAndSettle();
 
       // Stepper: muestra "Ciclo 1" y su resumen "1/3 aprobados".

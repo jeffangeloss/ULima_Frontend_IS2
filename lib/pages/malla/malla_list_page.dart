@@ -106,8 +106,20 @@ class _PulsingSimFabState extends State<_PulsingSimFab>
   @override
   void initState() {
     super.initState();
-    _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1600))
-      ..repeat();
+    _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1600));
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // El latido solo corre con animaciones habilitadas: respeta "reduce motion"
+    // (no desperdicia el ticker) y evita que el repeat() infinito congele
+    // pumpAndSettle en los widget tests.
+    if (MediaQuery.of(context).disableAnimations) {
+      if (_c.isAnimating) _c.stop();
+    } else if (!_c.isAnimating) {
+      _c.repeat();
+    }
   }
 
   @override
