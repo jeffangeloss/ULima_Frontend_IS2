@@ -62,10 +62,12 @@ class DescripCursosController extends GetxController {
       seccionActual.value = seccion;
       secciones.value = [seccion];
 
+      // Cada tab se carga por separado: si UNO falla, los otros igual cargan
+      // (antes un fallo en cualquiera disparaba limpiarDatos y borraba todo).
       await Future.wait([
-        fetchAnuncios(idSeccion),
-        fetchAsesorias(idSeccion),
-        fetchContactos(idSeccion),
+        fetchAnuncios(idSeccion).catchError((e) => debugPrint('anuncios falló: $e')),
+        fetchAsesorias(idSeccion).catchError((e) => debugPrint('asesorías falló: $e')),
+        fetchContactos(idSeccion).catchError((e) => debugPrint('contactos falló: $e')),
       ]);
     } catch (e) {
       debugPrint('Error cargando datos del curso: $e');

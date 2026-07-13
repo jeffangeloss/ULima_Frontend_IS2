@@ -269,7 +269,4 @@ class CalculadoraController extends GetxController {
         .toList();
   }
 
-  Future<void> _sincronizarConBackend() async {
-    await _guardarNotasRemotas();
-  }
 }

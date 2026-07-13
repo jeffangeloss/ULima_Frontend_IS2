@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
 import '../../../models/anuncio_model.dart';
@@ -59,7 +60,13 @@ class DelegadoAnunciosController extends GetxController {
   }
 
   Future<void> refreshAll() async {
-    await Future.wait([fetchAnnouncements(), fetchStatistics()]);
+    // Anuncios y estadísticas se cargan por separado: si una falla, la otra
+    // igual carga (fetchStatistics no atrapa su error, así que sin esto un
+    // fallo de estadísticas tumbaba también los anuncios).
+    await Future.wait([
+      fetchAnnouncements().catchError((e) => debugPrint('anuncios delegado falló: $e')),
+      fetchStatistics().catchError((e) => debugPrint('estadísticas falló: $e')),
+    ]);
   }
 
   Future<void> openCreate() async {
