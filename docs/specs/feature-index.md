@@ -18,6 +18,7 @@ This index connects real user stories, product requirements, Flutter files, mock
 | 11 | Silabo Viewer | _(sin spec)_ | HU21 | Visualizar sílabo en PDF | `lib/pages/silabo/**`, `lib/services/silabo_service.dart` | Implementado sin spec |
 | 12 | Release Build | `specs/features/release-build/release-build.spec.md` | Infra | Build config | `android/`, `pubspec.yaml` | Documentado |
 | 13 | Chatbot Asistente Académico | `specs/features/chatbot/chatbot.spec.md` | HU-CHATBOT-01, HU-CHATBOT-02 | Chatbot con IA para consultas académicas | `lib/pages/chatbot/**`, `lib/services/chatbot_service.dart`, `lib/components/chatbot_fab.dart`, `lib/models/chatbot_models.dart` | **Diseñada — pendiente de implementar** |
+| 14 | Carnet de networking | `specs/features/networking/networking.spec.md` | HU25 (issues históricos HU27) | Opt-in y una red social propia | `lib/pages/networking/**`, `lib/services/networking_service.dart` | Escenario 1 implementado |
 
 ## Workflow
 

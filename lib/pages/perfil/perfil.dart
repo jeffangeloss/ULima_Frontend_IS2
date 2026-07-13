@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../components/networking/networking_profile_entry_card.dart';
 import '../../configs/themes.dart';
 import '../../models/malla_models.dart';
 import '../../services/api_client.dart';
@@ -34,6 +35,10 @@ class ProfilePage extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
+                           NetworkingProfileEntryCard(
+                            onTap: () => Get.toNamed('/networking'),
+                          ),
+                          const SizedBox(height: 16),
                           if (!user.isTeacher) ...[
                             const _CarreraCard(),
                             const SizedBox(height: 16),
