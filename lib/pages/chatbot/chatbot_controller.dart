@@ -93,6 +93,15 @@ class ChatbotController extends GetxController {
     final sessionId = activeSessionId.value;
     if (sessionId == null || question.trim().isEmpty) return;
 
+    // Optimista: el mensaje del usuario aparece de INMEDIATO (antes se agregaba
+    // recién al llegar la respuesta, así que desaparecía mientras el bot pensaba).
+    final now = DateTime.now();
+    messages.add(ChatbotMessage(
+      id: now.millisecondsSinceEpoch.toString(),
+      role: 'user',
+      content: question,
+      createdAt: now,
+    ));
     isTyping.value = true;
 
     try {
@@ -103,18 +112,11 @@ class ChatbotController extends GetxController {
         localGrades: localGrades,
       );
 
-      final now = DateTime.now();
-      messages.add(ChatbotMessage(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        role: 'user',
-        content: question,
-        createdAt: now,
-      ));
       messages.add(ChatbotMessage(
         id: (DateTime.now().millisecondsSinceEpoch + 1).toString(),
         role: 'assistant',
         content: answer,
-        createdAt: now,
+        createdAt: DateTime.now(),
       ));
     } catch (e) {
       debugPrint('Error sending question: $e');
@@ -124,7 +126,24 @@ class ChatbotController extends GetxController {
       isTyping.value = false;
     }
 
-    await loadSessions();
+    // Refresco SILENCIOSO de la lista de sesiones (el backend autogenera el
+    // título con la 1ª pregunta y actualiza `updatedAt`). NO usamos loadSessions()
+    // aquí porque pone loadingSessions=true → el Obx de _buildBody reemplaza toda
+    // la pantalla por un spinner y reinicia el área de chat (scroll + input). Este
+    // sync no toca loadingSessions ni activeSessionId, así que solo se actualiza
+    // la barra de conversaciones y los mensajes se quedan quietos abajo.
+    await _syncSessionsQuietly();
+  }
+
+  /// Actualiza la lista de sesiones en segundo plano sin flags de carga, para no
+  /// re-renderizar la pantalla del chat mientras se conversa.
+  Future<void> _syncSessionsQuietly() async {
+    try {
+      final result = await _service.listSessions();
+      sessions.assignAll(result);
+    } catch (e) {
+      debugPrint('Error syncing sessions: $e');
+    }
   }
 
   Future<List<Map<String, dynamic>>?> _loadLocalGrades() async {
