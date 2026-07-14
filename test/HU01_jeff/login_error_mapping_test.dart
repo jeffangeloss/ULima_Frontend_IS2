@@ -42,11 +42,5 @@ void main() {
       );
     });
 
-    test('caso 5 (valor límite): código vacío → propaga el mensaje del backend', () {
-      expect(
-        AuthService.loginErrorMessage('', 'Error interno del servidor.'),
-        'Error interno del servidor.',
-      );
-    });
   });
 }

@@ -1,4 +1,4 @@
-// test/HU26_aurelio/export_csv_cajanegra_test.dart
+// test/HU26_sam/export_csv_cajanegra_test.dart
 //
 // CAJA NEGRA — HU26: exportación de la lista de impedidos a CSV.
 // Método: AttendanceRiskService.exportCsv()  — lib/services/attendance_risk_service.dart

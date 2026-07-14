@@ -1,4 +1,4 @@
-// test/HU07_aurelio/calculadora_flujo_cajanegra_test.dart
+// test/HU07_sam/calculadora_flujo_cajanegra_test.dart
 //
 // CAJA NEGRA — HU06 + HU07 (calculadora): registrar una nota y ver el promedio.
 // Se evalúa la pantalla Calculadora completa (CalculadoraPage +
@@ -18,7 +18,7 @@
 // DOBLE DE PRUEBA: el backend se reemplaza en el borde del controller — el
 // fake replica la fórmula de POST /grades/me/calculate (promedio =
 // Σ valor·peso/100, la misma de grades.logic.ts, cubierta por bun test en
-// ULima_Backend_IS2/test/HU07_aurelio). La UI real no se modifica.
+// ULima_Backend_IS2/test/HU07_sam). La UI real no se modifica.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';

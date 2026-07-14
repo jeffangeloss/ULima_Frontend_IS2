@@ -1,4 +1,4 @@
-// test/HU22_aurelio/at_risk_student_model_unitaria_test.dart
+// test/HU22_sam/at_risk_student_model_unitaria_test.dart
 //
 // UNITARIA — HU22 (lista de impedidos): AtRiskStudent.fromJson() y statusLabel.
 // Modelo: lib/models/at_risk_student_model.dart

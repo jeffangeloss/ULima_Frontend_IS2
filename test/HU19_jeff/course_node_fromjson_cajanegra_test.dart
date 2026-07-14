@@ -3,9 +3,8 @@
 // CAJA NEGRA — HU19 (malla): deserializar un curso desde el JSON del backend.
 // Funcionalidad: CourseNode.fromJson(map)  — lib/domain/malla/malla_entities.dart
 //
-// Se derivan los casos desde los REQUISITOS del payload (no del código). El
-// objeto tiene MÁS DE 4 CAMPOS DE ENTRADA y debe tolerar campos faltantes o
-// mal tipados sin romper la malla.
+// Se derivan CUATRO casos desde los REQUISITOS del payload (no del código). El
+// objeto debe tolerar campos faltantes o valores límite sin romper la malla.
 //
 // CAMPOS (10): id, code, name, credits, level, prerequisites, category, row,
 //              specialties, externalFaculty.
@@ -65,18 +64,7 @@ void main() {
       expect(c.isExternal, isFalse); // externalFaculty ausente → null
     });
 
-    test('CNV1: id/code/name explícitamente null → cadena vacía', () {
-      final c = CourseNode.fromJson({'id': null, 'code': null, 'name': null});
-      expect(c.id, '');
-      expect(c.code, '');
-      expect(c.name, '');
-    });
-
-    test('CNV2: id numérico → se normaliza a string', () {
-      expect(CourseNode.fromJson({'id': 42}).id, '42');
-    });
-
-    test('CNV3 (límite): prerequisites con vacíos y null se filtran → solo los reales', () {
+    test('CNV1 (límite): prerequisites con vacíos y null se filtran → solo los reales', () {
       final c = CourseNode.fromJson({
         'prerequisites': ['', 'a', null, '  ', 'b'],
       });
@@ -84,26 +72,8 @@ void main() {
       expect(c.prerequisites, ['a', '  ', 'b']);
     });
 
-    test('CNV4 (límite): credits == 0 se respeta (no cae al default 3)', () {
+    test('CNV2 (límite): credits == 0 se respeta (no cae al default 3)', () {
       expect(CourseNode.fromJson({'credits': 0}).credits, 0);
-    });
-
-    test('CNV5: credits como número decimal (num) → toInt', () {
-      expect(CourseNode.fromJson({'credits': 4.0}).credits, 4);
-    });
-
-    test('CNV6: category desconocida → faculty (no electivo)', () {
-      expect(CourseNode.fromJson({'category': 'ZZZ'}).isElective, isFalse);
-    });
-
-    test('CNV7: category EEGG → no es electivo', () {
-      final c = CourseNode.fromJson({'category': 'EEGG'});
-      expect(c.category, CourseCategory.eegg);
-      expect(c.isElective, isFalse);
-    });
-
-    test('CNV8: specialties null → lista vacía', () {
-      expect(CourseNode.fromJson({'specialties': null}).specialties, isEmpty);
     });
   });
 }

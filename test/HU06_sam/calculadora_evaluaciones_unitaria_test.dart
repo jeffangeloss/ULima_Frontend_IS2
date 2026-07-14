@@ -1,4 +1,4 @@
-// test/HU06_aurelio/calculadora_evaluaciones_unitaria_test.dart
+// test/HU06_sam/calculadora_evaluaciones_unitaria_test.dart
 //
 // UNITARIA — HU06 (calculadora): evaluaciones disponibles según el sílabo.
 // Métodos: CalculadoraController.getRegisteredEvaluationIds() /
