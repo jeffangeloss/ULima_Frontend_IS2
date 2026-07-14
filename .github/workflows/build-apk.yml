@@ -6,6 +6,11 @@ on:
       - main
   workflow_dispatch:
 
+# Si llegan varios pushes a main seguidos, cancela el build anterior en curso.
+concurrency:
+  group: build-apk-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
 
@@ -48,14 +53,21 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+          cache: gradle
 
       - name: Instalar Flutter
-        run: |
-          git clone https://github.com/flutter/flutter.git --depth 1 -b stable "$HOME/flutter"
-          echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.2
+          channel: stable
+          cache: true
 
-      - name: Flutter Doctor
-        run: flutter doctor -v
+      - name: Cache pub
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: pub-${{ runner.os }}-${{ hashFiles('pubspec.lock') }}
+          restore-keys: pub-${{ runner.os }}-
 
       - name: Instalar dependencias
         run: flutter pub get
@@ -82,6 +94,13 @@ jobs:
             -storepass "$ANDROID_KEYSTORE_PASSWORD" \
             -alias "$ANDROID_KEY_ALIAS" > /dev/null
           echo "✅ Firmando el release con la keystore estable."
+
+      - name: Cache Android native (cmake)
+        uses: actions/cache@v4
+        with:
+          path: |
+            /usr/local/lib/android/sdk/cmake
+          key: android-cmake-${{ runner.os }}-3.22.1
 
       - name: Compilar APK
         run: flutter build apk --release --dart-define=API_BASE_URL=https://u-lima-backend-is-2-tau.vercel.app
