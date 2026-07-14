@@ -1,15 +1,41 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:ulima_plus/configs/themes.dart';
-import 'package:ulima_plus/services/alert_service.dart';
 import 'package:ulima_plus/pages/alertas/alertas_page.dart';
-import 'package:ulima_plus/services/auth_service.dart';
 import 'package:ulima_plus/pages/horario/horario_controller.dart';
+import 'package:ulima_plus/services/alert_service.dart';
+import 'package:ulima_plus/services/auth_service.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+typedef AppHeaderLinkLauncher = Future<bool> Function(Uri uri);
 
 class AppHeader extends StatelessWidget {
   final bool showScheduleToggle;
-  
-  const AppHeader({super.key, this.showScheduleToggle = false});
+  final AppHeaderLinkLauncher? linkLauncher;
+
+  const AppHeader({
+    super.key,
+    this.showScheduleToggle = false,
+    this.linkLauncher,
+  });
+
+  // La URI se conserva completa y en un único lugar para evitar que al editar
+  // el header se pierdan parámetros de seguimiento solicitados por el usuario.
+  static final Uri _donBelisarioPromotionUri = Uri.parse(
+    'https://www.donbelisario.com.pe/clasico-combo-contundente?'
+    'gsImpressionId=01KXPTTES6C5C0S9FKJG902C2G&'
+    'gsListName=Recomendaciones%20-%20Promociones&gsIndex=3',
+  );
+
+  Future<void> _openDonBelisarioPromotion() async {
+    // La dependencia opcional hace verificable la URI sin abrir una aplicación
+    // externa durante los widget tests. En producción siempre usa url_launcher.
+    final launcher = linkLauncher ?? _launchExternally;
+    await launcher(_donBelisarioPromotionUri);
+  }
+
+  static Future<bool> _launchExternally(Uri uri) =>
+      launchUrl(uri, mode: LaunchMode.externalApplication);
 
   @override
   Widget build(BuildContext context) {
@@ -34,14 +60,23 @@ class AppHeader extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'ULIMA++',
-
-                style: TextStyle(
-                  color: colors.onPrimary,
-                  fontSize: 20,
-                  fontStyle: FontStyle.italic,
-                  fontWeight: FontWeight.bold,
+              Semantics(
+                button: true,
+                excludeSemantics: true,
+                label: 'Abrir promoción de Don Belisario',
+                child: InkWell(
+                  key: const Key('app-header-brand-link'),
+                  borderRadius: BorderRadius.circular(4),
+                  onTap: _openDonBelisarioPromotion,
+                  child: Text(
+                    'ULIMA++',
+                    style: TextStyle(
+                      color: colors.onPrimary,
+                      fontSize: 20,
+                      fontStyle: FontStyle.italic,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
 
