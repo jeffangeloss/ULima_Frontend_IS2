@@ -11,6 +11,7 @@ import 'api_client.dart';
 import 'courses_service.dart';
 import 'evaluations_service.dart';
 import 'malla_service.dart';
+import 'official_grades_service.dart';
 import 'storage_service.dart';
 
 class AuthService extends GetxService {
@@ -60,6 +61,21 @@ class AuthService extends GetxService {
   bool get isLoggedIn => _currentUser.value != null;
   bool get isLoading => _loading.value;
 
+  /// Secciones donde el docente es Profesor titular (`section.teacher_id`), no
+  /// JP. Se llena al iniciar sesión (docente) desde `/official-grades/teacher/
+  /// sections`, que devuelve solo secciones de titular. Es la fuente de
+  /// `canGrade` (pestaña Calificar) y del gating de "alertar" por sección.
+  final Set<int> _profesorSectionIds = <int>{};
+
+  /// True si el docente es Profesor titular de al menos una sección → puede
+  /// calificar. Un JP puro (solo `jp_id`) queda en false.
+  bool get canGrade => _profesorSectionIds.isNotEmpty;
+
+  /// True si el docente es el Profesor titular de esa sección (no el JP). Se usa
+  /// para habilitar/ocultar las acciones de "alertar" del modal de la sección.
+  bool isProfesorOfSection(int sectionId) =>
+      _profesorSectionIds.contains(sectionId);
+
   StorageService get _storage => StorageService.to;
 
   List<Map<String, dynamic>> get carreras => _carreras;
@@ -87,6 +103,8 @@ class AuthService extends GetxService {
       // requireRole de alumno): un docente recibiría 403.
       if (!user.isTeacher) {
         await _loadCatalogs(token: token, careerId: user.careerId);
+      } else {
+        await _loadProfesorSections();
       }
       _currentUser.value = user;
       await _storage.saveCode(user.code);
@@ -122,6 +140,8 @@ class AuthService extends GetxService {
       // Los catálogos son de alumno; un docente (HU18) los omite (evita 403).
       if (!user.isTeacher) {
         await _loadCatalogs(token: token, careerId: user.careerId);
+      } else {
+        await _loadProfesorSections();
       }
       _currentUser.value = user;
       return null;
@@ -180,6 +200,8 @@ class AuthService extends GetxService {
       // con Google debe omitirlos, igual que en el login con código/contraseña.
       if (!user.isTeacher) {
         await _loadCatalogs(token: token, careerId: user.careerId);
+      } else {
+        await _loadProfesorSections();
       }
       _currentUser.value = user;
       return null;
@@ -274,11 +296,28 @@ class AuthService extends GetxService {
     MallaService.to.clear();
     CoursesService().clear();
     EvaluationSyllabusService().clear();
+    _profesorSectionIds.clear();
     _currentUser.value = null;
     await _storage.clearSession();
     try {
       await _googleSignIn.signOut();
     } catch (_) {}
+  }
+
+  /// Carga las secciones donde el docente es Profesor titular (para `canGrade` e
+  /// `isProfesorOfSection`). El endpoint `/official-grades/teacher/sections` solo
+  /// devuelve secciones de titular, así que un JP recibe lista vacía.
+  /// Degradación segura: ante cualquier fallo deja el set vacío y NO rompe el
+  /// login (el docente no verá acciones de profesor hasta reintentar/reingresar).
+  Future<void> _loadProfesorSections() async {
+    try {
+      final sections = await OfficialGradesService().fetchTeacherSections();
+      _profesorSectionIds
+        ..clear()
+        ..addAll(sections.map((s) => s.sectionId));
+    } catch (_) {
+      _profesorSectionIds.clear();
+    }
   }
 
   Future<void> _loadCatalogs({required String token, int? careerId}) async {

@@ -10,11 +10,16 @@ class AtRiskStudentsPage extends StatefulWidget {
   final String courseName;
   final String sectionCode;
 
+  /// Solo el Profesor titular puede "alertar" (notificar a los alumnos en
+  /// riesgo). El JP puede VER la lista pero no notifica → se le oculta el botón.
+  final bool isProfesor;
+
   const AtRiskStudentsPage({
     super.key,
     required this.sectionId,
     required this.courseName,
     required this.sectionCode,
+    this.isProfesor = true,
   });
 
   @override
@@ -69,6 +74,7 @@ class _AtRiskStudentsPageState extends State<AtRiskStudentsPage> {
                   tooltip: 'Exportar CSV',
                   onPressed: controller.exportCsv,
                 ),
+                if (widget.isProfesor)
                 IconButton(
                   icon: const Icon(Icons.notifications_active_outlined, color: Colors.white),
                   tooltip: 'Notificar alumnos en riesgo',

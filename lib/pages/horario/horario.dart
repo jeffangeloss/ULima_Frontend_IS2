@@ -840,6 +840,10 @@ class _TeacherCourseDetailSheetState extends State<_TeacherCourseDetailSheet> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Solo el Profesor titular de ESTA sección puede "alertar" (notificar notas
+    // y notificar alumnos en riesgo). El JP la ve pero no ejecuta esas acciones.
+    final isProfesor = AuthService.to
+        .isProfesorOfSection(int.tryParse(widget.idSeccion) ?? -1);
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -906,6 +910,7 @@ class _TeacherCourseDetailSheetState extends State<_TeacherCourseDetailSheet> {
                                 sectionId: widget.idSeccion,
                                 courseName: widget.courseName,
                                 sectionCode: widget.sectionCode,
+                                isProfesor: isProfesor,
                               ),
                             );
                           },
@@ -1021,7 +1026,12 @@ class _TeacherCourseDetailSheetState extends State<_TeacherCourseDetailSheet> {
                                 value: _notifiedAssessments.contains(
                                   ass['id']?.toString(),
                                 ),
-                                onChanged: (val) {
+                                // El JP ve el estado de carga pero NO puede
+                                // notificar: el toggle queda deshabilitado. Solo
+                                // el Profesor titular dispara la notificación.
+                                onChanged: !isProfesor
+                                    ? null
+                                    : (val) {
                                   final assId = ass['id']?.toString() ?? '';
                                   if (val) {
                                     // Activar: marcar optimistamente y pedir confirmaci\u00f3n

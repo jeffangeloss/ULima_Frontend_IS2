@@ -3,6 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../components/footer/app_footer.dart';
 import '../../models/user_model.dart';
+import '../../services/auth_service.dart';
 import '../calculadora/calculadora_page.dart';
 import '../delegado/delegado_cursos/delegado_cursos_page.dart';
 import '../horario/horario.dart';
@@ -19,25 +20,34 @@ class HomeShellConfig {
   final List<AppFooterItem> footerItems;
 
   factory HomeShellConfig.forUser(UserModel? user) {
-    if (user?.isTeacher ?? false) return HomeShellConfig.teacher();
+    if (user?.isTeacher ?? false) {
+      // La pestaña "Calificar" solo la ve el Profesor titular. Un JP (jefe de
+      // práctica) no califica, así que se omite. `canGrade` = tiene ≥1 sección
+      // donde es teacher_id (derivado del backend en AuthService).
+      return HomeShellConfig.teacher(canGrade: AuthService.to.canGrade);
+    }
     return HomeShellConfig.student(user);
   }
 
-  factory HomeShellConfig.teacher() {
-    return const HomeShellConfig(
+  factory HomeShellConfig.teacher({required bool canGrade}) {
+    return HomeShellConfig(
       pages: [
-        TeacherSectionsPage(),
-        TeacherGradesPage(),
-        HorarioPage(),
-        TeacherHomePage(embedded: true),
-        ProfilePage(),
+        const TeacherSectionsPage(),
+        if (canGrade) const TeacherGradesPage(),
+        const HorarioPage(),
+        const TeacherHomePage(embedded: true),
+        const ProfilePage(),
       ],
       footerItems: [
-        AppFooterItem(icon: LucideIcons.layers, label: 'Secciones'),
-        AppFooterItem(icon: LucideIcons.clipboardList, label: 'Calificar'),
-        AppFooterItem(icon: LucideIcons.calendar, label: 'Horario'),
-        AppFooterItem(icon: LucideIcons.calendarPlus, label: 'Asesorias'),
-        AppFooterItem(icon: LucideIcons.user, label: 'Perfil'),
+        const AppFooterItem(icon: LucideIcons.layers, label: 'Secciones'),
+        if (canGrade)
+          const AppFooterItem(
+            icon: LucideIcons.clipboardList,
+            label: 'Calificar',
+          ),
+        const AppFooterItem(icon: LucideIcons.calendar, label: 'Horario'),
+        const AppFooterItem(icon: LucideIcons.calendarPlus, label: 'Asesorias'),
+        const AppFooterItem(icon: LucideIcons.user, label: 'Perfil'),
       ],
     );
   }
