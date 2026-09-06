@@ -97,9 +97,20 @@ CourseStatus deriveAvailability(
 
 /// IDs aprobados derivados del progreso persistido.
 ///
-/// `approvedLevels` representa ciclos completos, pero cada ciclo completo
-/// solo aporta cursos obligatorios. Los electivos aprobados se agregan como
-/// cursos individuales y no sirven para completar un ciclo académico.
+/// Es la UNIÓN de dos fuentes que se complementan, no una sola:
+///
+/// - `approvedLevels` es un PISO: los ciclos que el backend da por cumplidos
+///   para tapar lo que no pudo emparejar contra la malla (cambio de malla,
+///   convalidaciones, códigos antiguos). Cada ciclo del piso solo aporta sus
+///   cursos obligatorios; un electivo nunca se aprueba por pertenecer a un
+///   ciclo, porque tampoco sirve para completarlo.
+/// - `approvedCourseIds` es lo que el alumno aprobó DE VERDAD, curso por curso.
+///   Acá llegan los aprobados del propio ciclo y de ciclos superiores —el nivel
+///   del alumno no acota lo que pudo aprobar, porque el plan de estudios pide
+///   requisitos por curso y no por ciclo— y también todos los electivos.
+///
+/// `approvedElectives` es el nombre viejo de esa misma lista y se suma igual,
+/// para no depender de qué versión del backend responda.
 Set<String> approvedCourseIdsForProgress(
   MallaGraph graph,
   CourseProgress progress,
@@ -110,6 +121,7 @@ Set<String> approvedCourseIdsForProgress(
       approved.add(c.id);
     }
   }
+  approved.addAll(progress.approvedCourseIds);
   approved.addAll(progress.approvedElectives);
   return approved;
 }

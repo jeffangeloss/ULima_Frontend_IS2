@@ -127,12 +127,22 @@ class CourseProgress {
     required this.approvedLevels,
     required this.approvedElectives,
     required this.currentCourses,
+    this.approvedCourseIds = const <String>{},
   });
 
-  /// Niveles cuyos cursos obligatorios están todos aprobados.
+  /// Niveles que se dan por cumplidos. Es un PISO, no la verdad de las notas:
+  /// el backend los rellena para tapar los cursos que no pudo emparejar contra
+  /// la malla (cambio de malla, convalidaciones, códigos antiguos). Nunca es un
+  /// techo — lo aprobado por encima del nivel llega en [approvedCourseIds].
   final Set<int> approvedLevels;
 
-  /// Electivos individuales que el alumno ya aprobó.
+  /// Ids de curso REALMENTE aprobados, uno por uno, según el récord importado.
+  /// Es la fuente honesta; [approvedElectives] es su alias de compatibilidad.
+  final Set<String> approvedCourseIds;
+
+  /// LEGADO: el backend manda acá los mismos ids que en [approvedCourseIds]
+  /// para que las apps ya instaladas —que solo leen este campo— también vean
+  /// bien la malla. Se mantiene en la unión mientras siga llegando.
   final Set<String> approvedElectives;
 
   /// Cursos (id) que el alumno está llevando en este ciclo.
@@ -164,6 +174,10 @@ class CourseProgress {
           .where((e) => e > 0)
           .toSet(),
       approvedElectives: ((json['approvedElectives'] as List?) ?? const [])
+          .map((e) => e?.toString() ?? '')
+          .where((e) => e.isNotEmpty)
+          .toSet(),
+      approvedCourseIds: ((json['approvedCourseIds'] as List?) ?? const [])
           .map((e) => e?.toString() ?? '')
           .where((e) => e.isNotEmpty)
           .toSet(),
