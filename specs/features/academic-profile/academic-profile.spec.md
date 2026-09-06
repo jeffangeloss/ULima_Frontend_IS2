@@ -107,7 +107,7 @@ Shown once after first login when `setupComplete == false`.
 
 **Fields kept for legacy compatibility** (will be removed when curriculum/grades specs are rewritten):
 - `currentCycle` → hardcoded default or from backend when available
-- `courseProgress` → from `/curriculum/me` endpoint
+- `courseProgress` → viene de `/auth/me` y del login, **no** de `/curriculum/me`. `/curriculum/me` devuelve solo `{courses, specialties, simulation}`: el catálogo de la malla y la simulación del alumno, nunca su progreso real. `courseProgress` tampoco es prescindible — es lo único con lo que la malla pinta los cursos completados (ver `docs/specs/api-contracts.md`, `User.courseProgress`).
 
 ## Data Flow
 

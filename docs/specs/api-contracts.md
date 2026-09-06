@@ -83,11 +83,34 @@ Contrato REST local del frontend ULima++. Mantener alineado manualmente con `ULi
   "setupComplete": false,
   "specialties": [
     { "specialtyId": 1, "name": "Ingeniería de Software", "selectionType": "primary" }
-  ]
+  ],
+  "courseProgress": {
+    "approvedLevels": [1, 2, 3, 4],
+    "approvedCourseIds": ["33", "41", "90"],
+    "approvedElectives": ["33", "41", "90"],
+    "currentCourses": [
+      {
+        "idSeccion": "12",
+        "codigoSeccion": "701",
+        "idCurso": "58",
+        "courseId": "58",
+        "nombre": "INGENIERÍA DE SOFTWARE II",
+        "period_code": "2026-2"
+      }
+    ]
+  }
 }
 ```
 
 Errores de login con código: `401 USER_NOT_FOUND`, `401 INVALID_PASSWORD`, `403 NOT_ENROLLED`. Errores adicionales de Google: `401 INVALID_TOKEN`, `403 INVALID_DOMAIN`.
+
+`User.courseProgress` es lo único con lo que la app pinta los cursos completados de la malla (`lib/domain/malla/malla_logic.dart`, `approvedCourseIdsForProgress`). El conjunto de aprobados es la **unión** de `approvedLevels` y `approvedCourseIds`, no uno de los dos:
+
+- `approvedCourseIds: string[]` — ids de curso de la malla realmente aprobados, curso por curso, según el récord importado del portal. Solo aprobados: lo que se está llevando va en `currentCourses` y lo desaprobado no cuenta.
+- `approvedLevels: number[]` — `[1 .. currentLevel-1]`. Es un **piso** que rellena los cursos que no se pudieron emparejar contra la malla tras el cambio de plan de estudios, no una afirmación sobre las notas. Es piso y nunca techo: los requisitos del plan son por curso, no por ciclo, así que un curso aprobado del propio ciclo del alumno o de uno superior es legítimo y debe verse completado.
+- `approvedElectives: string[]` — **legado**, repite `approvedCourseIds`. Existe solo para que las versiones ya instaladas de la app —que únicamente leen este campo— reciban el progreso real sin actualizarse.
+
+`CourseProgress.fromJson` deja `approvedCourseIds` vacío si el backend no lo manda, y la lógica suma los tres campos, así que cualquier combinación de versiones cliente/backend funciona.
 
 ## Academic Profile
 
