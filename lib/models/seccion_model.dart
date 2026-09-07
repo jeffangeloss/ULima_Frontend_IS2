@@ -40,6 +40,18 @@ class Seccion {
   /// (`sky_engine/lib/ui/math.dart`: `if (x.isNaN) return max;`). El
   /// `CircularProgressIndicator` terminaba pintado lleno y verde, afirmándole
   /// al alumno que asistió al 100% justo cuando no se sabe nada.
+  /// Fracción del ANILLO pintada de verde: horas asistidas sobre el total del
+  /// ciclo. El anillo nace vacío y se llena como las manecillas de un reloj.
+  ///
+  /// Sobre el TOTAL y no sobre lo dictado a propósito: lo que todavía no se
+  /// dictó tiene que quedar SIN PINTAR. Pintarlo de rojo —como hacía el
+  /// `backgroundColor` del indicador— dice que faltaste a clases que no
+  /// ocurrieron; pintarlo de verde dice que ya terminaste el curso.
+  double get fraccionAsistida => total > 0 ? asistido / total : 0.0;
+
+  /// Fracción del anillo pintada de rojo: horas de falta sobre el total.
+  double get fraccionFaltas => total > 0 ? inasistencia / total : 0.0;
+
   /// RS-BE-16: se divide por lo dictado, no por el ciclo entero. Con 8 horas
   /// asistidas de 64 programadas en la semana 2, dividir por `total` daría
   /// 12.5% y el alumno leería "asististe al 12.5%" — la misma deshonestidad que

@@ -11,6 +11,7 @@ import 'package:ulima_plus/models/seccion_model.dart';
 /// app le afirmaba a cada alumno, en cada curso, que había asistido al 100%.
 /// "Sin datos" nunca debe poder disfrazarse de asistencia perfecta.
 void main() {
+  _anillo();
   Map<String, dynamic> json({
     int asistido = 0,
     int inasistencia = 0,
@@ -101,6 +102,51 @@ void main() {
       // Degradación con un backend viejo: no se asume disponible por omisión.
       expect(Seccion.fromJson(json(total: 80)).asistenciaDisponible, isTrue);
       expect(Seccion.fromJson(json(total: 0)).asistenciaDisponible, isFalse);
+    });
+  });
+}
+
+/// El anillo NACE VACÍO y se llena con el ciclo, como las manecillas de un
+/// reloj: verde lo asistido, rojo lo faltado, y sin pintar lo que todavía no se
+/// dictó. Las dos fracciones son sobre el TOTAL del ciclo, no sobre lo dictado.
+void _anillo() {
+  Map<String, dynamic> j(int asistido, int inasistencia, int total) => {
+        'idSeccion': '1', 'codigoSeccion': '751', 'docenteCode': 'D1',
+        'promedioSeccion': 0, 'idCurso': '650065', 'curso': 'X',
+        'asistido': asistido, 'inasistencia': inasistencia, 'total': total,
+        'horasTranscurridas': asistido + inasistencia,
+      };
+
+  group('el anillo se llena sobre el total del ciclo', () {
+    test('semana 2 sin faltas: 12.5% verde, nada de rojo, el resto vacío', () {
+      final s = Seccion.fromJson(j(8, 0, 64));
+      expect(s.fraccionAsistida, closeTo(0.125, 1e-9));
+      expect(s.fraccionFaltas, 0.0);
+      // 87.5% del anillo queda SIN PINTAR: son clases que no ocurrieron.
+      expect(s.fraccionAsistida + s.fraccionFaltas, lessThan(1.0));
+    });
+
+    test('con faltas, el rojo crece y el verde no', () {
+      final s = Seccion.fromJson(j(6, 2, 64));
+      expect(s.fraccionAsistida, closeTo(6 / 64, 1e-9));
+      expect(s.fraccionFaltas, closeTo(2 / 64, 1e-9));
+    });
+
+    test('al inicio del ciclo el anillo esta completamente vacio', () {
+      final s = Seccion.fromJson(j(0, 0, 64));
+      expect(s.fraccionAsistida, 0.0);
+      expect(s.fraccionFaltas, 0.0);
+    });
+
+    test('a fin de ciclo las dos fracciones cierran el anillo', () {
+      final s = Seccion.fromJson(j(56, 8, 64));
+      expect(s.fraccionAsistida + s.fraccionFaltas, closeTo(1.0, 1e-9));
+    });
+
+    test('sin horas programadas no se pinta nada, sin dividir por cero', () {
+      final s = Seccion.fromJson(j(0, 0, 0));
+      expect(s.fraccionAsistida, 0.0);
+      expect(s.fraccionFaltas, 0.0);
     });
   });
 }
