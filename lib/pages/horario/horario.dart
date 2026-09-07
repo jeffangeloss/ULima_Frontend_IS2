@@ -592,9 +592,11 @@ class HorarioPage extends StatelessWidget {
         : const Color(0xFFE6E6E6);
     final user = AuthService.to.currentUser;
     final studentCode = user?.code ?? '';
-    final studentName = user == null
-        ? ''
-        : '${user.lastName} ${user.firstName}'.toUpperCase();
+    // El nombre va tal como está guardado: APELLIDOS y después NOMBRES. Antes se
+    // imprimía `lastName + firstName` sobre una partición equivocada —el backend
+    // toma el último token como apellido— y salía "ANGELO SANCHEZ PALACIOS
+    // JEFFERSON" en vez de "SANCHEZ PALACIOS JEFFERSON ANGELO".
+    final studentName = user == null ? '' : user.fullName.toUpperCase();
     final cycle = user?.currentCycle ?? '';
 
     return Container(
