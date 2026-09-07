@@ -96,7 +96,16 @@ class DescripCursosPage extends StatelessWidget {
 
     int total = seccion.total;
 
-    double porcentaje = asistido / total;
+    // `porcentajeAsistencia` es null cuando no hay horas cargadas. Antes acá
+    // había un `asistido / total` pelado: con total = 0 daba NaN y Flutter
+    // clampea NaN al MÁXIMO, así que la dona salía llena y verde y le decía al
+    // alumno que había asistido al 100%. Ver RS-BE-10 y el test
+    // test/HU_asistencia/seccion_asistencia_test.dart.
+    final double? porcentaje = seccion.porcentajeAsistencia;
+
+    if (!seccion.asistenciaDisponible || porcentaje == null) {
+      return _asistenciaSinDatos(context, colors);
+    }
 
     return Container(
       width: double.infinity,
@@ -216,6 +225,59 @@ class DescripCursosPage extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Estado honesto cuando no hay horas de asistencia cargadas.
+  ///
+  /// Deliberadamente NEUTRO, no verde: el verde es el color de "todo bien" en
+  /// esta app, y "no sabemos" no es "todo bien". Tampoco muestra los tres ceros,
+  /// que se leían como asistencia perfecta.
+  Widget _asistenciaSinDatos(BuildContext context, ColorScheme colors) {
+    return Container(
+      width: double.infinity,
+      color: _attendanceBackground(colors),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Asistencia',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Icon(
+                Icons.help_outline,
+                color: colors.onSurfaceVariant,
+                size: 22,
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  'Sin datos de asistencia para este curso.',
+                  style: TextStyle(color: colors.onSurfaceVariant),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Todavía no se importaron tus horas de clase desde miUlima.',
+            style: TextStyle(color: colors.onSurfaceVariant, fontSize: 12),
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () => Get.toNamed<dynamic>('/portal-sync'),
+              icon: const Icon(Icons.sync, size: 18),
+              label: const Text('Actualizar desde miUlima'),
+            ),
           ),
         ],
       ),
