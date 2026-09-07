@@ -61,9 +61,22 @@ class ResetPasswordController extends GetxController {
     }
   }
 
+  /// El código tal como lo entiende el flujo: recortado a su largo.
+  ///
+  /// El campo ya no lleva `LengthLimitingTextInputFormatter` —era la causa del
+  /// bug de borrado en iOS— así que el controller sí puede traer un dígito de
+  /// más. Sin este recorte, `validateResetCode` rechazaría con «debe tener 6
+  /// dígitos» un código que en pantalla se ve perfecto.
+  String get _codigo {
+    final crudo = codeController.text.trim();
+    return crudo.length > passwordResetCodeLength
+        ? crudo.substring(0, passwordResetCodeLength)
+        : crudo;
+  }
+
   /// Paso 1 -> 2: valida el formato del código localmente y avanza.
   void continueToPassword() {
-    final codeError = validateResetCode(codeController.text.trim());
+    final codeError = validateResetCode(_codigo);
     if (codeError != null) {
       errorMessage.value = codeError;
       return;
@@ -79,7 +92,7 @@ class ResetPasswordController extends GetxController {
   }
 
   Future<void> submit() async {
-    final code = codeController.text.trim();
+    final code = _codigo;
     final newPassword = passwordController.text;
     final confirmation = confirmController.text;
 
