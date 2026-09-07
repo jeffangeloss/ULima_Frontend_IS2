@@ -39,22 +39,30 @@ class HorarioPage extends StatelessWidget {
   ///
   /// Pura y expuesta para poder probarla, igual que [blockGeometry].
   ///
-  /// La vista de día a día ([_portraitGrid], `compact == false`) muestra solo el
-  /// salón: nombre del curso y dónde se dicta, nada más. La sección sobra ahí —
-  /// el alumno está matriculado en una sola y la tiene en el detalle del curso —
-  /// mientras que el salón es el dato que se va a buscar en el bloque.
+  /// Lo decide la VISTA, no el tamaño del bloque:
+  /// - Vista de día a día ([_portraitGrid], `vistaDia: true`): el salón. Nombre
+  ///   del curso y dónde se dicta, nada más. La sección sobra — el alumno está
+  ///   matriculado en una sola y la tiene en el detalle del curso — mientras que
+  ///   el salón es el dato que va a buscar en el bloque.
+  /// - Vista semanal horizontal ([_landscapeWeekGrid], `vistaDia: false`): la
+  ///   sección. Cada día es una columna angosta donde el salón no entra.
   ///
-  /// La vista semanal horizontal ([_landscapeWeekGrid], `compact == true`) no
-  /// cambia: cada día es una columna angosta donde el salón no entra, así que
-  /// sigue mostrando la sección y solo si el bloque tiene alto suficiente.
+  /// ⚠️ `compact` NO distingue las vistas, aunque lo parezca: significa que el
+  /// bloque quedó chico. La semanal lo pasa fijo en `true`, pero la de día lo
+  /// CALCULA (`dynamicHourHeight < 35`) y en una pantalla pequeña también da
+  /// `true` — en un iPhone SE las 15 horas del día caben a ~25 px por hora. La
+  /// primera versión de esto decidía por `compact` y el teléfono siguió
+  /// mostrando la sección. Aquí `compact` solo gobierna el umbral de alto.
   static List<String> blockMetaLines({
+    required bool vistaDia,
     required bool compact,
     required double height,
     required String seccionLabel,
     required String aula,
   }) {
-    if (!compact) return <String>[aula];
-    return height >= compactMetaMinHeight ? <String>[seccionLabel] : const <String>[];
+    final linea = vistaDia ? aula : seccionLabel;
+    if (!compact) return <String>[linea];
+    return height >= compactMetaMinHeight ? <String>[linea] : const <String>[];
   }
 
   /// Dónde va y cuánto mide el bloque de un curso.
@@ -268,6 +276,9 @@ class HorarioPage extends StatelessWidget {
     required double left,
     required double right,
     required bool compact,
+    /// true en la vista de día a día, false en la semanal horizontal. Separado
+    /// de [compact] a propósito: ese dice si el bloque es chico, no qué vista es.
+    required bool vistaDia,
     /// Dónde cae la línea de la hora dentro de su fila: 9 en la vista vertical,
     /// 0 en la horizontal, que dibuja las líneas justo en `i * alto`.
     double lineOffset = 0.0,
@@ -474,6 +485,7 @@ class HorarioPage extends StatelessWidget {
                         ),
                       ),
                       for (final linea in blockMetaLines(
+                        vistaDia: vistaDia,
                         compact: compact,
                         height: heightVal,
                         seccionLabel: course['isAdvising'] == true
@@ -576,6 +588,7 @@ class HorarioPage extends StatelessWidget {
                     left: 66,
                     right: 14,
                     compact: dynamicHourHeight < 35,
+                    vistaDia: true,
                     lineOffset: vertLineOffset,
                   ),
                 ),
@@ -721,6 +734,7 @@ class HorarioPage extends StatelessWidget {
                                       left: 2,
                                       right: 2,
                                       compact: true,
+                                      vistaDia: false,
                                       lineOffset: labelPad,
                                     ),
                                   ),

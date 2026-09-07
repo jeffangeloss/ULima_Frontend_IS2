@@ -15,55 +15,67 @@ void main() {
   const alto = HorarioPage.compactMetaMinHeight;
 
   List<String> lineas({
-    required bool compact,
+    required bool vistaDia,
+    bool compact = false,
     double height = 90,
     String seccionLabel = 'Sección: 855',
     String aula = 'A-501',
   }) => HorarioPage.blockMetaLines(
+    vistaDia: vistaDia,
     compact: compact,
     height: height,
     seccionLabel: seccionLabel,
     aula: aula,
   );
 
-  group('vista de día a día (compact == false)', () {
+  group('vista de día a día', () {
     test('muestra el salón y nada más', () {
-      expect(lineas(compact: false), ['A-501']);
+      expect(lineas(vistaDia: true), ['A-501']);
     });
 
     test('nunca muestra la sección', () {
-      expect(lineas(compact: false), isNot(contains('Sección: 855')));
+      expect(lineas(vistaDia: true), isNot(contains('Sección: 855')));
     });
 
-    test('el alto del bloque no le quita el salón a un curso corto', () {
-      // Un curso de una hora mide menos que el umbral de la vista semanal, y
-      // aun así tiene que decir dónde se dicta.
-      expect(lineas(compact: false, height: 20), ['A-501']);
+    test('SIGUE mostrando el salón aunque el bloque salga compacto', () {
+      // Regresión del 2026-09-07, vista en un iPhone SE: la vista de día calcula
+      // `compact: dynamicHourHeight < 35`, y al comprimir las 15 horas del día en
+      // una pantalla chica el alto de hora baja a ~25 px, así que compact es TRUE
+      // también aquí. La primera versión decidía por `compact` y por eso el
+      // teléfono seguía mostrando "Sección: 952". La vista manda, no el tamaño.
+      expect(lineas(vistaDia: true, compact: true, height: 50), ['A-501']);
     });
 
     test('si el backend no manda salón, se muestra el marcador y no la sección', () {
-      expect(lineas(compact: false, aula: 'Sin salón'), ['Sin salón']);
+      expect(lineas(vistaDia: true, aula: 'Sin salón'), ['Sin salón']);
     });
   });
 
-  group('vista semanal horizontal (compact == true): no cambia', () {
+  group('vista semanal horizontal: no cambia', () {
     test('muestra la sección cuando el bloque tiene alto suficiente', () {
-      expect(lineas(compact: true, height: alto), ['Sección: 855']);
+      expect(lineas(vistaDia: false, compact: true, height: alto), ['Sección: 855']);
     });
 
     test('no muestra nada cuando el bloque es demasiado bajo', () {
-      expect(lineas(compact: true, height: alto - 1), isEmpty);
+      expect(lineas(vistaDia: false, compact: true, height: alto - 1), isEmpty);
     });
 
     test('nunca muestra el salón, que no entra en una columna de día', () {
-      expect(lineas(compact: true, height: 90), isNot(contains('A-501')));
+      expect(lineas(vistaDia: false, compact: true, height: 90), isNot(contains('A-501')));
     });
 
     test('una asesoría lleva su propia etiqueta, no el prefijo "Sección:"', () {
       expect(
-        lineas(compact: true, height: alto, seccionLabel: 'Asesoría'),
+        lineas(vistaDia: false, compact: true, height: alto, seccionLabel: 'Asesoría'),
         ['Asesoría'],
       );
+    });
+  });
+
+  group('el umbral de alto sigue protegiendo a los bloques diminutos', () {
+    test('un bloque bajísimo no pinta texto en ninguna de las dos vistas', () {
+      expect(lineas(vistaDia: true, compact: true, height: alto - 1), isEmpty);
+      expect(lineas(vistaDia: false, compact: true, height: alto - 1), isEmpty);
     });
   });
 }
