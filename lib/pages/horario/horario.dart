@@ -31,6 +31,32 @@ class HorarioPage extends StatelessWidget {
   /// duración: un bloque tiene que llegar hasta la línea de su hora de fin.
   static const double blockHairline = 2.0;
 
+  /// Alto mínimo para que un bloque de la vista semanal muestre su sección
+  /// debajo del nombre. Por debajo de esto el texto no entra y se omite.
+  static const double compactMetaMinHeight = 34.0;
+
+  /// Qué va debajo del nombre del curso dentro de un bloque.
+  ///
+  /// Pura y expuesta para poder probarla, igual que [blockGeometry].
+  ///
+  /// La vista de día a día ([_portraitGrid], `compact == false`) muestra solo el
+  /// salón: nombre del curso y dónde se dicta, nada más. La sección sobra ahí —
+  /// el alumno está matriculado en una sola y la tiene en el detalle del curso —
+  /// mientras que el salón es el dato que se va a buscar en el bloque.
+  ///
+  /// La vista semanal horizontal ([_landscapeWeekGrid], `compact == true`) no
+  /// cambia: cada día es una columna angosta donde el salón no entra, así que
+  /// sigue mostrando la sección y solo si el bloque tiene alto suficiente.
+  static List<String> blockMetaLines({
+    required bool compact,
+    required double height,
+    required String seccionLabel,
+    required String aula,
+  }) {
+    if (!compact) return <String>[aula];
+    return height >= compactMetaMinHeight ? <String>[seccionLabel] : const <String>[];
+  }
+
   /// Dónde va y cuánto mide el bloque de un curso.
   ///
   /// Pura y expuesta para poder probarla: el bloque MIDE su duración. La versión
@@ -447,12 +473,17 @@ class HorarioPage extends StatelessWidget {
                           height: 1.05,
                         ),
                       ),
-                      if (!compact || heightVal >= 34) ...[
+                      for (final linea in blockMetaLines(
+                        compact: compact,
+                        height: heightVal,
+                        seccionLabel: course['isAdvising'] == true
+                            ? (course['codigoSeccion']?.toString() ?? 'Asesoría')
+                            : "Sección: ${course['codigoSeccion'] ?? 'Sin sección'}",
+                        aula: aulaStr,
+                      )) ...[
                         const SizedBox(height: 2),
                         Text(
-                          course['isAdvising'] == true
-                              ? (course['codigoSeccion'] ?? 'Asesoría')
-                              : "Sección: ${course['codigoSeccion'] ?? 'Sin sección'}",
+                          linea,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -461,19 +492,6 @@ class HorarioPage extends StatelessWidget {
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        if (!compact) ...[
-                          const SizedBox(height: 1),
-                          Text(
-                            aulaStr,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.9),
-                              fontSize: metaFontSize,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
                       ],
                     ],
                   ),
