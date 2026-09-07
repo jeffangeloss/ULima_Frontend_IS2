@@ -183,6 +183,20 @@ class DescripCursosPage extends StatelessWidget {
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
+
+                    // RS-BE-16: el anillo mide sobre lo DICTADO, no sobre el
+                    // ciclo entero. Sin esta línea, un anillo lleno en la
+                    // semana 2 se leería como "ya terminaste el curso".
+                    Padding(
+                      padding: const EdgeInsets.only(left: 38, top: 4),
+                      child: Text(
+                        '${seccion.horasTranscurridas} dictadas hasta hoy',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),

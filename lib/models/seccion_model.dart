@@ -14,6 +14,10 @@ class Seccion {
   /// del backend, así que la ausencia de dato tiene que ser explícita.
   final bool asistenciaDisponible;
 
+  /// Horas de clase ya DICTADAS (asistidas + faltas), no las del ciclo entero.
+  /// RS-BE-16.
+  final int horasTranscurridas;
+
   Seccion({
     required this.idSeccion,
     required this.codigoSeccion,
@@ -25,18 +29,24 @@ class Seccion {
     required this.inasistencia,
     required this.total,
     required this.asistenciaDisponible,
+    required this.horasTranscurridas,
   });
 
-  /// Fracción asistida (0..1), o `null` cuando no hay horas cargadas.
+  /// Fracción asistida (0..1) sobre las horas TRANSCURRIDAS, o `null` si
+  /// todavía no se dictó ninguna.
   ///
   /// NUNCA devolver `asistido / total` sin esta guarda: con `total = 0` da
   /// `0/0 = NaN`, y `clampDouble` de Flutter resuelve NaN al MÁXIMO
   /// (`sky_engine/lib/ui/math.dart`: `if (x.isNaN) return max;`). El
   /// `CircularProgressIndicator` terminaba pintado lleno y verde, afirmándole
   /// al alumno que asistió al 100% justo cuando no se sabe nada.
+  /// RS-BE-16: se divide por lo dictado, no por el ciclo entero. Con 8 horas
+  /// asistidas de 64 programadas en la semana 2, dividir por `total` daría
+  /// 12.5% y el alumno leería "asististe al 12.5%" — la misma deshonestidad que
+  /// arregló RS-BE-10, invertida.
   double? get porcentajeAsistencia {
-    if (total <= 0) return null;
-    return asistido / total;
+    if (horasTranscurridas <= 0) return null;
+    return asistido / horasTranscurridas;
   }
 
   factory Seccion.fromJson(Map<String, dynamic> json) {
@@ -55,6 +65,10 @@ class Seccion {
       // servidor (`total > 0`), nunca a `true`.
       asistenciaDisponible: (json['asistenciaDisponible'] as bool?) ??
           (((json['total'] as num?)?.toInt() ?? 0) > 0),
+      // Con un backend viejo que no lo emita, se reconstruye igual.
+      horasTranscurridas: (json['horasTranscurridas'] as num?)?.toInt() ??
+          (((json['asistido'] as num?)?.toInt() ?? 0) +
+              ((json['inasistencia'] as num?)?.toInt() ?? 0)),
     );
   }
 }
