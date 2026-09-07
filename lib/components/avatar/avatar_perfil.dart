@@ -5,6 +5,54 @@ import '../../services/auth_service.dart';
 import '../../services/avatar_service.dart';
 import 'avatar_usuario.dart';
 
+/// Insignia de cámara que avisa que el avatar se puede tocar.
+///
+/// Sin ella el cuadro de iniciales del perfil se ve idéntico al de las nueve
+/// pantallas donde la foto NO se puede cambiar, así que la función queda
+/// escondida: el 2026-09-07, con la app ya instalada en el teléfono, el propio
+/// usuario no encontró dónde cambiarse la foto. El `Semantics` que ya existía
+/// solo la anuncia a los lectores de pantalla, no a la vista.
+///
+/// Va solo en [AvatarPerfil]. Ponerla en [AvatarUsuario] prometería algo que
+/// esas pantallas no pueden cumplir.
+class AvatarEditBadge extends StatelessWidget {
+  const AvatarEditBadge({
+    super.key,
+    required this.avatarSize,
+    this.background,
+    this.foreground,
+  });
+
+  final double avatarSize;
+  final Color? background;
+  final Color? foreground;
+
+  /// Proporcional al avatar, pero con cotas: por debajo de 14 px el icono no se
+  /// distingue y por encima de 28 la insignia se come el cuadro de 48 del perfil.
+  double get diameter => (avatarSize * 0.36).clamp(14.0, 28.0);
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      width: diameter,
+      height: diameter,
+      decoration: BoxDecoration(
+        color: background ?? colors.primary,
+        shape: BoxShape.circle,
+        // El borde del color del fondo despega la insignia del avatar aunque la
+        // foto que haya debajo sea del mismo tono.
+        border: Border.all(color: colors.surface, width: 1.5),
+      ),
+      child: Icon(
+        Icons.photo_camera_rounded,
+        size: diameter * 0.58,
+        color: foreground ?? colors.onPrimary,
+      ),
+    );
+  }
+}
+
 /// El avatar del perfil, con la subida encima.
 ///
 /// Es el único punto de la app donde se cambia la foto. Al tocarlo ofrece
@@ -140,6 +188,12 @@ class _AvatarPerfilState extends State<AvatarPerfil> {
                 width: widget.size * 0.4,
                 height: widget.size * 0.4,
                 child: const CircularProgressIndicator(strokeWidth: 2),
+              )
+            else
+              Positioned(
+                right: 0,
+                bottom: 0,
+                child: AvatarEditBadge(avatarSize: widget.size),
               ),
           ],
         ),

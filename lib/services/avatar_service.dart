@@ -46,7 +46,9 @@ class AvatarService {
         .then(http.Response.fromStream);
 
     if (respuesta.statusCode < 200 || respuesta.statusCode >= 300) {
-      throw AvatarFailure('No se pudo subir la foto. Inténtalo de nuevo.');
+      throw AvatarFailure(
+        mensajeDeFalloDeCloudinary(respuesta.statusCode, respuesta.body),
+      );
     }
 
     final cuerpo = jsonDecode(respuesta.body) as Map<String, dynamic>;
@@ -66,6 +68,33 @@ class AvatarService {
   /// Quita la foto de otra persona. Solo lo permite el backend a delegados,
   /// subdelegados, docentes y jefes de práctica de una sección compartida.
   Future<void> quitarDe(String userId) => _api.deleteJson('/avatar/$userId');
+}
+
+/// Traduce una respuesta fallida de Cloudinary a un mensaje para la pantalla.
+///
+/// Pura y expuesta para poder probarla. Cloudinary manda el motivo en
+/// `{"error":{"message":"..."}}` y la app lo tiraba: el 2026-09-07 "No se pudo
+/// subir la foto" era compatible con una credencial mal puesta, una firma
+/// inválida, una cuenta equivocada y una caída de red, y hubo que leer los logs
+/// de Vercel solo para descartar el backend.
+///
+/// Lo que Cloudinary devuelve NO es secreto: el "string to sign" que cita en el
+/// error lleva `public_id` y `timestamp`, nunca el `api_secret`, que no sale del
+/// backend.
+String mensajeDeFalloDeCloudinary(int statusCode, String cuerpo) {
+  String? detalle;
+  try {
+    final json = jsonDecode(cuerpo);
+    if (json is Map && json['error'] is Map) {
+      detalle = (json['error'] as Map)['message']?.toString();
+    }
+  } catch (_) {
+    // Cloudinary no siempre responde JSON: un 502 de su CDN llega como HTML.
+  }
+  final limpio = detalle?.trim();
+  return limpio == null || limpio.isEmpty
+      ? 'No se pudo subir la foto (error $statusCode).'
+      : 'No se pudo subir la foto: $limpio (error $statusCode).';
 }
 
 /// Fallo con un mensaje ya listo para mostrar.
