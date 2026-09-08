@@ -105,8 +105,14 @@ class RegistroService {
       case 'PORTAL_SESSION_INVALID':
         return 'La sesión de miUlima se cortó mientras cargábamos. Inténtalo de nuevo.';
       case 'NOT_ENROLLED':
+        // La frase final no es adorno. Este código vuelve a `verificar`, donde
+        // el único botón dice "Crear mi cuenta": sin decirlo, la pantalla se
+        // lee como un formulario que hay que corregir y la persona reintenta.
+        // Reintentar no puede funcionar —la matrícula no aparece porque no
+        // existe— y a los cinco intentos el backend la bloquea una hora.
         return 'miUlima no reporta matrícula en el ciclo actual, así que '
-            'todavía no podemos crear tu cuenta.';
+            'todavía no podemos crear tu cuenta. No hace falta que lo '
+            'intentes de nuevo ahora.';
       case 'PORTAL_IDENTITY_UNVERIFIABLE':
         return 'No pudimos leer tu matrícula en miUlima.';
       case 'PORTAL_TIMEOUT':
@@ -114,11 +120,20 @@ class RegistroService {
       case 'PORTAL_UNAVAILABLE':
         return 'miUlima no está respondiendo. Inténtalo más tarde.';
       case 'REGISTRATION_UNAVAILABLE':
-        return 'El registro no está disponible por ahora.';
+        // Mismo motivo que `NOT_ENROLLED`: el registro está apagado del lado
+        // del servidor y volver a pulsar el botón solo gasta cupo. Acá el
+        // "más tarde" sí tiene sentido porque el estado cambia solo.
+        return 'El registro no está disponible por ahora. Vuelve a intentarlo '
+            'más tarde.';
       case 'RATE_LIMITED':
         // Se muestra el texto del backend y NO se lee `details`: detrás de este
         // código hay dos limitadores y la clave cambia entre ellos
         // (`retryAfterMinutes` vs `retryAfterSeconds`).
+        //
+        // Tampoco se le agrega nada: los dos mensajes ya dicen cuánto esperar
+        // —«Intenta de nuevo en 42 minuto(s).» el de por código, «en unos
+        // segundos» el de concurrencia— y cualquier añadido nuestro chocaría
+        // con uno de los dos. El respaldo cubre el caso de `message` vacío.
         return e.message.isNotEmpty
             ? e.message
             : 'Demasiados intentos. Espera un rato antes de volver a intentar.';

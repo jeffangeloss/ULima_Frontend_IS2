@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ulima_plus/models/registro_models.dart';
 import 'package:ulima_plus/services/api_client.dart';
@@ -110,7 +108,7 @@ void main() {
     });
 
     test('caso 5: un fallo de red crudo no se disfraza de error del backend', () async {
-      final api = _FakeApiClient(error: const SocketExceptionFalsa());
+      final api = _FakeApiClient(error: const _SocketExceptionFalsa());
       final e = await RegistroService(apiClient: api)
           .registrar(code: '20230001', portalPassword: 'x', passcode: '123456', password: 'micontrasena')
           .then<Object?>((_) => null)
@@ -180,10 +178,44 @@ void main() {
     test('caso 6: un código desconocido con mensaje vacío no deja la pantalla muda', () {
       expect(mensaje('LO_QUE_SEA'), isNotEmpty);
     });
+
+    test('caso 7: los códigos sin reintento útil dicen que no reintentes', () {
+      // Los cuatro vuelven a `verificar`, donde el único botón dice "Crear mi
+      // cuenta" y cada pulsada gasta uno de los cinco intentos por hora. Si el
+      // mensaje solo describe el problema, la pantalla se lee como un
+      // formulario que hay que corregir y la persona acaba bloqueada.
+      expect(mensaje('NOT_ENROLLED'),
+          contains('No hace falta que lo intentes de nuevo ahora'));
+      expect(mensaje('REGISTRATION_UNAVAILABLE'), contains('más tarde'));
+      // Estos dos ya lo decían y no se tocan.
+      expect(mensaje('PORTAL_TIMEOUT'), contains('más tarde'));
+      expect(mensaje('PORTAL_UNAVAILABLE'), contains('más tarde'));
+    });
+
+    test('caso 8: los códigos que SÍ se corrigen reintentando no dicen que esperes', () {
+      // La contracara del caso 7: acá reintentar es exactamente lo que hay que
+      // hacer, así que el mensaje no puede desanimarlo.
+      expect(mensaje('PORTAL_AUTH_FAILED'), isNot(contains('más tarde')));
+      expect(mensaje('PORTAL_SESSION_INVALID'), contains('de nuevo'));
+    });
+
+    test('caso 9: el 429 se muestra tal cual bajo los DOS limitadores', () {
+      // El de por código da los minutos exactos; el de concurrencia dice "en
+      // unos segundos". Los dos ya traen la espera, así que no se les agrega
+      // nada: cualquier añadido nuestro chocaría con uno de los dos.
+      const porCodigo =
+          'Demasiados intentos de registro. Intenta de nuevo en 42 minuto(s).';
+      const porConcurrencia =
+          'Hay demasiados registros en curso. Intenta de nuevo en unos segundos.';
+      expect(mensaje('RATE_LIMITED', porCodigo), equals(porCodigo));
+      expect(mensaje('RATE_LIMITED', porConcurrencia), equals(porConcurrencia));
+      // Y si el backend no manda texto, el respaldo tampoco deja a nadie mudo.
+      expect(mensaje('RATE_LIMITED'), contains('Espera'));
+    });
   });
 }
 
 /// Un fallo de red cualquiera: `ApiClient` los propaga sin envolver.
-class SocketExceptionFalsa implements Exception {
-  const SocketExceptionFalsa();
+class _SocketExceptionFalsa implements Exception {
+  const _SocketExceptionFalsa();
 }
