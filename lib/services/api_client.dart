@@ -63,12 +63,21 @@ class ApiClient {
     return 'http://localhost:3000';
   }
 
+  /// [suppressSessionExpiry] apaga, **solo para esta llamada**, el tratamiento
+  /// del 401 como sesión caducada. Ver la nota del parámetro en [_send].
   Future<Map<String, dynamic>> getJson(
     String path, {
     String? token,
     Map<String, String?> query = const {},
+    bool suppressSessionExpiry = false,
   }) {
-    return _send('GET', path, token: token, query: query);
+    return _send(
+      'GET',
+      path,
+      token: token,
+      query: query,
+      suppressSessionExpiry: suppressSessionExpiry,
+    );
   }
 
   Future<Map<String, dynamic>> postJson(
@@ -94,12 +103,22 @@ class ApiClient {
     return _send('DELETE', path, token: token);
   }
 
+  /// [suppressSessionExpiry] apaga el tratamiento del 401 como caducidad para
+  /// **esta llamada concreta**, sin tocar la sesión ni navegar.
+  ///
+  /// No se puede resolver con [esRuta401Exenta] porque la exención ahí es por
+  /// ruta y estos mismos endpoints, llamados desde un login normal, SÍ deben
+  /// tratar su 401 como una sesión que murió. Lo que cambia no es la ruta sino
+  /// el momento: quien la llama justo después de que el backend confirmó que
+  /// la cuenta existe no puede permitirse que un hipo de red eche a la persona
+  /// de la pantalla. Ver `AuthService.adoptarSesion` y BR-REG-F-10.
   Future<Map<String, dynamic>> _send(
     String method,
     String path, {
     String? token,
     Map<String, String?> query = const {},
     Map<String, dynamic>? body,
+    bool suppressSessionExpiry = false,
   }) async {
     final resolvedToken = token ?? await StorageService.to.savedToken;
     final request = http.Request(method, _uri(path, query));
@@ -109,7 +128,9 @@ class ApiClient {
     final streamed = await request.send();
     final resolved = await http.Response.fromStream(streamed);
 
-    if (resolved.statusCode == 401 && !esRuta401Exenta(path)) {
+    if (resolved.statusCode == 401 &&
+        !esRuta401Exenta(path) &&
+        !suppressSessionExpiry) {
       await StorageService.to.clearSession();
       // Un 401 del propio /auth/logout no es una "sesión expirada" que deba
       // navegar desde aquí: el cierre de sesión es voluntario y quien lo
