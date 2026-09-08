@@ -24,6 +24,20 @@ class ApiException implements Exception {
   String toString() => 'ApiException($statusCode, $code, $message)';
 }
 
+/// Rutas cuyo 401 **no** significa que la sesión caducó.
+///
+/// `/auth/login` porque un login rechazado es un 401 normal. `/auth/register`
+/// porque su fallo más común —miUlima rechaza la contraseña o el passcode—
+/// también responde 401, y quien se está registrando no tiene ninguna sesión
+/// que caducar: sin la exención se le borraría la sesión inexistente, se le
+/// sacaría de la pantalla de registro con `offAllToLogin()` y leería
+/// "Sesión expirada". Ver BR-REG-F-04 de `specs/features/registro`.
+///
+/// `/auth/logout` NO va acá: su 401 sí limpia la sesión (es lo que se pidió),
+/// solo se salta la navegación. Esa excepción vive dentro del `if`.
+bool esRuta401Exenta(String path) =>
+    path.contains('/auth/login') || path.contains('/auth/register');
+
 class ApiClient {
   ApiClient({String? configuredBaseUrl})
     : _configuredBaseUrl = configuredBaseUrl ?? _defaultConfiguredBaseUrl;
@@ -95,7 +109,7 @@ class ApiClient {
     final streamed = await request.send();
     final resolved = await http.Response.fromStream(streamed);
 
-    if (resolved.statusCode == 401 && !path.contains('/auth/login')) {
+    if (resolved.statusCode == 401 && !esRuta401Exenta(path)) {
       await StorageService.to.clearSession();
       // Un 401 del propio /auth/logout no es una "sesión expirada" que deba
       // navegar desde aquí: el cierre de sesión es voluntario y quien lo
