@@ -14,7 +14,7 @@ targets:
 
 # Registro
 
-> Estado: **diseñada el 2026-09-08, pendiente de implementación.** Consume `POST /auth/register`, que hoy vive en una rama del backend sin desplegar. Es la cara visible de `specs/features/registro/registro.spec.md` del backend (RS-BE-17 y RS-BE-18).
+> Estado: **implementada el 2026-09-08.** Consume `POST /auth/register`, que hoy vive en una rama del backend sin desplegar, así que la pantalla está probada entera contra dobles pero **todavía no contra el portal real**. Es la cara visible de `specs/features/registro/registro.spec.md` del backend (RS-BE-17 y RS-BE-18).
 
 ## Contexto
 
@@ -36,11 +36,19 @@ No es un formulario de alta genérico. No pide nombre, ni carrera, ni correo, pe
 ## Requirements
 
 - RS-FE-1: Desde `/login` se puede llegar a `/registro` y crear una cuenta que queda lista para usarse, sin pasar por ningún canal fuera de la app.
+  `[@test] ../../../test/HU33_jeff/registro_service_test.dart`
+  `[@test] ../../../test/HU33_jeff/registro_controller_test.dart`
+  `[@test] ../../../test/HU33_jeff/registro_page_test.dart`
 - RS-FE-2: Las dos contraseñas en juego —la de miUlima y la de ULima++— se piden en pantallas distintas y la de ULima++ se rotula como propia de la app. Nunca se ven las dos a la vez.
+  `[@test] ../../../test/HU33_jeff/registro_page_test.dart`
 - RS-FE-3: El cliente no agrega ningún camino para averiguar si un código tiene cuenta. Ninguna pantalla anterior al envío consulta al backend por un código, y el registro no se ofrece en función de por qué falló un login. Ver §Deuda conocida: el endpoint ya es distinguible por sí mismo, y eso no se arregla desde acá.
+  `[@test] ../../../test/HU33_jeff/registro_controller_test.dart`
 - RS-FE-4: Ningún fallo del registro cierra sesiones, navega fuera de la pantalla ni muestra un mensaje que no describa lo que pasó.
+  `[@test] ../../../test/HU33_jeff/api_client_401_test.dart`
 - RS-FE-5: Si el cliente no puede saber si la cuenta quedó creada, lo dice con esas palabras y ofrece iniciar sesión. Nunca afirma que el registro falló cuando no lo sabe.
+  `[@test] ../../../test/HU33_jeff/registro_controller_test.dart`
 - RS-FE-6: Las credenciales de miUlima viven solo en los `TextEditingController` de la pantalla y no sobreviven a salir de ella.
+  `[@test] ../../../test/HU33_jeff/registro_controller_test.dart`
 
 ## Business Rules
 
