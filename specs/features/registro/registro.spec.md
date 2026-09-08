@@ -81,7 +81,9 @@ Por eso el cliente valida antes de enviar, y envía el código ya recortado:
 
 `POST /auth/register` responde `401 PORTAL_AUTH_FAILED` en su fallo **más común** —contraseña de miUlima mal tipeada o código del authenticator vencido—. Sin arreglar esto, esa persona vería su pantalla de registro destruida, aterrizaría en el login y leería que su sesión caducó, cuando nunca tuvo una.
 
-`/auth/register` se suma por lo tanto a la exención que hoy tiene `/auth/login`, en la condición externa, para que no se limpie sesión **ni** se navegue. Es la única modificación que esta feature hace a `api_client.dart`, y es requisito para que RS-FE-4 se cumpla.
+`/auth/register` se suma por lo tanto a la exención que hoy tiene `/auth/login`, en la condición externa, para que no se limpie sesión **ni** se navegue.
+
+La exención por ruta no basta, y por eso `api_client.dart` recibe una segunda modificación: `getJson` y `_send` aceptan `suppressSessionExpiry`, que apaga ese tratamiento **para una llamada concreta**. Los catálogos que `adoptarSesion` carga después del 201 (`/academic-profile/careers` y `/academic-profile/specialties`) no pueden eximirse por ruta, porque los mismos endpoints, llamados desde un login normal, sí deben cerrar la sesión ante un 401. Lo que cambia no es la ruta sino el momento (§BR-REG-F-10). Las dos modificaciones juntas son requisito para que RS-FE-4 se cumpla.
 
 ### BR-REG-F-05: El reintento cuesta seis dígitos
 
@@ -119,6 +121,8 @@ Durante el envío la pantalla bloquea el retroceso con `PopScope(canPop: false)`
 
 Recibido el 201, la cuenta **existe**. Lo que el cliente haga después —guardar el token, cargar catálogos de carrera y especialidad, fijar el usuario— no puede convertirse en un mensaje de fallo.
 
+La carga de catálogos va con `suppressSessionExpiry: true` y no es opcional. Sin eso, un `401` de `/academic-profile/careers` recorre el camino genérico de `ApiClient`: borra el token guardado cuatro líneas antes, arranca `/registro` de la pila con `offAllToLogin()` y anuncia «Sesión expirada» a alguien cuya cuenta nació hace un segundo. El efecto ocurre **dentro** de `ApiClient`, antes de que `adoptarSesion` vea la excepción, así que atraparla no lo desharía: hay que impedirlo en el origen.
+
 La carga de catálogos se reintenta **una vez** y, si vuelve a fallar, se sigue adelante igual. Pero el fallo no se cura solo, y conviene decirlo: `_loadCatalogs` es privado y solo corre en `tryRestoreSession`, `login` y `finishGoogleLogin`, así que la persona aterrizaría en `/setup-carrera` —justo la pantalla que consume esas dos listas— con la carrera en blanco y sin especialidades que elegir hasta el próximo arranque de la app. Se asume a conciencia: el asistente sigue siendo completable, y ninguna alternativa justifica convertir un 201 en un error. Curarlo del todo es trabajo de `/setup-carrera`, no de esta feature.
 
 Es el reflejo en el cliente de la regla del backend: nada posterior al commit puede terminar en error, porque la persona reintentaría y el `409` le cerraría el paso.
@@ -131,6 +135,8 @@ Es el reflejo en el cliente de la regla del backend: nada posterior al commit pu
 
 Si el login falla, **no se concluye que la cuenta no existe**. Puede no existir, pero también puede existir bajo el código que devolvió el portal, que gana sobre el tecleado (§BR-REG-F-06) — y entonces el login con el código tecleado falla aunque la cuenta esté ahí. Se sigue en `incierto` y el texto cambia a algo accionable: volver a intentar el registro, y si esta vez responde «ya existe una cuenta con ese código», eso **confirma** que sí se creó y el camino es recuperar la contraseña desde el login. El `409` deja de ser un obstáculo y pasa a ser la respuesta.
 
+`AuthService.login` solo atrapa `ApiException`: un socket caído sale crudo. Y a `incierto` se llega casi siempre **por** una red mala, así que la pantalla tiene que contar con que siga mala al pulsar el botón. Ese fallo se atrapa en el controller y se responde «No hay conexión. Revisa tu internet e inténtalo de nuevo.»; dejarlo escapar borraría el texto rojo sin poner nada en su lugar y el botón no haría nada visible. Mientras el intento está en vuelo el botón queda en `loading`, que a la vez acusa recibo y bloquea el segundo toque: `paso` sigue en `incierto` durante todo el `await` y no sirve de guarda.
+
 **`Volver a intentar`** regresa a `verificar` con el passcode borrado y la contraseña de miUlima intacta, como cualquier otro reintento.
 
 Retener la contraseña de ULima++ en memoria mientras dura este estado es deliberado: es lo que hace posible la primera salida. Muere con la pantalla, igual que las credenciales del portal (§RS-FE-6).
@@ -141,9 +147,9 @@ Una sola ruta, `/registro`, con **cinco estados** en la misma pantalla — el pa
 
 - **`datos`** — «Crea tu cuenta de ULima++». Código, contraseña, repetir contraseña. Nota bajo los campos: con esta contraseña entrarás al app. Botón `Continuar`. Enlace secundario para volver al login.
 - **`verificar`** — «Verificamos que eres alumno». Texto que explica que entramos a miUlima una vez y no guardamos los datos. Contraseña de miUlima (con mostrar/ocultar) y `PasswordResetOtpField` de 6 dígitos. Botón `Crear mi cuenta`. Enlace para volver al paso anterior.
-- **`enviando`** — spinner a pantalla completa, «Entrando a miUlima…», con la advertencia de que puede tomar un par de minutos y no cerrar la app. Sin salida.
+- **`enviando`** — spinner a pantalla completa, «Creando tu cuenta…», con la advertencia de que puede tomar un par de minutos y no cerrar la app. Sin salida. El título habla de lo que la persona pidió, no del paso interno que estemos dando: entrar a miUlima es un medio, y nombrarlo invita a creer que se está iniciando sesión en el portal.
 - **`listo`** — ícono de éxito, «Listo, *nombre*», el conteo de cursos cargados del `summary`, los `warnings` si los hay, y un botón que entra a la app.
-- **`incierto`** — «No pudimos confirmar si tu cuenta se creó». Explica que puede haberse creado igual y ofrece dos salidas, ambas definidas en §BR-REG-F-11: `Iniciar sesión`, que lo intenta ahí mismo, y `Volver a intentar`, que regresa a `verificar`.
+- **`incierto`** — dos títulos, según lo que de verdad se sepa. Con el plazo vencido, «No pudimos confirmar si tu cuenta se creó», y explica que puede haberse creado igual. Con `SIN_TOKEN` el `201` ya llegó y la cuenta existe, así que el título es «Tu cuenta ya está creada» y lo que se explica es que falló dejar la sesión puesta: titular duda sobre un texto que afirma la creación se contradice hacia el lado que sabe menos. El mensaje de error no se pinta cuando repite la frase del título. Dos salidas, ambas definidas en §BR-REG-F-11: `Iniciar sesión`, que lo intenta ahí mismo, y `Volver a intentar`, que regresa a `verificar`.
 
 Los errores se muestran con `PasswordResetErrorMessage` bajo el formulario del paso correspondiente. El botón no se deshabilita por validación —`PasswordResetPrimaryButton.onPressed` no admite `null` y solo se apaga con `loading: true`—, así que la validación ocurre al pulsar.
 
@@ -193,15 +199,21 @@ Errores, con el mensaje que ve la persona y a qué paso vuelve:
 | `USER_ALREADY_EXISTS` | 409 | Ya existe una cuenta con ese código. Inicia sesión o recupera tu contraseña. | `datos` |
 | `PORTAL_AUTH_FAILED` | 401 | miUlima rechazó los datos. Revisa tu contraseña del portal y que el código del authenticator siga vigente. | `verificar` |
 | `PORTAL_SESSION_INVALID` | 409 | La sesión de miUlima se cortó mientras cargábamos. Inténtalo de nuevo. | `verificar` |
-| `NOT_ENROLLED` | 403 | miUlima no reporta matrícula en el ciclo actual, así que todavía no podemos crear tu cuenta. | `verificar` |
+| `NOT_ENROLLED` | 403 | miUlima no reporta matrícula en el ciclo actual, así que todavía no podemos crear tu cuenta. No hace falta que lo intentes de nuevo ahora. | `verificar` |
 | `PORTAL_IDENTITY_UNVERIFIABLE` | 422 | No pudimos leer tu matrícula en miUlima. | `verificar` |
 | `PORTAL_TIMEOUT` | 504 | miUlima tardó demasiado en responder. Inténtalo más tarde. | `verificar` |
 | `PORTAL_UNAVAILABLE` | 502 | miUlima no está respondiendo. Inténtalo más tarde. | `verificar` |
 | `RATE_LIMITED` | 429 | El `message` del backend tal cual: ya viene en español. | `verificar` |
-| `REGISTRATION_UNAVAILABLE` | 503 | El registro no está disponible por ahora. | `verificar` |
+| `REGISTRATION_UNAVAILABLE` | 503 | El registro no está disponible por ahora. Vuelve a intentarlo más tarde. | `verificar` |
 | `INVALID_REQUEST_BODY`, `INVALID_JSON_BODY` | 400 | Revisa tus datos: el código debe tener entre 6 y 10 dígitos. | `datos` |
 | `INTERNAL_ERROR`, `INTERNAL_SERVER_ERROR` | 500 | Algo falló de nuestro lado. Inténtalo de nuevo. | `verificar` |
 | cualquier otro | — | El `message` del backend si no viene vacío; si no, un genérico. | `verificar` |
+
+**La columna «Vuelve a» dice dónde aterriza la persona, no que reintentar sirva.** Esta tabla decía antes solo qué salió mal, y esa era una versión incompleta del contrato: el paso `verificar` tiene un único botón, rotulado «Crear mi cuenta», y cada pulsada gasta uno de los cinco intentos por hora que el backend concede por código —los gasta incluso cuando el rechazo es previo, porque el contador corre antes de validar el cuerpo—. Un mensaje que solo describe el problema deja la pantalla leyéndose como un formulario que hay que corregir, y quien lee «miUlima no reporta matrícula en el ciclo actual» reescribe el passcode y vuelve a pulsar hasta quedar bloqueado una hora; el quinto mensaje le dirá que espere 42 minutos.
+
+Por eso, cuando el reintento inmediato **no puede** funcionar, el mensaje lo dice. `NOT_ENROLLED` cierra con «No hace falta que lo intentes de nuevo ahora» —la matrícula no aparece porque no existe, no porque se haya tecleado mal—, y `REGISTRATION_UNAVAILABLE` con «Vuelve a intentarlo más tarde», que es la forma correcta para algo apagado del lado del servidor y que se enciende solo. `PORTAL_TIMEOUT` y `PORTAL_UNAVAILABLE` ya terminaban en «Inténtalo más tarde» y se quedan como están. A `RATE_LIMITED` no se le agrega nada: sus dos limitadores ya dicen cuánto esperar y cualquier añadido nuestro chocaría con uno de los dos.
+
+Lo que **no** se hace es mandar esos códigos a otro estado. Un sexto estado para «no reintentes» duplicaría la máquina por un caso de texto, y el destino honesto sigue siendo `verificar`: la persona está ahí, con sus datos, y puede salir de la pantalla cuando quiera.
 
 Los dos códigos de 400 y el `INTERNAL_SERVER_ERROR` traen su `message` **en inglés**; por eso se traducen acá en vez de mostrarse crudos. Hay dos códigos distintos de 500 porque `register` es el único método del módulo sin traductor de errores de base de datos; ambos se contemplan.
 

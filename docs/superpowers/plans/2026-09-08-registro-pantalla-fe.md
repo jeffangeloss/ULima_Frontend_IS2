@@ -14,7 +14,7 @@
 
 - Rama de trabajo: `feat/registro-fe`, en el worktree `/Users/jjjangelosss/ULIMA++/.worktrees/registro-fe`. Nunca `cd` a `ULima_Frontend_IS2`.
 - Commits firmados como `Jeffangeloss <178797184+jeffangeloss@users.noreply.github.com>`. **Sin trailer `Co-Authored-By`**: la autoría es del usuario.
-- El repo es **PÚBLICO**. Prohibido escribir códigos de alumno reales (`20232548`, `20232637`, `20233903`, `20235218`), hosts de base de datos o credenciales. En tests usar `20230001` y nombres sintéticos.
+- El repo es **PÚBLICO**. Prohibido escribir códigos de alumno reales —los del equipo no se enumeran acá; están en la memoria del proyecto—, hosts de base de datos o credenciales. En tests usar `20230001` y nombres sintéticos.
 - Las credenciales de miUlima no se persisten, no se loguean y no entran en ningún `Rx`. Solo viven en `TextEditingController` (RS-FE-6).
 - Nada posterior a un `201` puede convertirse en un mensaje de fallo (BR-REG-F-10).
 - Un plazo vencido **no** significa que el registro falló (BR-REG-F-08).
