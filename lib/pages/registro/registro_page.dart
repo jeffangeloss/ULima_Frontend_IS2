@@ -390,6 +390,14 @@ class _Incierto extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // A `incierto` se llega por dos caminos que NO saben lo mismo. Con
+    // `SIN_TOKEN` el 201 llegó y la cuenta está creada: lo único que falló fue
+    // dejar la sesión puesta, y el título tiene que decir eso en vez de dudar
+    // de algo que ya se sabe. Con el plazo vencido la duda es real.
+    final confirmada = controller.cuentaConfirmada.value;
+    final titulo = confirmada
+        ? 'Tu cuenta ya está creada'
+        : 'No pudimos confirmar si tu cuenta se creó';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
@@ -398,27 +406,39 @@ class _Incierto extends StatelessWidget {
         const SizedBox(height: 16),
         _Titulo(
           palette: palette,
-          texto: 'No pudimos confirmar si tu cuenta se creó',
-          bajada: 'Es posible que sí se haya creado. Prueba entrar con el '
-              'código y la contraseña que acabas de elegir.',
+          texto: titulo,
+          bajada: confirmada
+              ? 'Entra con el código y la contraseña que acabas de elegir.'
+              : 'Es posible que sí se haya creado. Prueba entrar con el '
+                  'código y la contraseña que acabas de elegir.',
         ),
-        Obx(() => PasswordResetErrorMessage(
-              palette: palette,
-              message: controller.errorMessage.value,
-            )),
+        Obx(() {
+          // Por el camino del plazo vencido el mensaje de error es LA MISMA
+          // frase del título: pintarlo debajo en naranja la repite sin agregar
+          // nada. Los demás mensajes de este estado —el del rescate fallido,
+          // el de la sesión que no se pudo dejar puesta— sí dicen algo nuevo.
+          final msg = controller.errorMessage.value;
+          return PasswordResetErrorMessage(
+            palette: palette,
+            message: _repiteElTitulo(msg, titulo) ? null : msg,
+          );
+        }),
         const SizedBox(height: 20),
-        PasswordResetPrimaryButton(
-          palette: palette,
-          label: 'Iniciar sesión',
-          loading: false,
-          onPressed: () async {
-            final entro = await controller.intentarIniciarSesion();
-            if (!entro) return;
-            // `login()` ya dejó el usuario puesto; de ahí sale la ruta.
-            final user = AuthService.to.currentUser;
-            if (user != null) Get.offAllNamed(postLoginRoute(user));
-          },
-        ),
+        Obx(() => PasswordResetPrimaryButton(
+              palette: palette,
+              label: 'Iniciar sesión',
+              // Apagar el botón mientras el login está en vuelo es lo que
+              // impide que un doble toque dispare dos sesiones (y da el único
+              // acuse de recibo que esta pantalla tiene durante la espera).
+              loading: controller.iniciandoSesion.value,
+              onPressed: () async {
+                final entro = await controller.intentarIniciarSesion();
+                if (!entro) return;
+                // `login()` ya dejó el usuario puesto; de ahí sale la ruta.
+                final user = AuthService.to.currentUser;
+                if (user != null) Get.offAllNamed(postLoginRoute(user));
+              },
+            )),
         const SizedBox(height: 14),
         GestureDetector(
           onTap: controller.volverAVerificar,
@@ -431,4 +451,16 @@ class _Incierto extends StatelessWidget {
       ],
     );
   }
+}
+
+/// True si el error a pintar bajo el título es la misma frase que el título.
+///
+/// Se compara sin puntuación ni mayúsculas porque las dos cadenas nacen en
+/// archivos distintos —el título en la página, el mensaje en
+/// `RegistroService`— y difieren solo en el punto final.
+bool _repiteElTitulo(String? mensaje, String titulo) {
+  if (mensaje == null) return false;
+  String normalizar(String s) =>
+      s.replaceAll(RegExp(r'[.\u2026]'), '').trim().toLowerCase();
+  return normalizar(mensaje) == normalizar(titulo);
 }

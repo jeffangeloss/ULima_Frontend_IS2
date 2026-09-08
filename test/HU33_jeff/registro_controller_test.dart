@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ulima_plus/models/portal_sync_models.dart';
 import 'package:ulima_plus/models/registro_models.dart';
@@ -33,6 +35,12 @@ class _ServicioFalso implements RegistroService {
     // una excepción que NO es RegistroFailure.
     return resultado!;
   }
+}
+
+/// Lo que `AuthService.login` NO atrapa: solo cubre `ApiException`, así que un
+/// socket caído o un `ClientException` salen crudos.
+class _RedCaida implements Exception {
+  const _RedCaida();
 }
 
 UserModel _usuario() => UserModel.fromJson({
@@ -204,6 +212,8 @@ void main() {
       c.continuar();
       await c.enviar();
       expect(c.paso.value, equals(RegistroPaso.incierto));
+      expect(c.cuentaConfirmada.value, isFalse,
+          reason: 'con el plazo vencido no sabemos si el servidor confirmó');
     });
 
     test('caso 9: si adoptar la sesión falla, la cuenta existe: incierto, no fallo', () async {
@@ -213,6 +223,27 @@ void main() {
       c.continuar();
       await c.enviar();
       expect(c.paso.value, equals(RegistroPaso.incierto));
+      // El 201 llegó: la pantalla no puede titular "no pudimos confirmar".
+      expect(c.cuentaConfirmada.value, isTrue);
+    });
+
+    test('caso 9b: un 201 sin token también sabe que la cuenta existe', () async {
+      // Acá NO hay `resultado` que guardar —el servicio no llegó a construirlo—
+      // y aun así la cuenta está creada: `resultado != null` no alcanza para
+      // distinguir los dos caminos hacia `incierto`.
+      final c = _controller(
+        servicio: _ServicioFalso(
+          fallo: const RegistroFailure(
+            'Tu cuenta se creó, pero no recibimos la sesión.',
+            code: 'SIN_TOKEN',
+          ),
+        ),
+      );
+      c.continuar();
+      await c.enviar();
+      expect(c.paso.value, equals(RegistroPaso.incierto));
+      expect(c.resultado.value, isNull);
+      expect(c.cuentaConfirmada.value, isTrue);
     });
 
     test('caso 10: una excepción inesperada no deja la pantalla colgada en enviando', () async {
@@ -224,10 +255,13 @@ void main() {
       expect(c.errorMessage.value, isNotNull);
     });
 
-    test('caso 11: la contraseña de miUlima no llega a ningún estado observable', () async {
-      // RS-FE-6. Es la comprobación que sí muerde: `onClose` también borra los
-      // campos, pero eso no se puede afirmar después de `dispose()` sin
-      // depender de si el SDK lanza al leer un controller liberado.
+    test('caso 11: tras un fallo, la contraseña de miUlima sigue solo en su campo', () async {
+      // RS-FE-6, acotado a lo que este camino demuestra de verdad. Las otras
+      // dos comprobaciones que había acá no podían fallar: `resultado` es null
+      // en este camino y `paso.value.toString()` es el nombre de un enum.
+      // `onClose` también borra los campos, pero eso no se puede afirmar
+      // después de `dispose()` sin depender de si el SDK lanza al leer un
+      // controller liberado.
       final c = _controller(
         servicio: _ServicioFalso(
           fallo: const RegistroFailure('miUlima rechazó los datos.', code: 'PORTAL_AUTH_FAILED'),
@@ -236,9 +270,13 @@ void main() {
       c.continuar();
       await c.enviar();
 
+      // El único Rx que un fallo escribe es `errorMessage`.
       expect(c.errorMessage.value ?? '', isNot(contains('clave-portal')));
-      expect(c.resultado.value?.toString() ?? '', isNot(contains('clave-portal')));
-      expect(c.paso.value.toString(), isNot(contains('clave-portal')));
+      // Y el que un éxito escribiría sigue vacío, porque no hubo 201.
+      expect(c.resultado.value, isNull);
+      // La credencial sobrevive SOLO en el TextEditingController, que es donde
+      // BR-REG-F-05 la quiere para que el reintento no la pida otra vez.
+      expect(c.portalPasswordCtrl.text, equals('clave-portal'));
     });
   });
 
@@ -291,6 +329,45 @@ void main() {
       c.volverAVerificar();
       expect(c.paso.value, equals(RegistroPaso.verificar));
       expect(c.passcodeCtrl.text, isEmpty);
+    });
+
+    test('caso 5: si el login de rescate LANZA, el botón no se queda mudo', () async {
+      // A `incierto` se llega casi siempre por una red mala, así que la red
+      // sigue mala al pulsar el botón. `AuthService.login` solo atrapa
+      // `ApiException`: sin el catch del controller la excepción escapa a la
+      // zona, el `errorMessage = null` de la primera línea ya borró el texto
+      // rojo y la pantalla no hace nada visible.
+      final c = await enIncierto(
+        login: ({required code, required password}) async => throw const _RedCaida(),
+      );
+
+      expect(await c.intentarIniciarSesion(), isFalse);
+      expect(c.paso.value, equals(RegistroPaso.incierto));
+      expect(c.errorMessage.value, isNotNull);
+      expect(c.errorMessage.value, contains('conexión'));
+      expect(c.iniciandoSesion.value, isFalse,
+          reason: 'el botón se vuelve a encender aunque el intento haya lanzado');
+    });
+
+    test('caso 6: un doble toque no dispara dos logins', () async {
+      // `paso` sigue en `incierto` durante todo el await, así que no sirve de
+      // guarda: dos toques serían dos tokens guardados y dos offAllNamed.
+      var llamadas = 0;
+      final puerta = Completer<String?>();
+      final c = await enIncierto(login: ({required code, required password}) {
+        llamadas++;
+        return puerta.future;
+      });
+
+      final primero = c.intentarIniciarSesion();
+      expect(c.iniciandoSesion.value, isTrue);
+      expect(await c.intentarIniciarSesion(), isFalse,
+          reason: 'el segundo toque se descarta mientras el primero está en vuelo');
+      expect(llamadas, equals(1));
+
+      puerta.complete(null);
+      expect(await primero, isTrue);
+      expect(c.iniciandoSesion.value, isFalse);
     });
   });
 }

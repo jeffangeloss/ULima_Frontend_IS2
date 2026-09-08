@@ -108,6 +108,28 @@ class RegistroController extends GetxController {
 
   final paso = RegistroPaso.datos.obs;
   final errorMessage = RxnString();
+
+  /// True mientras el login de rescate de `incierto` está en vuelo.
+  ///
+  /// Alimenta el `loading` del botón, que así se apaga y deja de ser pulsable.
+  /// `paso` no sirve de guarda: se queda en `incierto` durante todo el `await`,
+  /// así que sin esto un segundo toque sobre una conexión lenta dispara un
+  /// segundo login, un segundo token guardado, una segunda carga de catálogos
+  /// y un segundo `Get.offAllNamed`.
+  final iniciandoSesion = false.obs;
+
+  /// True cuando se sabe que la cuenta EXISTE aunque el flujo haya terminado en
+  /// `incierto`.
+  ///
+  /// A `incierto` se llega por dos códigos y solo uno deja duda de verdad. Con
+  /// `TIEMPO_AGOTADO` no sabemos si el servidor confirmó la transacción; con
+  /// `SIN_TOKEN` el 201 ya llegó y lo único que falló fue dejar la sesión
+  /// puesta. `resultado` no alcanza para distinguirlos: cuando el `SIN_TOKEN`
+  /// lo lanza el servicio —201 sin token, o respuesta ilegible— no hay
+  /// `RegistroResult` que guardar y aun así la cuenta está creada. Sin esto la
+  /// pantalla titula "no pudimos confirmar" sobre un texto que dice que sí se
+  /// creó, y se contradice hacia el lado que sabe menos.
+  final cuentaConfirmada = false.obs;
   final passwordVisible = false.obs;
   final portalPasswordVisible = false.obs;
   final Rx<RegistroResult?> resultado = Rx<RegistroResult?>(null);
@@ -211,6 +233,9 @@ class RegistroController extends GetxController {
   void _manejarFallo(RegistroFailure e) {
     passcodeCtrl.clear();
     errorMessage.value = e.message;
+    // Se fija ANTES que `paso`: la pantalla se repinta observando `paso`, así
+    // que leerlo después daría el valor viejo durante un frame.
+    cuentaConfirmada.value = e.code == 'SIN_TOKEN';
 
     const aIncierto = {'TIEMPO_AGOTADO', 'SIN_TOKEN'};
     const aDatos = {
@@ -236,11 +261,29 @@ class RegistroController extends GetxController {
   /// código que devolvió el portal, que gana sobre el tecleado (BR-REG-F-06).
   Future<bool> intentarIniciarSesion() async {
     if (paso.value != RegistroPaso.incierto) return false;
+    if (iniciandoSesion.value) return false;
+    iniciandoSesion.value = true;
     errorMessage.value = null;
-    final error = await _login(
-      code: codigoCtrl.text.trim(),
-      password: passwordCtrl.text,
-    );
+    final String? error;
+    try {
+      error = await _login(
+        code: codigoCtrl.text.trim(),
+        password: passwordCtrl.text,
+      );
+    } catch (_) {
+      // `AuthService.login` solo atrapa `ApiException`: un socket caído o un
+      // `ClientException` salen crudos. Y a `incierto` se llega casi siempre
+      // POR una red mala —el plazo venció—, así que la red sigue mal cuando se
+      // pulsa este botón. Sin este catch la excepción escapa a la zona, la
+      // línea de arriba ya borró el texto rojo y nada lo reemplaza: la
+      // pantalla no hace nada visible, que es justo lo que BR-REG-F-11 existe
+      // para evitar. `enviar()` ya tiene su catch-all por este mismo motivo.
+      errorMessage.value =
+          'No hay conexión. Revisa tu internet e inténtalo de nuevo.';
+      return false;
+    } finally {
+      iniciandoSesion.value = false;
+    }
     if (error == null) return true;
     errorMessage.value =
         'Seguimos sin poder confirmarlo. Puedes volver a intentar el registro: '
