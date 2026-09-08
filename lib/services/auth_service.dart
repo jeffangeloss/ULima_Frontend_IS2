@@ -115,6 +115,43 @@ class AuthService extends GetxService {
     await _storage.saveToken(token);
   }
 
+  /// Establece la sesión con lo que devolvió `POST /auth/register`.
+  ///
+  /// Hace lo mismo que `login()` después de recibir la respuesta. Existe
+  /// aparte porque el registro ya trae token y usuario: repetir el login
+  /// significaría una segunda vuelta contra el portal.
+  ///
+  /// El código que se guarda es el del `user`, o sea el que certificó el
+  /// portal, que puede no ser el que la persona tecleó (BR-REG-F-06).
+  ///
+  /// Los catálogos se reintentan UNA vez y, si vuelven a fallar, se sigue
+  /// igual: recibido el 201 la cuenta existe y nada de acá puede convertirse
+  /// en un error. El precio está anotado en BR-REG-F-10 de la spec — la
+  /// persona aterriza en `/setup-carrera` sin carrera ni especialidades hasta
+  /// el próximo arranque, porque `_loadCatalogs` solo corre al iniciar sesión.
+  Future<void> adoptarSesion({
+    required String token,
+    required UserModel user,
+  }) async {
+    await _storage.saveToken(token);
+    await _storage.saveCode(user.code);
+    // Una cuenta recién registrada es siempre de alumno, pero se consulta el
+    // rol igual: los catálogos son endpoints exclusivos de alumno y un docente
+    // recibiría 403, como ya contempla `login()`.
+    if (!user.isTeacher) {
+      try {
+        await _loadCatalogs(token: token, careerId: user.careerId);
+      } catch (_) {
+        try {
+          await _loadCatalogs(token: token, careerId: user.careerId);
+        } catch (_) {
+          // Se sigue sin catálogos. Ver BR-REG-F-10.
+        }
+      }
+    }
+    _currentUser.value = user;
+  }
+
   Future<void> refreshCurrentUser() async {
     final token = await _storage.savedToken;
     if (token == null || token.isEmpty) return;
