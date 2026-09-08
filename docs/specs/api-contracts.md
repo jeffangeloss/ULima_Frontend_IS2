@@ -12,7 +12,7 @@ Contrato REST local del frontend ULima++. Mantener alineado manualmente con `ULi
 
 ## Principios Globales
 
-- Todas las rutas, salvo `GET /`, `GET /health`, `POST /auth/login`, `POST /auth/google`, `POST /auth/password-reset/request` y `POST /auth/password-reset/confirm`, usan `Authorization: Bearer <token>`.
+- Todas las rutas, salvo `GET /`, `GET /health`, `POST /auth/login`, `POST /auth/register`, `POST /auth/google`, `POST /auth/password-reset/request` y `POST /auth/password-reset/confirm`, usan `Authorization: Bearer <token>`.
 - El usuario autenticado es estudiante **o docente** (HU18).
 - Roles permitidos: `student`, `delegate`, `subdelegate`, `teacher`.
 - `teacher` es el rol técnico compartido por profesor y jefe de práctica (JP); su etiqueta se deriva de `section.teacher_id` vs `section.jp_id`. El JWT docente lleva `teacherId` en vez de `studentId`.
@@ -47,6 +47,15 @@ Contrato REST local del frontend ULima++. Mantener alineado manualmente con `ULi
   - Request: `{ "code": "string", "password": "string" }`
   - Response: `{ "token": "string", "tokenType": "Bearer", "expiresIn": 86400, "user": User }`
   - HU18: si el `code` no es de un `student` pero sí de un `teacher` (vía `teacher.user_id`), inicia sesión como docente. El `user` docente es `{ id, teacherId, code, fullName, institutionalEmail, role: "teacher", teacherLabel: "Profesor"|"Jefe de Práctica", setupComplete: true }` (sin `studentId`). No exige matrícula activa.
+- `POST /auth/register`
+  - Público, sin token. Responde `201`.
+  - Request: `{ "code": "string", "portalPassword": "string", "passcode": "string", "password": "string" }`
+  - `code` es `^\d{6,10}$`. `portalPassword` y `passcode` son de **miUlima**: se usan para entrar al portal y se descartan; no se persisten ni se registran en logs. `password` es la que la persona quiere para ULima++.
+  - Response `201`: `{ "token": "string", "tokenType": "Bearer", "expiresIn": 86400, "user": User, "summary": ImportSummary, "warnings": SyncWarning[] }`
+  - `summary` y `warnings` tienen la misma forma que en `POST /portal-sync/import`, pero **planos**, sin `period` ni `identity`. Un `201` con `warnings` no vacío es un éxito.
+  - La identidad la pone el portal: el `code` enviado sirve solo para el login, y `user.code` puede diferir de él.
+  - Errores: `409 USER_ALREADY_EXISTS`, `401 PORTAL_AUTH_FAILED`, `409 PORTAL_SESSION_INVALID`, `403 NOT_ENROLLED`, `422 PORTAL_IDENTITY_UNVERIFIABLE`, `504 PORTAL_TIMEOUT`, `502 PORTAL_UNAVAILABLE`, `429 RATE_LIMITED` (5 intentos por código por hora, y 4 registros simultáneos), `503 REGISTRATION_UNAVAILABLE`, `400 INVALID_REQUEST_BODY`, `400 INVALID_JSON_BODY`, `500 INTERNAL_ERROR`, `500 INTERNAL_SERVER_ERROR`.
+  - Igual que en `POST /auth/login`, su `401` **no** significa sesión caducada: `ApiClient` exime a ambas rutas del cierre de sesión automático.
 - `POST /auth/google`
   - Request: `{ "idToken": "string" }`
   - Acepta `@aloe.ulima.edu.pe` para cuentas vinculadas a `student.user_id` y `@ulima.edu.pe` para cuentas vinculadas a `teacher.user_id`. No crea cuentas ni perfiles.
