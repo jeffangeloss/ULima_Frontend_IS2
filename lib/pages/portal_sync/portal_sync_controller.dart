@@ -152,9 +152,4 @@ class PortalSyncController extends GetxController {
       // alumno, solo significa que verá los datos nuevos al cambiar de pestaña.
     }
   }
-
-  void volverAlFormulario() {
-    errorMessage.value = null;
-    step.value = PortalSyncStep.form;
-  }
 }
