@@ -294,6 +294,10 @@ void main() {
 
       expect(find.byType(ErrorRetry), findsOneWidget);
       expect(find.text('No se pudo cargar tu récord'), findsOneWidget);
+      // El mensaje no culpa a la conexión del alumno: si el que falla es el
+      // backend (o la app sale antes que él), no es su wifi.
+      expect(find.text(AcademicRecordPage.loadErrorMessage), findsOneWidget);
+      expect(AcademicRecordPage.loadErrorMessage, isNot(contains('conexión')));
 
       await tester.tap(find.text('Reintentar'));
       await tester.pump();

@@ -31,6 +31,11 @@ class AcademicRecordPage extends GetView<AcademicRecordController> {
       'carrera, tu PPA y tus créditos.';
   static const String syncButtonLabel = 'Sincronizar con el portal';
   static const String loadErrorTitle = 'No se pudo cargar tu récord';
+  // Sin "revisa tu conexión": si el que falla es el backend, decirle al
+  // alumno que revise su wifi lo manda a buscar un problema que no es suyo.
+  static const String loadErrorMessage =
+      'No pudimos traer tu récord justo ahora. Puede ser algo pasajero: '
+      'inténtalo de nuevo.';
 
   static const Key skeletonKey = Key('record-page-skeleton');
   static const Key ringKey = Key('record-credits-ring');
@@ -74,7 +79,11 @@ class AcademicRecordPage extends GetView<AcademicRecordController> {
         // Sin récord en memoria: o falló la carga, o todavía está en camino.
         if (record == null) {
           if (controller.hasError) {
-            return ErrorRetry(title: loadErrorTitle, onRetry: controller.retry);
+            return ErrorRetry(
+              title: loadErrorTitle,
+              message: loadErrorMessage,
+              onRetry: controller.retry,
+            );
           }
           return const _RecordSkeleton();
         }
