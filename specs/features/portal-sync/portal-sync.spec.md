@@ -112,14 +112,14 @@ Recargar la pantalla no basta; hay tres capas que hay que invalidar en este orde
 - **PortalSyncPage** (`/portal-sync`, una sola pantalla con los cuatro estados de `PortalSyncStep`, ver BR-SYNC-F-03):
   - `consent` → **PortalConsentView** (`lib/components/portal_consent/`, compartida con el registro): qué se importa, finalidad, aceptar o cancelar.
   - `form` → formulario nativo con la contraseña de miUlima y el código del authenticator.
-  - `loading` → progreso: "Importando datos de miUlima…".
-  - `done` → resumen con conteos, lista de advertencias y botón "Listo".
+  - `loading` → espera: "Entrando a miUlima…".
+  - `done` → resumen "Listo, ya tienes tus datos" con conteos, lista de advertencias y botón "Ver mis cursos".
 - **Errores**: mensaje inline en el formulario con el texto de BR-SYNC-F-04; el `step` vuelve a `form` para reintentar.
 
 ## Data Flow
 
 ```
-Home → HomeController.checkPortalSync() → PortalSyncService.status() → GET /portal-sync/status
+Home → HomeController.refrescarEstadoPortal() → PortalSyncService.status() → GET /portal-sync/status
   → needsImport → banner → "Cargar ahora" → PortalSyncPage (step: consent)
   → PortalConsentView → "Acepto" → aceptarConsentimiento() → step: form
   → alumno escribe su contraseña de miUlima y el código del authenticator → submit()
