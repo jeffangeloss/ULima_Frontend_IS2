@@ -480,6 +480,7 @@ Alumno (`requireRole(student|delegate|subdelegate)`, `studentId` y `code` del JW
     - `{ "credentials": { "password": string, "passcode": string } }` — el camino que usa la app. `passcode` es `^\d{6,8}$`.
     - `{ "cookies": { "JSESSIONID": string, "LtpaToken2": string, "LtpaToken": string|null } }` — cookies de `webaloe.ulima.edu.pe`, del diseño de WebView que no se implementó.
     - Ninguno de los dos se persiste ni se registra en logs.
+  - `"consent": true` es opcional y va en el nivel superior del body (RS-BE-29). La app lo manda solo después de que el alumno toca «Acepto» en la pantalla de consentimiento (RF-REC-6). Sin él la importación corre igual, pero el backend no guarda récord, foto ni resumen ni desmarca electivos. La app nunca manda `false`.
   - Response `200`:
     ```json
     {

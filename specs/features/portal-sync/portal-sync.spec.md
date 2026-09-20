@@ -76,11 +76,11 @@ WebView.
 - Docentes nunca ven el banner ni la opción. Un fallo de `GET /portal-sync/status` no bloquea el Home: se omite el banner en silencio.
 
 ### BR-SYNC-F-02: Consentimiento previo
-- Antes de abrir el portal se muestra una pantalla con qué datos se importarán (nombre, código, carrera, cursos, secciones, docentes, horario, matrícula, notas históricas, impedimentos), con qué finalidad y que la contraseña nunca sale del portal. Requiere aceptación explícita. Sin aceptación no se abre el WebView.
+- Ver RF-REC-6 de `specs/features/academic-record/academic-record.spec.md`. Antes del formulario de credenciales se muestra `PortalConsentView`: qué datos se importan, para qué (solo para mostrárselos al propio alumno) y que la contraseña se usa una sola vez y no se guarda. Requiere aceptación explícita; sin ella no aparece el formulario y no se envía nada. Tras aceptar, el body de `POST /portal-sync/import` lleva `consent: true`.
 
 ### BR-SYNC-F-03: Pantalla de credenciales
 - Ruta `/portal-sync` con binding por ruta (`PortalSyncBinding`), nunca `Get.put` dentro de `build()`: eso ataría el controller al overlay del snackbar y GetX destruiría sus `TextEditingController`.
-- Una sola pantalla con tres estados (`PortalSyncStep`): formulario, cargando y resumen. No son tres rutas: el flujo es lineal y volver atrás a mitad de la carga no le sirve al alumno.
+- Una sola pantalla con cuatro estados (`PortalSyncStep`): consentimiento (`consent`, el inicial), formulario, cargando y resumen. No son cuatro rutas: el flujo es lineal y volver atrás a mitad de la carga no le sirve al alumno. Si la importación falla se vuelve al formulario sin volver a pedir la aceptación; salir y volver a entrar la pide de nuevo.
 - Reutiliza los widgets públicos de `password_reset_ui.dart` (`PasswordResetScaffold`, `PasswordResetField`, `PasswordResetOtpField`, `PasswordResetPrimaryButton`, `PasswordResetErrorMessage`). Los del login son privados y no se pueden importar.
 - El código del authenticator usa `PasswordResetOtpField`, que ya trae seis casillas, teclado numérico, `digitsOnly` y `autofillHints: oneTimeCode`.
 - El estado de carga dice qué está pasando y cuánto puede tardar: la importación real toma entre 30 y 50 segundos y sin eso el alumno cree que la app se colgó.
@@ -109,7 +109,7 @@ Recargar la pantalla no basta; hay tres capas que hay que invalidar en este orde
 ## UI Behavior
 
 - **Banner en Home**: solo alumnos, solo si `needsImport`. Estados: oculto / visible / "Después" pulsado.
-- **PortalSyncConsentPage**: qué se importa, finalidad, aceptar o cancelar.
+- **PortalConsentView** (`lib/components/portal_consent/`, compartida con el registro): qué se importa, finalidad, aceptar o cancelar.
 - **PortalSyncWebViewPage**: loading, página del portal, cierre manual, timeout de 5 min.
 - **PortalSyncProgressPage**: progreso, resumen con conteos, lista de advertencias, botón "Listo".
 - **Errores**: diálogo con el mensaje de BR-SYNC-F-04 y botón reintentar cuando aplica.

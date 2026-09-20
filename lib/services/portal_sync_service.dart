@@ -51,9 +51,15 @@ class PortalSyncService {
   /// Devuelve el resultado, o lanza [PortalSyncFailure] con un mensaje ya listo
   /// para mostrar. Nunca lanza `ApiException` cruda: la pantalla no debería
   /// tener que conocer los códigos del backend.
+  ///
+  /// [consent] es la aceptación de la pantalla de consentimiento (RF-REC-6).
+  /// Con `true` el body lleva `'consent': true` y el backend guarda el récord
+  /// académico (RS-BE-29); con `false` la clave no viaja. Es `required` para
+  /// que ninguna pantalla nueva se olvide de decidirlo.
   Future<PortalSyncResult> import({
     required String password,
     required String passcode,
+    required bool consent,
   }) async {
     try {
       final res = await _api
@@ -61,6 +67,11 @@ class PortalSyncService {
             '/portal-sync/import',
             body: {
               'credentials': {'password': password, 'passcode': passcode},
+              // Nivel SUPERIOR del body, nunca dentro de 'credentials'.
+              // RS-BE-29: solo `true` o ausente; nunca se manda `false`. El
+              // backend viejo lo descarta sin error porque `importSchema` es
+              // un `z.object` no estricto (backend portal-sync.schemas.ts:36).
+              if (consent) 'consent': true,
             },
           )
           .timeout(importTimeout);
