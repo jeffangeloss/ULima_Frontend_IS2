@@ -17,9 +17,11 @@ import 'package:ulima_plus/components/skeleton.dart';
 import 'package:ulima_plus/main.dart';
 import 'package:ulima_plus/models/academic_record_model.dart';
 import 'package:ulima_plus/models/user_model.dart';
+import 'package:ulima_plus/pages/academic_record/academic_record_binding.dart';
 import 'package:ulima_plus/pages/academic_record/academic_record_controller.dart';
 import 'package:ulima_plus/pages/academic_record/academic_record_page.dart';
 import 'package:ulima_plus/pages/academic_record/record_course_row.dart';
+import 'package:ulima_plus/pages/academic_record/record_profile_card.dart';
 import 'package:ulima_plus/services/academic_record_service.dart';
 import 'package:ulima_plus/services/api_client.dart';
 import 'package:ulima_plus/services/auth_service.dart';
@@ -621,6 +623,242 @@ void main() {
         ),
         'Sincronizado hoy',
       );
+    });
+  });
+
+  group('WIDGET · Borrar mi récord (RF-REC-5)', () {
+    Future<_FakeRecordApi> montarConRecord(
+      WidgetTester tester, {
+      List<Object>? getResponses,
+    }) =>
+        _mountPage(
+          tester,
+          getResponses: getResponses ?? <Object>[_syncedJson()],
+        );
+
+    // El botón es el último hijo de una pantalla scrolleable: antes de tocarlo
+    // hay que asegurarse de que esté a la vista. En el estado de éxito no hay
+    // ningún SkeletonPulse, así que acá pumpAndSettle sí se puede usar.
+    Future<void> traerBotonALaVista(WidgetTester tester) async {
+      await tester.ensureVisible(
+        find.byKey(AcademicRecordPage.deleteButtonKey),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> abrirDialogo(WidgetTester tester) async {
+      await traerBotonALaVista(tester);
+      await tester.tap(find.byKey(AcademicRecordPage.deleteButtonKey));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('el botón va al final, después de la tarjeta de cursos',
+        (tester) async {
+      await montarConRecord(tester);
+
+      expect(find.text(AcademicRecordPage.deleteButtonLabel), findsOneWidget);
+
+      await traerBotonALaVista(tester);
+
+      // "Al final de la pantalla" (RF-REC-5): debajo de la tarjeta de cursos.
+      // Las dos posiciones se miden después del mismo scroll, así que lo que
+      // se compara es el orden dentro del Column.
+      expect(
+        tester.getTopLeft(find.byKey(AcademicRecordPage.deleteButtonKey)).dy,
+        greaterThan(
+          tester.getTopLeft(find.byKey(AcademicRecordPage.coursesCardKey)).dy,
+        ),
+      );
+    });
+
+    testWidgets('el diálogo explica qué se borra y qué no', (tester) async {
+      await montarConRecord(tester);
+      await abrirDialogo(tester);
+
+      // find.text es exacto: 'Borrar mi récord' no choca con el botón
+      // 'Borrar mi récord de ULima++', que sigue montado detrás del diálogo.
+      expect(find.text(AcademicRecordPage.deleteDialogTitle), findsOneWidget);
+      expect(find.text(AcademicRecordPage.deleteDialogBody), findsOneWidget);
+      expect(find.text(AcademicRecordPage.deleteCancelLabel), findsOneWidget);
+      expect(find.text(AcademicRecordPage.deleteConfirmLabel), findsOneWidget);
+    });
+
+    testWidgets('cancelar no borra nada', (tester) async {
+      final api = await montarConRecord(tester);
+      await abrirDialogo(tester);
+
+      await tester.tap(find.text(AcademicRecordPage.deleteCancelLabel));
+      await tester.pumpAndSettle();
+
+      expect(api.deleteCalls, 0);
+      expect(find.text(AcademicRecordPage.deleteDialogTitle), findsNothing);
+      expect(find.byKey(AcademicRecordPage.successViewKey), findsOneWidget);
+      expect(find.text('14.62'), findsOneWidget);
+    });
+
+    testWidgets('confirmar llama al DELETE y la pantalla pasa al estado vacío',
+        (tester) async {
+      final api = await montarConRecord(
+        tester,
+        getResponses: <Object>[_syncedJson(), _neverSyncedJson()],
+      );
+      final controller = Get.find<AcademicRecordController>();
+
+      // Un ciclo elegido a mano: después de borrar tiene que volver a null,
+      // porque ese ciclo ya no existe. Los chips están arriba del todo, así
+      // que se tocan antes de bajar al botón.
+      await tester.tap(find.byKey(AcademicRecordPage.periodChipKey('2025-2')));
+      await tester.pump();
+      expect(controller.selectedPeriodCode.value, '2025-2');
+
+      await abrirDialogo(tester);
+      await tester.tap(find.text(AcademicRecordPage.deleteConfirmLabel));
+      await tester.pumpAndSettle();
+
+      expect(api.deleteCalls, 1);
+      expect(api.lastDeletePath, '/academic-record/me');
+      expect(api.getCalls, 2); // la recarga que confirma el borrado
+      expect(find.text(AcademicRecordPage.emptyTitle), findsOneWidget);
+      expect(find.byKey(AcademicRecordPage.successViewKey), findsNothing);
+      expect(find.text('14.62'), findsNothing);
+      // Ya no hay copia: el botón de borrar desaparece con ella.
+      expect(find.byKey(AcademicRecordPage.deleteButtonKey), findsNothing);
+      expect(controller.selectedPeriodCode.value, isNull);
+      expect(controller.deleting.value, isFalse);
+    });
+
+    testWidgets('si el DELETE falla, aviso explícito y el récord sigue ahí',
+        (tester) async {
+      final api = await montarConRecord(tester);
+      final controller = Get.find<AcademicRecordController>();
+      api.deleteError = ApiException(
+        statusCode: 500,
+        code: 'HTTP_ERROR',
+        message: 'x',
+      );
+      await abrirDialogo(tester);
+
+      await tester.tap(find.text(AcademicRecordPage.deleteConfirmLabel));
+      await tester.pumpAndSettle();
+
+      expect(api.deleteCalls, 1);
+      expect(api.getCalls, 1); // no recargó: no se borró nada
+      expect(
+        find.text(AcademicRecordService.deleteErrorMessage),
+        findsOneWidget,
+      );
+      expect(find.text('14.62'), findsOneWidget);
+      expect(find.byKey(AcademicRecordPage.deleteButtonKey), findsOneWidget);
+      // El finally del controller corre también cuando el DELETE falla.
+      expect(controller.deleting.value, isFalse);
+
+      // El SnackBar se cierra solo a los 4 s con un Timer. Si el test termina
+      // antes, el binding falla con "A Timer is still pending even after the
+      // widget tree was disposed".
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('mientras borra, el botón no acepta otro toque',
+        (tester) async {
+      final api = await montarConRecord(tester);
+      final controller = Get.find<AcademicRecordController>();
+
+      // El doble resuelve el DELETE al instante, así que no hay forma de
+      // dejarlo colgado desde la UI: se pone la bandera a mano, que es
+      // exactamente el estado en el que queda el controller mientras el
+      // DELETE va en camino.
+      controller.deleting.value = true;
+      await tester.pump();
+
+      expect(
+        tester
+            .widget<OutlinedButton>(
+              find.byKey(AcademicRecordPage.deleteButtonKey),
+            )
+            .onPressed,
+        isNull,
+      );
+      // Deshabilitado y nada más: sin indicador animado, que colgaría los
+      // pumpAndSettle del resto del archivo.
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+
+      // Y el guardia del controller impide un segundo DELETE aunque se llame
+      // al método directamente.
+      await controller.deleteRecord();
+      expect(api.deleteCalls, 0);
+
+      controller.deleting.value = false;
+      await tester.pump();
+      expect(
+        tester
+            .widget<OutlinedButton>(
+              find.byKey(AcademicRecordPage.deleteButtonKey),
+            )
+            .onPressed,
+        isNotNull,
+      );
+    });
+
+    testWidgets(
+        'RF-REC-5: al volver con back, la tarjeta del Perfil ya no muestra el '
+        'PPA ni los créditos borrados', (tester) async {
+      // Integración con la tarjeta real y el binding real: lo que se prueba
+      // es que las dos pantallas leen el MISMO AcademicRecordService.
+      final api = _FakeRecordApi(<Object>[_syncedJson(), _neverSyncedJson()]);
+      Get.put<AuthService>(_FakeAuthService(_student()));
+      Get.put<AcademicRecordService>(AcademicRecordService(apiClient: api));
+
+      await tester.pumpWidget(
+        GetMaterialApp(
+          initialRoute: '/',
+          getPages: [
+            GetPage(
+              name: '/',
+              page: () => const Scaffold(
+                body: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: RecordProfileCard(),
+                ),
+              ),
+            ),
+            GetPage(
+              name: '/mi-record',
+              page: () => const AcademicRecordPage(),
+              binding: AcademicRecordBinding(),
+            ),
+            GetPage(
+              name: '/portal-sync',
+              page: () => const Scaffold(body: Text('PORTAL SYNC')),
+            ),
+          ],
+        ),
+      );
+      await tester.pump(); // el postFrameCallback de la tarjeta → load()
+      await tester.pump();
+
+      expect(find.text('14.62'), findsOneWidget);
+      expect(find.text('197 de 240 créditos'), findsOneWidget);
+
+      await tester.tap(find.byType(RecordProfileCard));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AcademicRecordPage), findsOneWidget);
+      expect(api.getCalls, 1); // la pantalla usa la caché del servicio
+
+      await abrirDialogo(tester);
+      await tester.tap(find.text(AcademicRecordPage.deleteConfirmLabel));
+      await tester.pumpAndSettle();
+
+      expect(api.deleteCalls, 1);
+      expect(find.text(AcademicRecordPage.emptyTitle), findsOneWidget);
+
+      Get.back<void>();
+      await tester.pumpAndSettle();
+
+      expect(find.text(RecordProfileCard.neverSyncedText), findsOneWidget);
+      expect(find.text('14.62'), findsNothing);
+      expect(find.text('197 de 240 créditos'), findsNothing);
     });
   });
 }

@@ -10,6 +10,7 @@ import '../../components/error_retry.dart';
 import '../../components/skeleton.dart';
 import '../../configs/themes.dart';
 import '../../models/academic_record_model.dart';
+import '../../services/academic_record_service.dart';
 import 'academic_record_controller.dart';
 import 'record_course_row.dart';
 import 'record_format.dart';
@@ -42,6 +43,18 @@ class AcademicRecordPage extends GetView<AcademicRecordController> {
 
   /// Key de la tarjeta de cursos del ciclo elegido.
   static const Key coursesCardKey = Key('record-courses-card');
+
+  /// Borrar mi récord (RF-REC-5). El diálogo dice las tres cosas que el
+  /// alumno necesita saber antes de confirmar: qué se borra, qué no cambia y
+  /// cómo se recupera.
+  static const Key deleteButtonKey = Key('record-delete-button');
+  static const String deleteButtonLabel = 'Borrar mi récord de ULima++';
+  static const String deleteDialogTitle = 'Borrar mi récord';
+  static const String deleteDialogBody =
+      'Se borra la copia de tu récord guardada en ULima++. Tu malla no '
+      'cambia. Si vuelves a sincronizar con el portal, se guarda de nuevo.';
+  static const String deleteConfirmLabel = 'Borrar';
+  static const String deleteCancelLabel = 'Cancelar';
 
   @override
   Widget build(BuildContext context) {
@@ -235,6 +248,11 @@ class _RecordSuccessView extends StatelessWidget {
               ],
             );
           }),
+          // RF-REC-5: al final de todo, y solo en el estado de éxito. En el
+          // vacío no hay copia que borrar, y en el de error no se sabe si la
+          // hay.
+          const SizedBox(height: 28),
+          _DeleteRecordButton(controller: controller),
         ],
       ),
     );
@@ -537,4 +555,83 @@ class _CreditsRingPainter extends CustomPainter {
   @override
   bool shouldRepaint(_CreditsRingPainter old) =>
       old.progress != progress || old.track != track || old.color != color;
+}
+
+/// Botón destructivo del final de la pantalla (RF-REC-5).
+///
+/// Mismo estilo que `_LogoutButton` (lib/pages/perfil/perfil.dart:1306-1364):
+/// la app ya pide confirmación así para lo que no se deshace.
+class _DeleteRecordButton extends StatelessWidget {
+  const _DeleteRecordButton({required this.controller});
+
+  final AcademicRecordController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 50,
+      width: double.infinity,
+      child: Obx(() {
+        final borrando = controller.deleting.value;
+        return OutlinedButton.icon(
+          key: AcademicRecordPage.deleteButtonKey,
+          // Mientras el DELETE está en vuelo el botón no acepta otro toque.
+          // Sin spinner: un indicador animado no para nunca y colgaría los
+          // pumpAndSettle de los tests.
+          onPressed: borrando ? null : () => _confirmarYBorrar(context),
+          icon: const Icon(Icons.delete_outline),
+          label: const Text(AcademicRecordPage.deleteButtonLabel),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: Colors.redAccent,
+            side: const BorderSide(color: Colors.redAccent, width: 1.4),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+        );
+      }),
+    );
+  }
+
+  Future<void> _confirmarYBorrar(BuildContext context) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text(AcademicRecordPage.deleteDialogTitle),
+        content: const Text(AcademicRecordPage.deleteDialogBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text(AcademicRecordPage.deleteCancelLabel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text(
+              AcademicRecordPage.deleteConfirmLabel,
+              style: TextStyle(
+                color: Colors.redAccent,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    // Cerrar el diálogo con el barrier o con back devuelve null: tampoco borra.
+    if (confirmar != true) return;
+
+    try {
+      await controller.deleteRecord();
+      // Salió bien: el récord queda vacío, la pantalla pinta el estado vacío
+      // y este botón se desmonta con él. No hay nada más que avisar.
+    } on AcademicRecordFailure catch (e) {
+      // ScaffoldMessenger y no Get.snackbar: no necesita Get.testMode y el
+      // aviso queda dentro del Scaffold de esta pantalla (mismo criterio que
+      // lib/components/avatar/avatar_perfil.dart:132).
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    }
+  }
 }

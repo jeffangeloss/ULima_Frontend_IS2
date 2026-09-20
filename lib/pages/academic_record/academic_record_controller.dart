@@ -62,6 +62,29 @@ class AcademicRecordController extends GetxController {
   /// Un solo ciclo a la vez: el chip que se toca reemplaza al anterior.
   void selectPeriod(String periodCode) => selectedPeriodCode.value = periodCode;
 
+  /// Borrado en vuelo (RF-REC-5). Mientras dure, el botón se deshabilita y no
+  /// hay spinner: un indicador animado nunca para y colgaría los
+  /// `pumpAndSettle` de los tests, igual que `SkeletonPulse`.
+  final deleting = false.obs;
+
+  /// Borra la copia del récord guardada en ULima++ (RF-REC-5).
+  ///
+  /// Relanza [AcademicRecordFailure] tal cual: el controller no sabe pintar
+  /// avisos y es la pantalla la que muestra el mensaje. Si sale bien, el
+  /// servicio deja el récord vacío, así que el ciclo elegido deja de existir
+  /// y vuelve a null; si no, la próxima sincronización abriría en un chip
+  /// que ya no está.
+  Future<void> deleteRecord() async {
+    if (deleting.value) return; // doble toque mientras el DELETE va en camino
+    deleting.value = true;
+    try {
+      await _service.deleteRecord();
+      selectedPeriodCode.value = null;
+    } finally {
+      deleting.value = false;
+    }
+  }
+
   /// Pura y expuesta para probarla. Un ciclo elegido que ya no está en el
   /// récord —porque se volvió a sincronizar y cambió— cae al más reciente, que
   /// es el primero de la lista.
