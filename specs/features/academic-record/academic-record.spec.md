@@ -133,6 +133,7 @@ ahí. Al volver con back, la tarjeta nunca muestra el PPA o los créditos anteri
 
 `[@test] ../../../test/HU34_jeff/record_page_test.dart`
 `[@test] ../../../test/HU34_jeff/record_card_test.dart`
+`[@test] ../../../test/HU34_jeff/academic_record_service_test.dart`
 
 ### RF-REC-6 — Consentimiento antes de dar las credenciales
 
