@@ -49,8 +49,9 @@ Contrato REST local del frontend ULima++. Mantener alineado manualmente con `ULi
   - HU18: si el `code` no es de un `student` pero sí de un `teacher` (vía `teacher.user_id`), inicia sesión como docente. El `user` docente es `{ id, teacherId, code, fullName, institutionalEmail, role: "teacher", teacherLabel: "Profesor"|"Jefe de Práctica", setupComplete: true }` (sin `studentId`). No exige matrícula activa.
 - `POST /auth/register`
   - Público, sin token. Responde `201`.
-  - Request: `{ "code": "string", "portalPassword": "string", "passcode": "string", "password": "string" }`
+  - Request: `{ "code": "string", "portalPassword": "string", "passcode": "string", "password": "string", "consent"?: true }`
   - `code` es `^\d{6,10}$`. `portalPassword` y `passcode` son de **miUlima**: se usan para entrar al portal y se descartan; no se persisten ni se registran en logs. `password` es la que la persona quiere para ULima++.
+  - `consent` (RS-BE-29) es opcional y la app lo manda solo tras «Acepto» en la pantalla de consentimiento (RF-REC-6). Sin él la cuenta se crea igual, pero no se guarda el récord. Nunca `false`.
   - Response `201`: `{ "token": "string", "tokenType": "Bearer", "expiresIn": 86400, "user": User, "summary": ImportSummary, "warnings": SyncWarning[] }`
   - `summary` y `warnings` tienen la misma forma que en `POST /portal-sync/import`, pero **planos**, sin `period` ni `identity`. Un `201` con `warnings` no vacío es un éxito.
   - La identidad la pone el portal: el `code` enviado sirve solo para el login, y `user.code` puede diferir de él.
