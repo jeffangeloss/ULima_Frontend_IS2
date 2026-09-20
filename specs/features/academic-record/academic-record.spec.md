@@ -172,6 +172,8 @@ El objeto de cada ciclo en `periods` es
 `{ periodCode, average, relativePosition, level, convalidated, enrolled, approved, failed }`,
 cada grupo con `{ courses, credits }`. El detalle completo está en la spec del backend.
 
+`[@test] ../../../test/HU34_jeff/academic_record_model_test.dart`
+
 ## Nombres que no se confunden
 
 La app ya tiene "notas oficiales" en `/mis-notas`: las que carga el docente en ULima++ para
