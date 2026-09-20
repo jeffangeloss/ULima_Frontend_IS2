@@ -110,6 +110,13 @@ void main() {
       ));
     });
 
+    test('la nota numérica manda sobre gradeRaw cuando ambas vienen pobladas', () {
+      // Caso aprobado: nota y su texto coinciden, en verde.
+      expect(chip(15, '15'), (tone: RecordChipTone.green, label: '15'));
+      // Caso desaprobado: nota y su texto son distintos, pero la nota decide.
+      expect(chip(8, '08'), (tone: RecordChipTone.red, label: '08'));
+    });
+
     test('los rótulos neutros son las constantes de la fila', () {
       expect(RecordCourseRow.inProgressLabel, 'En curso');
       expect(RecordCourseRow.noGradeLabel, '—');
