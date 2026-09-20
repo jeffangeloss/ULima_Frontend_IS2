@@ -10,14 +10,16 @@ import 'auth_service.dart';
 /// La tarjeta del Perfil y la pantalla `/mi-record` leen de este mismo
 /// servicio, así que nunca muestran dos versiones del récord. El estado se
 /// vacía y se vuelve a pedir tras el `DELETE` ([deleteRecord]) y en
-/// `PortalSyncService.refreshAfterImport` ([reload]).
+/// `PortalSyncService.refreshAfterImport` ([reload]); y se vacía (sin volver a
+/// pedir) en `AuthService.logout()` ([clear], TT06: invalida TODAS las cachés
+/// por-usuario al cerrar sesión, con guarda `Get.isRegistered` porque no todas
+/// las pruebas que llaman a `logout()` registran este servicio).
 ///
-/// **Guarda por dueño.** `auth_service.dart` no está entre los archivos de la
-/// spec, así que `logout()` no limpia este servicio. Por eso se guarda el
-/// código del alumno dueño del estado: [record] devuelve null para cualquier
-/// otro usuario, y [load] descarta el estado ajeno antes del primer `await`.
-/// El récord anterior queda en memoria, invisible, hasta la próxima carga o
-/// hasta cerrar la app.
+/// **Guarda por dueño, además del logout.** [record] igual descarta el estado
+/// de cualquier usuario que no sea el actual, y [load] descarta el estado ajeno
+/// antes del primer `await`: así una cuenta nueva en el mismo dispositivo nunca
+/// ve el récord de la anterior aunque, por lo que sea, `AuthService.logout()`
+/// no se hubiera llegado a llamar.
 ///
 /// Un docente nunca dispara el `GET` ni el `DELETE`: para él la ruta responde
 /// 403 (RF-REC-1).
@@ -63,6 +65,11 @@ class AcademicRecordService extends GetxService {
     return (code != null && code == _ownerCode) ? r : null;
   }
 
+  /// A diferencia de [record], no están filtrados por dueño: por eso
+  /// `AuthService.logout()` llama a [clear] en vez de confiar solo en la
+  /// guarda de [load]. Sin eso, la cuenta nueva podría ver un frame del
+  /// estado de carga o de error del alumno anterior antes de su primer
+  /// `load()`.
   bool get isLoading => _loading.value;
   bool get hasError => _hasError.value;
 

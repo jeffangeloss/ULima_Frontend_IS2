@@ -12,6 +12,7 @@ targets:
   - ../../../lib/services/portal_sync_service.dart
   - ../../../lib/pages/registro/**
   - ../../../lib/services/registro_service.dart
+  - ../../../lib/services/auth_service.dart
   - ../../../lib/main.dart
 ---
 
@@ -131,9 +132,18 @@ estado se invalida y se vuelve a cargar tras el `DELETE` y en
 `PortalSyncService.refreshAfterImport`, junto a los demás servicios que ya se limpian
 ahí. Al volver con back, la tarjeta nunca muestra el PPA o los créditos anteriores.
 
+`AuthService.logout()` también lo limpia (TT06: invalida TODAS las cachés por-usuario
+al cerrar sesión, junto a `MallaService`, `CoursesService` y
+`EvaluationSyllabusService`), con `Get.isRegistered<AcademicRecordService>()` de guarda
+porque no todas las pruebas que llaman a `logout()` registran este servicio. A
+diferencia del `DELETE` y de `refreshAfterImport`, el logout **no** vuelve a pedir:
+solo vacía, para que la próxima cuenta que entre en el dispositivo no vea ni el PPA ni
+un frame del estado de error del alumno anterior.
+
 `[@test] ../../../test/HU34_jeff/record_page_test.dart`
 `[@test] ../../../test/HU34_jeff/record_card_test.dart`
 `[@test] ../../../test/HU34_jeff/academic_record_service_test.dart`
+`[@test] ../../../test/HU02_jeff/user_cache_reset_test.dart`
 
 ### RF-REC-6 — Consentimiento antes de dar las credenciales
 
@@ -143,8 +153,10 @@ Una sola pantalla de consentimiento, reutilizada en los dos lugares donde el alu
 a ULima++ su contraseña del portal. Dice **qué datos se importan y para qué**: nombre,
 código, carrera, nivel, cursos, secciones, docentes, horarios, matrícula, notas
 históricas, PPA, ubicación relativa, créditos, y estado de impedimento y deuda; que se
-usan solo para mostrárselos al propio alumno; y que la contraseña se usa una sola vez y
-no se guarda. Tiene un botón **"Acepto"** y otro para salir.
+usan para mostrárselos al propio alumno y para las funciones de ULima++ que ya usa
+(horario, malla y la lista de su sección que ve su docente, con nombre y código —
+`GradingStudent` en `official_grades_models.dart`); y que la contraseña se usa una sola
+vez y no se guarda. Tiene un botón **"Acepto"** y otro para salir.
 
 - **Portal Sync.** `PortalSyncStep` gana el paso `consent`, que pasa a ser el estado
   inicial. El formulario de credenciales (`form`) solo aparece tras tocar "Acepto". Si la
