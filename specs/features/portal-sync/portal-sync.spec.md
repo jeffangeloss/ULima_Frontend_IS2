@@ -109,20 +109,25 @@ Recargar la pantalla no basta; hay tres capas que hay que invalidar en este orde
 ## UI Behavior
 
 - **Banner en Home**: solo alumnos, solo si `needsImport`. Estados: oculto / visible / "Después" pulsado.
-- **PortalConsentView** (`lib/components/portal_consent/`, compartida con el registro): qué se importa, finalidad, aceptar o cancelar.
-- **PortalSyncWebViewPage**: loading, página del portal, cierre manual, timeout de 5 min.
-- **PortalSyncProgressPage**: progreso, resumen con conteos, lista de advertencias, botón "Listo".
-- **Errores**: diálogo con el mensaje de BR-SYNC-F-04 y botón reintentar cuando aplica.
+- **PortalSyncPage** (`/portal-sync`, una sola pantalla con los cuatro estados de `PortalSyncStep`, ver BR-SYNC-F-03):
+  - `consent` → **PortalConsentView** (`lib/components/portal_consent/`, compartida con el registro): qué se importa, finalidad, aceptar o cancelar.
+  - `form` → formulario nativo con la contraseña de miUlima y el código del authenticator.
+  - `loading` → progreso: "Importando datos de miUlima…".
+  - `done` → resumen con conteos, lista de advertencias y botón "Listo".
+- **Errores**: mensaje inline en el formulario con el texto de BR-SYNC-F-04; el `step` vuelve a `form` para reintentar.
 
 ## Data Flow
 
 ```
 Home → HomeController.checkPortalSync() → PortalSyncService.status() → GET /portal-sync/status
-  → needsImport → banner → "Cargar ahora" → PortalSyncConsentPage → acepta
-  → PortalSyncWebViewPage (inicio.jsp) → alumno se logea con SecurID
-  → onLoadStop en layout.jsp + cookies presentes → CookieManager.getCookies
-  → PortalSyncService.importFromPortal(cookies) → POST /portal-sync/import
-  → PortalSyncResult → PortalSyncProgressPage → refresco (BR-SYNC-F-06)
+  → needsImport → banner → "Cargar ahora" → PortalSyncPage (step: consent)
+  → PortalConsentView → "Acepto" → aceptarConsentimiento() → step: form
+  → alumno escribe su contraseña de miUlima y el código del authenticator → submit()
+  → step: loading → PortalSyncService.import(password, passcode, consent: true)
+  → POST /portal-sync/import
+  → éxito: PortalSyncResult → step: done, resumen con conteos y advertencias
+    → refresco (BR-SYNC-F-06)
+  → fallo (PortalSyncFailure): step vuelve a form con el mensaje mapeado (BR-SYNC-F-04)
 ```
 
 ## API Dependencies
