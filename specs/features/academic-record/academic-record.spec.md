@@ -40,7 +40,7 @@ En `perfil.dart`, dentro del bloque `if (!user.isTeacher)` y antes de `_CarreraC
 —es decir, entre "Configurar carnet" y la tarjeta de Carrera—, una tarjeta con:
 
 - **PPA** en grande y la **ubicación relativa** como insignia;
-- los **créditos acumulados de los requeridos** ("168 de 205 créditos") con una barra;
+- los **créditos acumulados de los requeridos** ("164 de 200 créditos") con una barra;
 - el enlace **"Ver mi récord completo ›"**, que navega con `Get.toNamed('/mi-record')`.
 
 Un docente nunca ve la tarjeta ni dispara el `GET`, que para él respondería 403.
