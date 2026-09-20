@@ -48,7 +48,9 @@ class PortalConsentView extends StatelessWidget {
     'Tu estado de impedimento y deuda.',
   ];
   static const String finalidad =
-      'Estos datos se usan solo para mostrártelos a ti.';
+      'Estos datos se usan para mostrártelos a ti y para las funciones de '
+      'ULima++ que ya usas: tu horario, tu malla y la lista de tu sección que '
+      've tu docente.';
   static const String contrasena =
       'Tu contraseña se usa una sola vez y no se guarda.';
   static const String botonAceptar = 'Acepto';

@@ -141,7 +141,14 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Tu estado de impedimento y deuda.'), findsOneWidget);
-      expect(find.text('Estos datos se usan solo para mostrártelos a ti.'), findsOneWidget);
+      expect(
+        find.text(
+          'Estos datos se usan para mostrártelos a ti y para las funciones de '
+          'ULima++ que ya usas: tu horario, tu malla y la lista de tu sección que '
+          've tu docente.',
+        ),
+        findsOneWidget,
+      );
       expect(find.text('Tu contraseña se usa una sola vez y no se guarda.'), findsOneWidget);
       expect(find.text('Acepto'), findsOneWidget);
       expect(find.text('Ahora no'), findsOneWidget);
@@ -182,7 +189,8 @@ void main() {
       await tester.pump();
 
       final texto = _textoVisible(tester);
-      expect(texto, contains('solo para mostrártelos a ti'));
+      expect(texto, contains('para mostrártelos a ti'));
+      expect(texto, contains('la lista de tu sección que ve tu docente'));
       expect(texto, contains('se usa una sola vez y no se guarda'));
     });
 
@@ -260,8 +268,12 @@ void main() {
       expect(PortalConsentView.botonAceptar, 'Acepto');
       expect(PortalConsentView.introduccion,
           'Para cargar tus datos, ULima++ entra a miUlima con tu contraseña y trae:');
-      expect(PortalConsentView.finalidad,
-          'Estos datos se usan solo para mostrártelos a ti.');
+      expect(
+        PortalConsentView.finalidad,
+        'Estos datos se usan para mostrártelos a ti y para las funciones de '
+        'ULima++ que ya usas: tu horario, tu malla y la lista de tu sección que '
+        've tu docente.',
+      );
       expect(PortalConsentView.contrasena,
           'Tu contraseña se usa una sola vez y no se guarda.');
       expect(PortalConsentView.datosImportados, hasLength(4));
