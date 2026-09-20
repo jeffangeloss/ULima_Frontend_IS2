@@ -39,6 +39,54 @@ class AcademicRecordController extends GetxController {
 
   Future<void> retry() => _service.load(force: true);
 
+  /// Ciclo que el alumno tocó. Queda null hasta el primer toque, y entonces
+  /// manda el más reciente (RF-REC-2). La tarea 8 lo vuelve a null al borrar
+  /// el récord.
+  final selectedPeriodCode = RxnString();
+
+  /// Los ciclos del récord, en el orden en que los manda el backend: del más
+  /// reciente al más viejo (RS-BE-26). El cliente no los reordena.
+  List<String> get periodCodes =>
+      record?.coursesByPeriod.map((p) => p.periodCode).toList() ??
+      const <String>[];
+
+  /// El ciclo que se está mostrando ahora mismo.
+  String? get currentPeriodCode =>
+      periodoSeleccionado(periodCodes, selectedPeriodCode.value);
+
+  /// Solo el ciclo más reciente del récord puede decir "En curso" (RF-REC-3):
+  /// en los demás, un curso sin nota es una raya.
+  bool isMostRecentPeriod(String periodCode) =>
+      periodCodes.isNotEmpty && periodCodes.first == periodCode;
+
+  /// Un solo ciclo a la vez: el chip que se toca reemplaza al anterior.
+  void selectPeriod(String periodCode) => selectedPeriodCode.value = periodCode;
+
+  /// Pura y expuesta para probarla. Un ciclo elegido que ya no está en el
+  /// récord —porque se volvió a sincronizar y cambió— cae al más reciente, que
+  /// es el primero de la lista.
+  static String? periodoSeleccionado(
+    List<String> periodCodes,
+    String? elegido,
+  ) {
+    if (periodCodes.isEmpty) return null;
+    if (elegido != null && periodCodes.contains(elegido)) return elegido;
+    return periodCodes.first;
+  }
+
+  /// Pura y expuesta para probarla. El promedio del ciclo sale de `periods`,
+  /// no de las notas: si el backend no manda ese ciclo, o su `average` es
+  /// null, devuelve null y la tarjeta no pinta nada (nunca un 0).
+  static double? periodAverage(
+    List<AcademicPeriodSummary> periods,
+    String periodCode,
+  ) {
+    for (final p in periods) {
+      if (p.periodCode == periodCode) return p.average;
+    }
+    return null;
+  }
+
   @override
   void onReady() {
     // GetX agenda onReady después del primer frame, así que ningún Rx cambia

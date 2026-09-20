@@ -15,9 +15,11 @@ import 'package:get/get.dart';
 import 'package:ulima_plus/components/error_retry.dart';
 import 'package:ulima_plus/components/skeleton.dart';
 import 'package:ulima_plus/main.dart';
+import 'package:ulima_plus/models/academic_record_model.dart';
 import 'package:ulima_plus/models/user_model.dart';
 import 'package:ulima_plus/pages/academic_record/academic_record_controller.dart';
 import 'package:ulima_plus/pages/academic_record/academic_record_page.dart';
+import 'package:ulima_plus/pages/academic_record/record_course_row.dart';
 import 'package:ulima_plus/services/academic_record_service.dart';
 import 'package:ulima_plus/services/api_client.dart';
 import 'package:ulima_plus/services/auth_service.dart';
@@ -384,6 +386,187 @@ void main() {
       expect(find.byKey(AcademicRecordPage.skeletonKey), findsNothing);
       expect(find.byKey(AcademicRecordPage.successViewKey), findsNothing);
       expect(find.byType(ErrorRetry), findsOneWidget);
+    });
+  });
+
+  group('WIDGET · Chips de ciclo y cursos (RF-REC-2, RF-REC-3)', () {
+    // El chip y el encabezado de la tarjeta dicen lo mismo ('2025-2'), así que
+    // find.text encontraría dos. Para tocar se usa la key del chip; para mirar
+    // la lista, solo lo que está dentro de la tarjeta.
+    Finder chip(String periodCode) =>
+        find.byKey(AcademicRecordPage.periodChipKey(periodCode));
+
+    Finder enLaTarjeta(Finder matching) => find.descendant(
+      of: find.byKey(AcademicRecordPage.coursesCardKey),
+      matching: matching,
+    );
+
+    Future<void> tocarChip(WidgetTester tester, String periodCode) async {
+      await tester.tap(chip(periodCode));
+      await tester.pump();
+    }
+
+    testWidgets('los chips van del más reciente al más viejo', (tester) async {
+      await _mountPage(tester, getResponses: [_syncedJson()]);
+
+      expect(chip('2026-1'), findsOneWidget);
+      expect(chip('2025-2'), findsOneWidget);
+      expect(chip('2025-1'), findsOneWidget);
+
+      // El orden es el del backend (RS-BE-26): el cliente no reordena.
+      final x2026 = tester.getTopLeft(chip('2026-1')).dx;
+      final x20252 = tester.getTopLeft(chip('2025-2')).dx;
+      final x20251 = tester.getTopLeft(chip('2025-1')).dx;
+      expect(x2026, lessThan(x20252));
+      expect(x20252, lessThan(x20251));
+    });
+
+    testWidgets('viene seleccionado el ciclo más reciente', (tester) async {
+      await _mountPage(tester, getResponses: [_syncedJson()]);
+
+      expect(enLaTarjeta(find.text('2026-1')), findsOneWidget);
+      expect(enLaTarjeta(find.text('CURSO EN CURSO')), findsOneWidget);
+      expect(enLaTarjeta(find.text('CURSO APROBADO')), findsNothing);
+      expect(find.byType(RecordCourseRow), findsOneWidget);
+    });
+
+    testWidgets('tocar otro chip cambia la lista: un ciclo a la vez', (
+      tester,
+    ) async {
+      await _mountPage(tester, getResponses: [_syncedJson()]);
+      await tocarChip(tester, '2025-2');
+
+      expect(enLaTarjeta(find.text('CURSO APROBADO')), findsOneWidget);
+      expect(enLaTarjeta(find.text('CURSO CONVALIDADO')), findsOneWidget);
+      expect(enLaTarjeta(find.text('CURSO EN CURSO')), findsNothing);
+      expect(find.byType(RecordCourseRow), findsNWidgets(2));
+
+      // Y se puede volver: sigue habiendo un solo ciclo a la vista.
+      await tocarChip(tester, '2026-1');
+      expect(enLaTarjeta(find.text('CURSO EN CURSO')), findsOneWidget);
+      expect(enLaTarjeta(find.text('CURSO APROBADO')), findsNothing);
+      expect(find.byType(RecordCourseRow), findsOneWidget);
+    });
+
+    testWidgets('el promedio sale de periods, y solo si el backend lo tiene', (
+      tester,
+    ) async {
+      await _mountPage(tester, getResponses: [_syncedJson()]);
+
+      // '2026-1' no está en 'periods': no hay promedio que mostrar.
+      expect(find.textContaining('prom.'), findsNothing);
+
+      await tocarChip(tester, '2025-2');
+      expect(enLaTarjeta(find.text('prom. 17.3')), findsOneWidget);
+
+      // '2025-1' sí está en 'periods', pero con average null: tampoco se
+      // pinta nada, y mucho menos un 0.
+      await tocarChip(tester, '2025-1');
+      expect(find.textContaining('prom.'), findsNothing);
+      expect(find.text('0'), findsNothing);
+    });
+
+    testWidgets('"En curso" solo en el ciclo más reciente del récord', (
+      tester,
+    ) async {
+      await _mountPage(tester, getResponses: [_syncedJson()]);
+
+      expect(
+        enLaTarjeta(find.text(RecordCourseRow.inProgressLabel)),
+        findsOneWidget,
+      );
+
+      await tocarChip(tester, '2025-1');
+      expect(enLaTarjeta(find.text('CURSO SIN NOTA ANTIGUO')), findsOneWidget);
+      expect(
+        enLaTarjeta(find.text(RecordCourseRow.noGradeLabel)),
+        findsOneWidget,
+      );
+      expect(find.text(RecordCourseRow.inProgressLabel), findsNothing);
+      expect(enLaTarjeta(find.text('08')), findsOneWidget);
+    });
+
+    testWidgets('cada curso del ciclo elegido se pinta como pide RF-REC-3', (
+      tester,
+    ) async {
+      await _mountPage(tester, getResponses: [_syncedJson()]);
+      await tocarChip(tester, '2025-2');
+
+      expect(enLaTarjeta(find.text('2.ª vez')), findsOneWidget);
+      expect(enLaTarjeta(find.text('100002 · 1.5 créd.')), findsOneWidget);
+      expect(enLaTarjeta(find.text('17')), findsOneWidget);
+      expect(enLaTarjeta(find.text('CONV')), findsOneWidget);
+      expect(enLaTarjeta(find.text('Convalidado por examen')), findsOneWidget);
+
+      // Qué NO entra: el resumen completo del ciclo. De 'periods' sale el
+      // promedio y nada más, aunque el '2025-2' de la respuesta traiga
+      // relativePosition 'MEDIO SUPERIOR', level 8 y los cuatro grupos de
+      // cursos y créditos. ('Tercio superior' SÍ está en pantalla, pero en el
+      // encabezado: es la ubicación del snapshot, que pide RF-REC-2; por eso
+      // lo de la ubicación se mira solo dentro de la tarjeta.)
+      expect(find.textContaining('MEDIO'), findsNothing);
+      expect(find.textContaining('Medio'), findsNothing);
+      expect(enLaTarjeta(find.textContaining('superior')), findsNothing);
+      expect(enLaTarjeta(find.textContaining('créditos')), findsNothing);
+    });
+  });
+
+  group('UNITARIA · periodoSeleccionado y periodAverage (RF-REC-2)', () {
+    const ciclos = ['2026-1', '2025-2'];
+
+    AcademicPeriodSummary resumen(String periodCode, double? average) =>
+        AcademicPeriodSummary(
+          periodCode: periodCode,
+          average: average,
+          relativePosition: null,
+          level: null,
+          convalidated: AcademicTotals.none,
+          enrolled: AcademicTotals.none,
+          approved: AcademicTotals.none,
+          failed: AcademicTotals.none,
+        );
+
+    test('sin elección previa manda el más reciente, que es el primero', () {
+      expect(
+        AcademicRecordController.periodoSeleccionado(ciclos, null),
+        '2026-1',
+      );
+    });
+
+    test('un ciclo elegido que existe se respeta', () {
+      expect(
+        AcademicRecordController.periodoSeleccionado(ciclos, '2025-2'),
+        '2025-2',
+      );
+    });
+
+    test('un ciclo que ya no está en el récord cae al más reciente', () {
+      // Pasa al volver a sincronizar: el récord nuevo puede no traer el ciclo
+      // que estaba elegido.
+      expect(
+        AcademicRecordController.periodoSeleccionado(ciclos, '2024-1'),
+        '2026-1',
+      );
+    });
+
+    test('sin ciclos no hay nada que elegir', () {
+      expect(
+        AcademicRecordController.periodoSeleccionado(
+          const <String>[],
+          '2025-2',
+        ),
+        isNull,
+      );
+    });
+
+    test('periodAverage solo devuelve el promedio que el backend tiene', () {
+      final periods = [resumen('2025-2', 17.3), resumen('2025-1', null)];
+
+      expect(AcademicRecordController.periodAverage(periods, '2025-2'), 17.3);
+      // El ciclo no está en 'periods'.
+      expect(AcademicRecordController.periodAverage(periods, '2026-1'), isNull);
+      // El ciclo está, pero sin promedio.
+      expect(AcademicRecordController.periodAverage(periods, '2025-1'), isNull);
     });
   });
 
