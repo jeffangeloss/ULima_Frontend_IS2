@@ -6,21 +6,22 @@
 
 **Arquitectura:** Un único `AcademicRecordService` (`GetxService` permanente, como `MallaService`) guarda todo el estado del récord y es lo único que habla con la API; la tarjeta del Perfil y la pantalla `/mi-record` lo leen con `Obx`, así que comparten una sola copia que se invalida tras el `DELETE` y en `PortalSyncService.refreshAfterImport`. El modelo parsea el contrato con helpers defensivos que conservan `null` —nunca 0—, y toda la presentación (progreso de créditos, decimales, ubicación relativa, chip de nota y etiqueta "N.ª vez") vive en funciones puras que se prueban aparte de los widgets. La pantalla usa binding por ruta con `Get.lazyPut`, y el consentimiento es una sola `PortalConsentView` que Portal Sync y Registro montan como un paso más de su máquina de estados.
 
-**Stack:** Flutter + Dart + GetX (flutter en `/Users/jjjangelosss/development/flutter/bin/flutter`)
+**Stack:** Flutter + Dart + GetX (flutter en `$FLUTTER`)
 
 **Spec:** `specs/features/academic-record/academic-record.spec.md` (y la contraparte en el otro repo: `ULima_Backend_IS2/specs/features/academic-record/academic-record.spec.md`, RS-BE-19 a RS-BE-29)
 
-**Repo y rama:** `/Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe`, rama `feat/record-academico-fe`
+**Repo y rama:** `.`, rama `feat/record-academico-fe`
 
 ## Restricciones globales
 
+- **Variables de los comandos.** Los comandos de este plan usan `$FLUTTER` para no fijar la ruta del SDK de una maquina concreta: `export FLUTTER=$(which flutter)` (o la ruta de tu instalacion). Las rutas relativas son desde la raiz de este repo.
 - Idioma: español en todo texto visible, comentarios, nombres de group/test y mensajes de commit.
-- Repo y rama: /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe en feat/record-academico-fe. Trabajar solo ahí. Editar con Edit sobre anclas concretas; nunca cp/mv para respaldar o restaurar, y nunca git stash (el stash se comparte entre worktrees).
+- Repo y rama: . en feat/record-academico-fe. Trabajar solo ahí. Editar con Edit sobre anclas concretas; nunca cp/mv para respaldar o restaurar, y nunca git stash (el stash se comparte entre worktrees).
 - Commits: el autor ya está configurado en git (Jeffangeloss <178797184+jeffangeloss@users.noreply.github.com>). SIN trailer Co-Authored-By. Un commit por tarea, con git add solo de los archivos de esa tarea. Formato: 'feat(academic-record): …' o 'test(…): …', en español.
 - No hacer push ni abrir PR: lo decide el dueño. Si alguna vez se hace, siempre 'git push origin feat/record-academico-fe', nunca git push a secas (upstream es el repo del grupo).
 - Repo público: ningún dato real. Alumno sintético code '20230001', firstName 'Alumna', lastName 'De Prueba', email 'test@aloe.ulima.edu.pe', role 'student'. Segundo alumno: 'otro.alumno.test'. Docente: code 'docente.test', role 'teacher'. Nunca copiar valores de test/HU31_jeff/fixtures ni de spike-portal/. Los JSON de prueba son inventados: cursos 'CURSO …', códigos 1000xx.
 - Valores PROHIBIDOS en todo archivo del repo: los que aparecen en `test/HU31_jeff/fixtures/` y en `spike-portal/`, porque son de un récord real. Antes de usar un valor nuevo hay que comprobarlo con `grep` contra esas dos carpetas; si aparece, se elige otro. Los de este plan ya se comprobaron así: PPA 14.62, ubicación 'TERCIO SUPERIOR' (y 'MEDIO SUPERIOR' cuando hace falta una segunda), 164 de 200 créditos en las tareas 3 y 4, 197 de 240 en las tareas 6, 7 y 8, secciones '917' y '80x', y cursos 'CURSO …' con códigos 1000xx.
-- Tests: /Users/jjjangelosss/development/flutter/bin/flutter test test/HU34_jeff/<archivo>. Análisis: /Users/jjjangelosss/development/flutter/bin/flutter analyze, sin issues nuevos; los preexistentes se reportan aparte. La línea base la mide la tarea 1 y la deja fuera del repo, en /private/tmp/claude-501/-Users-jjjangelosss-ULIMA--/b0e43952-2505-431f-9c2a-5bfea270569c/scratchpad/plan-fe/analyze-baseline.txt: donde una tarea diga 'la misma línea de la tarea 1', se compara con un cat de ese archivo, porque cada tarea corre en su propia sesión y no ve el reporte de la anterior.
+- Tests: $FLUTTER test test/HU34_jeff/<archivo>. Análisis: $FLUTTER analyze, sin issues nuevos; los preexistentes se reportan aparte. La línea base la mide la tarea 1 y la deja fuera del repo, en $TMP/plan-fe/analyze-baseline.txt: donde una tarea diga 'la misma línea de la tarea 1', se compara con un cat de ese archivo, porque cada tarea corre en su propia sesión y no ve el reporte de la anterior.
 - El frontend se prueba solo con dobles escritos a mano: extends ApiClient con super(configuredBaseUrl: 'http://test') y @override con la firma exacta; extends AuthService. Nunca contra el backend real. Sin mockito ni mocktail. No se agregan dependencias a pubspec.yaml (no hay intl).
 - Firmas a sobreescribir en ApiClient: Future<Map<String, dynamic>> getJson(String path, {String? token, Map<String, String?> query = const {}, bool suppressSessionExpiry = false}); postJson(String path, {required Map<String, dynamic> body, String? token}); deleteJson(String path, {String? token}).
 - Archivos permitidos: los targets de specs/features/academic-record/academic-record.spec.md; los tests de test/HU34_jeff/; los tests existentes que rompa un cambio de firma (test/HU31_jeff/portal_sync_test.dart y test/HU33_jeff/registro_*_test.dart); y los docs docs/specs/api-contracts.md, docs/specs/feature-index.md y specs/features/{academic-record,portal-sync,registro}/*.spec.md. NO tocar lib/services/auth_service.dart, lib/configs/themes.dart ni lib/models/user_model.dart, y no ampliar /auth/me.
@@ -505,7 +506,7 @@ En los doc comments del test, los genéricos van entre backticks (`Map<String, d
 - [ ] **Paso 2: Correr la prueba y ver que falla**
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter test test/HU34_jeff/academic_record_model_test.dart
+cd . && $FLUTTER test test/HU34_jeff/academic_record_model_test.dart
 ```
 
 Esperado: FAIL de compilación, porque el modelo no existe todavía. La salida incluye:
@@ -771,7 +772,7 @@ El código anterior ya cumple estas reglas. No las "arregles":
 - [ ] **Paso 4: Correr la prueba y ver que pasa**
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter test test/HU34_jeff/academic_record_model_test.dart
+cd . && $FLUTTER test test/HU34_jeff/academic_record_model_test.dart
 ```
 
 Esperado: PASS. La última línea es `+11: All tests passed!`.
@@ -801,7 +802,7 @@ cada grupo con `{ courses, credits }`. El detalle completo está en la spec del 
 No cambies ninguna otra línea de la spec. Compruébalo:
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && git diff --stat specs/features/academic-record/academic-record.spec.md
+cd . && git diff --stat specs/features/academic-record/academic-record.spec.md
 ```
 
 Esperado: `1 file changed, 2 insertions(+)`.
@@ -811,7 +812,7 @@ Esperado: `1 file changed, 2 insertions(+)`.
 Primero, los dos archivos de esta tarea:
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter analyze lib/models/academic_record_model.dart test/HU34_jeff/academic_record_model_test.dart
+cd . && $FLUTTER analyze lib/models/academic_record_model.dart test/HU34_jeff/academic_record_model_test.dart
 ```
 
 Esperado: `No issues found! (ran in …)`. Si aparece algún issue, corrígelo en esos dos archivos y vuelve a correr los Pasos 4 y 6.
@@ -819,7 +820,7 @@ Esperado: `No issues found! (ran in …)`. Si aparece algún issue, corrígelo e
 Después, el proyecto entero. Nadie midió todavía los issues preexistentes (riesgo abierto del esqueleto), y esta tarea los mide:
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter analyze 2>&1 | grep -E "issues? found|academic_record_model"
+cd . && $FLUTTER analyze 2>&1 | grep -E "issues? found|academic_record_model"
 ```
 
 Esperado: una sola línea, `N issues found. (ran in …)` o `No issues found! (ran in …)`, y ninguna línea que nombre `academic_record_model`. Todos esos N issues son preexistentes, porque todavía nadie importa los dos archivos nuevos y la spec no se analiza. Anota N en tu reporte como "issues preexistentes" y no corrijas ninguno en esta tarea.
@@ -827,7 +828,7 @@ Esperado: una sola línea, `N issues found. (ran in …)` o `No issues found! (r
 Y guarda esa línea en un archivo, porque las ocho tareas que siguen la comparan y cada una corre en su propia sesión, sin tu reporte a la vista:
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter analyze 2>&1 | grep -E "issues? found" | sed 's/ (ran in .*//' > /private/tmp/claude-501/-Users-jjjangelosss-ULIMA--/b0e43952-2505-431f-9c2a-5bfea270569c/scratchpad/plan-fe/analyze-baseline.txt && cat /private/tmp/claude-501/-Users-jjjangelosss-ULIMA--/b0e43952-2505-431f-9c2a-5bfea270569c/scratchpad/plan-fe/analyze-baseline.txt
+cd . && $FLUTTER analyze 2>&1 | grep -E "issues? found" | sed 's/ (ran in .*//' > $TMP/plan-fe/analyze-baseline.txt && cat $TMP/plan-fe/analyze-baseline.txt
 ```
 
 Esperado: una sola línea, la misma de arriba pero sin el `(ran in …)`. Ese archivo vive fuera del repo y no se commitea. Las tareas siguientes lo leen con `cat` para comparar; si no existe, la tarea 1 no se corrió en esta máquina y hay que medir la línea base antes de seguir.
@@ -837,7 +838,7 @@ Esperado: una sola línea, la misma de arriba pero sin el `(ran in …)`. Ese ar
 Revisa primero que el árbol no tenga cambios ajenos que puedas mezclar sin querer:
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && git status --short --untracked-files=all
+cd . && git status --short --untracked-files=all
 ```
 
 Esperado, en cualquier orden, exactamente estas tres líneas:
@@ -851,13 +852,13 @@ Esperado, en cualquier orden, exactamente estas tres líneas:
 Si aparece otro archivo, no lo agregues ni lo toques: puede ser de otra sesión.
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && git add lib/models/academic_record_model.dart test/HU34_jeff/academic_record_model_test.dart specs/features/academic-record/academic-record.spec.md && git diff --cached --stat
+cd . && git add lib/models/academic_record_model.dart test/HU34_jeff/academic_record_model_test.dart specs/features/academic-record/academic-record.spec.md && git diff --cached --stat
 ```
 
 Esperado: `git diff --cached --stat` muestra exactamente esos 3 archivos y `3 files changed`.
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && git commit -m "feat(academic-record): modelo del récord con números que conservan null"
+cd . && git commit -m "feat(academic-record): modelo del récord con números que conservan null"
 ```
 
 El autor ya está configurado en git. El mensaje no lleva trailer `Co-Authored-By`. No hagas push.
@@ -875,10 +876,10 @@ El autor ya está configurado en git. El mensaje no lleva trailer `Co-Authored-B
 **Precondición:** la tarea 1 ya tiene su commit. Comprobarlo antes de empezar:
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && ls lib/models/academic_record_model.dart test/HU34_jeff/ && git status --short
+cd . && ls lib/models/academic_record_model.dart test/HU34_jeff/ && git status --short
 ```
 
-Deben existir `lib/models/academic_record_model.dart` y la carpeta `test/HU34_jeff/`, y el árbol debe estar limpio. Todo se hace en `/Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe`, rama `feat/record-academico-fe`. Los archivos existentes se editan con Edit sobre las anclas literales de abajo. No se usan `cp`, `mv` ni `git stash`. `lib/services/auth_service.dart` no se toca.
+Deben existir `lib/models/academic_record_model.dart` y la carpeta `test/HU34_jeff/`, y el árbol debe estar limpio. Todo se hace en `.`, rama `feat/record-academico-fe`. Los archivos existentes se editan con Edit sobre las anclas literales de abajo. No se usan `cp`, `mv` ni `git stash`. `lib/services/auth_service.dart` no se toca.
 
 **Interfaces:**
 - Consume:
@@ -1324,7 +1325,7 @@ El test **no** importa `academic_record_model.dart`: nunca nombra sus tipos (lle
 - [ ] **Paso 2: Correr la prueba y ver que falla**
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter test test/HU34_jeff/academic_record_service_test.dart
+cd . && $FLUTTER test test/HU34_jeff/academic_record_service_test.dart
 ```
 
 Esperado: FAIL de compilación. El runner muestra `Failed to load "…/test/HU34_jeff/academic_record_service_test.dart"` y, entre otros, estos errores:
@@ -1508,7 +1509,7 @@ class AcademicRecordFailure implements Exception {
 **3.2 Comprobar que el servicio pasa y que falta la invalidación tras importar**
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter test test/HU34_jeff/academic_record_service_test.dart
+cd . && $FLUTTER test test/HU34_jeff/academic_record_service_test.dart
 ```
 
 Esperado: `+13 -1: Some tests failed.`
@@ -1603,7 +1604,7 @@ por esto:
 - [ ] **Paso 4: Correr la prueba y ver que pasa**
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter test test/HU34_jeff/academic_record_service_test.dart
+cd . && $FLUTTER test test/HU34_jeff/academic_record_service_test.dart
 ```
 
 Esperado: PASS (`+14: All tests passed!`).
@@ -1645,7 +1646,7 @@ Queda después de `Get.put<AuthService>(...)` (L63) y antes de `tryRestoreSessio
 Comprueba que el registro quedó escrito:
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && grep -c "Get.put<AcademicRecordService>(AcademicRecordService(), permanent: true);" lib/main.dart
+cd . && grep -c "Get.put<AcademicRecordService>(AcademicRecordService(), permanent: true);" lib/main.dart
 ```
 
 Esperado: `1`. Este grep es la ÚNICA verificación de RF-REC-5 ("un `GetxService` permanente, como `MallaService`") en todo el plan: ninguna prueba ejecuta `main()`, y las 30 y pico que tocan el servicio hacen su propio `Get.put<AcademicRecordService>(...)` antes de montar nada —incluida la que monta la app real con `const MyApp(initialRoute: '/mi-record')`, porque `MyApp` es solo el widget y el `Get.put(..., permanent: true)` vive en `main()`—. Sin esta línea la suite queda en verde y el Perfil se cae en runtime con "AcademicRecordService not found" desde `RecordProfileCard.initState`, y lo mismo el constructor por defecto de `AcademicRecordController` desde `AcademicRecordBinding`. Repite este mismo grep en el Paso final, antes del commit.
@@ -1730,23 +1731,23 @@ por esto:
 - [ ] **Paso 8: Regresión y análisis**
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter test test/HU34_jeff/academic_record_service_test.dart test/HU34_jeff/academic_record_model_test.dart test/HU31_jeff/portal_sync_test.dart
+cd . && $FLUTTER test test/HU34_jeff/academic_record_service_test.dart test/HU34_jeff/academic_record_model_test.dart test/HU31_jeff/portal_sync_test.dart
 ```
 
 Esperado: PASS (`All tests passed!`). `portal_sync_test.dart` no llama a `refreshAfterImport`, pero sí importa `portal_sync_service.dart`: confirma que el archivo compila con sus imports nuevos.
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter analyze
+cd . && $FLUTTER analyze
 ```
 
-Esperado: ningún issue nuevo respecto de la línea base medida en la tarea 1, que está en `/private/tmp/claude-501/-Users-jjjangelosss-ULIMA--/b0e43952-2505-431f-9c2a-5bfea270569c/scratchpad/plan-fe/analyze-baseline.txt` (léela con `cat` y compara la línea `N issues found` sin el `(ran in …)`). Los preexistentes se reportan aparte y no se corrigen aquí; el `avoid_print` de `lib/main.dart:79` pasa a reportarse en `lib/main.dart:83` por las cuatro líneas que agrega el paso 5. En los cuatro archivos Dart de esta tarea (`academic_record_service.dart`, `portal_sync_service.dart`, `main.dart` y el test) no puede aparecer ningún `unused_import`, `empty_catches` ni `avoid_print`.
+Esperado: ningún issue nuevo respecto de la línea base medida en la tarea 1, que está en `$TMP/plan-fe/analyze-baseline.txt` (léela con `cat` y compara la línea `N issues found` sin el `(ran in …)`). Los preexistentes se reportan aparte y no se corrigen aquí; el `avoid_print` de `lib/main.dart:79` pasa a reportarse en `lib/main.dart:83` por las cuatro líneas que agrega el paso 5. En los cuatro archivos Dart de esta tarea (`academic_record_service.dart`, `portal_sync_service.dart`, `main.dart` y el test) no puede aparecer ningún `unused_import`, `empty_catches` ni `avoid_print`.
 
 - [ ] **Paso final: Commit**
 
 Revisa primero que el registro permanente siga en su sitio y que el árbol no tenga cambios ajenos:
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && grep -c "Get.put<AcademicRecordService>(AcademicRecordService(), permanent: true);" lib/main.dart && git status --short --untracked-files=all
+cd . && grep -c "Get.put<AcademicRecordService>(AcademicRecordService(), permanent: true);" lib/main.dart && git status --short --untracked-files=all
 ```
 
 Esperado: `1` y después, en cualquier orden, exactamente estas seis líneas:
@@ -1763,13 +1764,13 @@ Esperado: `1` y después, en cualquier orden, exactamente estas seis líneas:
 Si aparece otro archivo, no lo agregues ni lo toques: puede ser de otra sesión.
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && git add lib/services/academic_record_service.dart lib/services/portal_sync_service.dart lib/main.dart docs/specs/api-contracts.md specs/features/academic-record/academic-record.spec.md test/HU34_jeff/academic_record_service_test.dart && git diff --cached --stat
+cd . && git add lib/services/academic_record_service.dart lib/services/portal_sync_service.dart lib/main.dart docs/specs/api-contracts.md specs/features/academic-record/academic-record.spec.md test/HU34_jeff/academic_record_service_test.dart && git diff --cached --stat
 ```
 
 Esperado: exactamente esos 6 archivos y `6 files changed`.
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && git commit -m "feat(academic-record): servicio único del récord con borrado e invalidación tras importar"
+cd . && git commit -m "feat(academic-record): servicio único del récord con borrado e invalidación tras importar"
 ```
 
 El autor ya está configurado en git. El mensaje va sin trailer `Co-Authored-By`. No hagas push.
@@ -1920,7 +1921,7 @@ Por qué estos casos y no otros:
 - [ ] **Paso 2: Correr la prueba y ver que falla**
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter test test/HU34_jeff/record_card_test.dart
+cd . && $FLUTTER test test/HU34_jeff/record_card_test.dart
 ```
 
 Esperado: falla al compilar, porque el archivo que se importa todavía no existe. Las primeras líneas:
@@ -1940,7 +1941,7 @@ y al final:
 00:00 +0 -1: Some tests failed.
 
 Failing tests:
-  /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe/test/HU34_jeff/record_card_test.dart: loading /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe/test/HU34_jeff/record_card_test.dart
+  ./test/HU34_jeff/record_card_test.dart: loading ./test/HU34_jeff/record_card_test.dart
 ```
 
 Es el fallo correcto: `Method not found` para las seis funciones (`creditsProgress`, `formatDecimal`, `creditsShortLabel`, `creditsOfRequiredLabel`, `formatRelativePosition`, `progressPercentLabel`), repetido en cada llamada, así que entre las dos líneas de arriba y el resumen final hay unas dos docenas de bloques `Error: Method not found`. Ningún cuerpo de test llega a correr todavía. Si en vez de esto sale `All tests passed!`, el archivo de implementación ya existía: revísalo antes de seguir.
@@ -2016,7 +2017,7 @@ Detalles que no son libres:
 - [ ] **Paso 4: Correr la prueba y ver que pasa**
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter test test/HU34_jeff/record_card_test.dart
+cd . && $FLUTTER test test/HU34_jeff/record_card_test.dart
 ```
 
 Esperado: PASS, con los 16 casos de los cuatro grupos:
@@ -2028,7 +2029,7 @@ Esperado: PASS, con los 16 casos de los cuatro grupos:
 - [ ] **Paso 5: Análisis estático**
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter analyze lib/pages/academic_record/record_format.dart test/HU34_jeff/record_card_test.dart
+cd . && $FLUTTER analyze lib/pages/academic_record/record_format.dart test/HU34_jeff/record_card_test.dart
 ```
 
 Esperado: `No issues found! (ran in …)`. Si sale algún issue, corrígelo en esos dos archivos y vuelve a correr los Pasos 4 y 5.
@@ -2036,17 +2037,17 @@ Esperado: `No issues found! (ran in …)`. Si sale algún issue, corrígelo en e
 Después, el proyecto entero, para comprobar que el número de issues preexistentes que anotaste en la tarea 1 no subió:
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter analyze 2>&1 | grep -E "issues? found|record_format|record_card"
+cd . && $FLUTTER analyze 2>&1 | grep -E "issues? found|record_format|record_card"
 ```
 
-Esperado: la misma línea `N issues found. (ran in …)` (o `No issues found!`) de la tarea 1, y ninguna línea que nombre `record_format` o `record_card`. Si esta tarea corre en otra sesión no tienes el reporte de la tarea 1: la línea base está en `/private/tmp/claude-501/-Users-jjjangelosss-ULIMA--/b0e43952-2505-431f-9c2a-5bfea270569c/scratchpad/plan-fe/analyze-baseline.txt`; léela con `cat` y compara sin el `(ran in …)`. Si el número subió, el issue nuevo es de esta tarea: corrígelo.
+Esperado: la misma línea `N issues found. (ran in …)` (o `No issues found!`) de la tarea 1, y ninguna línea que nombre `record_format` o `record_card`. Si esta tarea corre en otra sesión no tienes el reporte de la tarea 1: la línea base está en `$TMP/plan-fe/analyze-baseline.txt`; léela con `cat` y compara sin el `(ran in …)`. Si el número subió, el issue nuevo es de esta tarea: corrígelo.
 
 - [ ] **Paso final: Commit**
 
 Revisa primero que el árbol no tenga cambios ajenos:
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && git status --short --untracked-files=all
+cd . && git status --short --untracked-files=all
 ```
 
 Esperado, en cualquier orden, exactamente estas dos líneas:
@@ -2059,13 +2060,13 @@ Esperado, en cualquier orden, exactamente estas dos líneas:
 Si aparece otro archivo, no lo agregues ni lo toques: puede ser de otra sesión.
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && git add lib/pages/academic_record/record_format.dart test/HU34_jeff/record_card_test.dart && git diff --cached --stat
+cd . && git add lib/pages/academic_record/record_format.dart test/HU34_jeff/record_card_test.dart && git diff --cached --stat
 ```
 
 Esperado: exactamente esos 2 archivos y `2 files changed`.
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && git commit -m "feat(academic-record): formato puro de créditos, decimales y ubicación"
+cd . && git commit -m "feat(academic-record): formato puro de créditos, decimales y ubicación"
 ```
 
 El autor ya está configurado en git. El mensaje no lleva trailer `Co-Authored-By`. No hagas push.
@@ -2082,10 +2083,10 @@ El autor ya está configurado en git. El mensaje no lleva trailer `Co-Authored-B
 **Precondición:** las tareas 1, 2 y 3 ya tienen su commit. Comprobarlo antes de empezar:
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && ls lib/models/academic_record_model.dart lib/services/academic_record_service.dart lib/pages/academic_record/record_format.dart test/HU34_jeff/record_card_test.dart && git status --short
+cd . && ls lib/models/academic_record_model.dart lib/services/academic_record_service.dart lib/pages/academic_record/record_format.dart test/HU34_jeff/record_card_test.dart && git status --short
 ```
 
-Los cuatro archivos deben existir y el árbol debe estar limpio. Todo se hace en `/Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe`, rama `feat/record-academico-fe`, editando con Edit sobre las anclas literales de abajo. Nada de `cp`, `mv` ni `git stash`.
+Los cuatro archivos deben existir y el árbol debe estar limpio. Todo se hace en `.`, rama `feat/record-academico-fe`, editando con Edit sobre las anclas literales de abajo. Nada de `cp`, `mv` ni `git stash`.
 
 **Interfaces:**
 - Consume (tarea 1, `lib/models/academic_record_model.dart`):
@@ -2606,7 +2607,7 @@ Por qué estos casos y no otros:
 - [ ] **Paso 2: Correr la prueba y ver que falla**
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter test test/HU34_jeff/record_card_test.dart
+cd . && $FLUTTER test test/HU34_jeff/record_card_test.dart
 ```
 
 Esperado: falla al compilar, porque los dos archivos de widget todavía no existen. Las primeras líneas:
@@ -2939,7 +2940,7 @@ Detalles que no son libres:
 **3.3 · Comprobar que solo falta el Perfil**
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter test test/HU34_jeff/record_card_test.dart
+cd . && $FLUTTER test test/HU34_jeff/record_card_test.dart
 ```
 
 Esperado: `00:0X +29 -1: Some tests failed.` — los 16 casos de la tarea 3 y 13 de los 14 nuevos pasan; el único que falla es el del orden en el Perfil, con:
@@ -2989,7 +2990,7 @@ La tarjeta queda dentro del bloque de alumno, entre "Configurar carnet" (el `Net
 - [ ] **Paso 4: Correr la prueba y ver que pasa**
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter test test/HU34_jeff/record_card_test.dart
+cd . && $FLUTTER test test/HU34_jeff/record_card_test.dart
 ```
 
 Esperado: PASS, los 16 casos de la tarea 3 más los 14 nuevos:
@@ -3001,7 +3002,7 @@ Esperado: PASS, los 16 casos de la tarea 3 más los 14 nuevos:
 Después, la carpeta entera de la HU, para comprobar que nada de las tareas 1 y 2 se rompió:
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter test test/HU34_jeff/
+cd . && $FLUTTER test test/HU34_jeff/
 ```
 
 Esperado: `All tests passed!`.
@@ -3009,7 +3010,7 @@ Esperado: `All tests passed!`.
 - [ ] **Paso 5: Análisis estático**
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter analyze lib/pages/academic_record/ lib/pages/perfil/perfil.dart test/HU34_jeff/record_card_test.dart
+cd . && $FLUTTER analyze lib/pages/academic_record/ lib/pages/perfil/perfil.dart test/HU34_jeff/record_card_test.dart
 ```
 
 Esperado: `No issues found! (ran in …)`. Si sale algún issue en los archivos nuevos o en el test, corrígelo y repite los pasos 4 y 5. Si el issue ya venía de `perfil.dart` en la línea base de la tarea 1, no lo toques: se reporta aparte, tal como pide AGENTS.
@@ -3017,17 +3018,17 @@ Esperado: `No issues found! (ran in …)`. Si sale algún issue en los archivos 
 Y el proyecto entero, para comprobar que el número de issues preexistentes que anotaste en la tarea 1 no subió:
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter analyze 2>&1 | grep -E "issues? found|record_profile_card|record_position_badge|record_card|perfil"
+cd . && $FLUTTER analyze 2>&1 | grep -E "issues? found|record_profile_card|record_position_badge|record_card|perfil"
 ```
 
-Esperado: la misma línea `N issues found. (ran in …)` (o `No issues found!`) de la tarea 1, ninguna línea que nombre `record_profile_card`, `record_position_badge` ni `record_card`, y sobre `perfil` exactamente las mismas líneas (si había alguna) que ya estaban en esa línea base. Si esta tarea corre en otra sesión no tienes el reporte de la tarea 1: la línea base está en `/private/tmp/claude-501/-Users-jjjangelosss-ULIMA--/b0e43952-2505-431f-9c2a-5bfea270569c/scratchpad/plan-fe/analyze-baseline.txt`; léela con `cat` y compara sin el `(ran in …)`. Si el número subió, el issue nuevo es de esta tarea: corrígelo.
+Esperado: la misma línea `N issues found. (ran in …)` (o `No issues found!`) de la tarea 1, ninguna línea que nombre `record_profile_card`, `record_position_badge` ni `record_card`, y sobre `perfil` exactamente las mismas líneas (si había alguna) que ya estaban en esa línea base. Si esta tarea corre en otra sesión no tienes el reporte de la tarea 1: la línea base está en `$TMP/plan-fe/analyze-baseline.txt`; léela con `cat` y compara sin el `(ran in …)`. Si el número subió, el issue nuevo es de esta tarea: corrígelo.
 
 - [ ] **Paso final: Commit**
 
 Revisa primero que el árbol no tenga cambios ajenos:
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && git status --short --untracked-files=all
+cd . && git status --short --untracked-files=all
 ```
 
 Esperado, en cualquier orden, exactamente estas cuatro líneas:
@@ -3042,13 +3043,13 @@ Esperado, en cualquier orden, exactamente estas cuatro líneas:
 Si aparece otro archivo, no lo agregues ni lo toques: puede ser de otra sesión.
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && git add lib/pages/academic_record/record_position_badge.dart lib/pages/academic_record/record_profile_card.dart lib/pages/perfil/perfil.dart test/HU34_jeff/record_card_test.dart && git diff --cached --stat
+cd . && git add lib/pages/academic_record/record_position_badge.dart lib/pages/academic_record/record_profile_card.dart lib/pages/perfil/perfil.dart test/HU34_jeff/record_card_test.dart && git diff --cached --stat
 ```
 
 Esperado: exactamente esos 4 archivos y `4 files changed`.
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && git commit -m "feat(academic-record): tarjeta del récord en el Perfil"
+cd . && git commit -m "feat(academic-record): tarjeta del récord en el Perfil"
 ```
 
 El autor ya está configurado en git. El mensaje no lleva trailer `Co-Authored-By`. No hagas push.
@@ -3413,7 +3414,7 @@ Por qué estos casos y no otros:
 - [ ] **Paso 2: Correr la prueba y ver que falla**
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter test test/HU34_jeff/record_course_row_test.dart
+cd . && $FLUTTER test test/HU34_jeff/record_course_row_test.dart
 ```
 
 Esperado: no compila, porque el archivo que se importa todavía no existe. Las primeras líneas, con estas posiciones exactas:
@@ -3439,7 +3440,7 @@ y al final:
 00:00 +0 -1: Some tests failed.
 
 Failing tests:
-  /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe/test/HU34_jeff/record_course_row_test.dart: loading /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe/test/HU34_jeff/record_course_row_test.dart
+  ./test/HU34_jeff/record_course_row_test.dart: loading ./test/HU34_jeff/record_course_row_test.dart
 ```
 
 Es el fallo correcto: entre esas líneas y el resumen hay un bloque `Error:` por cada uso de un nombre que todavía no existe —56 en total, y el compilador los imprime dos veces, primero sueltos y después indentados dentro del reporte—, repartidos así: 30 `Undefined name 'RecordChipTone'`, 12 `Method not found: 'recordChipColors'`, 5 `Method not found: 'attemptLabel'`, 3 `Method not found: 'courseSubtitle'`, 2 `Undefined name 'RecordCourseRow'` (los dos usos de las constantes `inProgressLabel` y `noGradeLabel`), 1 `Method not found: 'recordChipFor'`, 1 `Method not found: 'RecordCourseRow'`, 1 `'RecordChip' isn't a type` y el de lectura del archivo. Ningún cuerpo de test llega a correr. Lo que **no** debe salir es un error sobre `RecordCourse` ni sobre `package:ulima_plus/models/academic_record_model.dart`: eso significaría que la tarea 1 no está hecha en este árbol, y entonces hay que terminarla antes de seguir. Si sale `All tests passed!`, el archivo de implementación ya existía: revísalo antes de tocar nada.
@@ -3694,7 +3695,7 @@ Detalles que no son libres:
 - [ ] **Paso 4: Correr la prueba y ver que pasa**
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter test test/HU34_jeff/record_course_row_test.dart
+cd . && $FLUTTER test test/HU34_jeff/record_course_row_test.dart
 ```
 
 Esperado: PASS, con los 23 casos de los cuatro grupos:
@@ -3706,7 +3707,7 @@ Esperado: PASS, con los 23 casos de los cuatro grupos:
 - [ ] **Paso 5: Análisis estático**
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter analyze lib/pages/academic_record/record_course_row.dart test/HU34_jeff/record_course_row_test.dart
+cd . && $FLUTTER analyze lib/pages/academic_record/record_course_row.dart test/HU34_jeff/record_course_row_test.dart
 ```
 
 Esperado: `No issues found! (ran in …)`. Si sale algún issue, corrígelo en esos dos archivos y repite los Pasos 4 y 5.
@@ -3714,17 +3715,17 @@ Esperado: `No issues found! (ran in …)`. Si sale algún issue, corrígelo en e
 Después, el proyecto entero, para comprobar que el número de issues preexistentes que anotaste en la tarea 1 no subió:
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter analyze 2>&1 | grep -E "issues? found|record_course_row"
+cd . && $FLUTTER analyze 2>&1 | grep -E "issues? found|record_course_row"
 ```
 
-Esperado: la misma línea `N issues found. (ran in …)` (o `No issues found!`) de la tarea 1, y ninguna línea que nombre `record_course_row`. Si esta tarea corre en otra sesión no tienes el reporte de la tarea 1: la línea base está en `/private/tmp/claude-501/-Users-jjjangelosss-ULIMA--/b0e43952-2505-431f-9c2a-5bfea270569c/scratchpad/plan-fe/analyze-baseline.txt`; léela con `cat` y compara sin el `(ran in …)`. Si el número subió, el issue nuevo es de esta tarea: corrígelo.
+Esperado: la misma línea `N issues found. (ran in …)` (o `No issues found!`) de la tarea 1, y ninguna línea que nombre `record_course_row`. Si esta tarea corre en otra sesión no tienes el reporte de la tarea 1: la línea base está en `$TMP/plan-fe/analyze-baseline.txt`; léela con `cat` y compara sin el `(ran in …)`. Si el número subió, el issue nuevo es de esta tarea: corrígelo.
 
 - [ ] **Paso final: Commit**
 
 Revisa primero que el árbol no tenga cambios ajenos:
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && git status --short --untracked-files=all
+cd . && git status --short --untracked-files=all
 ```
 
 Esperado, en cualquier orden, exactamente estas dos líneas:
@@ -3737,13 +3738,13 @@ Esperado, en cualquier orden, exactamente estas dos líneas:
 Si aparece otro archivo, no lo agregues ni lo toques: puede ser de otra sesión trabajando en el mismo árbol.
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && git add lib/pages/academic_record/record_course_row.dart test/HU34_jeff/record_course_row_test.dart && git diff --cached --stat
+cd . && git add lib/pages/academic_record/record_course_row.dart test/HU34_jeff/record_course_row_test.dart && git diff --cached --stat
 ```
 
 Esperado: exactamente esos 2 archivos y `2 files changed`.
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && git commit -m "feat(academic-record): fila de curso con chip de nota y etiqueta de vez"
+cd . && git commit -m "feat(academic-record): fila de curso con chip de nota y etiqueta de vez"
 ```
 
 El autor ya está configurado en git. El mensaje no lleva trailer `Co-Authored-By`. No hagas push.
@@ -3764,10 +3765,10 @@ El autor ya está configurado en git. El mensaje no lleva trailer `Co-Authored-B
 **Precondición:** las tareas 1 a 5 ya tienen su commit. Comprobarlo antes de empezar:
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && ls lib/models/academic_record_model.dart lib/services/academic_record_service.dart lib/pages/academic_record/record_format.dart lib/pages/academic_record/record_position_badge.dart test/HU34_jeff/ && git status --short
+cd . && ls lib/models/academic_record_model.dart lib/services/academic_record_service.dart lib/pages/academic_record/record_format.dart lib/pages/academic_record/record_position_badge.dart test/HU34_jeff/ && git status --short
 ```
 
-Los cuatro archivos deben existir, `test/HU34_jeff/` debe tener los tests de las tareas 1 a 5 y el árbol debe estar limpio. Todo se hace en `/Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe`, rama `feat/record-academico-fe`, editando con Edit sobre las anclas literales. Nada de `cp`, `mv` ni `git stash`.
+Los cuatro archivos deben existir, `test/HU34_jeff/` debe tener los tests de las tareas 1 a 5 y el árbol debe estar limpio. Todo se hace en `.`, rama `feat/record-academico-fe`, editando con Edit sobre las anclas literales. Nada de `cp`, `mv` ni `git stash`.
 
 **Interfaces:**
 - Consume (tarea 1) — `lib/models/academic_record_model.dart`: `class AcademicRecord { final DateTime? syncedAt; final AcademicSnapshot? snapshot; final List<AcademicPeriodSummary> periodSummaries; final List<RecordPeriod> coursesByPeriod; bool get hasRecord; factory AcademicRecord.fromJson(Map<String, dynamic> json); }` y `class AcademicSnapshot { final double? ppa; final String? relativePosition; final double? creditsAccumulated; final double? creditsRequired; final AcademicTotals approved; final AcademicTotals convalidated; }`. La pantalla solo nombra los tipos `AcademicRecord` y `AcademicSnapshot`, y lee `hasRecord`, `syncedAt`, `snapshot`, `ppa`, `relativePosition`, `creditsAccumulated` y `creditsRequired`.
@@ -4273,7 +4274,7 @@ void main() {
 - [ ] **Paso 2: Correr la prueba y ver que falla**
 
 ```
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter test test/HU34_jeff/record_page_test.dart
+cd . && $FLUTTER test test/HU34_jeff/record_page_test.dart
 ```
 
 Esperado: FALLA al compilar, porque faltan los dos archivos que el test importa (`record_format.dart` y `record_position_badge.dart` de las tareas 3 y 4 ya existen; el binding no lo importa el test, lo estrena `main.dart` en el Paso 3):
@@ -4290,7 +4291,7 @@ import 'package:ulima_plus/pages/academic_record/academic_record_page.dart';
 Detrás de esas dos líneas salen además un `Error: Undefined name 'AcademicRecordPage'.` o `'AcademicRecordController'.` por cada uso (constantes, `find.byType`, `syncedAgoLabel`, `const AcademicRecordPage()`), y termina en:
 
 ```
-Failed to load "/Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe/test/HU34_jeff/record_page_test.dart": Compilation failed
+Failed to load "./test/HU34_jeff/record_page_test.dart": Compilation failed
 ```
 
 Si en vez de eso hay errores sobre `lib/pages/academic_record/record_format.dart`, `record_position_badge.dart` o `lib/services/academic_record_service.dart`, alguna tarea anterior no está hecha: detente.
@@ -4756,7 +4757,7 @@ El bloque nuevo queda en las L213-219 y `lib/main.dart` pasa de 240 a 249 línea
 - [ ] **Paso 4: Correr la prueba y ver que pasa**
 
 ```
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter test test/HU34_jeff/record_page_test.dart
+cd . && $FLUTTER test test/HU34_jeff/record_page_test.dart
 ```
 
 Esperado: PASS (14 tests: 9 de widget y 5 unitarios), con la línea final `+14: All tests passed!`.
@@ -4766,10 +4767,10 @@ Si sale `A Timer is still pending even after the widget tree was disposed.`, es 
 - [ ] **Paso 5: Analizar**
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter analyze 2>&1 | grep -E "issues? found|academic_record|main.dart"
+cd . && $FLUTTER analyze 2>&1 | grep -E "issues? found|academic_record|main.dart"
 ```
 
-Esperado: la misma línea `N issues found. (ran in …)` (o `No issues found!`) de la tarea 1 —la línea base está en `/private/tmp/claude-501/-Users-jjjangelosss-ULIMA--/b0e43952-2505-431f-9c2a-5bfea270569c/scratchpad/plan-fe/analyze-baseline.txt`, léela con `cat` y compara sin el `(ran in …)`— y, sobre `main.dart`, exactamente las mismas líneas que ya estaban en esa línea base. Si el número subió, el issue nuevo es de esta tarea: corrígelo. Dicho de otro modo: ningún issue nuevo en `lib/pages/academic_record/**`, `lib/main.dart` ni `test/HU34_jeff/record_page_test.dart`. En esos archivos no puede aparecer ningún `unused_import`, `unused_local_variable` ni `avoid_print`. Los issues preexistentes de otros archivos se reportan aparte y no se arreglan aquí (el `avoid_print` de `lib/main.dart`, que la tarea 2 corrió a la L83, no se mueve con esta tarea: las dos ediciones de aquí van después de él).
+Esperado: la misma línea `N issues found. (ran in …)` (o `No issues found!`) de la tarea 1 —la línea base está en `$TMP/plan-fe/analyze-baseline.txt`, léela con `cat` y compara sin el `(ran in …)`— y, sobre `main.dart`, exactamente las mismas líneas que ya estaban en esa línea base. Si el número subió, el issue nuevo es de esta tarea: corrígelo. Dicho de otro modo: ningún issue nuevo en `lib/pages/academic_record/**`, `lib/main.dart` ni `test/HU34_jeff/record_page_test.dart`. En esos archivos no puede aparecer ningún `unused_import`, `unused_local_variable` ni `avoid_print`. Los issues preexistentes de otros archivos se reportan aparte y no se arreglan aquí (el `avoid_print` de `lib/main.dart`, que la tarea 2 corrió a la L83, no se mueve con esta tarea: las dos ediciones de aquí van después de él).
 
 - [ ] **Paso 6: Documentación (`docs/specs/feature-index.md`)**
 
@@ -4791,7 +4792,7 @@ por esto:
 Revisa primero que el árbol no tenga cambios ajenos:
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && git status --short --untracked-files=all
+cd . && git status --short --untracked-files=all
 ```
 
 Esperado, en cualquier orden, exactamente estas seis líneas (`record_page_test.dart` sale como `??` porque lo crea esta tarea):
@@ -4808,13 +4809,13 @@ Esperado, en cualquier orden, exactamente estas seis líneas (`record_page_test.
 Si aparece otro archivo, no lo agregues ni lo toques: puede ser de otra sesión.
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && git add lib/pages/academic_record/academic_record_controller.dart lib/pages/academic_record/academic_record_binding.dart lib/pages/academic_record/academic_record_page.dart lib/main.dart docs/specs/feature-index.md test/HU34_jeff/record_page_test.dart && git diff --cached --stat
+cd . && git add lib/pages/academic_record/academic_record_controller.dart lib/pages/academic_record/academic_record_binding.dart lib/pages/academic_record/academic_record_page.dart lib/main.dart docs/specs/feature-index.md test/HU34_jeff/record_page_test.dart && git diff --cached --stat
 ```
 
 Esperado: exactamente esos 6 archivos y `6 files changed`.
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && git commit -m "feat(academic-record): pantalla Mi récord académico con estados y encabezado"
+cd . && git commit -m "feat(academic-record): pantalla Mi récord académico con estados y encabezado"
 ```
 
 El autor ya está configurado en git. El mensaje no lleva trailer `Co-Authored-By`. No hagas push.
@@ -4832,7 +4833,7 @@ El autor ya está configurado en git. El mensaje no lleva trailer `Co-Authored-B
 **Precondición:** las tareas 1 a 6 ya tienen su commit y el árbol está limpio. Comprobarlo antes de editar nada, porque **las cuatro anclas de esta tarea las escribió la tarea 6** y los dos imports nuevos del test solo se pueden insertar si todavía no están. Los comandos van separados por `;` a propósito, para ver todos los resultados aunque uno falle:
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && \
+cd . && \
   echo "--- arbol" ; git status --short --untracked-files=all ; \
   echo "--- tareas 1, 3 y 5" ; ls lib/models/academic_record_model.dart lib/pages/academic_record/record_format.dart lib/pages/academic_record/record_course_row.dart ; \
   echo "--- ancla 1 (controller)" ; grep -n "retry() => _service.load(force: true);" lib/pages/academic_record/academic_record_controller.dart ; \
@@ -4852,7 +4853,7 @@ Esperado:
 - las dos anclas de import del test devuelven una línea cada una;
 - el último `grep` **no** imprime nada: si imprimiera, la tarea 6 ya importó el modelo o la fila y habría que saltarse el Paso 1.1 o el 1.2 en vez de duplicar el import.
 
-Si falta alguna, la tarea 6 no está hecha en este árbol: termínala antes de seguir. Todo se hace en `/Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe`, rama `feat/record-academico-fe`, con `Edit` sobre las anclas literales de abajo. Nada de `cp`, `mv` ni `git stash`.
+Si falta alguna, la tarea 6 no está hecha en este árbol: termínala antes de seguir. Todo se hace en `.`, rama `feat/record-academico-fe`, con `Edit` sobre las anclas literales de abajo. Nada de `cp`, `mv` ni `git stash`.
 
 **Interfaces:**
 - Consume (tarea 1, `lib/models/academic_record_model.dart`):
@@ -5122,7 +5123,7 @@ por:
 - [ ] **Paso 2: Correr la prueba y ver que falla**
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter test test/HU34_jeff/record_page_test.dart
+cd . && $FLUTTER test test/HU34_jeff/record_page_test.dart
 ```
 
 Esperado: **no compila**, porque los cuatro miembros nuevos todavía no existen. Sale un `Error: Member not found:` por cada uno de los nueve usos —el compilador los imprime dos veces, primero sueltos y después dentro del reporte—, con esta forma (los números de línea y de columna dependen de dónde cayeron los grupos):
@@ -5148,7 +5149,7 @@ y al final:
 00:00 +0 -1: Some tests failed.
 
 Failing tests:
-  /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe/test/HU34_jeff/record_page_test.dart: loading /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe/test/HU34_jeff/record_page_test.dart
+  ./test/HU34_jeff/record_page_test.dart: loading ./test/HU34_jeff/record_page_test.dart
 ```
 
 El reparto de los nueve usos: 1 de `periodChipKey`, 1 de `coursesCardKey`, 4 de `periodoSeleccionado` y 3 de `periodAverage`. Es el fallo correcto: el archivo no carga, así que en este estado tampoco corren los grupos de la tarea 6 — vuelven en el Paso 4. Lo que **no** debe salir es un error sobre `RecordCourseRow`, `AcademicPeriodSummary` o `AcademicTotals`: eso significaría que la tarea 5 o la tarea 1 no están hechas en este árbol, y hay que terminarlas antes de seguir. Si sale `All tests passed!`, alguien ya implementó esta tarea: revisa el árbol antes de tocar nada.
@@ -5491,7 +5492,7 @@ Dos detalles que no son de estilo: `final promedio = average;` no es un adorno �
 - [ ] **Paso 4: Correr la prueba y ver que pasa**
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter test test/HU34_jeff/record_page_test.dart
+cd . && $FLUTTER test test/HU34_jeff/record_page_test.dart
 ```
 
 Esperado: **PASS**, con todos los casos del archivo — los de la tarea 6 más los **11 nuevos** (6 en `WIDGET · Chips de ciclo y cursos (RF-REC-2, RF-REC-3)` y 5 en `UNITARIA · periodoSeleccionado y periodAverage (RF-REC-2)`):
@@ -5507,7 +5508,7 @@ Si falla `tocar otro chip cambia la lista`, y en cambio el resto pasa, el `Obx` 
 - [ ] **Paso 5: Análisis estático**
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter analyze lib/pages/academic_record/academic_record_controller.dart lib/pages/academic_record/academic_record_page.dart test/HU34_jeff/record_page_test.dart
+cd . && $FLUTTER analyze lib/pages/academic_record/academic_record_controller.dart lib/pages/academic_record/academic_record_page.dart test/HU34_jeff/record_page_test.dart
 ```
 
 Esperado: `No issues found! (ran in …)`. Si sale algún issue, corrígelo en esos tres archivos y repite los Pasos 4 y 5.
@@ -5515,17 +5516,17 @@ Esperado: `No issues found! (ran in …)`. Si sale algún issue, corrígelo en e
 Después, el proyecto entero, para comprobar que el número de issues preexistentes que se anotó en la tarea 1 no subió:
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter analyze 2>&1 | grep -E "issues? found|academic_record"
+cd . && $FLUTTER analyze 2>&1 | grep -E "issues? found|academic_record"
 ```
 
-Esperado: la misma línea `N issues found. (ran in …)` (o `No issues found!`) de la tarea 1, y ninguna línea que nombre `academic_record`. Si esta tarea corre en otra sesión no tienes el reporte de la tarea 1: la línea base está en `/private/tmp/claude-501/-Users-jjjangelosss-ULIMA--/b0e43952-2505-431f-9c2a-5bfea270569c/scratchpad/plan-fe/analyze-baseline.txt`; léela con `cat` y compara sin el `(ran in …)`. Si el número subió, el issue nuevo es de esta tarea: corrígelo.
+Esperado: la misma línea `N issues found. (ran in …)` (o `No issues found!`) de la tarea 1, y ninguna línea que nombre `academic_record`. Si esta tarea corre en otra sesión no tienes el reporte de la tarea 1: la línea base está en `$TMP/plan-fe/analyze-baseline.txt`; léela con `cat` y compara sin el `(ran in …)`. Si el número subió, el issue nuevo es de esta tarea: corrígelo.
 
 - [ ] **Paso final: Commit**
 
 Revisa primero que el árbol no tenga cambios ajenos:
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && git status --short --untracked-files=all
+cd . && git status --short --untracked-files=all
 ```
 
 Esperado, en cualquier orden, exactamente estas tres líneas:
@@ -5539,13 +5540,13 @@ Esperado, en cualquier orden, exactamente estas tres líneas:
 Si aparece otro archivo, no lo agregues ni lo toques: puede ser de otra sesión trabajando en el mismo árbol.
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && git add lib/pages/academic_record/academic_record_controller.dart lib/pages/academic_record/academic_record_page.dart test/HU34_jeff/record_page_test.dart && git diff --cached --stat
+cd . && git add lib/pages/academic_record/academic_record_controller.dart lib/pages/academic_record/academic_record_page.dart test/HU34_jeff/record_page_test.dart && git diff --cached --stat
 ```
 
 Esperado: exactamente esos 3 archivos y `3 files changed`.
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && git commit -m "feat(academic-record): chips de ciclo y cursos del ciclo elegido"
+cd . && git commit -m "feat(academic-record): chips de ciclo y cursos del ciclo elegido"
 ```
 
 El autor ya está configurado en git. El mensaje no lleva trailer `Co-Authored-By`. No hagas push.
@@ -5563,7 +5564,7 @@ El autor ya está configurado en git. El mensaje no lleva trailer `Co-Authored-B
 **Precondición:** las tareas 1 a 7 ya tienen su commit y el árbol está limpio. Las anclas de esta tarea las escribieron las tareas 6 y 7, así que hay que comprobarlas antes de editar. Los comandos van separados por `;` a propósito, para ver todos los resultados aunque uno falle:
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && \
+cd . && \
   echo "--- arbol" ; git status --short --untracked-files=all ; \
   echo "--- archivos de las tareas 2, 4 y 6" ; ls lib/services/academic_record_service.dart lib/pages/academic_record/record_profile_card.dart lib/pages/academic_record/academic_record_binding.dart ; \
   echo "--- tarea 2 (mensaje y excepcion del borrado)" ; grep -n "deleteErrorMessage =\|^class AcademicRecordFailure" lib/services/academic_record_service.dart ; \
@@ -5587,7 +5588,7 @@ Esperado:
 - las dos anclas de import del test devuelven una línea cada una (la segunda la agregó la tarea 7);
 - el último `grep` **no** imprime nada.
 
-Si falta el ancla 1 o la 3, la tarea 7 no está hecha en este árbol; si falta la 2, la 4, la 5 o la 6, falta la tarea 6; si fallan los `grep` de las tareas 2 o 4, faltan esas. Termínalas antes de seguir. Todo se hace en `/Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe`, rama `feat/record-academico-fe`, con `Edit` sobre las anclas literales de abajo. Nada de `cp`, `mv` ni `git stash`.
+Si falta el ancla 1 o la 3, la tarea 7 no está hecha en este árbol; si falta la 2, la 4, la 5 o la 6, falta la tarea 6; si fallan los `grep` de las tareas 2 o 4, faltan esas. Termínalas antes de seguir. Todo se hace en `.`, rama `feat/record-academico-fe`, con `Edit` sobre las anclas literales de abajo. Nada de `cp`, `mv` ni `git stash`.
 
 **Interfaces:**
 - Consume (tarea 2, `lib/services/academic_record_service.dart`):
@@ -5939,7 +5940,7 @@ Por qué el caso 7 vale lo que cuesta: mientras `/mi-record` está encima, la ta
 - [ ] **Paso 2: Correr la prueba y ver que falla**
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter test test/HU34_jeff/record_page_test.dart
+cd . && $FLUTTER test test/HU34_jeff/record_page_test.dart
 ```
 
 Esperado: **FALLA al compilar**. `AcademicRecordPage` existe, pero ninguna de sus seis constantes nuevas, así que el front end saca un `Member not found` por cada uso —17 en total— y después el archivo no carga:
@@ -6173,7 +6174,7 @@ class _DeleteRecordButton extends StatelessWidget {
 - [ ] **Paso 4: Correr la prueba y ver que pasa**
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter test test/HU34_jeff/record_page_test.dart
+cd . && $FLUTTER test test/HU34_jeff/record_page_test.dart
 ```
 
 Esperado: **PASS**, con los casos de las tareas 6 y 7 más los **7 nuevos** de `WIDGET · Borrar mi récord (RF-REC-5)`:
@@ -6194,7 +6195,7 @@ Diagnóstico si algo falla:
 - [ ] **Paso 5: Análisis estático**
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter analyze lib/pages/academic_record/academic_record_controller.dart lib/pages/academic_record/academic_record_page.dart test/HU34_jeff/record_page_test.dart
+cd . && $FLUTTER analyze lib/pages/academic_record/academic_record_controller.dart lib/pages/academic_record/academic_record_page.dart test/HU34_jeff/record_page_test.dart
 ```
 
 Esperado: `No issues found! (ran in …)`. El lint que más fácil salta acá es `use_build_context_synchronously`: lo apaga el `if (!context.mounted) return;` que va justo antes del `ScaffoldMessenger`. Si sale algún issue, corrígelo en esos tres archivos y repite los Pasos 4 y 5.
@@ -6202,17 +6203,17 @@ Esperado: `No issues found! (ran in …)`. El lint que más fácil salta acá es
 Después, el proyecto entero, para comprobar que el número de issues preexistentes que se anotó en la tarea 1 no subió:
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter analyze 2>&1 | grep -E "issues? found|academic_record"
+cd . && $FLUTTER analyze 2>&1 | grep -E "issues? found|academic_record"
 ```
 
-Esperado: la misma línea `N issues found. (ran in …)` (o `No issues found!`) de la tarea 1, y ninguna línea que nombre `academic_record`. Si esta tarea corre en otra sesión no tienes el reporte de la tarea 1: la línea base está en `/private/tmp/claude-501/-Users-jjjangelosss-ULIMA--/b0e43952-2505-431f-9c2a-5bfea270569c/scratchpad/plan-fe/analyze-baseline.txt`; léela con `cat` y compara sin el `(ran in …)`. Si el número subió, el issue nuevo es de esta tarea: corrígelo.
+Esperado: la misma línea `N issues found. (ran in …)` (o `No issues found!`) de la tarea 1, y ninguna línea que nombre `academic_record`. Si esta tarea corre en otra sesión no tienes el reporte de la tarea 1: la línea base está en `$TMP/plan-fe/analyze-baseline.txt`; léela con `cat` y compara sin el `(ran in …)`. Si el número subió, el issue nuevo es de esta tarea: corrígelo.
 
 - [ ] **Paso final: Commit**
 
 Revisa primero que el árbol no tenga cambios ajenos:
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && git status --short --untracked-files=all
+cd . && git status --short --untracked-files=all
 ```
 
 Esperado, en cualquier orden, exactamente estas tres líneas:
@@ -6226,13 +6227,13 @@ Esperado, en cualquier orden, exactamente estas tres líneas:
 Si aparece otro archivo, no lo agregues ni lo toques: puede ser de otra sesión trabajando en el mismo árbol.
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && git add lib/pages/academic_record/academic_record_controller.dart lib/pages/academic_record/academic_record_page.dart test/HU34_jeff/record_page_test.dart && git diff --cached --stat
+cd . && git add lib/pages/academic_record/academic_record_controller.dart lib/pages/academic_record/academic_record_page.dart test/HU34_jeff/record_page_test.dart && git diff --cached --stat
 ```
 
 Esperado: exactamente esos 3 archivos y `3 files changed`.
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && git commit -m "feat(academic-record): borrar mi récord con confirmación"
+cd . && git commit -m "feat(academic-record): borrar mi récord con confirmación"
 ```
 
 Sin trailer `Co-Authored-By`: el autor ya está configurado en este árbol. Nada de `git push`: eso lo decide el dueño.
@@ -6481,7 +6482,7 @@ Dos cosas del estilo del archivo de test, para que nadie las "corrija":
 - [ ] **Paso 2: Correr la prueba y ver que falla**
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter test test/HU34_jeff/portal_sync_consent_test.dart
+cd . && $FLUTTER test test/HU34_jeff/portal_sync_consent_test.dart
 ```
 
 Esperado: **ninguna prueba llega a ejecutarse**, porque el archivo no compila. El contador se queda en `+0 -1` y la salida termina así:
@@ -6684,7 +6685,7 @@ Detalles que no son libres:
 - [ ] **Paso 4: Correr la prueba y ver que pasa**
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter test test/HU34_jeff/portal_sync_consent_test.dart
+cd . && $FLUTTER test test/HU34_jeff/portal_sync_consent_test.dart
 ```
 
 Esperado: PASS, con los 8 casos (7 de widget y 1 unitario):
@@ -6698,7 +6699,7 @@ Ningún `RenderFlex overflowed` en la salida: la tarjeta va dentro del `SingleCh
 Después, la carpeta entera de la HU, para comprobar que nada de las tareas anteriores se rompió:
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter test test/HU34_jeff/
+cd . && $FLUTTER test test/HU34_jeff/
 ```
 
 Esperado: `All tests passed!`.
@@ -6706,7 +6707,7 @@ Esperado: `All tests passed!`.
 - [ ] **Paso 5: Análisis estático**
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter analyze lib/components/portal_consent/portal_consent_view.dart test/HU34_jeff/portal_sync_consent_test.dart
+cd . && $FLUTTER analyze lib/components/portal_consent/portal_consent_view.dart test/HU34_jeff/portal_sync_consent_test.dart
 ```
 
 Esperado: `No issues found! (ran in …)`. Si sale algún issue, corrígelo en esos dos archivos y repite los pasos 4 y 5.
@@ -6714,17 +6715,17 @@ Esperado: `No issues found! (ran in …)`. Si sale algún issue, corrígelo en e
 Y el proyecto entero, para comprobar que el número de issues preexistentes que anotaste en la tarea 1 no subió:
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter analyze 2>&1 | grep -E "issues? found|portal_consent"
+cd . && $FLUTTER analyze 2>&1 | grep -E "issues? found|portal_consent"
 ```
 
-Esperado: la misma línea `N issues found. (ran in …)` (o `No issues found!`) que anotaste en la tarea 1, y ninguna línea que nombre `portal_consent`. Si esta tarea corre en otra sesión no tienes ese reporte: la línea base está en `/private/tmp/claude-501/-Users-jjjangelosss-ULIMA--/b0e43952-2505-431f-9c2a-5bfea270569c/scratchpad/plan-fe/analyze-baseline.txt`; léela con `cat` y compara sin el `(ran in …)`. Si el número subió, el issue nuevo es de esta tarea: corrígelo.
+Esperado: la misma línea `N issues found. (ran in …)` (o `No issues found!`) que anotaste en la tarea 1, y ninguna línea que nombre `portal_consent`. Si esta tarea corre en otra sesión no tienes ese reporte: la línea base está en `$TMP/plan-fe/analyze-baseline.txt`; léela con `cat` y compara sin el `(ran in …)`. Si el número subió, el issue nuevo es de esta tarea: corrígelo.
 
 - [ ] **Paso final: Commit**
 
 Revisa primero que el árbol no tenga cambios ajenos:
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && git status --short --untracked-files=all
+cd . && git status --short --untracked-files=all
 ```
 
 Esperado, si vienes de la tarea 8 con todo commiteado, exactamente estas dos líneas (en cualquier orden):
@@ -6737,13 +6738,13 @@ Esperado, si vienes de la tarea 8 con todo commiteado, exactamente estas dos lí
 Si aparece otro archivo, no lo agregues ni lo toques: puede ser de otra sesión.
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && git add lib/components/portal_consent/portal_consent_view.dart test/HU34_jeff/portal_sync_consent_test.dart && git diff --cached --stat
+cd . && git add lib/components/portal_consent/portal_consent_view.dart test/HU34_jeff/portal_sync_consent_test.dart && git diff --cached --stat
 ```
 
 Esperado: exactamente esos 2 archivos y `2 files changed`.
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && git commit -m "feat(academic-record): pantalla de consentimiento antes de dar la contraseña del portal"
+cd . && git commit -m "feat(academic-record): pantalla de consentimiento antes de dar la contraseña del portal"
 ```
 
 El autor ya está configurado en git. El mensaje no lleva trailer `Co-Authored-By`. No hagas push.
@@ -6762,10 +6763,10 @@ El autor ya está configurado en git. El mensaje no lleva trailer `Co-Authored-B
 **Precondición:** las tareas 2 y 9 ya tienen su commit. Comprobarlo antes de empezar:
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && ls lib/components/portal_consent/portal_consent_view.dart test/HU34_jeff/portal_sync_consent_test.dart && git status --short
+cd . && ls lib/components/portal_consent/portal_consent_view.dart test/HU34_jeff/portal_sync_consent_test.dart && git status --short
 ```
 
-Deben existir los dos archivos y el árbol debe estar limpio. Todo se hace en `/Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe`, rama `feat/record-academico-fe`, editando con Edit sobre las anclas literales de abajo. Nada de `cp`, `mv` ni `git stash`.
+Deben existir los dos archivos y el árbol debe estar limpio. Todo se hace en `.`, rama `feat/record-academico-fe`, editando con Edit sobre las anclas literales de abajo. Nada de `cp`, `mv` ni `git stash`.
 
 **Interfaces:**
 - Consume:
@@ -7133,7 +7134,7 @@ Por qué estos casos y no otros: RF-REC-6 (`academic-record.spec.md:148-151`) pi
 - [ ] **Paso 2: Correr la prueba y ver que falla**
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter test test/HU34_jeff/portal_sync_consent_test.dart
+cd . && $FLUTTER test test/HU34_jeff/portal_sync_consent_test.dart
 ```
 
 Esperado: **ninguna prueba llega a ejecutarse**, porque el archivo no compila. El contador se queda en `+0 -1` y la salida termina con:
@@ -7396,7 +7397,7 @@ por esto:
 - [ ] **Paso 4: Correr la prueba y ver que pasa**
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter test test/HU34_jeff/portal_sync_consent_test.dart
+cd . && $FLUTTER test test/HU34_jeff/portal_sync_consent_test.dart
 ```
 
 Esperado: **PASS**, con los 19 casos (los 8 de la tarea 9 más los 11 de esta):
@@ -7414,13 +7415,13 @@ Ese archivo llama a `.import(...)` sin `consent` en cuatro sitios, así que ahor
 **5.1 El código real de las líneas 70 y 82.** No lo transcribas a ningún otro archivo ni al mensaje del commit. Sustitúyelo en el sitio:
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && perl -i -pe "s/'\\d{8}'/'20230001'/ if \$. == 70 || \$. == 82" test/HU31_jeff/portal_sync_test.dart
+cd . && perl -i -pe "s/'\\d{8}'/'20230001'/ if \$. == 70 || \$. == 82" test/HU31_jeff/portal_sync_test.dart
 ```
 
 Comprobar que solo cambiaron esas dos líneas y que el archivo ya no contiene ningún otro código de ocho dígitos:
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && git diff --numstat test/HU31_jeff/portal_sync_test.dart && grep -oE "20[0-9]{6}" test/HU31_jeff/portal_sync_test.dart | sort -u
+cd . && git diff --numstat test/HU31_jeff/portal_sync_test.dart && grep -oE "20[0-9]{6}" test/HU31_jeff/portal_sync_test.dart | sort -u
 ```
 
 Esperado: `2	2	test/HU31_jeff/portal_sync_test.dart` y exactamente una línea, `20230001`. Y las dos líneas deben quedar así:
@@ -7497,7 +7498,7 @@ Las aserciones de ese archivo no cambian: la de la línea 78 mira solo las clave
 **5.3 Correr lo que toca este cambio.**
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter test test/HU31_jeff/portal_sync_test.dart test/HU34_jeff/
+cd . && $FLUTTER test test/HU31_jeff/portal_sync_test.dart test/HU34_jeff/
 ```
 
 Esperado: `All tests passed!`, sin ningún fallo en `test/HU34_jeff/academic_record_service_test.dart`, que es el otro archivo que ejercita `refreshAfterImport`.
@@ -7564,7 +7565,7 @@ por esto:
 - [ ] **Paso 7: Análisis estático**
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter analyze lib/pages/portal_sync/ lib/services/portal_sync_service.dart test/HU34_jeff/portal_sync_consent_test.dart test/HU31_jeff/portal_sync_test.dart
+cd . && $FLUTTER analyze lib/pages/portal_sync/ lib/services/portal_sync_service.dart test/HU34_jeff/portal_sync_consent_test.dart test/HU31_jeff/portal_sync_test.dart
 ```
 
 Esperado: `No issues found! (ran in …)`. Si sale algún issue, corrígelo en esos archivos y repite los pasos 4, 5.3 y 7.
@@ -7572,17 +7573,17 @@ Esperado: `No issues found! (ran in …)`. Si sale algún issue, corrígelo en e
 Y el proyecto entero, para comprobar que el número de issues preexistentes que anotaste en la tarea 1 no subió:
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter analyze 2>&1 | grep -E "issues? found|portal_sync|portal_consent"
+cd . && $FLUTTER analyze 2>&1 | grep -E "issues? found|portal_sync|portal_consent"
 ```
 
-Esperado: la misma línea `N issues found. (ran in …)` (o `No issues found!`) que anotaste en la tarea 1, y ninguna línea que nombre `portal_sync` ni `portal_consent`. Si esta tarea corre en otra sesión no tienes ese reporte: la línea base está en `/private/tmp/claude-501/-Users-jjjangelosss-ULIMA--/b0e43952-2505-431f-9c2a-5bfea270569c/scratchpad/plan-fe/analyze-baseline.txt`; léela con `cat` y compara sin el `(ran in …)`. Si el número subió, el issue nuevo es de esta tarea: corrígelo.
+Esperado: la misma línea `N issues found. (ran in …)` (o `No issues found!`) que anotaste en la tarea 1, y ninguna línea que nombre `portal_sync` ni `portal_consent`. Si esta tarea corre en otra sesión no tienes ese reporte: la línea base está en `$TMP/plan-fe/analyze-baseline.txt`; léela con `cat` y compara sin el `(ran in …)`. Si el número subió, el issue nuevo es de esta tarea: corrígelo.
 
 - [ ] **Paso final: Commit**
 
 Revisa primero que el árbol no tenga cambios ajenos:
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && git status --short --untracked-files=all
+cd . && git status --short --untracked-files=all
 ```
 
 Esperado, si vienes de la tarea 9 con todo commiteado, exactamente estas siete líneas modificadas (en cualquier orden):
@@ -7600,13 +7601,13 @@ Esperado, si vienes de la tarea 9 con todo commiteado, exactamente estas siete l
 Si aparece otro archivo, no lo agregues ni lo toques: puede ser de otra sesión.
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && git add lib/pages/portal_sync/portal_sync_controller.dart lib/pages/portal_sync/portal_sync_page.dart lib/services/portal_sync_service.dart test/HU34_jeff/portal_sync_consent_test.dart test/HU31_jeff/portal_sync_test.dart specs/features/portal-sync/portal-sync.spec.md docs/specs/api-contracts.md && git diff --cached --stat
+cd . && git add lib/pages/portal_sync/portal_sync_controller.dart lib/pages/portal_sync/portal_sync_page.dart lib/services/portal_sync_service.dart test/HU34_jeff/portal_sync_consent_test.dart test/HU31_jeff/portal_sync_test.dart specs/features/portal-sync/portal-sync.spec.md docs/specs/api-contracts.md && git diff --cached --stat
 ```
 
 Esperado: exactamente esos 7 archivos y `7 files changed`.
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && git commit -m "feat(portal-sync): consentimiento antes de las credenciales y consent en la importación"
+cd . && git commit -m "feat(portal-sync): consentimiento antes de las credenciales y consent en la importación"
 ```
 
 El autor ya está configurado en git. El mensaje no lleva trailer `Co-Authored-By`. No hagas push.
@@ -8009,7 +8010,7 @@ void main() {
 - [ ] **Paso 2: Correr la prueba y ver que falla**
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter test test/HU34_jeff/registro_consent_test.dart
+cd . && $FLUTTER test test/HU34_jeff/registro_consent_test.dart
 ```
 
 Esperado: la suite **ni compila**. `flutter test` usa el frontend de Dart (CFE), que imprime, con los números de línea y columna que toquen:
@@ -8265,7 +8266,7 @@ El `switch` es una expresión exhaustiva sobre el enum, así que sin este caso e
 - [ ] **Paso 4: Correr la prueba y ver que pasa**
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter test test/HU34_jeff/registro_consent_test.dart
+cd . && $FLUTTER test test/HU34_jeff/registro_consent_test.dart
 ```
 
 Esperado: PASS, con `+12: All tests passed!`.
@@ -8542,7 +8543,7 @@ por esto:
 Correr:
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter test test/HU33_jeff
+cd . && $FLUTTER test test/HU33_jeff
 ```
 
 Esperado: PASS, `+52: All tests passed!` — los cuatro archivos de `test/HU33_jeff/` en verde, incluido `api_client_401_test.dart`, que no se toca. El número no cambia porque ningún test se agrega ni se quita. El caso 3 de `registro_service_test.dart` tarda ~2 min por el `timeout` de 120 s: es así desde HU33.
@@ -8678,7 +8679,7 @@ por esto:
 Primero los archivos tocados:
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter analyze lib/pages/registro lib/services/registro_service.dart test/HU33_jeff test/HU34_jeff/registro_consent_test.dart
+cd . && $FLUTTER analyze lib/pages/registro lib/services/registro_service.dart test/HU33_jeff test/HU34_jeff/registro_consent_test.dart
 ```
 
 Esperado: `No issues found! (ran in …)`. Si sale algo, corrígelo en esos archivos y repite los pasos 4 y 5.
@@ -8686,15 +8687,15 @@ Esperado: `No issues found! (ran in …)`. Si sale algo, corrígelo en esos arch
 Después el proyecto entero, para comprobar que el número de issues preexistentes que anotaste en la tarea 1 no subió:
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter analyze 2>&1 | grep -E "issues? found|registro|portal_consent"
+cd . && $FLUTTER analyze 2>&1 | grep -E "issues? found|registro|portal_consent"
 ```
 
-Esperado: la misma línea `N issues found. (ran in …)` (o `No issues found!`) que anotaste en la tarea 1, y ninguna línea que nombre `registro` ni `portal_consent`. Si esta tarea corre en otra sesión no tienes ese reporte: la línea base está en `/private/tmp/claude-501/-Users-jjjangelosss-ULIMA--/b0e43952-2505-431f-9c2a-5bfea270569c/scratchpad/plan-fe/analyze-baseline.txt`; léela con `cat` y compara sin el `(ran in …)`. Si el número subió, el issue nuevo es de esta tarea: corrígelo.
+Esperado: la misma línea `N issues found. (ran in …)` (o `No issues found!`) que anotaste en la tarea 1, y ninguna línea que nombre `registro` ni `portal_consent`. Si esta tarea corre en otra sesión no tienes ese reporte: la línea base está en `$TMP/plan-fe/analyze-baseline.txt`; léela con `cat` y compara sin el `(ran in …)`. Si el número subió, el issue nuevo es de esta tarea: corrígelo.
 
 Y toda la carpeta de la HU:
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && /Users/jjjangelosss/development/flutter/bin/flutter test test/HU34_jeff
+cd . && $FLUTTER test test/HU34_jeff
 ```
 
 Esperado: PASS con los siete archivos de `test/HU34_jeff/` —`academic_record_model_test.dart`, `academic_record_service_test.dart`, `record_card_test.dart`, `record_course_row_test.dart`, `record_page_test.dart`, `portal_sync_consent_test.dart` y `registro_consent_test.dart`—, es decir los de las tareas 1 a 10 más el de esta.
@@ -8704,7 +8705,7 @@ Esperado: PASS con los siete archivos de `test/HU34_jeff/` —`academic_record_m
 Revisa primero que el árbol no tenga cambios ajenos:
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && git status --short --untracked-files=all
+cd . && git status --short --untracked-files=all
 ```
 
 Esperado, si vienes de la tarea 10 con todo commiteado, exactamente estas nueve líneas (en cualquier orden):
@@ -8724,7 +8725,7 @@ Esperado, si vienes de la tarea 10 con todo commiteado, exactamente estas nueve 
 Si aparece otro archivo, no lo agregues ni lo toques: puede ser de otra sesión.
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && git add \
+cd . && git add \
   lib/pages/registro/registro_controller.dart \
   lib/pages/registro/registro_page.dart \
   lib/services/registro_service.dart \
@@ -8739,7 +8740,7 @@ cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && git add \
 Esperado: exactamente esos 9 archivos y `9 files changed`.
 
 ```bash
-cd /Users/jjjangelosss/ULIMA++/.worktrees/avatar-fe && git commit -m "feat(registro): paso de consentimiento antes del portal y consent en el alta"
+cd . && git commit -m "feat(registro): paso de consentimiento antes del portal y consent en el alta"
 ```
 
 El autor ya está configurado en git. El mensaje no lleva trailer `Co-Authored-By`. No hagas push.
