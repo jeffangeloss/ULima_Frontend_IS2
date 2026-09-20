@@ -26,6 +26,8 @@ import 'pages/teacher/attendees_page.dart';
 import 'pages/teacher/teacher_grades_controller.dart';
 import 'pages/teacher/teacher_grade_section_binding.dart';
 import 'pages/teacher/teacher_grade_section_page.dart';
+import 'pages/academic_record/academic_record_binding.dart';
+import 'pages/academic_record/academic_record_page.dart';
 import 'pages/mis_notas/mis_notas_binding.dart';
 import 'pages/portal_sync/portal_sync_binding.dart';
 import 'pages/portal_sync/portal_sync_page.dart';
@@ -207,6 +209,13 @@ class MyApp extends StatelessWidget {
           name: '/mis-notas',
           page: () => const MisNotasPage(),
           binding: MisNotasBinding(),
+        ),
+        // Récord académico del portal (RF-REC-2). Binding por ruta, como el
+        // resto.
+        GetPage(
+          name: '/mi-record',
+          page: () => const AcademicRecordPage(),
+          binding: AcademicRecordBinding(),
         ),
         // Carga de ciclo desde miUlima. Binding por ruta, como el resto: un
         // Get.put dentro de build() ataría el controller al overlay del
