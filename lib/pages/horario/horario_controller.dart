@@ -474,10 +474,16 @@ class HorarioController extends GetxController {
   /// `isoDate` null (y `dateText` vacío, "Semana actual"): no hay fecha, y
   /// por el nombre saldrían los cuatro lunes de la ventana uno al lado del
   /// otro. Se toma ese día de la semana en la semana de hoy, que es lo que
-  /// "Semana actual" dice. null si tampoco se reconoce el nombre del día.
+  /// "Semana actual" dice. Con más de siete días sin `isoDate` (un ciclo con
+  /// semanas que manda un backend sin RS-BE-36) tampoco hay fecha, y la
+  /// semana de hoy saldría en cada semana del ciclo, así que es null y el
+  /// bloque se omite. null también si no se reconoce el nombre del día.
   DateTime? _fechaDelDia(DaySchedule dia) {
     final propia = _fechaDeIso(dia.isoDate);
     if (propia != null) return propia;
+    // El ciclo sin semanas llega con siete días. Más días sin isoDate vienen
+    // de un backend sin RS-BE-36, así que no hay fecha y el bloque se omite.
+    if (daysList.length > 7) return null;
     final numero = _numeroDeDia(dia.dayName);
     if (numero == null) return null;
     return _lunesDeEstaSemana().add(Duration(days: numero - 1));

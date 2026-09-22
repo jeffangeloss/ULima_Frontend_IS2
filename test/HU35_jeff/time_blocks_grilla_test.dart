@@ -746,8 +746,8 @@ void main() {
       );
     });
 
-    test('un ciclo sin semanas (isoDate null) toma ese día en la semana de hoy',
-        () async {
+    test('un ciclo sin semanas (isoDate null) toma ese día en la semana de hoy, '
+        'y con más de una semana sin isoDate, ninguno', () async {
       final horario = await horarioCon([
         _ocurrencia(fecha: '2026-09-23', diaDeLaSemana: 3, inicio: '14:00', fin: '18:00'),
         _ocurrencia(fecha: '2026-09-30', diaDeLaSemana: 3, inicio: '14:00', fin: '18:00'),
@@ -768,6 +768,19 @@ void main() {
         soloEste,
       );
       expect(horario.bloquesDelDia(DaySchedule('Jueves', '', 'Semana actual')), isEmpty);
+
+      // Un ciclo con semanas sin isoDate (un backend sin RS-BE-36): el
+      // miércoles 23 no se distingue del 30, y la semana de hoy saldría en
+      // cada semana del ciclo. No hay fecha, así que no se pinta nada.
+      horario.daysList.assignAll([
+        for (final d in _ciclo(semanas: 2, desde: DateTime.utc(2026, 9, 21)))
+          DaySchedule(d.dayName, d.dateText, d.weekText),
+      ]);
+      expect(
+        horario.bloquesDelDia(
+            DaySchedule('Miércoles', '23 de Septiembre', 'Semana 1 del ciclo')),
+        isEmpty,
+      );
     });
 
     test('sin el service de bloques registrado no hay bloques, y nada se cae', () {
