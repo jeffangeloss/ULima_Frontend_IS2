@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 
 import '../descripcion_cursos/descrip_cursos.dart';
 import '../teacher/at_risk_students_page.dart';
+import '../time_blocks/time_block_form_controller.dart';
 import 'horario_controller.dart';
 import 'horario_layout.dart';
 import 'horario_list_view.dart';
@@ -1050,6 +1051,12 @@ class HorarioPage extends StatelessWidget {
                       // (solo el horario puede), así que se fija en vertical
                       // antes de abrirlo y se devuelve la rotación al volver.
                       onPressed: () async {
+                        // get 4.7.3 borra el controller del formulario recién
+                        // al terminar la animación de salida, y antes de eso
+                        // el binding le daría a /bloque el viejo.
+                        if (Get.isRegistered<TimeBlockFormController>()) {
+                          return;
+                        }
                         await SystemChrome.setPreferredOrientations(
                           _portraitOnly,
                         );

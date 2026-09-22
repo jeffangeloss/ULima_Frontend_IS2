@@ -692,8 +692,9 @@ void main() {
       await _desmontarHorario(tester);
     });
 
-    testWidgets('abre el formulario en vertical y al volver el horario rota',
-        (tester) async {
+    testWidgets(
+        'abre el formulario en vertical, al volver el horario rota y no '
+        'reabre un formulario que sigue cerrándose', (tester) async {
       // Solo el horario puede girar (schedule.spec.md, "Schedule-only
       // rotation"): el formulario se abre fijado en vertical, igual que el
       // detalle de un curso, y al volver se devuelve la rotación del horario.
@@ -719,6 +720,16 @@ void main() {
         'DeviceOrientation.landscapeLeft',
         'DeviceOrientation.landscapeRight',
       ]);
+
+      // get 4.7.3 borra el controller del formulario recién al terminar la
+      // animación de salida. Un toque en esa ventana no reabre /bloque, porque
+      // el binding le daría el controller viejo, con lo escrito y por liberar.
+      Get.put<TimeBlockFormController>(TimeBlockFormController());
+      await tester.tap(find.byKey(HorarioPage.agregarBloqueKey));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('FORMULARIO'), findsNothing);
+      expect(_orientaciones, hasLength(2));
 
       await _desmontarHorario(tester);
     });
