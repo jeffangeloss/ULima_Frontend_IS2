@@ -768,5 +768,73 @@ void main() {
         reason: 'sin la copia anterior, la misma ventana se vuelve a pedir',
       );
     });
+
+    test('caso 18: un fallo al cambiar de ventana no la deja marcada como '
+        'cargada', () async {
+      // El caso 9 lo prueba en la primera carga. Aquí ya hay una foto, la de
+      // la ventana anterior, y esa foto no puede contar como la de la nueva.
+      _loguear(_user());
+      final api = _FakeBlocksApi(
+        bloques: <Object>[_bloquesJson(), Exception('socket'), _bloquesJson()],
+        ocurrencias: <Object>[
+          _ocurrenciasJson(),
+          Exception('socket'),
+          _sinOcurrenciasJson(),
+        ],
+      );
+      final s = _servicio(api);
+      await s.load(from: _desde, to: _hasta);
+
+      await s.load(from: '2026-10-19', to: '2026-11-15');
+      expect(s.hasError, isTrue);
+
+      await s.load(from: '2026-10-19', to: '2026-11-15');
+      expect(
+        api.getOcurrencias,
+        3,
+        reason: 'un fallo no deja la ventana marcada como cargada, tampoco '
+            'cuando queda la foto de la ventana anterior',
+      );
+      expect(api.ultimaVentana, <String, String?>{
+        'from': '2026-10-19',
+        'to': '2026-11-15',
+      });
+      expect(s.hasError, isFalse);
+      expect(s.snapshot!.occurrences, isEmpty);
+    });
+
+    test('caso 19: con la foto de otra ventana, un segundo load() espera la '
+        'carga en vuelo', () async {
+      _loguear(_user());
+      final reglas = Completer<Map<String, dynamic>>();
+      final ocurrencias = Completer<Map<String, dynamic>>();
+      final api = _FakeBlocksApi(
+        bloques: <Object>[_bloquesJson(), reglas],
+        ocurrencias: <Object>[_ocurrenciasJson(), ocurrencias],
+      );
+      final s = _servicio(api);
+      await s.load(from: _desde, to: _hasta);
+
+      final primera = s.load(from: '2026-10-19', to: '2026-11-15');
+      var segundaTermino = false;
+      final segunda = s
+          .load(from: '2026-10-19', to: '2026-11-15')
+          .then((_) => segundaTermino = true);
+      await Future<void>.delayed(Duration.zero);
+      expect(
+        segundaTermino,
+        isFalse,
+        reason: 'la foto que hay es la de la ventana anterior: quien espera '
+            'tiene que esperar la carga en vuelo',
+      );
+
+      reglas.complete(_sinBloquesJson());
+      ocurrencias.complete(_sinOcurrenciasJson());
+      await Future.wait(<Future<void>>[primera, segunda]);
+
+      expect(segundaTermino, isTrue);
+      expect(api.getOcurrencias, 2, reason: 'una sola pareja de GET');
+      expect(s.snapshot!.occurrences, isEmpty);
+    });
   });
 }

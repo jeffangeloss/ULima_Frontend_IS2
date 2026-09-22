@@ -26,7 +26,7 @@
 - Un dato que falta se omite; nunca se pinta un 0 inventado. Horas y fechas viajan como texto (`"HH:MM"`, `"YYYY-MM-DD"`), en hora de Lima.
 - Texto visible: el que fija la spec. Cualquier texto nuevo se anota en el reporte para que el dueño lo lea antes de publicar.
 - El `SkeletonPulse` anima sin fin: mientras haya un esqueleto en pantalla no se usa `pumpAndSettle`, sino `tester.pump()`.
-- **Cifras de las pruebas.** Tras aplicar las decisiones finales del dueño (abajo), el código de las Tareas 1 a 7 se aplicó tal como está escrito, reemplazo por reemplazo, en una copia descartable del repo (fuera del worktree y sin git) y se corrió con Flutter 3.47.2. Cada ancla apareció una sola vez. Los rojos que se midieron dieron lo que dicen: los dos archivos que faltan en la Tarea 1, los 34 errores de compilación y el `+33 -13` de la Tarea 4, los 71 errores y el `+20 -3` de la Tarea 6, y los tres tipos de error de la Tarea 7. Por archivo: 17, 55, 46, 21, 23 y 21; `test/HU35_jeff/ test/HU31_jeff/` dio `+170`, `+191`, `+214` y `+235` al cerrar las Tareas 4, 5, 6 y 7; la suite completa, `+757`; `flutter analyze`, los 7 issues de la línea base. El script de cierre de la Tarea 8 dio sus 7 rojos y después `OK`. Las notas en la cabecera de algunas tareas cuentan cómo se llegó hasta aquí. Si una corrida real da otra cifra, se compara prueba por prueba antes de seguir; nunca se ajusta una prueba para que cuadre.
+- **Cifras de las pruebas.** Tras aplicar las decisiones finales del dueño (abajo), el código de las Tareas 1 a 7 se aplicó tal como está escrito, reemplazo por reemplazo, en una copia descartable del repo (fuera del worktree y sin git) y se corrió con Flutter 3.47.2. Cada ancla apareció una sola vez. Los rojos que se midieron dieron lo que dicen: los dos archivos que faltan en la Tarea 1, los 34 errores de compilación y el `+33 -13` de la Tarea 4, los 71 errores y el `+20 -3` de la Tarea 6, y los tres tipos de error de la Tarea 7. Por archivo: 19, 55, 46, 21, 23 y 21; `test/HU35_jeff/ test/HU31_jeff/` dio `+172`, `+193`, `+216` y `+237` al cerrar las Tareas 4, 5, 6 y 7; la suite completa, `+759`; `flutter analyze`, los 7 issues de la línea base. Los casos 18 y 19 del service llegan con la revisión de la Tarea 1, después de esa medición. El 19 de ese archivo se mide en el worktree, y `+172`, `+193`, `+216`, `+237` y `+759` resultan de sumar esos dos casos a la medida anterior, así que son cifras derivadas. El script de cierre de la Tarea 8 dio sus 7 rojos y después `OK`. Las notas en la cabecera de algunas tareas cuentan cómo se llegó hasta aquí. Si una corrida real da otra cifra, se compara prueba por prueba antes de seguir; nunca se ajusta una prueba para que cuadre.
 
 ## Decisiones finales del dueño (2026-09-21)
 
@@ -1041,6 +1041,74 @@ Las tareas las citan por su número. Ya están escritas en la spec, que el dueñ
           reason: 'sin la copia anterior, la misma ventana se vuelve a pedir',
         );
       });
+
+      test('caso 18: un fallo al cambiar de ventana no la deja marcada como '
+          'cargada', () async {
+        // El caso 9 lo prueba en la primera carga. Aquí ya hay una foto, la de
+        // la ventana anterior, y esa foto no puede contar como la de la nueva.
+        _loguear(_user());
+        final api = _FakeBlocksApi(
+          bloques: <Object>[_bloquesJson(), Exception('socket'), _bloquesJson()],
+          ocurrencias: <Object>[
+            _ocurrenciasJson(),
+            Exception('socket'),
+            _sinOcurrenciasJson(),
+          ],
+        );
+        final s = _servicio(api);
+        await s.load(from: _desde, to: _hasta);
+
+        await s.load(from: '2026-10-19', to: '2026-11-15');
+        expect(s.hasError, isTrue);
+
+        await s.load(from: '2026-10-19', to: '2026-11-15');
+        expect(
+          api.getOcurrencias,
+          3,
+          reason: 'un fallo no deja la ventana marcada como cargada, tampoco '
+              'cuando queda la foto de la ventana anterior',
+        );
+        expect(api.ultimaVentana, <String, String?>{
+          'from': '2026-10-19',
+          'to': '2026-11-15',
+        });
+        expect(s.hasError, isFalse);
+        expect(s.snapshot!.occurrences, isEmpty);
+      });
+
+      test('caso 19: con la foto de otra ventana, un segundo load() espera la '
+          'carga en vuelo', () async {
+        _loguear(_user());
+        final reglas = Completer<Map<String, dynamic>>();
+        final ocurrencias = Completer<Map<String, dynamic>>();
+        final api = _FakeBlocksApi(
+          bloques: <Object>[_bloquesJson(), reglas],
+          ocurrencias: <Object>[_ocurrenciasJson(), ocurrencias],
+        );
+        final s = _servicio(api);
+        await s.load(from: _desde, to: _hasta);
+
+        final primera = s.load(from: '2026-10-19', to: '2026-11-15');
+        var segundaTermino = false;
+        final segunda = s
+            .load(from: '2026-10-19', to: '2026-11-15')
+            .then((_) => segundaTermino = true);
+        await Future<void>.delayed(Duration.zero);
+        expect(
+          segundaTermino,
+          isFalse,
+          reason: 'la foto que hay es la de la ventana anterior: quien espera '
+              'tiene que esperar la carga en vuelo',
+        );
+
+        reglas.complete(_sinBloquesJson());
+        ocurrencias.complete(_sinOcurrenciasJson());
+        await Future.wait(<Future<void>>[primera, segunda]);
+
+        expect(segundaTermino, isTrue);
+        expect(api.getOcurrencias, 2, reason: 'una sola pareja de GET');
+        expect(s.snapshot!.occurrences, isEmpty);
+      });
     });
   }
   ```
@@ -1447,6 +1515,12 @@ Las tareas las citan por su número. Ya están escritas en la spec, que el dueñ
     String? _from;
     String? _to;
 
+    /// La ventana de la foto que hay en [_snapshot]. Cambia solo cuando una
+    /// carga termina bien: tras un fallo, o mientras llega la ventana nueva,
+    /// la foto sigue siendo la de la anterior y no cuenta como la pedida.
+    String? _loadedFrom;
+    String? _loadedTo;
+
     /// Sube con cada [clear] y con cada carga nueva. Una respuesta que vuelve
     /// con otro número es vieja y se descarta.
     int _generation = 0;
@@ -1486,6 +1560,8 @@ Las tareas las citan por su número. Ya están escritas en la spec, que el dueñ
       _ownerCode = null;
       _from = null;
       _to = null;
+      _loadedFrom = null;
+      _loadedTo = null;
       _blocks.clear();
       _snapshot.value = null;
       _hasError.value = false;
@@ -1507,10 +1583,15 @@ Las tareas las citan por su número. Ya están escritas en la spec, que el dueñ
       // cualquier await.
       if (_ownerCode != user.code) clear();
       final mismaVentana = _from == from && _to == to;
-      if (!force && mismaVentana && _snapshot.value != null) {
+      // La carga en vuelo va antes que la foto: mientras llega esta ventana,
+      // la foto que hay puede ser la de la anterior, y quien espera tiene que
+      // esperar la de esta.
+      if (!force && mismaVentana && _inFlight != null) return _inFlight!;
+      // Solo corta la foto de ESTA ventana. Tras un fallo al cambiar de
+      // ventana queda la de la anterior, y esa no la marca como cargada.
+      if (!force && mismaVentana && _loadedFrom == from && _loadedTo == to) {
         return Future<void>.value();
       }
-      if (!force && mismaVentana && _inFlight != null) return _inFlight!;
       _ownerCode = user.code;
       _from = from;
       _to = to;
@@ -1532,6 +1613,8 @@ Las tareas las citan por su número. Ya están escritas en la spec, que el dueñ
         if (generation != _generation) return;
         _blocks.assignAll(_reglasDe(respuestas[0]));
         _snapshot.value = TimeBlocksSnapshot.fromJson(respuestas[1]);
+        _loadedFrom = from;
+        _loadedTo = to;
       } catch (e) {
         if (generation != _generation) return;
         // ApiException, fallo de red crudo (ApiClient no lo envuelve) o plazo
@@ -1809,9 +1892,9 @@ Las tareas las citan por su número. Ya están escritas en la spec, que el dueñ
   "${FLUTTER:?}" test test/HU35_jeff/time_blocks_service_test.dart
   ```
 
-  Esperado: PASS — `00:00 +17: All tests passed!`, los 17 casos. Sin el 3.g, el caso 17 falla en `expect(s.blocks, isEmpty)`.
+  Esperado: PASS — `00:00 +19: All tests passed!`, los 19 casos. Sin el 3.g, el caso 17 falla en `expect(s.blocks, isEmpty)`.
 
-  En la salida aparecen dos líneas de `debugPrint` —`Error cargando los bloques de horario: Exception: socket` (caso 9) y `Error escribiendo un bloque de horario: Exception: socket` (caso 16)—: son los fallos que esas dos pruebas provocan a propósito, no un test en rojo.
+  En la salida aparecen tres líneas de `debugPrint` —`Error cargando los bloques de horario: Exception: socket` (casos 9 y 18) y `Error escribiendo un bloque de horario: Exception: socket` (caso 16)—: son los fallos que esas tres pruebas provocan a propósito, no un test en rojo.
 
 - [ ] **Paso 5: `analyze` sin issues nuevos**
 
@@ -5662,8 +5745,8 @@ cd "${REPO:?}"
 ```
 
 Esperado:
-- `test/HU35_jeff/ test/HU31_jeff/` termina en `+170: All tests passed!` (las 118 de `HU35_jeff` —17 de la Tarea 1, 55 de la Tarea 2 y las 46 de este archivo— y las 52 de `HU31_jeff`). `HU31_jeff` cubre `blockGeometry` y `blockMetaLines`, que no cambian.
-- La suite completa termina en `+692: All tests passed!` (las 574 de antes de la rama más 118). Tarda entre dos y tres minutos y parece colgada en `test/HU33_jeff/registro_service_test.dart` «caso 3: el plazo vencido…»: esa prueba espera de verdad los 120 s de `RegistroService.registroTimeout`. No es de esta tarea y no hay que tocarla.
+- `test/HU35_jeff/ test/HU31_jeff/` termina en `+172: All tests passed!` (las 120 de `HU35_jeff` —19 de la Tarea 1, 55 de la Tarea 2 y las 46 de este archivo— y las 52 de `HU31_jeff`). `HU31_jeff` cubre `blockGeometry` y `blockMetaLines`, que no cambian.
+- La suite completa termina en `+694: All tests passed!` (las 574 de antes de la rama más 120). Tarda entre dos y tres minutos y parece colgada en `test/HU33_jeff/registro_service_test.dart` «caso 3: el plazo vencido…»: esa prueba espera de verdad los 120 s de `RegistroService.registroTimeout`. No es de esta tarea y no hay que tocarla.
 - `analyze` da `7 issues found.`, la misma lista de la línea base de la Tarea 1: el `avoid_print` en `lib/main.dart:91`, tres `deprecated_member_use`, un `unnecessary_import` y dos `depend_on_referenced_packages`. Ninguno cae en `horario.dart`, `horario_controller.dart` ni `time_blocks_grilla_test.dart`.
 
 El `// ignore: must_call_super` del doble del controller es el mismo recurso que ya usa `test/HU07_sam/calculadora_flujo_cajanegra_test.dart:36`; sin él, `analyze` sube a 8. Si aparece un issue nuevo, se corrige antes del commit. Si aparece uno que no se entiende, **PARAR** y reportarlo.
@@ -7435,7 +7518,7 @@ cd "${REPO:?}"
 "${FLUTTER:?}" test test/HU35_jeff/ test/HU31_jeff/
 ```
 
-Esperado: PASS en todo, `+191: All tests passed!`: las 139 de `test/HU35_jeff/` (17 del service, 55 de cruces, 46 de la grilla y las 21 de esta tarea) y las 52 de `test/HU31_jeff/`. Esto incluye `time_blocks_grilla_test.dart` de las Tareas 3 y 4, que monta el mismo `HorarioPage`, y la geometría y el contenido de bloque de HU31. Si el total en verde es otro, se corre archivo por archivo y se compara con esas cifras. Si una prueba de la Tarea 4 falla porque el botón nuevo se interpone en un toque suyo (el botón solo existe para alumnos y en vertical), **PARAR** y reportar: no se mueve el botón ni se cambia esa prueba sin decidirlo con el dueño.
+Esperado: PASS en todo, `+193: All tests passed!`: las 141 de `test/HU35_jeff/` (19 del service, 55 de cruces, 46 de la grilla y las 21 de esta tarea) y las 52 de `test/HU31_jeff/`. Esto incluye `time_blocks_grilla_test.dart` de las Tareas 3 y 4, que monta el mismo `HorarioPage`, y la geometría y el contenido de bloque de HU31. Si el total en verde es otro, se corre archivo por archivo y se compara con esas cifras. Si una prueba de la Tarea 4 falla porque el botón nuevo se interpone en un toque suyo (el botón solo existe para alumnos y en vertical), **PARAR** y reportar: no se mueve el botón ni se cambia esa prueba sin decidirlo con el dueño.
 
 - [ ] **Paso 6: Análisis estático**
 
@@ -9036,8 +9119,8 @@ cd "${REPO:?}"
 ```
 
 Esperado:
-- El primero: `+214: All tests passed!` (las 162 de `test/HU35_jeff/` —17 del service, 55 de cruces, 46 de la grilla, 21 del formulario y las 23 de esta tarea— y las 52 de `test/HU31_jeff/`). Las líneas `Error al cargar … "StorageService" not found` que salen son de las pruebas de las Tareas 4 y 5 que montan el `HorarioController` real; no son fallas.
-- El segundo: `+736: All tests passed!` (las 574 de antes de la rama más 162). Tarda un par de minutos.
+- El primero: `+216: All tests passed!` (las 164 de `test/HU35_jeff/` —19 del service, 55 de cruces, 46 de la grilla, 21 del formulario y las 23 de esta tarea— y las 52 de `test/HU31_jeff/`). Las líneas `Error al cargar … "StorageService" not found` que salen son de las pruebas de las Tareas 4 y 5 que montan el `HorarioController` real; no son fallas.
+- El segundo: `+738: All tests passed!` (las 574 de antes de la rama más 164). Tarda un par de minutos.
 - `analyze`: `7 issues found.`, la misma lista de la línea base que midió la Tarea 1, con el `avoid_print` en `lib/main.dart:93` (donde lo dejó la Tarea 5; esta tarea no toca `main.dart`). Ningún issue en `lib/pages/time_blocks/time_block_actions_sheet.dart`, `lib/pages/horario/horario.dart` ni `test/HU35_jeff/time_blocks_acciones_test.dart`. El `// ignore: must_call_super` del doble del controller es el mismo recurso de la Tarea 4; sin él, `analyze` sube a 8. Si aparece un issue nuevo, se corrige antes del commit; si aparece uno que no se entiende, **PARAR** y reportarlo.
 
 Si una prueba de la Tarea 4 o de la 5 se pone roja, **PARAR**: esta tarea solo agrega una rama al principio del `onTap`, y ninguna de esas pruebas toca un bloque propio. Si el total en verde es otro, se corre archivo por archivo y se compara con esas cifras.
@@ -9957,8 +10040,8 @@ cd "${REPO:?}"
 ```
 
 Esperado. Cada total es el del Paso 5 de la Tarea 6 más las 21 de este archivo, sin ninguna falla:
-- `test/HU35_jeff/ test/HU31_jeff/` termina en `+235: All tests passed!`: 183 de `test/HU35_jeff/` (17 del service, 55 de cruces, 46 de la grilla, 21 del formulario, 23 de las acciones y las 21 de esta tarea) y 52 de `test/HU31_jeff/`. Si la Tarea 6 dio otro total en verde, el esperado aquí es ese más 21. En la salida siguen apareciendo líneas de `debugPrint` de pruebas anteriores (`Error al cargar … "StorageService" not found`, de las que montan el `HorarioController` real); no son pruebas en rojo.
-- La suite completa termina en `+757: All tests passed!` (`+736` de la Tarea 6 más 21). Tarda entre dos y tres minutos y parece colgada en `test/HU33_jeff/registro_service_test.dart`: esa prueba espera de verdad los 120 s de `RegistroService.registroTimeout`. No es de esta tarea y no hay que tocarla.
+- `test/HU35_jeff/ test/HU31_jeff/` termina en `+237: All tests passed!`: 185 de `test/HU35_jeff/` (19 del service, 55 de cruces, 46 de la grilla, 21 del formulario, 23 de las acciones y las 21 de esta tarea) y 52 de `test/HU31_jeff/`. Si la Tarea 6 dio otro total en verde, el esperado aquí es ese más 21. En la salida siguen apareciendo líneas de `debugPrint` de pruebas anteriores (`Error al cargar … "StorageService" not found`, de las que montan el `HorarioController` real); no son pruebas en rojo.
+- La suite completa termina en `+759: All tests passed!` (`+738` de la Tarea 6 más 21). Tarda entre dos y tres minutos y parece colgada en `test/HU33_jeff/registro_service_test.dart`: esa prueba espera de verdad los 120 s de `RegistroService.registroTimeout`. No es de esta tarea y no hay que tocarla.
 - `analyze` da `7 issues found.`, la misma lista de la línea base de la Tarea 1, con el `avoid_print` en `lib/main.dart:93` (esta tarea no toca `main.dart`). Ninguno cae en `horario.dart`, `horario_controller.dart` ni `time_blocks_horas_test.dart`. El `// ignore: must_call_super` del doble es el mismo recurso de la Tarea 4; sin él, `analyze` sube a 8.
 
 Si falla una prueba de las Tareas 4 a 6, **PARAR** y reportarlo: sus dobles no mandan semanas (`weeks` vacío), así que la línea nueva no aparece en ninguna de ellas, ni en la vista de día ni en la semanal, y no debería cambiar nada. Si aparece un issue nuevo de `analyze`, se corrige antes del commit. Si aparece uno que no se entiende, **PARAR** y reportarlo.
@@ -10029,7 +10112,7 @@ Antes del `git add`, `git status --short` solo puede listar esos tres archivos; 
 
 **Interfaces:**
 - Consume, de las Tareas 1 a 7, solo archivos y rutas (esta tarea no importa ni llama ningún símbolo):
-  - Las seis pruebas y cuántas trae cada una: `test/HU35_jeff/time_blocks_service_test.dart` (17, Tarea 1), `time_blocks_conflicto_test.dart` (55, Tarea 2), `time_blocks_grilla_test.dart` (46: 11 de la Tarea 3 y 35 de la 4), `time_blocks_form_test.dart` (21, Tarea 5), `time_blocks_acciones_test.dart` (23, Tarea 6) y `time_blocks_horas_test.dart` (21, Tarea 7). En total, 183.
+  - Las seis pruebas y cuántas trae cada una: `test/HU35_jeff/time_blocks_service_test.dart` (19, Tarea 1), `time_blocks_conflicto_test.dart` (55, Tarea 2), `time_blocks_grilla_test.dart` (46: 11 de la Tarea 3 y 35 de la 4), `time_blocks_form_test.dart` (21, Tarea 5), `time_blocks_acciones_test.dart` (23, Tarea 6) y `time_blocks_horas_test.dart` (21, Tarea 7). En total, 185.
   - Los tres archivos de `lib/` que la rama toca fuera de los `targets` originales y que el Paso 0 de la Tarea 1 sumó a la spec: `lib/services/api_client.dart` (`patchJson`), `lib/services/auth_service.dart` (`logout()` vacía los bloques) y `lib/pages/horario/horario_layout.dart` (lo creó la Tarea 3). Y el commit `docs(time-blocks): la spec queda aprobada por el dueño…` de ese paso.
   - La sección `## Time Blocks (bloques de horario propios) — RF-BLQ-1 a RF-BLQ-7` que la Tarea 1 (Paso 7) dejó al final de `docs/specs/api-contracts.md`, y el `"isoDate"` que su Paso 7.b sumó al ejemplo de `days`.
   - La línea base de `analyze` que midió la Tarea 1 (Paso 1): 7 issues preexistentes, con el `avoid_print` de `lib/main.dart` que la Tarea 1 (seis líneas) y la Tarea 5 (dos imports) corrieron de la línea 85 a la 93.
@@ -10345,7 +10428,7 @@ Antes del `git add`, `git status --short` solo puede listar esos tres archivos; 
   ```
 
   Esperado:
-  - La primera: `+183: All tests passed!`. Son 17 del service, 55 de validadores y cruces, 46 de la grilla, 21 del formulario, 23 de la hoja de acciones y 21 de la línea de horas. Si el total no cuadra, se corre archivo por archivo (`"${FLUTTER:?}" test test/HU35_jeff/<archivo>`) y se compara con esas cifras para saber de qué tarea viene la diferencia.
+  - La primera: `+185: All tests passed!`. Son 19 del service, 55 de validadores y cruces, 46 de la grilla, 21 del formulario, 23 de la hoja de acciones y 21 de la línea de horas. Si el total no cuadra, se corre archivo por archivo (`"${FLUTTER:?}" test test/HU35_jeff/<archivo>`) y se compara con esas cifras para saber de qué tarea viene la diferencia.
   - La segunda: `+104: All tests passed!` (52 de `HU31_jeff`, que cubre la geometría y el contenido de bloque del horario, y 52 de `HU33_jeff`). Tarda unos dos minutos y parece colgada en `test/HU33_jeff/registro_service_test.dart` «caso 3: el plazo vencido NO dice que falló…»: esa prueba espera de verdad los 120 s de `RegistroService.registroTimeout`.
 
   En la salida aparecen líneas de `debugPrint` que no son pruebas en rojo, porque las provocan esas mismas pruebas a propósito: `Error al cargar …: "StorageService" not found` (las pruebas que montan el `HorarioController` real), `Error cargando los bloques de horario: Exception: socket`, `Error escribiendo un bloque de horario: Exception: socket`, `Error guardando el bloque: Bad state: inesperado` y `Error en una acción de bloque: Bad state: inesperado`.
@@ -10361,7 +10444,7 @@ Antes del `git add`, `git status --short` solo puede listar esos tres archivos; 
   ```
 
   Esperado:
-  - `+757: All tests passed!`, en unos dos minutos y medio: las 574 que había antes de la rama más las 183 de `HU35_jeff`.
+  - `+759: All tests passed!`, en unos dos minutos y medio: las 574 que había antes de la rama más las 185 de `HU35_jeff`.
   - `analyze`: `7 issues found.`, todos `info` y todos preexistentes, los mismos de la línea base de la Tarea 1:
     ```
     info • Don't invoke 'print' in production code. … • lib/main.dart:93:9 • avoid_print
@@ -10386,10 +10469,10 @@ Antes del `git add`, `git status --short` solo puede listar esos tres archivos; 
   (RF-BLQ-1 a RF-BLQ-7).
 
   1. VERIFICACIÓN
-  - test/HU35_jeff/: +183, en verde (17 service, 55 validadores y cruces, 46 grilla,
+  - test/HU35_jeff/: +185, en verde (19 service, 55 validadores y cruces, 46 grilla,
     21 formulario, 23 hoja de acciones, 21 línea de horas).
   - Regresión test/HU31_jeff/ y test/HU33_jeff/: +104, en verde.
-  - Suite completa: +757, en verde.
+  - Suite completa: +759, en verde.
   - flutter analyze: 7 issues, los mismos 7 preexistentes de la línea base (avoid_print en
     lib/main.dart:93, que antes estaba en la 85; tres deprecated_member_use; un
     unnecessary_import; dos depend_on_referenced_packages). Ninguno en archivos de esta

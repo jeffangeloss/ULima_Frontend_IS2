@@ -51,6 +51,12 @@ class TimeBlocksService extends GetxService {
   String? _from;
   String? _to;
 
+  /// La ventana de la foto que hay en [_snapshot]. Cambia solo cuando una
+  /// carga termina bien: tras un fallo, o mientras llega la ventana nueva,
+  /// la foto sigue siendo la de la anterior y no cuenta como la pedida.
+  String? _loadedFrom;
+  String? _loadedTo;
+
   /// Sube con cada [clear] y con cada carga nueva. Una respuesta que vuelve
   /// con otro número es vieja y se descarta.
   int _generation = 0;
@@ -90,6 +96,8 @@ class TimeBlocksService extends GetxService {
     _ownerCode = null;
     _from = null;
     _to = null;
+    _loadedFrom = null;
+    _loadedTo = null;
     _blocks.clear();
     _snapshot.value = null;
     _hasError.value = false;
@@ -111,10 +119,15 @@ class TimeBlocksService extends GetxService {
     // cualquier await.
     if (_ownerCode != user.code) clear();
     final mismaVentana = _from == from && _to == to;
-    if (!force && mismaVentana && _snapshot.value != null) {
+    // La carga en vuelo va antes que la foto: mientras llega esta ventana,
+    // la foto que hay puede ser la de la anterior, y quien espera tiene que
+    // esperar la de esta.
+    if (!force && mismaVentana && _inFlight != null) return _inFlight!;
+    // Solo corta la foto de ESTA ventana. Tras un fallo al cambiar de
+    // ventana queda la de la anterior, y esa no la marca como cargada.
+    if (!force && mismaVentana && _loadedFrom == from && _loadedTo == to) {
       return Future<void>.value();
     }
-    if (!force && mismaVentana && _inFlight != null) return _inFlight!;
     _ownerCode = user.code;
     _from = from;
     _to = to;
@@ -136,6 +149,8 @@ class TimeBlocksService extends GetxService {
       if (generation != _generation) return;
       _blocks.assignAll(_reglasDe(respuestas[0]));
       _snapshot.value = TimeBlocksSnapshot.fromJson(respuestas[1]);
+      _loadedFrom = from;
+      _loadedTo = to;
     } catch (e) {
       if (generation != _generation) return;
       // ApiException, fallo de red crudo (ApiClient no lo envuelve) o plazo
