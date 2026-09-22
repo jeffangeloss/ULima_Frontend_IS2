@@ -4,15 +4,49 @@ import '../../configs/course_colors.dart';
 
 import 'package:get/get.dart';
 
+import '../../models/time_block_model.dart';
 import '../../services/api_client.dart';
 import '../../services/auth_service.dart';
+import '../../services/time_blocks_service.dart';
 
 class DaySchedule {
   final String dayName;
   final String dateText;
   final String weekText;
 
-  DaySchedule(this.dayName, this.dateText, this.weekText);
+  /// La fecha exacta de ese día en hora de Lima, `"YYYY-MM-DD"`, o null
+  /// cuando el ciclo no tiene semanas (el mismo caso en que [dateText] llega
+  /// vacío). La manda `/schedule/me/sessions` (D1). De aquí, y nunca de
+  /// [dateText], salen las fechas de los bloques propios (RF-BLQ-4 y
+  /// RF-BLQ-7): [dateText] no trae año.
+  final String? isoDate;
+
+  DaySchedule(this.dayName, this.dateText, this.weekText, {this.isoDate});
+
+  /// Un elemento de `days` de `/schedule/me/sessions`. Los tres textos se
+  /// leen como siempre; [isoDate] queda en null si no llega (un backend
+  /// anterior) o si no es una fecha `YYYY-MM-DD` que existe.
+  factory DaySchedule.fromJson(Map<String, dynamic> json) => DaySchedule(
+    json['dayName'] as String,
+    json['dateText'] as String,
+    json['weekText'] as String,
+    isoDate: _fechaIsoONull(json['isoDate']),
+  );
+}
+
+/// [valor] si es una fecha `YYYY-MM-DD` que existe en el calendario, o null.
+/// `DateTime.tryParse` corre el 30 de febrero al 2 de marzo: por eso la vuelta
+/// a texto tiene que dar lo mismo.
+String? _fechaIsoONull(Object? valor) {
+  if (valor is! String) return null;
+  if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(valor)) return null;
+  final fecha = DateTime.tryParse('${valor}T00:00:00Z');
+  if (fecha == null) return null;
+  final vuelta =
+      '${fecha.year.toString().padLeft(4, '0')}-'
+      '${fecha.month.toString().padLeft(2, '0')}-'
+      '${fecha.day.toString().padLeft(2, '0')}';
+  return vuelta == valor ? valor : null;
 }
 
 class HorarioController extends GetxController {
@@ -59,10 +93,17 @@ class HorarioController extends GetxController {
       _loadTeacherDaysAndSessions();
       _loadTeacherAssessments();
     } else {
-      _loadDays();
+      _cargarDiasYBloques();
       _loadSecciones();
       _loadAssessments();
       _loadWeeklyLoad();
+      // En un ciclo de más de 120 días la ventana va desde el lunes de la
+      // semana activa (ventanaVisible): al cambiar de semana se pide la
+      // nueva. Dentro de la misma semana, load no vuelve a pedir nada.
+      _ventanaDeBloques = ever<int>(
+        currentDayIndex,
+        (_) => _cargarBloquesPropios(),
+      );
     }
   }
 
@@ -77,13 +118,18 @@ class HorarioController extends GetxController {
         _loadTeacherAssessments(),
       ]);
     } else {
-      await Future.wait([_loadDays(), _loadSecciones(), _loadAssessments()]);
+      await Future.wait([
+        _cargarDiasYBloques(),
+        _loadSecciones(),
+        _loadAssessments(),
+      ]);
     }
   }
 
   @override
   void onClose() {
     _clockTimer?.cancel();
+    _ventanaDeBloques?.dispose();
     super.onClose();
   }
 
@@ -105,11 +151,7 @@ class HorarioController extends GetxController {
       daysList.assignAll(
         decoded
             .map(
-              (d) => DaySchedule(
-                d['dayName'] as String,
-                d['dateText'] as String,
-                d['weekText'] as String,
-              ),
+              (d) => DaySchedule.fromJson(Map<String, dynamic>.from(d as Map)),
             )
             .toList(),
       );
@@ -337,6 +379,230 @@ class HorarioController extends GetxController {
     }
 
     return courses;
+  }
+
+  /// Los bloques propios que caen en [dia] (RF-BLQ-4): las ocurrencias que el
+  /// servidor ya expandió, filtradas por fecha ([_caeEnElDia]).
+  List<TimeBlockOccurrence> bloquesDelDia(DaySchedule dia) {
+    final propias = _bloquesPropios;
+    if (propias.isEmpty) return const <TimeBlockOccurrence>[];
+    return propias.where((o) => _caeEnElDia(o.date, dia)).toList();
+  }
+
+  /// Los días cancelados de los bloques propios que caen en [dia] (RF-BLQ-5),
+  /// con las horas de su regla y `moved: false`.
+  ///
+  /// El servidor no manda un día cancelado entre las ocurrencias (RS-BE-33),
+  /// pero la regla trae la excepción. La grilla lo pinta tenue, con "Este día
+  /// está cancelado", para que la alumna pueda tocarlo y devolverlo al patrón
+  /// desde su hoja. Solo cuenta si la fecha sigue en el patrón (uno de sus
+  /// días y dentro de su rango): una excepción que quedó fuera al editar la
+  /// regla ya no se expande, y tampoco se pinta.
+  List<TimeBlockOccurrence> bloquesCanceladosDelDia(DaySchedule dia) {
+    final reglas = _reglasPropias;
+    if (reglas.isEmpty) return const <TimeBlockOccurrence>[];
+    return <TimeBlockOccurrence>[
+      for (final regla in reglas)
+        for (final excepcion in regla.exceptions)
+          if (excepcion.status == 'cancelled' &&
+              _enElPatron(regla, excepcion.date) &&
+              _caeEnElDia(excepcion.date, dia))
+            TimeBlockOccurrence(
+              blockId: regla.id,
+              title: regla.title,
+              colorHex: regla.colorHex,
+              date: excepcion.date,
+              dayOfWeek: DateTime.parse(excepcion.date).weekday,
+              startTime: regla.startTime,
+              endTime: regla.endTime,
+              moved: false,
+            ),
+    ];
+  }
+
+  /// La ventana de ocurrencias que pide el horario (RF-BLQ-7), como fechas
+  /// planas `YYYY-MM-DD`.
+  ///
+  /// Es la del ciclo visible: del primer al último `isoDate` no nulo de
+  /// [daysList], en el orden en que llegan. No se lee nada de `dateText` ni
+  /// del ciclo del alumno: `dateText` no trae año, y adivinarlo era frágil.
+  ///
+  /// Si esa ventana pasa de los 120 días que acepta el servidor
+  /// (`TIME_BLOCK_WINDOW_TOO_WIDE`; un ciclo de 16 semanas son 112), son 120
+  /// días desde el lunes de la semana del día activo. Al cambiar de semana,
+  /// [currentDayIndex] cambia y el `ever` de `onInit` pide la ventana nueva;
+  /// dentro de la misma semana es la misma, y `load` no vuelve a pedir nada.
+  ///
+  /// Si ningún día trae `isoDate` ([daysList] vacío, o el ciclo sin semanas,
+  /// que llega con `isoDate` null, `dateText` vacío y "Semana actual"), son
+  /// las cuatro semanas de lunes a domingo alrededor de hoy en Lima: la
+  /// pasada, la actual y las dos siguientes.
+  ({String from, String to}) ventanaVisible() {
+    final ciclo = _fechasDelCiclo();
+    if (ciclo == null) {
+      final desde = _lunesDeEstaSemana().subtract(const Duration(days: 7));
+      final hasta = desde.add(const Duration(days: 27));
+      return (from: _fechaPlana(desde), to: _fechaPlana(hasta));
+    }
+    final (primero, ultimo, activo) = ciclo;
+    if (ultimo.difference(primero).inDays < _diasMaximosPorVentana) {
+      return (from: _fechaPlana(primero), to: _fechaPlana(ultimo));
+    }
+    final desde = _lunesDe(activo);
+    final hasta = desde.add(const Duration(days: _diasMaximosPorVentana - 1));
+    return (from: _fechaPlana(desde), to: _fechaPlana(hasta));
+  }
+
+  /// Los días que cubre como mucho una ventana, contando los dos extremos: el
+  /// tope del servidor (`TIME_BLOCK_WINDOW_TOO_WIDE`).
+  static const int _diasMaximosPorVentana = 120;
+
+  /// Si la fecha plana [iso] ("2026-09-21") es la de [dia] ([_fechaDelDia]).
+  ///
+  /// Compara por FECHA. El nombre del día no basta: [daysList] trae los siete
+  /// días de CADA semana del ciclo, y una práctica del lunes 21 no es la del
+  /// lunes 28.
+  bool _caeEnElDia(String iso, DaySchedule dia) {
+    final fecha = _fechaDelDia(dia);
+    return fecha != null && iso == _fechaPlana(fecha);
+  }
+
+  /// La fecha de [dia] a medianoche UTC: su `isoDate`, la fecha exacta que
+  /// manda `/schedule/me/sessions` (D1).
+  ///
+  /// Si el ciclo no tiene semanas, el backend manda los siete días con
+  /// `isoDate` null (y `dateText` vacío, "Semana actual"): no hay fecha, y
+  /// por el nombre saldrían los cuatro lunes de la ventana uno al lado del
+  /// otro. Se toma ese día de la semana en la semana de hoy, que es lo que
+  /// "Semana actual" dice. null si tampoco se reconoce el nombre del día.
+  DateTime? _fechaDelDia(DaySchedule dia) {
+    final propia = _fechaDeIso(dia.isoDate);
+    if (propia != null) return propia;
+    final numero = _numeroDeDia(dia.dayName);
+    if (numero == null) return null;
+    return _lunesDeEstaSemana().add(Duration(days: numero - 1));
+  }
+
+  /// Si [fecha] cae en uno de los días de [regla] y dentro de su rango.
+  static bool _enElPatron(TimeBlockRule regla, String fecha) {
+    final dia = DateTime.tryParse(fecha);
+    if (dia == null) return false;
+    return regla.daysOfWeek.contains(dia.weekday) &&
+        fecha.compareTo(regla.startDate) >= 0 &&
+        fecha.compareTo(regla.endDate) <= 0;
+  }
+
+  /// La fecha del primer `isoDate` de [daysList], la del último y la del día
+  /// activo (la primera, si el activo no trae), o null si ningún día trae
+  /// `isoDate`.
+  (DateTime, DateTime, DateTime)? _fechasDelCiclo() {
+    final dias = daysList;
+    // Marcador null-aware (`?`): un día sin isoDate no entra. Con un
+    // `if (… case final f?)` el analizador saca `use_null_aware_elements`.
+    final fechas = <DateTime>[
+      for (final dia in dias) ?_fechaDeIso(dia.isoDate),
+    ];
+    if (fechas.isEmpty) return null;
+    var indice = currentDayIndex.value;
+    if (indice < 0 || indice >= dias.length) indice = 0;
+    final activo = _fechaDeIso(dias[indice].isoDate) ?? fechas.first;
+    return (fechas.first, fechas.last, activo);
+  }
+
+  /// `"2026-09-21"` → el 21 de septiembre de 2026 a medianoche UTC, o null.
+  /// En UTC para que restar días no tropiece con un cambio de hora del
+  /// dispositivo.
+  static DateTime? _fechaDeIso(String? iso) =>
+      iso == null ? null : DateTime.tryParse('${iso}T00:00:00Z');
+
+  /// El lunes de la semana de [fecha].
+  static DateTime _lunesDe(DateTime fecha) =>
+      fecha.subtract(Duration(days: fecha.weekday - 1));
+
+  /// El lunes de la semana de hoy en Lima, a medianoche UTC. Los campos de
+  /// [currentLimaTime] ya son la hora de pared de Lima (`_nowInLima`).
+  DateTime _lunesDeEstaSemana() {
+    final ahora = currentLimaTime.value;
+    return _lunesDe(DateTime.utc(ahora.year, ahora.month, ahora.day));
+  }
+
+  /// Las ocurrencias que el servidor ya expandió, o vacío.
+  ///
+  /// Van en su propia lista y NUNCA en [_todasLasSecciones] (RF-BLQ-7): ese
+  /// arreglo alimenta [colorPorCurso] y el marcado de evaluaciones de
+  /// [coursesForDay], así que un bloque ahí dentro le quitaría un color de la
+  /// paleta a un curso real y podría quedar marcado como evaluación por
+  /// coincidir de nombre con una.
+  ///
+  /// Se leen del service y no se copian: leer `snapshot` dentro del `Obx` de
+  /// la pantalla lo suscribe, y la grilla refleja sola lo que la alumna crea,
+  /// edita o borra. Sin el service registrado no hay bloques y nada se cae.
+  List<TimeBlockOccurrence> get _bloquesPropios {
+    if (!Get.isRegistered<TimeBlocksService>()) {
+      return const <TimeBlockOccurrence>[];
+    }
+    return TimeBlocksService.to.snapshot?.occurrences ??
+        const <TimeBlockOccurrence>[];
+  }
+
+  /// Las reglas de la alumna, del service, o vacío. Como [_bloquesPropios], se
+  /// leen y no se copian: un día que se cancela o vuelve al patrón se repinta
+  /// solo.
+  List<TimeBlockRule> get _reglasPropias {
+    if (!Get.isRegistered<TimeBlocksService>()) {
+      return const <TimeBlockRule>[];
+    }
+    return TimeBlocksService.to.blocks;
+  }
+
+  /// El `ever` de [onInit] sobre [currentDayIndex]: en un ciclo de más de 120
+  /// días, pide la ventana de la semana nueva. Lo apaga [onClose].
+  Worker? _ventanaDeBloques;
+
+  /// Los días primero y los bloques después: la ventana sale de las fechas
+  /// del ciclo ([ventanaVisible]), y sin días sería la de respaldo.
+  Future<void> _cargarDiasYBloques() async {
+    await _loadDays();
+    await _cargarBloquesPropios();
+  }
+
+  /// Pide al service la [ventanaVisible]. Idempotente: si la ventana es la
+  /// misma y ya está cargada, el service no vuelve a pedir nada. Nunca lanza.
+  Future<void> _cargarBloquesPropios() {
+    if (!Get.isRegistered<TimeBlocksService>()) return Future<void>.value();
+    final ventana = ventanaVisible();
+    return TimeBlocksService.to.load(from: ventana.from, to: ventana.to);
+  }
+
+  static String _fechaPlana(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-'
+      '${d.month.toString().padLeft(2, '0')}-'
+      '${d.day.toString().padLeft(2, '0')}';
+
+  /// Nombre de un día del horario → 1 (lunes) a 7 (domingo), o null. Tolera
+  /// "Miercoles" y "Sabado" sin tilde, como `_weekDays` de la vista. Es una
+  /// copia corta a propósito: la de `time_block_conflicts.dart` es privada de
+  /// ese archivo.
+  static int? _numeroDeDia(String nombre) {
+    final limpio = nombre
+        .trim()
+        .toLowerCase()
+        .replaceAll('á', 'a')
+        .replaceAll('é', 'e')
+        .replaceAll('í', 'i')
+        .replaceAll('ó', 'o')
+        .replaceAll('ú', 'u');
+    const dias = <String>[
+      'lunes',
+      'martes',
+      'miercoles',
+      'jueves',
+      'viernes',
+      'sabado',
+      'domingo',
+    ];
+    final i = dias.indexOf(limpio);
+    return i < 0 ? null : i + 1;
   }
 
   void previousDay() {
