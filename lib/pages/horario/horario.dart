@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 
 import '../descripcion_cursos/descrip_cursos.dart';
 import '../teacher/at_risk_students_page.dart';
+import '../time_blocks/time_block_actions_sheet.dart';
 import '../time_blocks/time_block_form_controller.dart';
 import 'horario_controller.dart';
 import 'horario_layout.dart';
@@ -524,6 +525,18 @@ class HorarioPage extends StatelessWidget {
       height: heightVal,
       child: _enSuColumna(columna: columna, columnas: columnas, tenue: diaCancelado, bloque: InkWell(
         onTap: () async {
+          // RF-BLQ-5: un bloque propio no tiene curso al que ir; abre su
+          // hoja de acciones (la de un día cancelado solo ofrece volver al
+          // patrón). Va primero: sin esta rama caería en la del alumno, que
+          // con `idSeccion` vacío no hace nada.
+          if (bloquePropio != null) {
+            await mostrarAccionesDeBloque(
+              context,
+              bloquePropio,
+              cancelado: diaCancelado,
+            );
+            return;
+          }
           final String idSeccion = course['idSeccion']?.toString() ?? '';
           final isTeacher = AuthService.to.currentUser?.isTeacher ?? false;
 
