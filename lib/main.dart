@@ -50,6 +50,8 @@ import 'pages/silabo/silabo_viewer_page.dart';
 import 'pages/chatbot/chatbot_page.dart';
 import 'pages/networking/networking_binding.dart';
 import 'pages/networking/networking_page.dart';
+import 'pages/time_blocks/time_block_form_binding.dart';
+import 'pages/time_blocks/time_block_form_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -236,6 +238,14 @@ class MyApp extends StatelessWidget {
           name: '/networking',
           page: () => const NetworkingPage(),
           binding: NetworkingBinding(),
+        ),
+        // Bloques de horario propios (RF-BLQ-1, RF-BLQ-2). Sin argumento crea;
+        // con un TimeBlockRule en `arguments` edita ese bloque. Binding por
+        // ruta, como el resto.
+        GetPage(
+          name: '/bloque',
+          page: () => const TimeBlockFormPage(),
+          binding: TimeBlockFormBinding(),
         ),
       ],
     );

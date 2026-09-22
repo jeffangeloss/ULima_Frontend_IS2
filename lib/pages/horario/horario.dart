@@ -21,6 +21,9 @@ import '../../configs/course_colors.dart';
 class HorarioPage extends StatelessWidget {
   const HorarioPage({super.key});
 
+  /// Botón para agregar un bloque propio (RF-BLQ-1). Solo lo ve el alumno.
+  static const Key agregarBloqueKey = Key('horario-agregar-bloque');
+
   static const double startHour = 7.0;
   static const double endHour = 22.0;
   static const double hourHeight = 85.0;
@@ -1020,10 +1023,45 @@ class HorarioPage extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    // RF-BLQ-1: agregar un bloque propio es solo del alumno; el horario del
+    // docente es el de sus clases y asesorías. En horizontal la grilla semanal
+    // ocupa toda la pantalla y el botón la taparía; en la lista de chats no
+    // hay grilla a la que agregar nada.
+    final esAlumno = !(AuthService.to.currentUser?.isTeacher ?? false);
+    final enHorizontal =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+
     return Scaffold(
       backgroundColor: isDark
           ? const Color(0xFF1E1E26)
           : const Color(0xFFF8F9FA),
+      floatingActionButton: (esAlumno && !enHorizontal)
+          ? Obx(
+              () => controller.isListView.value
+                  ? const SizedBox.shrink()
+                  // `small`: la esquina inferior derecha es la franja de 9 a
+                  // 10 pm, donde sí hay clases; el botón chico tapa menos.
+                  : FloatingActionButton.small(
+                      key: agregarBloqueKey,
+                      tooltip: 'Agregar bloque',
+                      backgroundColor: colors.primary,
+                      foregroundColor: Colors.white,
+                      // Como el toque de un curso: el formulario no rota
+                      // (solo el horario puede), así que se fija en vertical
+                      // antes de abrirlo y se devuelve la rotación al volver.
+                      onPressed: () async {
+                        await SystemChrome.setPreferredOrientations(
+                          _portraitOnly,
+                        );
+                        await Get.toNamed<dynamic>('/bloque');
+                        await SystemChrome.setPreferredOrientations(
+                          _scheduleOrientations,
+                        );
+                      },
+                      child: const Icon(Icons.add),
+                    ),
+            )
+          : null,
       body: Obx(() {
         if (controller.isListView.value) {
           return HorarioListView();
