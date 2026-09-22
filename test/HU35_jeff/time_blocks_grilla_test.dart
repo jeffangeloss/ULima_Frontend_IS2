@@ -106,15 +106,32 @@ void main() {
       expect(reparto([tramo('14:00', '16:00'), tramo('14:00', '16:00')]), [(0, 2), (1, 2)]);
     });
 
-    test('la columna siempre cae dentro de la cuenta de columnas', () {
+    test('la columna cae dentro de la cuenta y dos que se cruzan no la comparten', () {
       // Invariante que la vista da por hecho al calcular el ancho: si
       // `columna >= columnas`, el bloque se dibujaría fuera de su día.
-      final slots = repartirEnColumnas([
+      final bloques = [
         tramo('07:00', '22:00'),
         tramo('08:00', '09:00'),
         tramo('08:30', '10:00'),
         tramo('12:00', '13:00'),
-      ]);
+      ];
+      final slots = repartirEnColumnas(bloques);
+      // Y dos bloques que se cruzan caen en el mismo racimo: columnas distintas
+      // y la misma cuenta. Es el corte contra `finDelRacimo` (punto 2 de «Tres
+      // cosas que parecen detalle», Tarea 3 del plan): si el racimo se cortara
+      // contra el fin del bloque anterior, 12-13 abriría racimo propio detrás
+      // de 8:30-10, saldría "0 de 1" y se dibujaría a ancho completo encima de
+      // 7-22.
+      for (var i = 0; i < slots.length; i++) {
+        for (var j = i + 1; j < slots.length; j++) {
+          if (bloques[i].inicio < bloques[j].fin && bloques[j].inicio < bloques[i].fin) {
+            expect(slots[i].columna, isNot(slots[j].columna),
+                reason: 'los bloques $i y $j se cruzan: no pueden compartir columna');
+            expect(slots[i].columnas, slots[j].columnas,
+                reason: 'los bloques $i y $j se cruzan: tienen que medir lo mismo');
+          }
+        }
+      }
       expect(slots, hasLength(4));
       for (final s in slots) {
         expect(s.columna, greaterThanOrEqualTo(0));
