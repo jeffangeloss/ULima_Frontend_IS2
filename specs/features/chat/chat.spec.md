@@ -24,8 +24,13 @@ targets:
 
 # Chat de sección
 
-> Estado: **diseñada con el dueño el 2026-09-23 y aprobada por él ese mismo día**, con los
-> puntos que la spec fija por su cuenta y el AppBar en blanco sobre `#FF6600` (ver «Decisiones»).
+> Estado: **diseñada con el dueño el 2026-09-23, aprobada por él ese mismo día e implementada el
+> 2026-09-23**, con los puntos que la spec fija por su cuenta y el AppBar en blanco sobre
+> `#FF6600` (ver «Decisiones»).
+> La fase 1 no se da todavía por terminada, porque RF-CHAT-5 lo condiciona a que las seis
+> etiquetas del footer del delegado se lean completas en un iPhone SE. La revisión manual que
+> pide «Verificación» sigue pendiente, y una medida local con una aproximación de la fuente del
+> iPhone anticipa que «Delegado» no cabe, así que el ajuste del footer queda en manos del dueño.
 > Cubre la fase 1 de los chats de curso. Documenta el chat que ya existe y que se conserva
 > (RF-CHAT-1 a RF-CHAT-4) y suma la pestaña Chats del alumno, su bandeja, el botón de la
 > ficha del curso, el rediseño de la conversación y el acceso del docente (RF-CHAT-5 a
@@ -38,8 +43,8 @@ targets:
 > fase 1 lo borra. Las pruebas de `test/HU23_jeff/` figuran porque la fase 1 las escribe o
 > las ajusta, y las dos de HU35 porque les quita una prueba a cada una («Pruebas existentes
 > que cambian»).
-> Los `[@test]` que apuntan a archivos que todavía no existen nombran la prueba que fija cada
-> requisito, y estas pruebas se escriben con la fase 1.
+> Cada `[@test]` apunta a un archivo que existe y que tiene al menos un caso del requisito que
+> lo enlaza.
 > Después de la aprobación, la revisión de la Tarea 2 suma tres aclaraciones que no cambian
 > ningún comportamiento aprobado. Son la base de las referencias por línea («Contexto»), el
 > toque del botón enviar deshabilitado (RF-CHAT-12 y «Pruebas existentes que cambian») y la
