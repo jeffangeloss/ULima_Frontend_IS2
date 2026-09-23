@@ -3,8 +3,9 @@
 // Piezas puras de la conversación de una sección (HU23), sin widgets ni
 // estado, para probarlas aparte:
 // - las iniciales del curso y su color (RF-CHAT-8);
-// - el día y la hora de un mensaje en hora de Lima y la etiqueta del día
-//   (RF-CHAT-11);
+// - el subtítulo del AppBar, «Sección N» o «Sin sección» (RF-CHAT-8);
+// - el día y la hora de un mensaje en hora de Lima, la etiqueta del día y si
+//   antes de un mensaje va un separador (RF-CHAT-11);
 // - si un mensaje abre grupo y si lleva el nombre del remitente (RF-CHAT-9).
 
 import 'package:flutter/material.dart';
@@ -77,6 +78,16 @@ Color colorDeIniciales(Color fondo) {
   final conBlanco = contrasteWcag(Colors.white, fondo);
   final conNegro = contrasteWcag(Colors.black, fondo);
   return conBlanco >= conNegro ? Colors.white : Colors.black;
+}
+
+// ── Subtítulo del AppBar (RF-CHAT-8) ────────────────────────────────────────
+
+/// Subtítulo del AppBar del chat: «Sección N» con el código recortado, o solo
+/// «Sin sección» si el código llega nulo, vacío o con solo espacios, como la
+/// fila de la bandeja.
+String etiquetaDeSeccion(String? codigo) {
+  final limpio = codigo?.trim() ?? '';
+  return limpio.isEmpty ? 'Sin sección' : 'Sección $limpio';
 }
 
 // ── Día y hora en Lima (RF-CHAT-11) ─────────────────────────────────────────
@@ -155,21 +166,26 @@ String etiquetaDeDia(DateTime diaLima, DateTime hoyLima) {
   return '${_dias[dia.weekday - 1]} ${dia.day} de ${_meses[dia.month - 1]}';
 }
 
-// ── Grupos de mensajes (RF-CHAT-9) ──────────────────────────────────────────
-
 bool _mismoDiaEnLima(DateTime a, DateTime b) {
   final la = enHoraDeLima(a);
   final lb = enHoraDeLima(b);
   return la.year == lb.year && la.month == lb.month && la.day == lb.day;
 }
 
+/// Si antes de [actual] va un separador de día: es el primero de la lista o
+/// el [anterior] es de otro día en hora de Lima. Una lápida cuenta como
+/// mensaje de su día.
+bool abreDia(ChatMessage actual, ChatMessage? anterior) =>
+    anterior == null || !_mismoDiaEnLima(anterior.createdAt, actual.createdAt);
+
+// ── Grupos de mensajes (RF-CHAT-9) ──────────────────────────────────────────
+
 /// Si [actual] abre grupo: es el primero de la lista, el [anterior] tiene
 /// otro `senderId`, es de otro día en hora de Lima o es una lápida. Vale igual
 /// para propios, ajenos y mensajes de carnet.
 bool abreGrupo(ChatMessage actual, ChatMessage? anterior) {
-  if (anterior == null) return true;
-  if (anterior.senderId != actual.senderId) return true;
-  if (!_mismoDiaEnLima(anterior.createdAt, actual.createdAt)) return true;
+  if (abreDia(actual, anterior)) return true;
+  if (anterior!.senderId != actual.senderId) return true;
   return anterior.deleted;
 }
 

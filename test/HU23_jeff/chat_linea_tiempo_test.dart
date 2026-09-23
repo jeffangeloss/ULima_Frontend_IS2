@@ -5,7 +5,9 @@
 // - RF-CHAT-11: el día y la hora de un mensaje salen en hora de Lima
 //   (UTC−5 todo el año), no en la zona del teléfono, y el separador dice
 //   «Hoy», «Ayer» o «Lunes 21 de septiembre».
+// - RF-CHAT-11: si antes de un mensaje va un separador de día.
 // - RF-CHAT-9: si un mensaje abre grupo y si lleva el nombre del remitente.
+// - RF-CHAT-8: el subtítulo del AppBar, «Sección N» o «Sin sección».
 // Archivo: lib/pages/chat/chat_linea_tiempo.dart.
 //
 // Todos los datos son inventados; el repo es público. Los remitentes son
@@ -206,6 +208,89 @@ void main() {
         expect(etiquetaDeDia(despues, hoyLima), 'Jueves 24 de septiembre');
       },
     );
+  });
+
+  group('UNITARIA · abreDia (RF-CHAT-11)', () {
+    test('el primero de la lista abre día', () {
+      final primero = _msg(
+        id: '1',
+        senderId: '7',
+        createdAt: DateTime.utc(2026, 9, 15, 15),
+      );
+
+      expect(abreDia(primero, null), isTrue);
+    });
+
+    test('otro día en Lima abre día aunque esté a minutos en UTC', () {
+      // 04:58 UTC del 15 es 23:58 del 14 en Lima; 05:02 UTC es 00:02 del 15.
+      final anterior = _msg(
+        id: '1',
+        senderId: '7',
+        createdAt: DateTime.utc(2026, 9, 15, 4, 58),
+      );
+      final actual = _msg(
+        id: '2',
+        senderId: '7',
+        createdAt: DateTime.utc(2026, 9, 15, 5, 2),
+      );
+
+      expect(abreDia(actual, anterior), isTrue);
+    });
+
+    test('el mismo día en Lima no abre día aunque en UTC cambie el día', () {
+      // 23:50 UTC del 14 y 00:10 UTC del 15 son 18:50 y 19:10 del 14 en Lima.
+      final anterior = _msg(
+        id: '1',
+        senderId: '7',
+        createdAt: DateTime.utc(2026, 9, 14, 23, 50),
+      );
+      final actual = _msg(
+        id: '2',
+        senderId: '8',
+        createdAt: DateTime.utc(2026, 9, 15, 0, 10),
+      );
+
+      expect(abreDia(actual, anterior), isFalse);
+    });
+
+    test('una lápida cuenta como mensaje de su día', () {
+      final lapida = _msg(
+        id: '1',
+        senderId: '7',
+        createdAt: DateTime.utc(2026, 9, 15, 15),
+        deleted: true,
+      );
+      final mismoDia = _msg(
+        id: '2',
+        senderId: '7',
+        createdAt: DateTime.utc(2026, 9, 15, 16),
+      );
+      final lapidaOtroDia = _msg(
+        id: '3',
+        senderId: '8',
+        createdAt: DateTime.utc(2026, 9, 16, 16),
+        deleted: true,
+      );
+
+      expect(abreDia(mismoDia, lapida), isFalse);
+      expect(abreDia(lapidaOtroDia, mismoDia), isTrue);
+    });
+  });
+
+  group('UNITARIA · etiquetaDeSeccion (RF-CHAT-8)', () {
+    test('con código dice «Sección N»', () {
+      expect(etiquetaDeSeccion('801'), 'Sección 801');
+    });
+
+    test('recorta los espacios del código', () {
+      expect(etiquetaDeSeccion('  802 '), 'Sección 802');
+    });
+
+    test('con código nulo, vacío o solo espacios dice solo «Sin sección»', () {
+      expect(etiquetaDeSeccion(null), 'Sin sección');
+      expect(etiquetaDeSeccion(''), 'Sin sección');
+      expect(etiquetaDeSeccion('   '), 'Sin sección');
+    });
   });
 
   group('UNITARIA · abreGrupo y llevaNombre (RF-CHAT-9)', () {

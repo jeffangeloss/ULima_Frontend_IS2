@@ -12,18 +12,33 @@
 //   cada uno con 4,5:1 para texto y 3:1 para ícono en los dos temas.
 // - El círculo del curso (CursoAvatar), el mismo widget para la bandeja y el
 //   AppBar.
+// - ChatPage en los dos temas: cada elemento de RF-CHAT-8 con su token (AppBar,
+//   fondo, burbujas, carnet, lápida, error del stream, estados, avisos y
+//   diálogo de borrado) y la etiqueta de rol de RF-CHAT-10 solo junto al
+//   nombre, sin fondo y con la burbuja del moderador igual a las demás.
+// - chat_page.dart sin hex sueltos ni colores fijos de Colors, salvo white,
+//   black y transparent.
 // Archivos: lib/pages/chat/chat_linea_tiempo.dart,
-// lib/pages/chat/curso_avatar.dart y lib/configs/themes.dart.
+// lib/pages/chat/curso_avatar.dart, lib/pages/chat/chat_page.dart y
+// lib/configs/themes.dart.
 //
 // Todos los datos son inventados; el repo es público. Los nombres de curso
 // son genéricos o «CURSO DE PRUEBA A».
 
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get/get.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:ulima_plus/configs/course_colors.dart';
 import 'package:ulima_plus/configs/themes.dart';
+import 'package:ulima_plus/models/message.dart';
 import 'package:ulima_plus/pages/chat/chat_linea_tiempo.dart';
 import 'package:ulima_plus/pages/chat/curso_avatar.dart';
+import 'package:ulima_plus/services/api_client.dart';
+
+import 'chat_repo_falso.dart';
 
 const _negro = Color(0xFF000000);
 const _blanco = Color(0xFFFFFFFF);
@@ -59,6 +74,112 @@ class _Par {
   final double? claro;
   final double? oscuro;
   final double minimo;
+}
+
+/// Color con que se pinta de verdad un texto o un ícono: el del `RichText`
+/// que construye, ya mezclado con el estilo heredado.
+Color? _colorPintado(WidgetTester tester, Finder texto) => tester
+    .widget<RichText>(
+      find.descendant(of: texto, matching: find.byType(RichText)).first,
+    )
+    .text
+    .style
+    ?.color;
+
+/// Decoración del `Container` decorado más cercano que envuelve a [hijo]: la
+/// burbuja, la lápida o la tarjeta del estado.
+BoxDecoration _cajaDe(WidgetTester tester, Finder hijo) =>
+    _contenedorDe(tester, hijo).decoration! as BoxDecoration;
+
+Container _contenedorDe(WidgetTester tester, Finder hijo) =>
+    tester.widget<Container>(
+      find
+          .ancestor(
+            of: hijo,
+            matching: find.byWidgetPredicate(
+              (w) => w is Container && w.decoration is BoxDecoration,
+            ),
+          )
+          .first,
+    );
+
+/// Un mensaje inventado con remitente, rol y fecha fijos.
+ChatMessage _mensaje(
+  String id,
+  String senderId,
+  String senderName,
+  String body, {
+  String role = 'student',
+  int minuto = 0,
+  bool deleted = false,
+}) => ChatMessage.fromMap(id, {
+  'senderId': senderId,
+  'senderName': senderName,
+  'senderRole': role,
+  'body': body,
+  'createdAt': DateTime.utc(2026, 9, 15, 15, minuto).millisecondsSinceEpoch,
+  if (deleted) 'deleted': true,
+  if (deleted) 'deletedBy': 'Docente De Prueba',
+});
+
+/// La conversación que ve el delegado (sesión '20230001'): dos mensajes del
+/// profesor seguidos, uno de un compañero, uno propio, un carnet ajeno, un
+/// carnet propio y una lápida, todos el mismo día.
+List<ChatMessage> _conversacion() => [
+  _mensaje(
+    '1',
+    '292',
+    'Docente De Prueba',
+    'Bienvenidos al curso',
+    role: 'teacher',
+  ),
+  _mensaje(
+    '2',
+    '292',
+    'Docente De Prueba',
+    'Recuerden la práctica',
+    role: 'teacher',
+    minuto: 1,
+  ),
+  _mensaje('3', '6', 'Compañero De Prueba', 'Hola a todos', minuto: 2),
+  _mensaje(
+    '4',
+    '20230001',
+    'Alumno De Prueba',
+    'Mensaje del delegado',
+    role: 'delegate',
+    minuto: 3,
+  ),
+  _mensaje(
+    '5',
+    '6',
+    'Compañero De Prueba',
+    '${ChatMessage.networkingBodyPrefix}6',
+    minuto: 4,
+  ),
+  _mensaje(
+    '6',
+    '20230001',
+    'Alumno De Prueba',
+    '${ChatMessage.networkingBodyPrefix}20230001',
+    role: 'delegate',
+    minuto: 5,
+  ),
+  _mensaje(
+    '7',
+    '6',
+    'Compañero De Prueba',
+    'texto borrado',
+    minuto: 6,
+    deleted: true,
+  ),
+];
+
+/// Pantalla alta para que la conversación entera quede construida.
+void _pantallaAlta(WidgetTester tester) {
+  tester.view.physicalSize = const Size(800, 2400);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
 }
 
 void main() {
@@ -465,5 +586,464 @@ void main() {
         findsNothing,
       );
     });
+  });
+
+  group('WIDGET · ChatPage con la identidad de la app (RF-CHAT-8)', () {
+    tearDown(Get.reset);
+
+    testWidgets('sin color usa el acento de la sección, o el del 0 si el id no '
+        'es un número', (tester) async {
+      final repo = ChatRepoFalso(session: sesionDelegado);
+      await tester.pumpWidget(chatEnApp(repo, sectionId: '5'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<CursoAvatar>(find.byType(CursoAvatar)).color,
+        courseAccentColor(5),
+      );
+
+      await tester.pumpWidget(chatEnApp(repo, sectionId: 'abc'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<CursoAvatar>(find.byType(CursoAvatar)).color,
+        courseAccentColor(0),
+      );
+    });
+
+    for (final b in Brightness.values) {
+      final tema = b == Brightness.light ? 'claro' : 'oscuro';
+      final candado = b == Brightness.light
+          ? MaterialTheme.primaryDark
+          : MaterialTheme.primaryColor;
+
+      testWidgets('el AppBar va en headerColor, con el círculo de 36 px y la '
+          'flecha, el título y el subtítulo en blanco, en $tema', (
+        tester,
+      ) async {
+        final rosa = kCoursePalette[4];
+        final repo = ChatRepoFalso(session: sesionDelegado);
+        await tester.pumpWidget(
+          chatEnApp(repo, brillo: b, sectionCode: '801', courseColor: rosa),
+        );
+        await tester.pumpAndSettle();
+
+        final appBar = find.byType(AppBar);
+        final lienzo = tester.widget<Material>(
+          find.descendant(of: appBar, matching: find.byType(Material)).first,
+        );
+        expect(lienzo.color, MaterialTheme.headerColor(b));
+        expect(lienzo.surfaceTintColor, anyOf(isNull, Colors.transparent));
+
+        final circulo = find.descendant(
+          of: appBar,
+          matching: find.byType(CursoAvatar),
+        );
+        expect(tester.getSize(circulo), const Size(36, 36));
+        expect(tester.widget<CursoAvatar>(circulo).color, rosa);
+
+        expect(_colorPintado(tester, find.byIcon(Icons.arrow_back)), _blanco);
+        expect(
+          _colorPintado(tester, find.text('INGENIERÍA DE SOFTWARE II')),
+          _blanco,
+        );
+        expect(_colorPintado(tester, find.text('Sección 801')), _blanco);
+      });
+
+      testWidgets('el fondo va en pageBg, la burbuja propia en chatOwnBubbleBg '
+          'y la ajena en cardBg con borde, en $tema', (tester) async {
+        _pantallaAlta(tester);
+        final repo = ChatRepoFalso(
+          session: sesionDelegado,
+          messages: _conversacion(),
+        );
+        await tester.pumpWidget(chatEnApp(repo, brillo: b));
+        await tester.pumpAndSettle();
+
+        expect(
+          tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor,
+          MaterialTheme.pageBg(b),
+        );
+
+        final propia = _cajaDe(tester, find.text('Mensaje del delegado'));
+        expect(propia.color, MaterialTheme.chatOwnBubbleBg(b));
+        expect(
+          _colorPintado(tester, find.text('Mensaje del delegado')),
+          MaterialTheme.textPrimary(b),
+        );
+
+        final ajena = _cajaDe(tester, find.text('Hola a todos'));
+        expect(ajena.color, MaterialTheme.cardBg(b));
+        expect(ajena.border, Border.all(color: MaterialTheme.borderColor(b)));
+        expect(
+          _colorPintado(tester, find.text('Hola a todos')),
+          MaterialTheme.textPrimary(b),
+        );
+      });
+
+      testWidgets(
+        'RF-CHAT-10: la etiqueta de rol sale solo junto al nombre, en '
+        'textSecondary, en negrita y sin fondo, en $tema',
+        (tester) async {
+          _pantallaAlta(tester);
+          final repo = ChatRepoFalso(
+            session: sesionDelegado,
+            messages: _conversacion(),
+          );
+          await tester.pumpWidget(chatEnApp(repo, brillo: b));
+          await tester.pumpAndSettle();
+
+          // Solo el primer mensaje del profesor lleva nombre y etiqueta; el
+          // segundo, del mismo día, no. El propio del delegado tampoco.
+          expect(find.text('Docente De Prueba'), findsOneWidget);
+          expect(find.text('Profesor'), findsOneWidget);
+          expect(find.text('Delegado'), findsNothing);
+          expect(find.text('Alumno De Prueba'), findsNothing);
+
+          final etiqueta = find.text('Profesor');
+          expect(
+            _colorPintado(tester, etiqueta),
+            MaterialTheme.textSecondary(b),
+          );
+          expect(
+            tester.widget<Text>(etiqueta).style!.fontWeight,
+            isIn([FontWeight.w700, FontWeight.w800, FontWeight.w900]),
+          );
+          expect(tester.widget<Text>(etiqueta).style!.backgroundColor, isNull);
+          // Ningún recuadro entre la etiqueta y la burbuja: el Container
+          // decorado más cercano a la etiqueta es la burbuja del mensaje.
+          expect(
+            _contenedorDe(tester, etiqueta),
+            same(_contenedorDe(tester, find.text('Bienvenidos al curso'))),
+          );
+
+          expect(
+            _colorPintado(tester, find.text('Docente De Prueba')),
+            MaterialTheme.textPrimary(b),
+          );
+        },
+      );
+
+      testWidgets('RF-CHAT-10: la burbuja del moderador es igual a la de otro '
+          'ajeno, en $tema', (tester) async {
+        _pantallaAlta(tester);
+        final repo = ChatRepoFalso(
+          session: sesionDelegado,
+          messages: _conversacion(),
+        );
+        await tester.pumpWidget(chatEnApp(repo, brillo: b));
+        await tester.pumpAndSettle();
+
+        final moderador = _cajaDe(tester, find.text('Bienvenidos al curso'));
+        final siguiente = _cajaDe(tester, find.text('Recuerden la práctica'));
+        final alumno = _cajaDe(tester, find.text('Hola a todos'));
+        for (final caja in [moderador, siguiente]) {
+          expect(caja.color, alumno.color);
+          expect(caja.border, alumno.border);
+          expect(caja.color, MaterialTheme.cardBg(b));
+        }
+      });
+
+      testWidgets('la burbuja de carnet sin borde naranja, con su recuadro en '
+          'primaryDark y la credencial en blanco, en $tema', (tester) async {
+        _pantallaAlta(tester);
+        final repo = ChatRepoFalso(
+          session: sesionDelegado,
+          messages: _conversacion(),
+        );
+        await tester.pumpWidget(chatEnApp(repo, brillo: b));
+        await tester.pumpAndSettle();
+
+        final textos = find.text('Envio su carnet de networking');
+        expect(textos, findsNWidgets(2));
+
+        // El ajeno lleva el fondo y el borde de las ajenas; el propio, el de
+        // las propias, sin borde.
+        final ajena = _cajaDe(tester, textos.at(0));
+        expect(ajena.color, MaterialTheme.cardBg(b));
+        expect(ajena.border, Border.all(color: MaterialTheme.borderColor(b)));
+        final propia = _cajaDe(tester, textos.at(1));
+        expect(propia.color, MaterialTheme.chatOwnBubbleBg(b));
+        expect(propia.border, isNull);
+
+        for (final texto in [textos.at(0), textos.at(1)]) {
+          expect(_colorPintado(tester, texto), MaterialTheme.textPrimary(b));
+        }
+
+        // Los recuadros de las dos burbujas, sin contar la barra.
+        final credenciales = find.descendant(
+          of: find.byType(ListView),
+          matching: find.byIcon(LucideIcons.idCard),
+        );
+        expect(credenciales, findsNWidgets(2));
+        for (var i = 0; i < 2; i++) {
+          expect(
+            _cajaDe(tester, credenciales.at(i)).color,
+            MaterialTheme.primaryDark,
+          );
+          expect(_colorPintado(tester, credenciales.at(i)), _blanco);
+        }
+      });
+
+      testWidgets('la lápida va en tagBg con borde y su texto y su ícono en '
+          'textSecondary, en $tema', (tester) async {
+        _pantallaAlta(tester);
+        final repo = ChatRepoFalso(
+          session: sesionDelegado,
+          messages: _conversacion(),
+        );
+        await tester.pumpWidget(chatEnApp(repo, brillo: b));
+        await tester.pumpAndSettle();
+
+        final texto = find.text('Mensaje eliminado por Docente De Prueba');
+        final lapida = _cajaDe(tester, texto);
+        expect(lapida.color, MaterialTheme.tagBg(b));
+        expect(lapida.border, Border.all(color: MaterialTheme.borderColor(b)));
+        expect(_colorPintado(tester, texto), MaterialTheme.textSecondary(b));
+        expect(
+          _colorPintado(tester, find.byIcon(Icons.do_not_disturb_on_outlined)),
+          MaterialTheme.textSecondary(b),
+        );
+      });
+
+      testWidgets('la hora y el separador de día van en textSecondary, en '
+          '$tema', (tester) async {
+        _pantallaAlta(tester);
+        final repo = ChatRepoFalso(
+          session: sesionDelegado,
+          messages: _conversacion(),
+        );
+        await tester.pumpWidget(chatEnApp(repo, brillo: b));
+        await tester.pumpAndSettle();
+
+        // 15:00 UTC del 15 de septiembre es 10:00 del martes 15 en Lima.
+        expect(
+          _colorPintado(tester, find.text('Martes 15 de septiembre')),
+          MaterialTheme.textSecondary(b),
+        );
+        expect(
+          _colorPintado(tester, find.text('10:00')),
+          MaterialTheme.textSecondary(b),
+        );
+      });
+
+      testWidgets('el error del stream va en textSecondary, en $tema', (
+        tester,
+      ) async {
+        final repo = ChatRepoFalso(
+          session: sesionDelegado,
+          streamError: Exception('sin permiso'),
+        );
+        await tester.pumpWidget(chatEnApp(repo, brillo: b));
+        await tester.pumpAndSettle();
+
+        final error = find.textContaining('Error: ');
+        expect(error, findsOneWidget);
+        expect(_colorPintado(tester, error), MaterialTheme.textSecondary(b));
+      });
+
+      testWidgets('el estado vacío va en cardBg con borde, el título en '
+          'textPrimary, el cuerpo en textSecondary y el candado naranja, en '
+          '$tema', (tester) async {
+        final repo = ChatRepoFalso(session: sesionDelegado);
+        await tester.pumpWidget(chatEnApp(repo, brillo: b));
+        await tester.pumpAndSettle();
+
+        final titulo = find.text('Chat privado de la sección');
+        final tarjeta = _cajaDe(tester, titulo);
+        expect(tarjeta.color, MaterialTheme.cardBg(b));
+        expect(tarjeta.border, Border.all(color: MaterialTheme.borderColor(b)));
+        expect(_colorPintado(tester, titulo), MaterialTheme.textPrimary(b));
+        expect(
+          _colorPintado(
+            tester,
+            find.textContaining('Solo los miembros de esta sección'),
+          ),
+          MaterialTheme.textSecondary(b),
+        );
+        expect(
+          _colorPintado(tester, find.byIcon(Icons.lock_outline_rounded)),
+          candado,
+        );
+      });
+
+      testWidgets('el estado no disponible va en cardBg con borde y su aviso, '
+          'en blanco sobre errorBg, en $tema', (tester) async {
+        final repo = ChatRepoFalso(error: Exception('403'));
+        await tester.pumpWidget(chatEnApp(repo, brillo: b));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        final titulo = find.text('No se pudo conectar al chat.');
+        final tarjeta = _cajaDe(tester, titulo);
+        expect(tarjeta.color, MaterialTheme.cardBg(b));
+        expect(tarjeta.border, Border.all(color: MaterialTheme.borderColor(b)));
+        expect(_colorPintado(tester, titulo), MaterialTheme.textPrimary(b));
+        expect(
+          _colorPintado(
+            tester,
+            find.text(
+              'Solo los miembros de esta sección pueden entrar al chat.',
+            ),
+          ),
+          MaterialTheme.textSecondary(b),
+        );
+        expect(_colorPintado(tester, find.byIcon(Icons.lock_clock)), candado);
+
+        final aviso = tester.widget<GetSnackBar>(find.byType(GetSnackBar));
+        expect(aviso.backgroundColor, MaterialTheme.errorBg(b));
+        expect((aviso.titleText! as Text).style!.color, _blanco);
+        expect((aviso.messageText! as Text).style!.color, _blanco);
+
+        Get.closeAllSnackbars();
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets('el aviso de envío fallido va en blanco sobre errorBg, en '
+          '$tema', (tester) async {
+        final repo = ChatRepoFalso(
+          session: sesionDelegado,
+          sendError: Exception('sin red'),
+        );
+        await tester.pumpWidget(chatEnApp(repo, brillo: b));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextField), 'Hola');
+        await tester.pump();
+        await tester.tap(find.byIcon(Icons.send));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        final aviso = tester.widget<GetSnackBar>(find.byType(GetSnackBar));
+        expect(
+          (aviso.messageText! as Text).data,
+          'No se pudo enviar el mensaje',
+        );
+        expect(aviso.backgroundColor, MaterialTheme.errorBg(b));
+        expect((aviso.messageText! as Text).style!.color, _blanco);
+
+        Get.closeAllSnackbars();
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets('un aviso que no es de error va en cardBg con borde y texto '
+          'en textPrimary, en $tema', (tester) async {
+        final repo = ChatRepoFalso(
+          session: sesionDelegado,
+          fetchCardError: ApiException(
+            statusCode: 403,
+            code: 'NETWORKING_CARD_HIDDEN',
+            message: 'Carnet oculto',
+          ),
+        );
+        await tester.pumpWidget(chatEnApp(repo, brillo: b));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byIcon(LucideIcons.idCard));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        final aviso = tester.widget<GetSnackBar>(find.byType(GetSnackBar));
+        expect(
+          (aviso.messageText! as Text).data,
+          'Activa "Mostrar mi carnet" antes de enviarlo.',
+        );
+        expect(aviso.backgroundColor, MaterialTheme.cardBg(b));
+        expect(aviso.borderColor, MaterialTheme.borderColor(b));
+        expect(
+          (aviso.titleText! as Text).style!.color,
+          MaterialTheme.textPrimary(b),
+        );
+        expect(
+          (aviso.messageText! as Text).style!.color,
+          MaterialTheme.textPrimary(b),
+        );
+
+        Get.closeAllSnackbars();
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets(
+        'el diálogo de borrado va en cardBg, con «Eliminar» en blanco '
+        'sobre errorBg, en $tema',
+        (tester) async {
+          _pantallaAlta(tester);
+          final repo = ChatRepoFalso(
+            session: sesionDocente,
+            messages: _conversacion(),
+          );
+          await tester.pumpWidget(chatEnApp(repo, brillo: b));
+          await tester.pumpAndSettle();
+
+          await tester.longPress(find.text('Hola a todos'));
+          await tester.pumpAndSettle();
+
+          final dialogo = find.byType(AlertDialog);
+          expect(dialogo, findsOneWidget);
+          final lienzo = tester.widget<Material>(
+            find.descendant(of: dialogo, matching: find.byType(Material)).first,
+          );
+          expect(lienzo.color, MaterialTheme.cardBg(b));
+          expect(lienzo.surfaceTintColor, anyOf(isNull, Colors.transparent));
+
+          expect(
+            _colorPintado(tester, find.text('¿Eliminar mensaje?')),
+            MaterialTheme.textPrimary(b),
+          );
+          expect(
+            _colorPintado(
+              tester,
+              find.textContaining('Esta acción no se puede'),
+            ),
+            MaterialTheme.textPrimary(b),
+          );
+          expect(
+            _colorPintado(tester, find.text('Cancelar')),
+            MaterialTheme.textPrimary(b),
+          );
+
+          final eliminar = find.text('Eliminar');
+          expect(_colorPintado(tester, eliminar), _blanco);
+          final boton = tester.widget<Material>(
+            find.ancestor(of: eliminar, matching: find.byType(Material)).first,
+          );
+          expect(boton.color, MaterialTheme.errorBg(b));
+        },
+      );
+    }
+  });
+
+  group('UNITARIA · colores con nombre en chat_page.dart (RF-CHAT-8)', () {
+    // Solo cuenta el código: los comentarios pueden nombrar colores viejos.
+    final codigo = File(
+      'lib/pages/chat/chat_page.dart',
+    ).readAsStringSync().replaceAll(RegExp(r'//[^\n]*'), '');
+
+    test('no construye colores: ni Color(0x…) ni Color.fromARGB y afines', () {
+      expect(RegExp(r'\bColor\s*\(').allMatches(codigo), isEmpty);
+      expect(RegExp(r'\bColor\.\w+\s*\(').allMatches(codigo), isEmpty);
+    });
+
+    test('de Colors solo usa white, black y transparent', () {
+      final usados = RegExp(
+        r'\bColors\.(\w+)',
+      ).allMatches(codigo).map((m) => m.group(1)).toSet();
+
+      expect(usados, isNotEmpty);
+      expect(usados.difference({'white', 'black', 'transparent'}), isEmpty);
+    });
+
+    test(
+      'Colors.white va pleno y Colors.black con opacidad, solo en sombras',
+      () {
+        expect(RegExp(r'Colors\.white\s*\.').allMatches(codigo), isEmpty);
+        final negros = RegExp(r'Colors\.black\s*\.').allMatches(codigo);
+        for (final negro in negros) {
+          final antes = codigo.substring(
+            (negro.start - 120).clamp(0, codigo.length),
+            negro.start,
+          );
+          expect(antes, contains('BoxShadow('));
+        }
+      },
+    );
   });
 }
