@@ -8,6 +8,7 @@ import '../descripcion_cursos/descrip_cursos.dart';
 import '../teacher/at_risk_students_page.dart';
 import '../time_blocks/time_block_actions_sheet.dart';
 import '../time_blocks/time_block_form_controller.dart';
+import '../time_blocks/time_block_list_controller.dart';
 import 'horario_controller.dart';
 import 'horario_layout.dart';
 import 'horario_list_view.dart';
@@ -25,6 +26,10 @@ class HorarioPage extends StatelessWidget {
 
   /// Botón para agregar un bloque propio (RF-BLQ-1). Solo lo ve el alumno.
   static const Key agregarBloqueKey = Key('horario-agregar-bloque');
+
+  /// Botón que abre la lista «Mis bloques» (RF-BLQ-8), junto al de agregar y
+  /// con sus mismas condiciones.
+  static const Key misBloquesKey = Key('horario-mis-bloques');
 
   /// La línea "Tus bloques: N h esta semana" de las vistas de día y semanal.
   static const Key horasSemanaKey = Key('horario-horas-semana');
@@ -1079,7 +1084,8 @@ class HorarioPage extends StatelessWidget {
     // RF-BLQ-1: agregar un bloque propio es solo del alumno; el horario del
     // docente es el de sus clases y asesorías. En horizontal la grilla semanal
     // ocupa toda la pantalla y el botón la taparía; en la lista de chats no
-    // hay grilla a la que agregar nada.
+    // hay grilla a la que agregar nada. El botón de «Mis bloques» (RF-BLQ-8)
+    // va encima, con las mismas condiciones.
     final esAlumno = !(AuthService.to.currentUser?.isTeacher ?? false);
     final enHorizontal =
         MediaQuery.of(context).orientation == Orientation.landscape;
@@ -1092,32 +1098,70 @@ class HorarioPage extends StatelessWidget {
           ? Obx(
               () => controller.isListView.value
                   ? const SizedBox.shrink()
-                  // `small`: la esquina inferior derecha es la franja de 9 a
-                  // 10 pm, donde sí hay clases; el botón chico tapa menos.
-                  : FloatingActionButton.small(
-                      key: agregarBloqueKey,
-                      tooltip: 'Agregar bloque',
-                      backgroundColor: colors.primary,
-                      foregroundColor: Colors.white,
-                      // Como el toque de un curso: el formulario no rota
-                      // (solo el horario puede), así que se fija en vertical
-                      // antes de abrirlo y se devuelve la rotación al volver.
-                      onPressed: () async {
-                        // get 4.7.3 borra el controller del formulario recién
-                        // al terminar la animación de salida, y antes de eso
-                        // el binding le daría a /bloque el viejo.
-                        if (Get.isRegistered<TimeBlockFormController>()) {
-                          return;
-                        }
-                        await SystemChrome.setPreferredOrientations(
-                          _portraitOnly,
-                        );
-                        await Get.toNamed<dynamic>('/bloque');
-                        await SystemChrome.setPreferredOrientations(
-                          _scheduleOrientations,
-                        );
-                      },
-                      child: const Icon(Icons.add),
+                  : Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        FloatingActionButton.small(
+                          key: misBloquesKey,
+                          // La etiqueta accesible, como la de agregar.
+                          tooltip: 'Mis bloques',
+                          // Sin Hero: dos botones flotantes con la etiqueta
+                          // de Hero por omisión en la misma pantalla hacen
+                          // fallar la transición a cualquier otra ruta.
+                          heroTag: null,
+                          backgroundColor: colors.surface,
+                          foregroundColor: colors.primary,
+                          onPressed: () async {
+                            // La misma guarda que el de agregar: mientras la
+                            // lista anterior termina de cerrarse, el binding
+                            // le daría a la nueva su controller, y al
+                            // terminar la salida GetX lo borraría.
+                            if (Get.isRegistered<TimeBlockListController>()) {
+                              return;
+                            }
+                            await SystemChrome.setPreferredOrientations(
+                              _portraitOnly,
+                            );
+                            await Get.toNamed<dynamic>('/mis-bloques');
+                            await SystemChrome.setPreferredOrientations(
+                              _scheduleOrientations,
+                            );
+                          },
+                          child: const Icon(Icons.list_alt),
+                        ),
+                        const SizedBox(height: 12),
+                        // `small`: la esquina inferior derecha es la franja de
+                        // 9 a 10 pm, donde sí hay clases; el botón chico tapa
+                        // menos.
+                        FloatingActionButton.small(
+                          key: agregarBloqueKey,
+                          tooltip: 'Agregar bloque',
+                          backgroundColor: colors.primary,
+                          foregroundColor: Colors.white,
+                          // Como el toque de un curso: el formulario no rota
+                          // (solo el horario puede), así que se fija en
+                          // vertical antes de abrirlo y se devuelve la
+                          // rotación al volver.
+                          onPressed: () async {
+                            // get 4.7.3 borra el controller del formulario
+                            // recién al terminar la animación de salida, y
+                            // antes de eso el binding le daría a /bloque el
+                            // viejo.
+                            if (Get.isRegistered<TimeBlockFormController>()) {
+                              return;
+                            }
+                            await SystemChrome.setPreferredOrientations(
+                              _portraitOnly,
+                            );
+                            await Get.toNamed<dynamic>('/bloque');
+                            await SystemChrome.setPreferredOrientations(
+                              _scheduleOrientations,
+                            );
+                          },
+                          child: const Icon(Icons.add),
+                        ),
+                      ],
                     ),
             )
           : null,

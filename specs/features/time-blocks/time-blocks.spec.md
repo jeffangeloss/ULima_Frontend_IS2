@@ -1,8 +1,11 @@
 ---
 name: Time Blocks
-description: Bloques de horario propios del alumno en la pantalla de horario — crearlos, editarlos, corregir un día suelto, verlos junto a las clases y sumar sus horas semanales
+description: Bloques de horario propios del alumno en la pantalla de horario — crearlos, editarlos, corregir un día suelto, verlos junto a las clases, sumar sus horas semanales y verlos todos en la lista Mis bloques
 targets:
   - ../../../lib/pages/time_blocks/**
+  - ../../../lib/pages/time_blocks/time_block_list_page.dart
+  - ../../../lib/pages/time_blocks/time_block_list_controller.dart
+  - ../../../lib/pages/time_blocks/time_block_list_binding.dart
   - ../../../lib/services/time_blocks_service.dart
   - ../../../lib/models/time_block_model.dart
   - ../../../lib/pages/horario/horario.dart
@@ -34,6 +37,8 @@ targets:
 - Como alumno, quiero registrar mis prácticas en mi horario para ver mi semana completa.
 - Como alumno, quiero corregir una semana suelta sin deshacer el patrón.
 - Como alumno, quiero saber cuántas horas a la semana me llevan mis bloques.
+- Como alumno, quiero ver todos mis bloques guardados, también los que la grilla no pinta,
+  para editarlos o borrarlos.
 
 ## Requisitos
 
@@ -217,6 +222,48 @@ trae `isoDate`, la ventana es la de las cuatro semanas alrededor de hoy.
 
 `[@test] ../../../test/HU35_jeff/time_blocks_service_test.dart`
 `[@test] ../../../test/HU35_jeff/time_blocks_grilla_test.dart`
+
+### RF-BLQ-8 — Mis bloques
+
+La grilla solo pinta los días reales de un bloque dentro de la ventana del ciclo. Un bloque
+vencido, uno fuera de esa ventana o uno sin ningún día real entre sus fechas (el de martes
+y sábado del miércoles 23 al miércoles 23) no se ve en ella, y sin verlo no se puede editar
+ni borrar. La lista «Mis bloques» los muestra todos.
+
+- **El botón.** Uno pequeño junto al botón de agregar del horario (RF-BLQ-1), con las
+  mismas condiciones: solo para alumnos, y ni en horizontal ni en la lista de chats. Su
+  etiqueta accesible es «Mis bloques». Abre la pantalla en una ruta nueva, `/mis-bloques`,
+  con binding por ruta. Como el formulario, la pantalla se abre fijada en vertical y, al
+  volver, el horario recupera su rotación.
+- **La lista.** Todos los bloques guardados de la alumna, los de `TimeBlocksService.blocks`
+  (`GET /time-blocks/me`), sin recortarlos a la ventana del horario. Primero van los
+  vigentes y después los que ya terminaron, cada grupo ordenado por fecha de inicio (a
+  igual inicio, primero el que termina antes). Cada fila muestra el color del bloque, su
+  nombre, sus días (Lu, Ma, Mi, Ju, Vi, Sá, Do), sus horas en `HH:MM`, como el formulario
+  y la hoja de RF-BLQ-5 («Lu, Mi · 14:00 a 18:00»), y sus fechas en dd/mm/aaaa («Del
+  01/09/2026 al 15/12/2026»).
+- **Lo que avisa una fila.** Si ninguno de los días marcados cae entre sus fechas, la fila
+  dice «Ningún día marcado cae entre sus fechas». Lo decide la misma función pura que
+  valida el formulario (RF-BLQ-2). Si su fecha de fin ya pasó en hora de Lima, dice
+  «Terminó». Un bloque que termina hoy sigue vigente. Si se cumplen las dos cosas, la fila
+  muestra los dos avisos.
+- **Tocar una fila** abre una hoja con dos acciones. «Editar el bloque» abre el formulario
+  de RF-BLQ-2 con la regla, igual que la hoja de RF-BLQ-5. «Borrar el bloque» pide la misma
+  confirmación que en RF-BLQ-5. Las dos acciones usan el mismo código que esa hoja.
+- **Estados.** Si todavía no hay ningún bloque y hay una carga en curso, o todavía no ha
+  llegado ninguna (el horario pide los bloques después de sus días), un indicador. Si la
+  última carga falló, «No se pudieron cargar tus bloques.» y un botón «Reintentar» que
+  vuelve a pedir la ventana vigente (`reload()`), aunque queden bloques de antes: pueden
+  estar viejos, porque borrar uno no lo quita de la lista hasta que la recarga llega. Si la
+  carga terminó y no hay ninguno, «Todavía no tienes bloques propios.».
+- Al volver de editar o de borrar, la lista y la grilla ya muestran el cambio. El service
+  recarga después de cada escritura (RF-BLQ-7) y las dos pantallas leen de él.
+
+Textos nuevos: «Mis bloques» (la etiqueta del botón y el título de la pantalla), «Ningún
+día marcado cae entre sus fechas», «Terminó», «Del dd/mm/aaaa al dd/mm/aaaa», «No se
+pudieron cargar tus bloques.», «Reintentar» y «Todavía no tienes bloques propios.».
+
+`[@test] ../../../test/HU35_jeff/time_blocks_lista_test.dart`
 
 ## Contrato que se consume
 
