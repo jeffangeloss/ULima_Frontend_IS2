@@ -27,6 +27,7 @@ targets:
 > (`isoDate`), días cancelados visibles, línea de horas oculta en 0 y tope de 20 bloques
 > guardados.
 > Ajustada el 2026-09-22 en RF-BLQ-6, que ahora oculta la línea de horas también cuando el total redondeado a un decimal da 0; el dueño aprobó ese ajuste el 2026-09-23.
+> Ajustada el 2026-09-23 con el arreglo del bloque sin días reales y la lista Mis bloques, aprobado por el dueño ese día.
 
 ## User Stories
 
@@ -63,8 +64,20 @@ fin**, **desde** y **hasta**.
   `flutter_localizations` y esta funcionalidad no agrega dependencias.
 - La validación vive en funciones puras que devuelven `String?` en español, como
   `lib/pages/teacher/advising_validators.dart`: nombre entre 1 y 60 caracteres, al menos un
-  día, hora de fin posterior a la de inicio, las dos dentro de **7 am–10 pm**, y fecha de
-  fin no anterior a la de inicio.
+  día, hora de fin posterior a la de inicio, las dos dentro de **7 am–10 pm**, fecha de
+  fin no anterior a la de inicio, y **al menos una fecha del rango que caiga en uno de los
+  días marcados**. Un bloque de martes y sábado que va del miércoles 23 al miércoles 23 no
+  tiene ningún día real: el servidor no genera ninguna ocurrencia y la grilla no pinta
+  nada. El mensaje es «Entre esas fechas no cae ninguno de los días que marcaste.», idéntico
+  al del servidor (RS-BE-31). Si faltan las fechas o están invertidas, esta regla no suma
+  nada: ya hay otro mensaje para eso.
+- **Dónde abren los selectores de fecha al crear.** «Desde» abre en hoy. «Hasta» abre en
+  el último día del ciclo visible —el último `isoDate` no nulo de los días que manda
+  `GET /schedule/me/sessions`, el mismo extremo de la ventana de RF-BLQ-7— cuando ese día
+  no es anterior a «Desde». Si no hay ciclo con fechas (el horario no está montado o ningún
+  día trae `isoDate`) o ese día es anterior a «Desde», abre en «Desde» (o en hoy, si
+  «Desde» sigue vacío) más 6 días. Aceptar los dos selectores sin moverlos ya no deja
+  desde = hasta. Solo cambia dónde abre el selector: los campos no se prellenan.
 - El mismo formulario sirve para crear y para editar; al editar trae los valores actuales.
 
 El servidor vuelve a validar todo: el mensaje que se muestra ante un error del servidor es
@@ -86,6 +99,16 @@ El aviso es del formulario. Cambiar la hora de un solo día (RF-BLQ-5) no lo mue
 La detección es una función pura, probada aparte: dos rangos de hora en el mismo día de la
 semana se cruzan si uno empieza antes de que el otro termine. Tocarse en el borde (una
 termina 18:00 y la otra empieza 18:00) **no** es cruce.
+
+**Solo avisa de cruces que pueden pasar en una fecha real.** Contra otro bloque propio,
+avisa solo si existe al menos una fecha común a los dos rangos cuyo día de la semana está
+en los dos bloques y en la que las horas se cruzan; que los rangos se solapen no basta (un
+bloque de lunes que va del miércoles 23 al domingo 27 no tiene ningún lunes, así que no se
+cruza con otro de lunes que va del lunes 21 a fin de octubre, aunque los rangos se
+solapen). Un bloque guardado sin ningún día real en su rango no produce ningún aviso.
+Contra una clase, que no trae fechas, avisa solo por los días de la semana que tienen al
+menos una fecha real dentro del rango del bloque nuevo. Si falta un rango, se toma como
+abierto y el aviso prefiere avisar de más que callar un cruce real.
 
 `[@test] ../../../test/HU35_jeff/time_blocks_conflicto_test.dart`
 `[@test] ../../../test/HU35_jeff/time_blocks_form_test.dart`
