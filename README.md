@@ -167,7 +167,7 @@ return GetMaterialApp(
 | `initialRoute` | calculado en `main()` | Ver diagrama abajo. |
 | `getPages` | 15 rutas nombradas | `lib/main.dart:105-211`. |
 
-**Orientaciones.** `main.dart` fija `portraitUp` y cinco puntos del código lo amplían o lo restauran. `_scheduleOrientations` y `_mallaMapOrientations` son la misma lista `[portraitUp, landscapeLeft, landscapeRight]`, y solo la aplican el shell cuando la pestaña activa es "Horario" ([`lib/pages/home/home_page.dart`](lib/pages/home/home_page.dart)`:24-31`), la campana del header al volver de las alertas, la vista de horario y la malla clásica en modo mapa. Cada una vuelve a vertical en su `dispose()`.
+**Orientaciones.** `main.dart` fija `portraitUp`, y cinco archivos amplían la rotación o la restauran. `_scheduleOrientations` y `_mallaMapOrientations` son la misma lista `[portraitUp, landscapeLeft, landscapeRight]`. Solo dos pantallas la aplican por sí mismas, el shell mientras la pestaña activa es "Horario" ([`lib/pages/home/home_page.dart`](lib/pages/home/home_page.dart)`:24-31` y `:56-60`) y la malla clásica en modo mapa (`malla_page.dart:32-51`). Las dos vuelven a vertical en su `dispose()`, y el shell también al cambiar de pestaña. La campana del header fuerza vertical antes de abrir las alertas y, al volver, devuelve la rotación del horario si la pestaña activa es Horario (`app_header.dart:100-109`). El horario hace lo mismo al abrir la ficha del curso, «Mis bloques», el formulario de un bloque nuevo y, para el docente, la lista de alumnos impedidos y en riesgo (`horario.dart:678-687`, `:1132-1138`, `:1163-1169` y `:1604-1617`). La hoja de acciones de un bloque repite el patrón al abrir su edición (`time_block_actions_sheet.dart:217-221`).
 
 > ⚠️ **Solo Android, iOS y Web arrancan.** `firebase_options.dart:27-45` lanza `UnsupportedError` para macOS, Windows y Linux, y `Firebase.initializeApp` está en el paso 3 de `main()`. Los directorios `macos/`, `windows/` y `linux/` existen en el repo pero la app moriría en el arranque en esas tres plataformas.
 
@@ -801,10 +801,11 @@ Desde la fase 1 de los chats de curso, el header ya no lleva el ícono de lista 
 > `PortalSyncStatus.desconocido` y el banner simplemente no aparece.
 
 **Orientación.** La app arranca bloqueada en vertical (`main.dart:50-52`). El único lugar donde se permite
-landscape dentro del shell es el tab Horario (`_scheduleOrientations`, `home_page.dart:24-31,51-55`); en
-landscape se ocultan header, banner y footer (`home_page.dart:99-134`). Fuera del shell, solo
+landscape dentro del shell es el tab Horario (`_scheduleOrientations`, `home_page.dart:24-31,56-60`); en
+landscape se ocultan header, banner y footer (`home_page.dart:109-144`). Fuera del shell, solo
 `/malla-clasica` rota (`malla_page.dart:32-51`). Toda navegación que sale del horario fuerza vertical y
-restaura al volver (`app_header.dart:100-109`, `horario.dart:678-687`, `horario.dart:1604-1615`).
+restaura la rotación al volver (`app_header.dart:100-109`, `horario.dart:678-687`, `:1132-1138`,
+`:1163-1169` y `:1604-1617`, y `time_block_actions_sheet.dart:217-221`).
 
 ---
 
@@ -3233,17 +3234,21 @@ Ambos son artefactos **generados**: editar a mano `android/app/src/main/res/mipm
 
 | Pantalla | Orientaciones | Por qué |
 |:---|:---|:---|
-| Tab **Horario** (`home_page.dart:24-31, 51-55`) | `portraitUp`, `landscapeLeft`, `landscapeRight` | Rejilla de 7 → 22 h con 85 px por hora (`horario.dart:20-22`): en vertical los bloques de un día completo no caben legibles |
+| Tab **Horario** (`home_page.dart:24-31, 56-60`) | `portraitUp`, `landscapeLeft`, `landscapeRight` | Rejilla de 7 → 22 h con 85 px por hora (`horario.dart:20-22`): en vertical los bloques de un día completo no caben legibles |
 | **Malla clásica** `/malla-clasica` (`malla_page.dart:32-38`) | idénticas (`_mallaMapOrientations`) | Lienzo 2D con conectores de prerrequisito y zoom `[0.5, 1.6]`: es un mapa, y un mapa se lee ancho |
 
 Las dos constantes, `_scheduleOrientations` y `_mallaMapOrientations`, son literalmente la misma
 lista. La disciplina está en el retorno: **toda navegación que sale de esas pantallas fuerza
-vertical y la restaura al volver** — la campana del header (`app_header.dart:100-109`), la ida y
-vuelta a `DescripCursosPage` (`horario.dart:678-687`) y el `dispose()` de la malla clásica. Sin eso, una pantalla
-de detalle heredaría el landscape y quedaría desmaquetada.
+vertical y la restaura al volver**. Lo hacen la campana del header (`app_header.dart:100-109`) y
+el horario, en la ida y vuelta a `DescripCursosPage`, a «Mis bloques», al formulario de un bloque
+nuevo y a `AtRiskStudentsPage` desde la hoja de clase del docente (`horario.dart:678-687`,
+`:1132-1138`, `:1163-1169` y `:1604-1617`). La hoja de acciones de un bloque hace lo mismo al abrir
+su edición (`time_block_actions_sheet.dart:217-221`), y la malla clásica vuelve a vertical en su
+`dispose()`. Sin esta disciplina, una pantalla de detalle heredaría el landscape y quedaría
+desmaquetada.
 
 Cuando el horario entra en landscape, header y footer se ocultan para devolver alto útil
-(`home_page.dart:107, 128-134`).
+(`home_page.dart:117, 138-144`).
 
 **Daltonismo.** En la malla, **color, ícono y texto van siempre juntos**; el comentario que lo
 exige está en `lib/pages/malla/malla_list_page.dart:1157`. El `_StatusBadge` combina fondo
@@ -3408,9 +3413,10 @@ cuando la app tiene que reaccionar a ellas.
 
 ### Matriz de trazabilidad
 
-Las 15 features del frontend son exactamente las 15 carpetas de `specs/features/`. La columna
-**Estado** contrasta lo que declara [`docs/specs/feature-index.md`](docs/specs/feature-index.md)
-con lo que hay en el árbol.
+La tabla cubre 16 de las 19 carpetas de `specs/features/`, una por fila. Las otras tres,
+`registro/`, `academic-record/` y `time-blocks/`, no tienen fila aquí y figuran en las filas 16 a
+18 de [`docs/specs/feature-index.md`](docs/specs/feature-index.md). La columna **Estado** contrasta
+lo que declara el índice con lo que hay en el árbol.
 
 | Feature | Spec | Historias | Pantallas | Services | Pruebas | Estado |
 |:---|:---|:---|:---|:---|:---|:---|
