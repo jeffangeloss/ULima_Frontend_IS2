@@ -1,14 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../components/skeleton.dart';
+import '../../configs/course_colors.dart';
 import '../../configs/themes.dart';
 import '../../models/advising_models.dart';
+import '../../services/chat_repository.dart';
 import '../chat/chat_page.dart';
 import 'teacher_sections_controller.dart';
 
 class TeacherSectionsPage extends StatelessWidget {
-  const TeacherSectionsPage({super.key});
+  const TeacherSectionsPage({super.key, this.chatRepository});
+
+  /// Repositorio inyectable para tests, que se le pasa a cada `ChatPage` que
+  /// abre una tarjeta. En producción es null y `ChatPage` usa el repositorio
+  /// real.
+  final ChatRepositoryContract? chatRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -63,6 +71,7 @@ class TeacherSectionsPage extends StatelessWidget {
                     child: _SectionCard(
                       section: sections[index],
                       brightness: brightness,
+                      chatRepository: chatRepository,
                     ),
                   ),
                 ),
@@ -123,88 +132,135 @@ class _Header extends StatelessWidget {
   }
 }
 
+/// Tarjeta de una sección, que abre su chat (RF-CHAT-13). La tarjeta entera
+/// es un botón con la etiqueta `Abrir el chat de <curso>`, como la fila de la
+/// bandeja del alumno.
 class _SectionCard extends StatelessWidget {
-  const _SectionCard({required this.section, required this.brightness});
+  const _SectionCard({
+    required this.section,
+    required this.brightness,
+    this.chatRepository,
+  });
 
   final TeacherSectionOption section;
   final Brightness brightness;
+  final ChatRepositoryContract? chatRepository;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => Get.to(
-        () => ChatPage(
-          sectionId: section.sectionId.toString(),
-          courseName: section.courseName,
-        ),
-      ),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: MaterialTheme.cardBg(brightness),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: MaterialTheme.borderColor(brightness)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: MaterialTheme.espPrincipalBg(brightness),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.school_outlined,
-                color: MaterialTheme.primaryDark,
-                size: 21,
-              ),
+    final forma = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+      side: BorderSide(color: MaterialTheme.borderColor(brightness)),
+    );
+    // Un ícono pide 3:1 contra la tarjeta. El naranja de marca da 2,94:1 sobre
+    // el blanco, así que en claro va el naranja oscuro (4,12:1); en oscuro, el
+    // de marca da 5,65:1.
+    final naranja = brightness == Brightness.light
+        ? MaterialTheme.primaryDark
+        : MaterialTheme.primaryColor;
+
+    // El Material lleva el color y la forma de la tarjeta para que el ripple
+    // del InkWell se vea, ya que un Container decorado encima lo taparía. El
+    // lector de pantalla lee solo «Abrir el chat de <curso>», como en la
+    // bandeja del alumno, con la acción de toque del InkWell.
+    return Semantics(
+      container: true,
+      button: true,
+      label: 'Abrir el chat de ${section.courseName}',
+      child: Material(
+        color: MaterialTheme.cardBg(brightness),
+        shape: forma,
+        child: InkWell(
+          customBorder: forma,
+          onTap: () => Get.to<void>(
+            () => ChatPage(
+              sectionId: section.sectionId.toString(),
+              courseName: section.courseName,
+              sectionCode: section.sectionCode,
+              // El mismo acento que usa Calificar para esta sección.
+              courseColor: courseAccentColor(section.sectionId),
+              repository: chatRepository,
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          ),
+          child: ExcludeSemantics(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
                 children: [
-                  Text(
-                    section.courseName,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: MaterialTheme.textPrimary(brightness),
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: MaterialTheme.espPrincipalBg(brightness),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.school_outlined,
+                      color: MaterialTheme.primaryDark,
+                      size: 21,
                     ),
                   ),
-                  const SizedBox(height: 5),
-                  Text(
-                    section.sectionCode,
-                    style: const TextStyle(
-                      color: MaterialTheme.primaryColor,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          section.courseName,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: MaterialTheme.textPrimary(brightness),
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          section.sectionCode,
+                          style: const TextStyle(
+                            color: MaterialTheme.primaryColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
                     ),
+                  ),
+                  const SizedBox(width: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      _Badge(
+                        text: section.rol,
+                        color: MaterialTheme.textMuted(brightness),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            LucideIcons.messagesSquare,
+                            size: 20,
+                            color: naranja,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Chat',
+                            style: TextStyle(
+                              color: MaterialTheme.textSecondary(brightness),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                _Badge(
-                  text: section.rol,
-                  color: MaterialTheme.textMuted(brightness),
-                ),
-                const SizedBox(height: 10),
-                Icon(
-                  Icons.forum_outlined,
-                  size: 20,
-                  color: MaterialTheme.primaryColor,
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );

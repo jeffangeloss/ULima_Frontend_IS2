@@ -676,7 +676,14 @@ class HorarioPage extends StatelessWidget {
             }
           } else if (idSeccion.isNotEmpty) {
             await SystemChrome.setPreferredOrientations(_portraitOnly);
-            await Get.to(() => DescripCursosPage(idSeccion: idSeccion));
+            // La ficha recibe el color del curso para su chat, el mismo de la
+            // bandeja (RF-CHAT-7). Sin él, ChatPage usa su respaldo.
+            await Get.to(
+              () => DescripCursosPage(
+                idSeccion: idSeccion,
+                courseColor: controller.colorPorCurso[idSeccion],
+              ),
+            );
             await SystemChrome.setPreferredOrientations(_scheduleOrientations);
           }
         },
