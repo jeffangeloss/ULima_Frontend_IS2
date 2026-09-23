@@ -194,6 +194,20 @@ Widget _app() => GetMaterialApp(
       ],
     );
 
+/// Lo mínimo de /bloque para las pruebas del botón del horario. Resuelve el
+/// controller en su `build`, como `TimeBlockFormPage`: así el binding REAL lo
+/// crea y GetX lo ata a la ruta, y al cerrarla lo borra como en la app. Dice
+/// "FORMULARIO" si abre para crear, que es lo que pide el botón.
+class _FormularioDePrueba extends StatelessWidget {
+  const _FormularioDePrueba();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = Get.find<TimeBlockFormController>();
+    return Scaffold(body: Text(c.editando ? 'EDITANDO' : 'FORMULARIO'));
+  }
+}
+
 /// Pantalla de un iPhone SE en vertical (375 x 667). La superficie por defecto
 /// de las pruebas es 800 x 600, o sea HORIZONTAL, y ahí el horario esconde el
 /// botón de agregar: una prueba de "el docente no lo ve" pasaría por la razón
@@ -668,7 +682,8 @@ void main() {
           getPages: [
             GetPage(
               name: '/bloque',
-              page: () => const Scaffold(body: Text('FORMULARIO')),
+              page: () => const _FormularioDePrueba(),
+              binding: TimeBlockFormBinding(),
             ),
           ],
         );
@@ -710,6 +725,8 @@ void main() {
       expect(_orientaciones, [
         ['DeviceOrientation.portraitUp'],
       ]);
+      // El binding de la ruta creó el controller del formulario.
+      expect(Get.isRegistered<TimeBlockFormController>(), isTrue);
 
       Get.back<dynamic>();
       await tester.pump();
@@ -720,6 +737,10 @@ void main() {
         'DeviceOrientation.landscapeLeft',
         'DeviceOrientation.landscapeRight',
       ]);
+      // La premisa de la guarda del botón: terminada la salida, GetX ya borró
+      // el controller. Si una versión de get lo dejara vivo, el botón quedaría
+      // inerte para siempre.
+      expect(Get.isRegistered<TimeBlockFormController>(), isFalse);
 
       // get 4.7.3 borra el controller del formulario recién al terminar la
       // animación de salida. Un toque en esa ventana no reabre /bloque, porque
