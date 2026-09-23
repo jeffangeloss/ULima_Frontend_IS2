@@ -135,11 +135,11 @@ void main() {
       'senderId': '6',
       'body': 'texto original',
       'deleted': true,
-      'deletedBy': 'Quintana Cruz, Hernan',
+      'deletedBy': 'Docente De Prueba',
       'deletedByRole': 'teacher',
     });
     expect(m.deleted, isTrue);
-    expect(m.deletedBy, 'Quintana Cruz, Hernan');
+    expect(m.deletedBy, 'Docente De Prueba');
     expect(m.deletedByRole, 'teacher');
   });
 
