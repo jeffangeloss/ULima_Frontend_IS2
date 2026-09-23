@@ -20,6 +20,7 @@ import '../../services/attendance_risk_service.dart';
 import '../../models/contacto_model.dart';
 import '../../models/time_block_model.dart';
 import '../../configs/course_colors.dart';
+import '../../configs/themes.dart';
 
 class HorarioPage extends StatelessWidget {
   const HorarioPage({super.key});
@@ -1111,7 +1112,13 @@ class HorarioPage extends StatelessWidget {
                           // fallar la transición a cualquier otra ruta.
                           heroTag: null,
                           backgroundColor: colors.surface,
-                          foregroundColor: colors.primary,
+                          // Un ícono pide 3:1 contra el botón (WCAG). En
+                          // claro el naranja de marca da 2,89:1 sobre
+                          // #FEFDFC y el naranja oscuro del tema, 4,05:1; en
+                          // oscuro el de marca ya da 5,65:1 sobre #1E1E24.
+                          foregroundColor: isDark
+                              ? colors.primary
+                              : MaterialTheme.primaryDark,
                           onPressed: () async {
                             // La misma guarda que el de agregar: mientras la
                             // lista anterior termina de cerrarse, el binding

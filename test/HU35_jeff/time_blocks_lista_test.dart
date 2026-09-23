@@ -16,6 +16,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
+import 'package:ulima_plus/configs/themes.dart';
 import 'package:ulima_plus/main.dart';
 import 'package:ulima_plus/models/time_block_model.dart';
 import 'package:ulima_plus/models/user_model.dart';
@@ -251,9 +252,35 @@ void _telefonoVertical(WidgetTester tester) {
   addTearDown(tester.view.reset);
 }
 
+/// El tema real de la app, claro u oscuro (`main.dart` usa los dos).
+ThemeData _temaDeLaApp(Brightness brillo) {
+  const tema = MaterialTheme(TextTheme());
+  return brillo == Brightness.light ? tema.light() : tema.dark();
+}
+
+/// Contraste de WCAG 2.x entre dos colores opacos: (L1 + 0,05) / (L2 + 0,05),
+/// con L1 la luminancia relativa del más claro.
+double _contraste(Color a, Color b) {
+  final la = a.computeLuminance();
+  final lb = b.computeLuminance();
+  return la > lb ? (la + 0.05) / (lb + 0.05) : (lb + 0.05) / (la + 0.05);
+}
+
+/// El color con que se pinta de verdad lo que encuentra [finder]: el de su
+/// `RichText`, que ya mezcla el estilo propio con el que hereda.
+Color _colorPintado(WidgetTester tester, Finder finder) => tester
+    .widget<RichText>(
+      find.descendant(of: finder, matching: find.byType(RichText)).first,
+    )
+    .text
+    .style!
+    .color!;
+
 /// App mínima: una pantalla de partida, la ruta /mis-bloques con su binding
-/// REAL y la ruta /bloque, que anota el argumento con que se abrió.
-Widget _app() => GetMaterialApp(
+/// REAL y la ruta /bloque, que anota el argumento con que se abrió. Sin
+/// [tema], el de Flutter por omisión.
+Widget _app({ThemeData? tema}) => GetMaterialApp(
+      theme: tema,
       initialRoute: '/inicio',
       getPages: [
         GetPage(
@@ -283,6 +310,7 @@ Future<_FakeTimeBlocksService> _abrirLista(
   bool cargado = true,
   bool cargando = false,
   bool conError = false,
+  ThemeData? tema,
 }) async {
   _telefonoVertical(tester);
   final service = _FakeTimeBlocksService(bloques: bloques, cargado: cargado);
@@ -294,7 +322,7 @@ Future<_FakeTimeBlocksService> _abrirLista(
   Get.put<TimeBlockListController>(
     TimeBlockListController(ahora: () => _ahora),
   );
-  await tester.pumpWidget(_app());
+  await tester.pumpWidget(_app(tema: tema));
   await tester.pumpAndSettle();
   Get.toNamed<dynamic>('/mis-bloques');
   // Sin pumpAndSettle: el indicador de carga gira sin fin.
@@ -537,6 +565,36 @@ void main() {
       expect(_enLaFila(13, TimeBlockListPage.sinDiasReales), findsOneWidget);
     });
 
+    // Los avisos van en 12 px w700, que para WCAG no es texto grande: piden
+    // 4,5:1 contra el fondo de la fila, en los dos temas de la app.
+    for (final brillo in Brightness.values) {
+      testWidgets(
+          'los avisos de la fila llegan a 4,5:1 contra su fondo '
+          '(tema ${brillo == Brightness.light ? 'claro' : 'oscuro'})',
+          (tester) async {
+        await _abrirLista(tester, tema: _temaDeLaApp(brillo));
+
+        for (final (id, aviso) in const [
+          (11, TimeBlockListPage.sinDiasReales),
+          (5, TimeBlockListPage.terminado),
+        ]) {
+          await tester.ensureVisible(_fila(id));
+          final fondo = tester.widget<ListTile>(_fila(id)).tileColor!;
+          expect(fondo, MaterialTheme.cardBg(brillo), reason: aviso);
+          final color = _colorPintado(tester, _enLaFila(id, aviso));
+          // Opacos los dos: con transparencia, el contraste dependería de lo
+          // que haya debajo.
+          expect(fondo.a, 1.0, reason: aviso);
+          expect(color.a, 1.0, reason: aviso);
+          expect(
+            _contraste(color, fondo),
+            greaterThanOrEqualTo(4.5),
+            reason: '$aviso: $color sobre $fondo',
+          );
+        }
+      });
+    }
+
     testWidgets(
         'tocar una fila ofrece editar y borrar el bloque, nada de un día '
         'suelto', (tester) async {
@@ -597,22 +655,31 @@ void main() {
     });
 
     testWidgets(
-        '«Borrar el bloque» pide la misma confirmación, y «Cancelar» no borra',
-        (tester) async {
+        '«Borrar el bloque» pide confirmación sin «no solo este», y '
+        '«Cancelar» no borra', (tester) async {
       final service = await _abrirLista(tester);
 
       await _tocarFila(tester, 7);
       await tester.tap(find.text(TimeBlockActionsSheet.borrar));
       await tester.pumpAndSettle();
 
+      // El mismo diálogo que la hoja de un día, con su título y sus botones.
       expect(
         find.byKey(TimeBlockActionsSheet.confirmarBorradoKey),
         findsOneWidget,
       );
       expect(find.text(TimeBlockActionsSheet.borrarTitulo), findsOneWidget);
+      // Pero desde la lista no se tocó ningún día: «no solo este» no tendría
+      // a qué referirse.
       expect(
-        find.text(TimeBlockActionsSheet.borrarCuerpo('Prácticas de prueba')),
+        find.text('Se borra "Prácticas de prueba" con todos sus días.'),
         findsOneWidget,
+      );
+      expect(find.textContaining('no solo este'), findsNothing);
+      // La hoja de un día sigue diciéndolo: ahí sí se tocó un día.
+      expect(
+        TimeBlockActionsSheet.borrarCuerpo('Prácticas de prueba'),
+        'Se borra "Prácticas de prueba" con todos sus días, no solo este.',
       );
 
       await tester.tap(find.text(TimeBlockActionsSheet.cancelarLabel));
@@ -775,7 +842,8 @@ void main() {
   });
 
   group('WIDGET · botón «Mis bloques» en el horario (RF-BLQ-8)', () {
-    Widget horario() => GetMaterialApp(
+    Widget horario({ThemeData? tema}) => GetMaterialApp(
+          theme: tema,
           home: const HorarioPage(),
           getPages: [
             GetPage(
@@ -870,6 +938,40 @@ void main() {
 
       await _desmontarHorario(tester);
     });
+
+    // Un ícono es un componente para WCAG: pide 3:1 contra el botón. En claro
+    // va en el naranja oscuro del tema; en oscuro sigue el naranja de marca.
+    for (final (brillo, icono) in const [
+      (Brightness.light, MaterialTheme.primaryDark),
+      (Brightness.dark, MaterialTheme.primaryColor),
+    ]) {
+      testWidgets(
+          'su ícono llega a 3:1 contra el botón '
+          '(tema ${brillo == Brightness.light ? 'claro' : 'oscuro'})',
+          (tester) async {
+        _telefonoVertical(tester);
+        Get.put<AuthService>(_FakeAuthService(_alumna()));
+        await tester.pumpWidget(horario(tema: _temaDeLaApp(brillo)));
+        await tester.pump();
+
+        final boton = find.byKey(HorarioPage.misBloquesKey);
+        final fondo = tester
+            .widget<Material>(
+              find.descendant(of: boton, matching: find.byType(Material)).first,
+            )
+            .color!;
+        final color = _colorPintado(tester, boton);
+        expect(fondo.a, 1.0);
+        expect(
+          _contraste(color, fondo),
+          greaterThanOrEqualTo(3.0),
+          reason: '$color sobre $fondo',
+        );
+        expect(color, icono);
+
+        await _desmontarHorario(tester);
+      });
+    }
 
     testWidgets('un docente no lo ve', (tester) async {
       // En vertical, donde la alumna sí lo ve: la única diferencia es el rol.

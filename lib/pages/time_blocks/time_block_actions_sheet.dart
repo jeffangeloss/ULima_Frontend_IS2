@@ -224,7 +224,11 @@ Future<void> editarBloque(
 
 /// Pide confirmación y, si la alumna confirma, borra el bloque [id] con todos
 /// sus días. La usan esta hoja y la lista «Mis bloques» (RF-BLQ-8), así que
-/// las dos piden la misma confirmación.
+/// las dos piden la confirmación con el mismo título y los mismos botones.
+///
+/// El cuerpo es [TimeBlockActionsSheet.borrarCuerpo], que habla del día
+/// tocado («no solo este»), salvo que llegue [cuerpo]: la lista pasa el suyo,
+/// porque ahí no se tocó ningún día.
 ///
 /// Recibe [navigator] y [messenger] y no un contexto: quien la llama los toma
 /// antes de su primer `await`, porque su contexto puede no sobrevivir a la
@@ -234,6 +238,7 @@ Future<void> borrarBloque(
   ScaffoldMessengerState messenger, {
   required int id,
   required String titulo,
+  String? cuerpo,
 }) async {
   if (!navigator.mounted) return;
   final confirmar = await showDialog<bool>(
@@ -241,7 +246,7 @@ Future<void> borrarBloque(
     builder: (ctx) => AlertDialog(
       key: TimeBlockActionsSheet.confirmarBorradoKey,
       title: const Text(TimeBlockActionsSheet.borrarTitulo),
-      content: Text(TimeBlockActionsSheet.borrarCuerpo(titulo)),
+      content: Text(cuerpo ?? TimeBlockActionsSheet.borrarCuerpo(titulo)),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(ctx).pop(false),

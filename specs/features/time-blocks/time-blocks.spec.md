@@ -31,6 +31,7 @@ targets:
 > guardados.
 > Ajustada el 2026-09-22 en RF-BLQ-6, que ahora oculta la línea de horas también cuando el total redondeado a un decimal da 0; el dueño aprobó ese ajuste el 2026-09-23.
 > Ajustada el 2026-09-23 con el arreglo del bloque sin días reales y la lista Mis bloques, aprobado por el dueño ese día.
+> Ajustada el 2026-09-23 en RF-BLQ-8 con los retoques de la revisión visual, que cambian el cuerpo de la confirmación de borrado desde la lista y fijan el contraste de sus avisos y del botón.
 
 ## User Stories
 
@@ -234,7 +235,8 @@ ni borrar. La lista «Mis bloques» los muestra todos.
   mismas condiciones: solo para alumnos, y ni en horizontal ni en la lista de chats. Su
   etiqueta accesible es «Mis bloques». Abre la pantalla en una ruta nueva, `/mis-bloques`,
   con binding por ruta. Como el formulario, la pantalla se abre fijada en vertical y, al
-  volver, el horario recupera su rotación.
+  volver, el horario recupera su rotación. Su ícono llega a un contraste de al menos 3:1 con
+  el fondo del botón en los dos temas de la app, lo que WCAG 2.x pide a un componente.
 - **La lista.** Todos los bloques guardados de la alumna, los de `TimeBlocksService.blocks`
   (`GET /time-blocks/me`), sin recortarlos a la ventana del horario. Primero van los
   vigentes y después los que ya terminaron, cada grupo ordenado por fecha de inicio (a
@@ -246,10 +248,15 @@ ni borrar. La lista «Mis bloques» los muestra todos.
   dice «Ningún día marcado cae entre sus fechas». Lo decide la misma función pura que
   valida el formulario (RF-BLQ-2). Si su fecha de fin ya pasó en hora de Lima, dice
   «Terminó». Un bloque que termina hoy sigue vigente. Si se cumplen las dos cosas, la fila
-  muestra los dos avisos.
+  muestra los dos avisos. Los avisos van en 12 px, que para WCAG 2.x no es texto grande, así
+  que llegan a un contraste de al menos 4,5:1 con el fondo de la fila en los dos temas de
+  la app.
 - **Tocar una fila** abre una hoja con dos acciones. «Editar el bloque» abre el formulario
-  de RF-BLQ-2 con la regla, igual que la hoja de RF-BLQ-5. «Borrar el bloque» pide la misma
-  confirmación que en RF-BLQ-5. Las dos acciones usan el mismo código que esa hoja.
+  de RF-BLQ-2 con la regla, igual que la hoja de RF-BLQ-5. «Borrar el bloque» pide
+  confirmación con el mismo título y los mismos botones que en RF-BLQ-5, pero su cuerpo es
+  «Se borra "<nombre>" con todos sus días.», sin el «no solo este» de la hoja de un día,
+  porque desde la lista no se tocó ningún día. Las dos acciones usan el mismo código que esa
+  hoja.
 - **Estados.** Si todavía no hay ningún bloque y hay una carga en curso, o todavía no ha
   llegado ninguna (el horario pide los bloques después de sus días), un indicador. Si la
   última carga falló, «No se pudieron cargar tus bloques.» y un botón «Reintentar» que
@@ -261,7 +268,8 @@ ni borrar. La lista «Mis bloques» los muestra todos.
 
 Textos nuevos: «Mis bloques» (la etiqueta del botón y el título de la pantalla), «Ningún
 día marcado cae entre sus fechas», «Terminó», «Del dd/mm/aaaa al dd/mm/aaaa», «No se
-pudieron cargar tus bloques.», «Reintentar» y «Todavía no tienes bloques propios.».
+pudieron cargar tus bloques.», «Reintentar», «Todavía no tienes bloques propios.» y «Se
+borra "<nombre>" con todos sus días.».
 
 `[@test] ../../../test/HU35_jeff/time_blocks_lista_test.dart`
 

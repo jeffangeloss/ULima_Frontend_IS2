@@ -3,7 +3,8 @@
 // con su color, nombre, días, horas y fechas, y los avisos de la fila: si ya
 // terminó o si ninguno de sus días marcados cae entre sus fechas. Tocar una
 // fila ofrece editar o borrar el bloque, con el mismo código que la hoja de
-// RF-BLQ-5 (editarBloque y borrarBloque, time_block_actions_sheet.dart).
+// RF-BLQ-5 (editarBloque y borrarBloque, time_block_actions_sheet.dart). Solo
+// cambia el cuerpo de la confirmación de borrado: aquí no se tocó ningún día.
 //
 // Ningún widget lee JSON ni habla HTTP: todo sale de TimeBlockListController,
 // que lee TimeBlocksService.
@@ -29,6 +30,27 @@ class TimeBlockListPage extends GetView<TimeBlockListController> {
   static const String terminado = 'Terminó';
   static const String sinDiasReales =
       'Ningún día marcado cae entre sus fechas';
+
+  /// El cuerpo de la confirmación de borrado desde la lista. El de la hoja de
+  /// un día ([TimeBlockActionsSheet.borrarCuerpo]) termina en «no solo este»,
+  /// y aquí no se tocó ningún día al que eso se refiera.
+  static String borrarCuerpo(String titulo) =>
+      'Se borra "$titulo" con todos sus días.';
+
+  /// El color del aviso «Terminó»: el texto atenuado del tema. `textMuted`
+  /// no alcanza en oscuro (#787890 da 3,86:1 sobre la fila), y este llega a
+  /// 7,58:1 en claro (#475569 sobre #FFFFFF) y 4,80:1 en oscuro (#8888A0
+  /// sobre #1E1E24). Los avisos van en 12 px w700 y piden 4,5:1.
+  static Color colorTerminado(Brightness b) => MaterialTheme.textDimmed(b);
+
+  /// El color del aviso «Ningún día marcado cae entre sus fechas». El naranja
+  /// oscuro del tema (#D45500) da 4,12:1 sobre la fila blanca y 4,03:1 sobre
+  /// la oscura, así que en claro va uno más oscuro (#B34700, 5,50:1) y en
+  /// oscuro el naranja claro que el tema oscuro usa como `secondary`
+  /// (#FF8C42, 7,17:1 sobre #1E1E24).
+  static Color colorSinDiasReales(Brightness b) => b == Brightness.light
+      ? const Color(0xFFB34700)
+      : MaterialTheme.darkScheme().secondary;
 
   /// Key de la fila de un bloque, por su id.
   static Key filaKey(int id) => ValueKey<String>('mis-bloques-fila-$id');
@@ -150,6 +172,7 @@ class TimeBlockListPage extends GetView<TimeBlockListController> {
         messenger,
         id: regla.id,
         titulo: regla.title,
+        cuerpo: TimeBlockListPage.borrarCuerpo(regla.title),
       );
     }
   }
@@ -222,18 +245,18 @@ class _FilaDeBloque extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: MaterialTheme.textMuted(b),
+                  color: TimeBlockListPage.colorTerminado(b),
                 ),
               ),
             ],
             if (sinDiasReales) ...[
               const SizedBox(height: 6),
-              const Text(
+              Text(
                 TimeBlockListPage.sinDiasReales,
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: MaterialTheme.primaryDark,
+                  color: TimeBlockListPage.colorSinDiasReales(b),
                 ),
               ),
             ],
