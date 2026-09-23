@@ -52,8 +52,13 @@ const List<String> _nombresDeDiaSinTilde = <String>[
   'domingo',
 ];
 
-/// Nombre del día del horario → 1..7, o null si no es un día conocido.
-int? _diaANumero(String nombre) {
+/// Nombre del día del horario → 1 (lunes) a 7 (domingo), o null si no es un
+/// día conocido. Tolera "Miercoles" y "Sabado" sin tilde.
+///
+/// La usan el aviso de cruce y la grilla de los bloques propios
+/// (`HorarioController`): con una sola función, los dos leen igual qué día
+/// nombra un texto.
+int? numeroDeDia(String nombre) {
   final limpio = nombre
       .trim()
       .toLowerCase()
@@ -192,7 +197,7 @@ List<Cruce> crucesDeBloque({
     final curso = (seccion['curso'] as String? ?? '').trim();
     for (final crudo in horarios) {
       if (crudo is! Map) continue;
-      final dia = _diaANumero(crudo['dia'] as String? ?? '');
+      final dia = numeroDeDia(crudo['dia'] as String? ?? '');
       if (dia == null || !dias.contains(dia)) continue;
       final desdeMin = horaAMinutos(crudo['hora_inicio'] as String? ?? '');
       final hastaMin = horaAMinutos(crudo['hora_fin'] as String? ?? '');

@@ -8,6 +8,7 @@ import '../../models/time_block_model.dart';
 import '../../services/api_client.dart';
 import '../../services/auth_service.dart';
 import '../../services/time_blocks_service.dart';
+import '../time_blocks/time_block_conflicts.dart' show numeroDeDia;
 
 class DaySchedule {
   final String dayName;
@@ -42,11 +43,7 @@ String? _fechaIsoONull(Object? valor) {
   if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(valor)) return null;
   final fecha = DateTime.tryParse('${valor}T00:00:00Z');
   if (fecha == null) return null;
-  final vuelta =
-      '${fecha.year.toString().padLeft(4, '0')}-'
-      '${fecha.month.toString().padLeft(2, '0')}-'
-      '${fecha.day.toString().padLeft(2, '0')}';
-  return vuelta == valor ? valor : null;
+  return HorarioController._fechaPlana(fecha) == valor ? valor : null;
 }
 
 class HorarioController extends GetxController {
@@ -484,7 +481,7 @@ class HorarioController extends GetxController {
     // El ciclo sin semanas llega con siete días. Más días sin isoDate vienen
     // de un backend sin RS-BE-36, así que no hay fecha y el bloque se omite.
     if (daysList.length > 7) return null;
-    final numero = _numeroDeDia(dia.dayName);
+    final numero = numeroDeDia(dia.dayName);
     if (numero == null) return null;
     return _lunesDeEstaSemana().add(Duration(days: numero - 1));
   }
@@ -584,32 +581,6 @@ class HorarioController extends GetxController {
       '${d.year.toString().padLeft(4, '0')}-'
       '${d.month.toString().padLeft(2, '0')}-'
       '${d.day.toString().padLeft(2, '0')}';
-
-  /// Nombre de un día del horario → 1 (lunes) a 7 (domingo), o null. Tolera
-  /// "Miercoles" y "Sabado" sin tilde, como `_weekDays` de la vista. Es una
-  /// copia corta a propósito: la de `time_block_conflicts.dart` es privada de
-  /// ese archivo.
-  static int? _numeroDeDia(String nombre) {
-    final limpio = nombre
-        .trim()
-        .toLowerCase()
-        .replaceAll('á', 'a')
-        .replaceAll('é', 'e')
-        .replaceAll('í', 'i')
-        .replaceAll('ó', 'o')
-        .replaceAll('ú', 'u');
-    const dias = <String>[
-      'lunes',
-      'martes',
-      'miercoles',
-      'jueves',
-      'viernes',
-      'sabado',
-      'domingo',
-    ];
-    final i = dias.indexOf(limpio);
-    return i < 0 ? null : i + 1;
-  }
 
   /// Las horas que los bloques propios ocupan en la semana del día activo
   /// —la de lunes a domingo que lo contiene—, o null si la línea de RF-BLQ-6
