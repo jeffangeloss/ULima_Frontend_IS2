@@ -138,6 +138,14 @@ String horaDeMensaje(DateTime createdAt) {
 ///
 /// Las dos fechas son campos de pared de Lima (ver [enHoraDeLima]); solo
 /// cuentan su año, su mes y su día, así que la hora no importa.
+///
+/// Un [diaLima] posterior a [hoyLima] también da el día completo. Pasa
+/// cuando el reloj del teléfono va atrasado frente al `createdAt` del
+/// servidor cerca de la medianoche de Lima. RF-CHAT-11 reserva «Hoy» para la
+/// fecha actual en Lima, y un «Hoy» ahí dejaría el mensaje bajo un día que no
+/// es el suyo, además de repetir «Hoy» en el separador de los mensajes del
+/// día anterior. `syncedAgoLabel` sí lleva ese caso a «hoy», porque da una
+/// sola etiqueta relativa y no una serie de separadores.
 String etiquetaDeDia(DateTime diaLima, DateTime hoyLima) {
   final dia = DateTime.utc(diaLima.year, diaLima.month, diaLima.day);
   final hoy = DateTime.utc(hoyLima.year, hoyLima.month, hoyLima.day);

@@ -176,6 +176,36 @@ void main() {
         'Ayer',
       );
     });
+
+    test('un día posterior a hoy dice el día completo, no «Hoy»', () {
+      // El reloj del teléfono va atrasado: para él son las 23:58 del 23 y el
+      // servidor ya fechó un mensaje a las 00:01 del 24.
+      expect(
+        etiquetaDeDia(
+          DateTime.utc(2026, 9, 24, 0, 1),
+          DateTime.utc(2026, 9, 23, 23, 58),
+        ),
+        'Jueves 24 de septiembre',
+      );
+      expect(
+        etiquetaDeDia(DateTime.utc(2026, 9, 25, 9), hoy),
+        'Viernes 25 de septiembre',
+      );
+    });
+
+    test(
+      'con el reloj atrasado, dos días seguidos no quedan bajo dos «Hoy»',
+      () {
+        // Instantes reales: 04:58 UTC del 24 es 23:58 del 23 en Lima (el reloj
+        // del teléfono), 04:50 UTC es 23:50 del 23 y 05:01 UTC es 00:01 del 24.
+        final hoyLima = enHoraDeLima(DateTime.utc(2026, 9, 24, 4, 58));
+        final antes = enHoraDeLima(DateTime.utc(2026, 9, 24, 4, 50));
+        final despues = enHoraDeLima(DateTime.utc(2026, 9, 24, 5, 1));
+
+        expect(etiquetaDeDia(antes, hoyLima), 'Hoy');
+        expect(etiquetaDeDia(despues, hoyLima), 'Jueves 24 de septiembre');
+      },
+    );
   });
 
   group('UNITARIA · abreGrupo y llevaNombre (RF-CHAT-9)', () {
