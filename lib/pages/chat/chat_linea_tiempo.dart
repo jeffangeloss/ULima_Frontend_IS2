@@ -83,6 +83,15 @@ Color colorDeIniciales(Color fondo) {
 
 /// Lima está en UTC−5 todo el año, sin horario de verano, como `_nowInLima`
 /// del horario.
+///
+/// Esta cuenta y las listas de días y meses de abajo repiten a propósito lo
+/// que ya hacen `_nowInLima` (horario_controller.dart), `fechaEnLima`
+/// (time_block_list_controller.dart), `syncedAgoLabel`
+/// (academic_record_controller.dart) y `resumenDelDia`
+/// (time_block_actions_sheet.dart). RF-CHAT-11 pide listas propias y los
+/// `targets` de la spec del chat no incluyen esos archivos, así que juntarlos
+/// en un helper común de fecha en Lima queda para un cambio con su propia
+/// spec.
 const Duration _desfaseLima = Duration(hours: 5);
 
 const List<String> _dias = [
