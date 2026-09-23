@@ -32,6 +32,7 @@ targets:
 > Ajustada el 2026-09-22 en RF-BLQ-6, que ahora oculta la línea de horas también cuando el total redondeado a un decimal da 0; el dueño aprobó ese ajuste el 2026-09-23.
 > Ajustada el 2026-09-23 con el arreglo del bloque sin días reales y la lista Mis bloques, aprobado por el dueño ese día.
 > Ajustada el 2026-09-23 en RF-BLQ-8 con los retoques de la revisión visual, que cambian el cuerpo de la confirmación de borrado desde la lista y fijan el contraste de sus avisos y del botón.
+> Ajustada el 2026-09-23 en RF-BLQ-8 por la spec del chat de sección (`specs/features/chat/chat.spec.md`), que saca del horario la lista de chats. El botón de «Mis bloques» ya no tiene esa condición, y las pruebas «en la lista de chats no aparece» salen con ella. Pendiente de la aprobación del dueño de esa spec.
 
 ## User Stories
 
@@ -232,7 +233,8 @@ y sábado del miércoles 23 al miércoles 23) no se ve en ella, y sin verlo no s
 ni borrar. La lista «Mis bloques» los muestra todos.
 
 - **El botón.** Uno pequeño junto al botón de agregar del horario (RF-BLQ-1), con las
-  mismas condiciones: solo para alumnos, y ni en horizontal ni en la lista de chats. Su
+  mismas condiciones: solo para alumnos y nunca en horizontal (la lista de chats, que
+  también lo ocultaba, sale del horario con `specs/features/chat/chat.spec.md`). Su
   etiqueta accesible es «Mis bloques». Abre la pantalla en una ruta nueva, `/mis-bloques`,
   con binding por ruta. Como el formulario, la pantalla se abre fijada en vertical y, al
   volver, el horario recupera su rotación. Su ícono llega a un contraste de al menos 3:1 con
