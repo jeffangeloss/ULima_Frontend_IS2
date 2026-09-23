@@ -762,6 +762,29 @@ void main() {
     });
 
     testWidgets(
+        'elegir otra acción quita el "Deshacer" de la cancelación anterior',
+        (tester) async {
+      // El miércoles 23 estaba movido: se cancela y después se devuelve al
+      // patrón, que sale bien y no muestra aviso propio. Un «Deshacer» que
+      // siguiera en pantalla volvería a moverlo y desharía la última
+      // elección de la alumna.
+      final service = await _abrirHoja(tester, ocurrencia: _miercoles23Movido);
+      await _tocar(tester, TimeBlockActionsSheet.cancelarDia);
+      expect(find.text(TimeBlockActionsSheet.deshacer), findsOneWidget);
+
+      await tester.tap(find.text('ABRIR'));
+      await tester.pumpAndSettle();
+      await _tocar(tester, TimeBlockActionsSheet.volverAlPatron);
+
+      expect(find.text(TimeBlockActionsSheet.deshacer), findsNothing);
+      expect(find.text(TimeBlockActionsSheet.diaCancelado), findsNothing);
+      expect(service.llamadas, [
+        'setException 7 2026-09-23 cancelled null null',
+        'clearException 7 2026-09-23',
+      ]);
+    });
+
+    testWidgets(
         'cambiar la hora usa los pickers del formulario y los mismos validadores',
         (tester) async {
       tester.platformDispatcher.alwaysUse24HourFormatTestValue = true;

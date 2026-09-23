@@ -107,6 +107,10 @@ Future<void> mostrarAccionesDeBloque(
     ),
   );
   if (accion == null) return;
+  // Otra acción deja viejo el «Deshacer» de una cancelación anterior: si la
+  // alumna devolvió al patrón un día movido y después lo tocara, el día
+  // volvería a moverse y la app desharía su última elección.
+  messenger.hideCurrentSnackBar();
 
   final id = ocurrencia.blockId;
   final fecha = ocurrencia.date;
