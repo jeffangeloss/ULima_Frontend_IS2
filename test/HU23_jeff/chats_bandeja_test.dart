@@ -10,6 +10,9 @@
 // - La fila entera abre ChatPage con el curso, el código y el color, es un
 //   botón «Abrir el chat de <curso>» de al menos 48 px y lleva el ripple de un
 //   InkWell dentro de un Material con la forma de la tarjeta.
+// - Esa tarjeta es TarjetaDeChat, la misma de Secciones del docente
+//   (RF-CHAT-13), que reúne en un solo widget la etiqueta, el Material, el
+//   InkWell con su forma y el relleno de 16 px.
 // - Los colores de la fila en los dos temas, con las cifras de contraste de la
 //   spec.
 // - Los estados: indicador mientras no termina la primera carga de secciones
@@ -875,6 +878,102 @@ void main() {
           reason: nombre,
         );
         expect(kCoursePalette, contains(avatar.color), reason: nombre);
+      }
+
+      semantica.dispose();
+      await _desmontar(tester);
+    });
+  });
+
+  group('WIDGET · TarjetaDeChat, la tarjeta que comparten la bandeja y el '
+      'docente (RF-CHAT-6 y RF-CHAT-13)', () {
+    for (final brillo in Brightness.values) {
+      final tema = brillo == Brightness.light ? 'claro' : 'oscuro';
+
+      testWidgets('en $tema, un botón «Abrir el chat de <curso>» con un '
+          'Material de cardBg y la forma de la tarjeta, el InkWell con la '
+          'misma forma y 16 px de relleno', (tester) async {
+        final semantica = tester.ensureSemantics();
+        const curso = 'Curso De Prueba A';
+        const contenido = Key('contenido');
+        var toques = 0;
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: _temaDeLaApp(brillo),
+            home: Scaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 300,
+                  child: TarjetaDeChat(
+                    brillo: brillo,
+                    nombreDelCurso: curso,
+                    onTap: () => toques++,
+                    child: const SizedBox(
+                      key: contenido,
+                      height: 20,
+                      child: Text('Texto De Prueba'),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        final tarjeta = find.bySemanticsLabel('Abrir el chat de $curso');
+        expect(tarjeta, findsOneWidget);
+        // La etiqueta es solo la del botón, porque el contenido queda callado.
+        expect(
+          tester.getSemantics(tarjeta),
+          isSemantics(
+            label: 'Abrir el chat de $curso',
+            isButton: true,
+            hasTapAction: true,
+          ),
+        );
+        expect(find.bySemanticsLabel('Texto De Prueba'), findsNothing);
+
+        final tinta = find.byType(InkWell);
+        expect(tinta, findsOneWidget);
+        final material = tester.widget<Material>(
+          find.ancestor(of: tinta, matching: find.byType(Material)).first,
+        );
+        expect(material.color, MaterialTheme.cardBg(brillo));
+        final forma = material.shape! as RoundedRectangleBorder;
+        expect(forma.borderRadius, BorderRadius.circular(16));
+        expect(forma.side.color, MaterialTheme.borderColor(brillo));
+        expect(tester.widget<InkWell>(tinta).customBorder, forma);
+        expect(tester.getSize(tinta), tester.getSize(find.byWidget(material)));
+
+        final caja = tester.getRect(tinta);
+        final dentro = tester.getRect(find.byKey(contenido));
+        expect(dentro.left - caja.left, moreOrLessEquals(16));
+        expect(dentro.top - caja.top, moreOrLessEquals(16));
+        expect(caja.right - dentro.right, moreOrLessEquals(16));
+        expect(caja.bottom - dentro.bottom, moreOrLessEquals(16));
+
+        await tester.tap(tarjeta);
+        expect(toques, 1);
+
+        semantica.dispose();
+      });
+    }
+
+    testWidgets('cada fila de la bandeja es una TarjetaDeChat con el nombre '
+        'de su curso', (tester) async {
+      final semantica = tester.ensureSemantics();
+      await _abrirBandeja(tester, _apiCon(_secciones));
+
+      expect(find.byType(TarjetaDeChat), findsNWidgets(_cursosEnOrden.length));
+      for (final curso in _cursosEnOrden) {
+        final tarjeta = find.ancestor(
+          of: _enLaFila(curso, find.text(curso)),
+          matching: find.byType(TarjetaDeChat),
+        );
+        expect(tarjeta, findsOneWidget, reason: curso);
+        final widget = tester.widget<TarjetaDeChat>(tarjeta);
+        expect(widget.nombreDelCurso, curso);
+        expect(widget.brillo, Brightness.light);
       }
 
       semantica.dispose();

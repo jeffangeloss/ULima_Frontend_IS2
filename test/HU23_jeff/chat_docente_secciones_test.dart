@@ -6,14 +6,16 @@
 //   la forma de la tarjeta (radio de 16 px y borde borderColor), sin un
 //   GestureDetector ni un Container decorado por fuera que tape el ripple.
 // - Su semántica es la de un botón «Abrir el chat de <curso>», como en la
-//   bandeja del alumno.
+//   bandeja del alumno, porque la tarjeta es la misma TarjetaDeChat de la
+//   bandeja con el nombre del curso de la sección.
 // - La columna derecha lleva LucideIcons.messagesSquare bajo la insignia de
 //   rol y, a su derecha en la misma fila, el texto visible «Chat».
 // - «Chat» va en textSecondary (4,5:1) y el ícono en primaryDark en claro y en
 //   primaryColor en oscuro (3:1), contra la tarjeta en los dos temas.
 // - La tarjeta abre ChatPage con el código de la sección y
 //   courseAccentColor(sectionId) como color.
-// Archivo: lib/pages/teacher/teacher_sections_page.dart.
+// Archivos: lib/pages/teacher/teacher_sections_page.dart y
+// lib/pages/chat/chats_inbox_page.dart.
 //
 // Todos los datos son inventados; el repo es público. Las secciones y los
 // cursos no existen.
@@ -27,6 +29,7 @@ import 'package:ulima_plus/configs/themes.dart';
 import 'package:ulima_plus/models/advising_models.dart';
 import 'package:ulima_plus/pages/chat/chat_linea_tiempo.dart';
 import 'package:ulima_plus/pages/chat/chat_page.dart';
+import 'package:ulima_plus/pages/chat/chats_inbox_page.dart';
 import 'package:ulima_plus/pages/chat/curso_avatar.dart';
 import 'package:ulima_plus/pages/teacher/teacher_sections_controller.dart';
 import 'package:ulima_plus/pages/teacher/teacher_sections_page.dart';
@@ -148,6 +151,26 @@ void main() {
           ),
         );
         expect(tester.getSize(tarjeta).height, greaterThanOrEqualTo(48));
+      }
+
+      semantica.dispose();
+    });
+
+    testWidgets('cada tarjeta es la TarjetaDeChat de la bandeja con el nombre '
+        'del curso de su sección', (tester) async {
+      final semantica = tester.ensureSemantics();
+      await _abrirSecciones(tester);
+
+      expect(find.byType(TarjetaDeChat), findsNWidgets(2));
+      for (final curso in <String>[_cursoA, _cursoC]) {
+        final tarjeta = find.ancestor(
+          of: _enLaTarjeta(curso, find.text(curso)),
+          matching: find.byType(TarjetaDeChat),
+        );
+        expect(tarjeta, findsOneWidget, reason: curso);
+        final widget = tester.widget<TarjetaDeChat>(tarjeta);
+        expect(widget.nombreDelCurso, curso);
+        expect(widget.brillo, Brightness.light);
       }
 
       semantica.dispose();

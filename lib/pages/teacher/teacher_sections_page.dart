@@ -8,6 +8,7 @@ import '../../configs/themes.dart';
 import '../../models/advising_models.dart';
 import '../../services/chat_repository.dart';
 import '../chat/chat_page.dart';
+import '../chat/chats_inbox_page.dart';
 import 'teacher_sections_controller.dart';
 
 class TeacherSectionsPage extends StatelessWidget {
@@ -132,9 +133,9 @@ class _Header extends StatelessWidget {
   }
 }
 
-/// Tarjeta de una sección, que abre su chat (RF-CHAT-13). La tarjeta entera
-/// es un botón con la etiqueta `Abrir el chat de <curso>`, como la fila de la
-/// bandeja del alumno.
+/// Tarjeta de una sección, que abre su chat (RF-CHAT-13). Es la misma
+/// [TarjetaDeChat] de la fila de la bandeja del alumno, con la etiqueta
+/// `Abrir el chat de <curso>`, y solo su contenido es propio.
 class _SectionCard extends StatelessWidget {
   const _SectionCard({
     required this.section,
@@ -148,10 +149,6 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final forma = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(16),
-      side: BorderSide(color: MaterialTheme.borderColor(brightness)),
-    );
     // Un ícono pide 3:1 contra la tarjeta. El naranja de marca da 2,94:1 sobre
     // el blanco, así que en claro va el naranja oscuro (4,12:1); en oscuro, el
     // de marca da 5,65:1.
@@ -159,109 +156,88 @@ class _SectionCard extends StatelessWidget {
         ? MaterialTheme.primaryDark
         : MaterialTheme.primaryColor;
 
-    // El Material lleva el color y la forma de la tarjeta para que el ripple
-    // del InkWell se vea, ya que un Container decorado encima lo taparía. El
-    // lector de pantalla lee solo «Abrir el chat de <curso>», como en la
-    // bandeja del alumno, con la acción de toque del InkWell.
-    return Semantics(
-      container: true,
-      button: true,
-      label: 'Abrir el chat de ${section.courseName}',
-      child: Material(
-        color: MaterialTheme.cardBg(brightness),
-        shape: forma,
-        child: InkWell(
-          customBorder: forma,
-          onTap: () => Get.to<void>(
-            () => ChatPage(
-              sectionId: section.sectionId.toString(),
-              courseName: section.courseName,
-              sectionCode: section.sectionCode,
-              // El mismo acento que usa Calificar para esta sección.
-              courseColor: courseAccentColor(section.sectionId),
-              repository: chatRepository,
+    return TarjetaDeChat(
+      brillo: brightness,
+      nombreDelCurso: section.courseName,
+      onTap: () => Get.to<void>(
+        () => ChatPage(
+          sectionId: section.sectionId.toString(),
+          courseName: section.courseName,
+          sectionCode: section.sectionCode,
+          // El mismo acento que usa Calificar para esta sección.
+          courseColor: courseAccentColor(section.sectionId),
+          repository: chatRepository,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: MaterialTheme.espPrincipalBg(brightness),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.school_outlined,
+              color: MaterialTheme.primaryDark,
+              size: 21,
             ),
           ),
-          child: ExcludeSemantics(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  section.courseName,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: MaterialTheme.textPrimary(brightness),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  section.sectionCode,
+                  style: const TextStyle(
+                    color: MaterialTheme.primaryColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              _Badge(
+                text: section.rol,
+                color: MaterialTheme.textMuted(brightness),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      color: MaterialTheme.espPrincipalBg(brightness),
-                      borderRadius: BorderRadius.circular(12),
+                  Icon(LucideIcons.messagesSquare, size: 20, color: naranja),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Chat',
+                    style: TextStyle(
+                      color: MaterialTheme.textSecondary(brightness),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
                     ),
-                    child: const Icon(
-                      Icons.school_outlined,
-                      color: MaterialTheme.primaryDark,
-                      size: 21,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          section.courseName,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: MaterialTheme.textPrimary(brightness),
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 5),
-                        Text(
-                          section.sectionCode,
-                          style: const TextStyle(
-                            color: MaterialTheme.primaryColor,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      _Badge(
-                        text: section.rol,
-                        color: MaterialTheme.textMuted(brightness),
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            LucideIcons.messagesSquare,
-                            size: 20,
-                            color: naranja,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Chat',
-                            style: TextStyle(
-                              color: MaterialTheme.textSecondary(brightness),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
                   ),
                 ],
               ),
-            ),
+            ],
           ),
-        ),
+        ],
       ),
     );
   }

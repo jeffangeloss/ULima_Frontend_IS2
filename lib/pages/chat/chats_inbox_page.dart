@@ -4,6 +4,9 @@
 // sección matriculada, que abre el chat de esa sección. No hace pedidos
 // propios: lee las secciones y sus colores de HorarioController, el mismo que
 // carga el horario.
+//
+// El archivo define además TarjetaDeChat, la tarjeta de cada fila, que
+// Secciones del docente también usa para abrir el chat (RF-CHAT-13).
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -80,8 +83,8 @@ class ChatsInboxPage extends StatelessWidget {
   }
 }
 
-/// Una fila de la bandeja: el círculo del curso, su nombre, «Sección N» o
-/// «Sin sección» y un chevron. La fila entera es un botón.
+/// Una fila de la bandeja, que pone en una [TarjetaDeChat] el círculo del
+/// curso, su nombre, «Sección N» o «Sin sección» y un chevron.
 class _FilaDeChat extends StatelessWidget {
   const _FilaDeChat({
     required this.brillo,
@@ -99,19 +102,93 @@ class _FilaDeChat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return TarjetaDeChat(
+      brillo: brillo,
+      nombreDelCurso: nombre,
+      onTap: onTap,
+      child: Row(
+        children: [
+          CursoAvatar(nombre: nombre, color: color, size: 42),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  nombre,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: MaterialTheme.textPrimary(brillo),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    height: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  seccion,
+                  style: TextStyle(
+                    color: MaterialTheme.textSecondary(brillo),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Icon(
+            LucideIcons.chevronRight,
+            size: 20,
+            color: MaterialTheme.textMuted(brillo),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// La tarjeta que abre el chat de un curso. La usan la fila de la bandeja
+/// (RF-CHAT-6) y la tarjeta de Secciones del docente (RF-CHAT-13), que la
+/// spec pide iguales, así que la forma, la semántica y el relleno viven solo
+/// aquí y cada página pone su contenido.
+///
+/// Es un botón con la etiqueta `Abrir el chat de <curso>`, y el lector de
+/// pantalla lee solo esa etiqueta, con la acción de toque del `InkWell`,
+/// porque el contenido queda callado.
+class TarjetaDeChat extends StatelessWidget {
+  const TarjetaDeChat({
+    super.key,
+    required this.brillo,
+    required this.nombreDelCurso,
+    required this.onTap,
+    required this.child,
+  });
+
+  final Brightness brillo;
+
+  /// El nombre del curso tal como llega, que va en la etiqueta accesible.
+  final String nombreDelCurso;
+
+  final VoidCallback onTap;
+
+  /// El contenido visible de la tarjeta, dentro de un relleno de 16 px.
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
     final forma = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(16),
       side: BorderSide(color: MaterialTheme.borderColor(brillo)),
     );
 
     // El Material lleva el color y la forma de la tarjeta para que el ripple
-    // del InkWell se vea: un Container decorado encima lo taparía. El lector de
-    // pantalla lee solo «Abrir el chat de <curso>», con la acción de toque del
-    // InkWell.
+    // del InkWell se vea, ya que un Container decorado encima lo taparía.
     return Semantics(
       container: true,
       button: true,
-      label: 'Abrir el chat de $nombre',
+      label: 'Abrir el chat de $nombreDelCurso',
       child: Material(
         color: MaterialTheme.cardBg(brillo),
         shape: forma,
@@ -119,48 +196,7 @@ class _FilaDeChat extends StatelessWidget {
           customBorder: forma,
           onTap: onTap,
           child: ExcludeSemantics(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  CursoAvatar(nombre: nombre, color: color, size: 42),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          nombre,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: MaterialTheme.textPrimary(brillo),
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                            height: 1.2,
-                          ),
-                        ),
-                        const SizedBox(height: 5),
-                        Text(
-                          seccion,
-                          style: TextStyle(
-                            color: MaterialTheme.textSecondary(brillo),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Icon(
-                    LucideIcons.chevronRight,
-                    size: 20,
-                    color: MaterialTheme.textMuted(brillo),
-                  ),
-                ],
-              ),
-            ),
+            child: Padding(padding: const EdgeInsets.all(16), child: child),
           ),
         ),
       ),
