@@ -17,11 +17,15 @@
 // Las etiquetas del footer se miden con Roboto, la fuente del tema en la
 // plataforma de las pruebas, que se carga del propio SDK de Flutter (la ruta
 // sale de FLUTTER_ROOT, que fija `flutter test`). Con la fuente de pruebas por
-// omisión cada letra mide 1 em y ninguna medida de ancho significaría nada. La
-// del iPhone (SF) no viene con el SDK, así que el verde de estas pruebas vale
-// para Android y no para el iPhone SE que nombra la spec: allí «Delegado» es
-// más ancha que en Roboto, y el footer del iPhone lo decide la revisión manual
-// («Verificación» de la spec).
+// omisión cada letra mide 1 em y ninguna medida de ancho significaría nada.
+//
+// El verde de estas pruebas vale solo para Android en 375 dp y no cierra
+// RF-CHAT-5. La fuente del iPhone (SF) no viene con el SDK, y en una medida
+// local con SF «Delegado» ocupa unos 64,8 pt, más que los 62,5 pt que recibe
+// en el iPhone SE que nombra la spec. Con Roboto ocupa unos 60,8 dp, así que
+// tampoco cabe en los 60 dp que recibe en un Android de 360 dp, un ancho que
+// la spec no fija. RF-CHAT-5 deja ese ajuste del footer al dueño, y la fase 1
+// no se da por terminada mientras él no lo decida.
 //
 // Todos los datos son inventados; el repo es público. La alumna y el delegado
 // usan el código sintético 20230001 y el docente es "docente.test".
@@ -575,7 +579,8 @@ void main() {
 
   group('WIDGET · el footer del delegado en 375 x 667, medido con Roboto '
       '(RF-CHAT-5)', () {
-    // Solo Roboto: este verde no dice nada del iPhone (ver el encabezado).
+    // Solo Roboto y solo 375 dp. Este verde no dice nada del iPhone SE ni de
+    // un Android de 360 dp (ver el encabezado).
     setUpAll(_cargarRoboto);
 
     for (var activa = 0; activa < _pestanasDelegado.length; activa++) {
