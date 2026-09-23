@@ -26,6 +26,23 @@ class HorarioPage extends StatelessWidget {
   /// Botón para agregar un bloque propio (RF-BLQ-1). Solo lo ve el alumno.
   static const Key agregarBloqueKey = Key('horario-agregar-bloque');
 
+  /// La línea "Tus bloques: N h esta semana" de las vistas de día y semanal.
+  static const Key horasSemanaKey = Key('horario-horas-semana');
+
+  /// Las horas de esa línea: sin decimal cuando la cifra es entera y con uno
+  /// cuando no ("12 h", "12.5 h"). Se redondea a un decimal antes de decidir,
+  /// para que 12.96 salga "13 h" y no "13.0 h".
+  ///
+  /// Pura y expuesta para poder probarla, igual que [blockGeometry]. Solo da
+  /// forma: el número lo manda el servidor y no se recalcula en la app.
+  static String textoDeHoras(double horas) {
+    final decimas = (horas * 10).round();
+    final cifra = decimas % 10 == 0
+        ? '${decimas ~/ 10}'
+        : (decimas / 10).toStringAsFixed(1);
+    return '$cifra h';
+  }
+
   static const double startHour = 7.0;
   static const double endHour = 22.0;
   static const double hourHeight = 85.0;
@@ -854,6 +871,10 @@ class HorarioPage extends StatelessWidget {
           _mismoDiaEnLaSemanaActiva(controller, day),
         ),
     };
+    // RF-BLQ-6 también en la vista semanal, que pinta los bloques de la
+    // semana del día activo. Se lee aquí, fuera del LayoutBuilder, por lo
+    // mismo que los bloques: así el Obx de [build] se entera solo.
+    final horasDeBloques = controller.horasDeLaSemanaActiva;
 
     return Container(
       color: bg,
@@ -1012,6 +1033,22 @@ class HorarioPage extends StatelessWidget {
                           ),
                         ),
                       ),
+                      // RF-BLQ-6: los encabezados de la vista semanal no
+                      // llevan fecha (el horario de clases es semanal), así
+                      // que la línea va aquí, junto al ciclo. Nunca un 0
+                      // inventado: sin dato no hay línea.
+                      if (horasDeBloques != null) ...[
+                        Text(
+                          'Tus bloques: ${textoDeHoras(horasDeBloques)} esta semana',
+                          key: horasSemanaKey,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                      ],
                       Text(
                         cycle,
                         style: const TextStyle(
@@ -1189,15 +1226,40 @@ class HorarioPage extends StatelessWidget {
                 color: isDark ? const Color(0xFF1B1B22) : Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 alignment: Alignment.center,
-                child: Text(
-                  activeDay.weekText,
-                  style: TextStyle(
-                    color: isDark
-                        ? const Color(0xFFB0B0C0)
-                        : const Color(0xFF666666),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      activeDay.weekText,
+                      style: TextStyle(
+                        color: isDark
+                            ? const Color(0xFFB0B0C0)
+                            : const Color(0xFF666666),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    // RF-BLQ-6: las horas de los bloques propios en la semana
+                    // del día activo, tal como las manda el servidor. Se lee
+                    // aquí, dentro del Obx de build y fuera de cualquier
+                    // LayoutBuilder, para que la línea se entere sola cuando
+                    // llegan los bloques o cambia el día. Si no hay dato, no
+                    // hay línea: nunca un 0 inventado.
+                    if (controller.horasDeLaSemanaActiva case final horas?) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        'Tus bloques: ${textoDeHoras(horas)} esta semana',
+                        key: horasSemanaKey,
+                        style: TextStyle(
+                          color: isDark
+                              ? const Color(0xFFB0B0C0)
+                              : const Color(0xFF666666),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
               const Divider(height: 1, thickness: 1, color: Color(0xFFE5E5E5)),

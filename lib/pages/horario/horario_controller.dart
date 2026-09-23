@@ -611,6 +611,55 @@ class HorarioController extends GetxController {
     return i < 0 ? null : i + 1;
   }
 
+  /// Las horas que los bloques propios ocupan en la semana del día activo
+  /// —la de lunes a domingo que lo contiene—, o null si la línea de RF-BLQ-6
+  /// no se pinta.
+  ///
+  /// El número NO se calcula aquí: es el `hours` que el servidor manda en
+  /// `weeks` para esa semana (RS-BE-34). Sumar las ocurrencias en la app sería
+  /// una segunda cuenta que podría no coincidir con la suya.
+  ///
+  /// null si no hay línea que pintar: si la alumna no tiene bloques, si la
+  /// semana del día activo no vino en `weeks` (queda fuera de la
+  /// [ventanaVisible]), o si vino con `hours` null o 0. Una semana sin
+  /// ocurrencias viene con `hours: 0` (RS-BE-34), y la línea solo sale con
+  /// horas mayores que 0 (D3): nunca se pinta "0 h" ni un 0 en lugar de un
+  /// dato que falta.
+  double? get horasDeLaSemanaActiva {
+    // Todo lo reactivo se lee ANTES de cualquier return: el Obx de la pantalla
+    // que llama a este getter queda suscrito a los bloques, a la ventana y al
+    // día activo aunque hoy devuelva null, y la línea aparece sola cuando
+    // llegan los bloques o cambia el día.
+    final servicio = Get.isRegistered<TimeBlocksService>()
+        ? TimeBlocksService.to
+        : null;
+    final snapshot = servicio?.snapshot;
+    final reglas = servicio?.blocks ?? const <TimeBlockRule>[];
+    final dia = currentDay;
+    if (snapshot == null || reglas.isEmpty || dia == null) return null;
+    final horas = _semanaQueContiene(dia, snapshot.weeks)?.hours;
+    return horas != null && horas > 0 ? horas : null;
+  }
+
+  /// La entrada de [semanas] de la semana que contiene a [dia], o null.
+  ///
+  /// Cada `weekStart` es un lunes (RS-BE-34): [dia] es de la semana cuyo
+  /// `weekStart` es el lunes de su fecha. La fecha es la de [_fechaDelDia],
+  /// la misma de [bloquesDelDia]: su `isoDate` o, si el ciclo no tiene
+  /// semanas, ese día en la semana de hoy. Nunca se lee `dateText`.
+  TimeBlockWeek? _semanaQueContiene(
+    DaySchedule dia,
+    List<TimeBlockWeek> semanas,
+  ) {
+    final fecha = _fechaDelDia(dia);
+    if (fecha == null) return null;
+    final lunes = _fechaPlana(_lunesDe(fecha));
+    for (final semana in semanas) {
+      if (semana.weekStart == lunes) return semana;
+    }
+    return null;
+  }
+
   void previousDay() {
     if (daysList.isEmpty) return;
     if (currentDayIndex.value > 0) {
