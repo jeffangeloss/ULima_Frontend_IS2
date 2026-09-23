@@ -441,6 +441,14 @@ class _ChatPageState extends State<ChatPage> {
   }
 }
 
+/// Naranja de un ícono informativo, que pide 3:1 contra su fondo. Va en
+/// `primaryDark` en claro y en `primaryColor` en oscuro, porque el `#FF6600`
+/// da 2,94:1 sobre blanco y menos sobre el `tagBg` claro. Lo usan los candados
+/// de los estados (RF-CHAT-8) y «Enviar carnet» (RF-CHAT-12).
+Color _naranjaDeIcono(Brightness brillo) => brillo == Brightness.light
+    ? MaterialTheme.primaryDark
+    : MaterialTheme.primaryColor;
+
 /// Estado vacío o de chat no disponible: la tarjeta de la app con un candado
 /// naranja, el título en `textPrimary` y el cuerpo en `textSecondary`.
 class _TarjetaDeEstado extends StatelessWidget {
@@ -464,10 +472,7 @@ class _TarjetaDeEstado extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // El #FF6600 sobre blanco da 2,94:1; en claro el candado va en primaryDark.
-    final candado = brillo == Brightness.light
-        ? MaterialTheme.primaryDark
-        : MaterialTheme.primaryColor;
+    final candado = _naranjaDeIcono(brillo);
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -549,10 +554,7 @@ class _BarraDeEscritura extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // El #FF6600 no llega a 3:1 sobre el campo claro; ahí va primaryDark.
-    final naranja = brillo == Brightness.light
-        ? MaterialTheme.primaryDark
-        : MaterialTheme.primaryColor;
+    final naranja = _naranjaDeIcono(brillo);
 
     return Container(
       decoration: BoxDecoration(
