@@ -2014,7 +2014,7 @@ Las tareas las citan por su número. Ya están escritas en la spec, que el dueñ
   y, justo antes de la nota de `asistenciaDisponible` que sigue al ejemplo (la primera línea del archivo que empieza con `> **` después de él), esta nota nueva con su línea en blanco detrás:
 
   ```markdown
-  > **`isoDate`** (RS-BE-36): la fecha de ese día en hora de Lima, `"YYYY-MM-DD"`, la misma de la que sale `dateText` (que no trae año). Llega en `null` cuando el ciclo no tiene semanas: el mismo caso en que `dateText` viene vacío y `weekText` dice "Semana actual". Es aditivo: un backend anterior no lo manda, y la app lo trata como `null`. La app lo usa para pedir los bloques propios del ciclo visible y para saber qué bloques caen en cada día (`specs/features/time-blocks/time-blocks.spec.md`, RF-BLQ-4 y RF-BLQ-7); con `null`, cae al día de la semana en la semana de hoy.
+  > **`isoDate`** (RS-BE-36): la fecha de ese día en hora de Lima, `"YYYY-MM-DD"`, la misma de la que sale `dateText` (que no trae año). Llega en `null` cuando el ciclo no tiene semanas: el mismo caso en que `dateText` viene vacío y `weekText` dice "Semana actual". Es aditivo: un backend anterior no lo manda, y la app lo trata como `null`. La app lo usa para pedir los bloques propios del ciclo visible y para saber qué bloques caen en cada día (`specs/features/time-blocks/time-blocks.spec.md`, RF-BLQ-4 y RF-BLQ-7). Con `null`, solo el ciclo sin semanas, que llega con siete días, toma ese día de la semana en la semana de hoy; si llegan más de siete días sin `isoDate` (un ciclo con semanas que manda un backend sin RS-BE-36), no hay fecha y la app no pinta bloques propios ni la línea de horas.
 
   ```
 

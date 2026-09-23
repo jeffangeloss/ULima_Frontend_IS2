@@ -25,6 +25,7 @@ targets:
 > Ajustada el 2026-09-21 con las decisiones finales del dueño: fecha exacta de cada día
 > (`isoDate`), días cancelados visibles, línea de horas oculta en 0 y tope de 20 bloques
 > guardados.
+> Ajustada el 2026-09-22, después de la aprobación, en RF-BLQ-6 (`bea7d45`), que ahora oculta la línea de horas también cuando el total redondeado a un decimal da 0; ese cambio espera el sí del dueño.
 
 ## User Stories
 
