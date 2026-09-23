@@ -16,7 +16,7 @@ targets:
 # Bloques de horario propios
 
 > Estado: **diseñada con el dueño del proyecto el 2026-09-20**, sección por sección.
-> Aprobada por el dueño el 2026-09-22, con los targets de arriba, **e implementada.** Está
+> Aprobada por el dueño con los targets de arriba (los planes el 2026-09-22; la spec y los targets, de forma explícita el 2026-09-23), **e implementada.** Está
 > probada entera contra dobles, pero **todavía no contra el backend desplegado**: las rutas
 > `/time-blocks/**`, su migración `0012_time_blocks.sql` y el `isoDate` de los días de
 > `GET /schedule/me/sessions` tienen que estar en producción antes de mergear a `main`,
@@ -26,7 +26,7 @@ targets:
 > Ajustada el 2026-09-21 con las decisiones finales del dueño: fecha exacta de cada día
 > (`isoDate`), días cancelados visibles, línea de horas oculta en 0 y tope de 20 bloques
 > guardados.
-> Ajustada el 2026-09-22, después de la aprobación, en RF-BLQ-6 (`bea7d45`), que ahora oculta la línea de horas también cuando el total redondeado a un decimal da 0; ese cambio espera el sí del dueño.
+> Ajustada el 2026-09-22 en RF-BLQ-6, que ahora oculta la línea de horas también cuando el total redondeado a un decimal da 0; el dueño aprobó ese ajuste el 2026-09-23.
 
 ## User Stories
 
