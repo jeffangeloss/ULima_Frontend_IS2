@@ -11,6 +11,8 @@
 // 20230001, el bloque "Prácticas de prueba" no existe y el curso es "CURSO DE
 // PRUEBA A", sección 801: nada sale del portal ni de test/HU31_jeff/fixtures.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -198,6 +200,10 @@ class _FakeTimeBlocksService extends TimeBlocksService {
   /// Si no es null, toda escritura lo lanza.
   Object? falla;
 
+  /// Si no es null, toda escritura queda en vuelo, ya anotada, hasta que se
+  /// complete: como el service real con el backend en frío.
+  Completer<void>? espera;
+
   @override
   List<TimeBlockRule> get blocks => reglas;
 
@@ -207,6 +213,8 @@ class _FakeTimeBlocksService extends TimeBlocksService {
   Future<void> _anotar(String llamada) async {
     if (falla != null) throw falla!;
     llamadas.add(llamada);
+    final enVuelo = espera;
+    if (enVuelo != null) await enVuelo.future;
   }
 
   @override
@@ -821,13 +829,40 @@ void main() {
       expect(service.llamadas, isEmpty);
     });
 
-    testWidgets('confirmar el borrado borra el bloque entero', (tester) async {
+    testWidgets(
+        'confirmar el borrado borra el bloque entero y espera con un '
+        'indicador que tapa el horario', (tester) async {
       final service = await _abrirHoja(tester, ocurrencia: _lunes21);
 
       await _tocar(tester, TimeBlockActionsSheet.borrar);
+      // El borrado queda en vuelo: con el backend en frío, la escritura y la
+      // recarga que la sigue pueden tardar hasta 30 s.
+      service.espera = Completer<void>();
       await tester.tap(find.text(TimeBlockActionsSheet.borrarConfirmar));
+      // Sin pumpAndSettle: el indicador gira sin fin.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(service.llamadas, ['remove 7']);
+
+      // Mientras tanto, tocar el horario no reabre la hoja: el botón hace aquí
+      // el papel del bloque, y la espera lo tapa.
+      await tester.tap(find.text('ABRIR'), warnIfMissed: false);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text(TimeBlockActionsSheet.borrar), findsNothing);
+
+      // El botón atrás tampoco lo quita.
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+      service.espera!.complete();
       await tester.pumpAndSettle();
 
+      expect(find.byType(CircularProgressIndicator), findsNothing);
       expect(service.llamadas, ['remove 7']);
     });
   });

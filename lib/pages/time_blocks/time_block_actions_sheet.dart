@@ -118,6 +118,7 @@ Future<void> mostrarAccionesDeBloque(
       await SystemChrome.setPreferredOrientations(_orientacionesDelHorario);
     case AccionDeBloque.cancelarDia:
       final ok = await _intentar(
+        navigator,
         messenger,
         () => service.setException(id, fecha, status: 'cancelled'),
       );
@@ -144,7 +145,7 @@ Future<void> mostrarAccionesDeBloque(
           persist: false,
           action: SnackBarAction(
             label: TimeBlockActionsSheet.deshacer,
-            onPressed: () => _intentar(messenger, deshacer),
+            onPressed: () => _intentar(navigator, messenger, deshacer),
           ),
         ),
       );
@@ -159,6 +160,7 @@ Future<void> mostrarAccionesDeBloque(
       );
       if (horas == null) return;
       await _intentar(
+        navigator,
         messenger,
         () => service.setException(
           id,
@@ -169,7 +171,11 @@ Future<void> mostrarAccionesDeBloque(
         ),
       );
     case AccionDeBloque.volverAlPatron:
-      await _intentar(messenger, () => service.clearException(id, fecha));
+      await _intentar(
+        navigator,
+        messenger,
+        () => service.clearException(id, fecha),
+      );
     case AccionDeBloque.borrar:
       if (!navigator.mounted) return;
       final confirmar = await showDialog<bool>(
@@ -198,16 +204,36 @@ Future<void> mostrarAccionesDeBloque(
       );
       // Cerrar el diálogo con el barrier o con back devuelve null: no borra.
       if (confirmar != true) return;
-      await _intentar(messenger, () => service.remove(id));
+      await _intentar(navigator, messenger, () => service.remove(id));
   }
 }
 
 /// Corre una escritura del service y dice si salió bien. Si falla, lo avisa
 /// con el mensaje que trae el error: el del servidor, tal cual.
+///
+/// Mientras viaja, un indicador sin texto tapa el horario. La escritura y la
+/// recarga que la sigue pueden tardar hasta 30 s con el backend en frío, y
+/// sin él la alumna no ve nada y el bloque sigue tocable: un segundo borrado
+/// daría un error justo después de uno bueno, y cancelar y luego mover el
+/// mismo día quedaría como dijera el orden de las peticiones. No se cierra
+/// con el barrier ni con atrás, igual que el formulario mientras guarda.
 Future<bool> _intentar(
+  NavigatorState navigator,
   ScaffoldMessengerState messenger,
   Future<void> Function() escritura,
 ) async {
+  final espera = navigator.mounted
+      ? DialogRoute<void>(
+          context: navigator.context,
+          barrierDismissible: false,
+          builder: (_) => const PopScope(
+            canPop: false,
+            child: Center(child: CircularProgressIndicator()),
+          ),
+        )
+      : null;
+  // Sin esperar su futuro: la ruta se quita en el finally.
+  if (espera != null) navigator.push(espera);
   try {
     await escritura();
     return true;
@@ -222,6 +248,11 @@ Future<bool> _intentar(
       messenger,
       const SnackBar(content: Text(TimeBlocksService.genericErrorMessage)),
     );
+  } finally {
+    // Se quita ESTA ruta, y solo si sigue en el navegador; nunca con un pop a
+    // ciegas. Un 401 en plena escritura manda al login con offAllToLogin()
+    // (api_client.dart), que ya se la llevó, y un pop cerraría el login.
+    if (espera != null && espera.isActive) navigator.removeRoute(espera);
   }
   return false;
 }
