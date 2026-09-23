@@ -154,10 +154,11 @@ calcula el servidor (RS-BE-34): el total de esa semana entera, aunque la ventana
 corte. La app lo muestra y **no lo recalcula**, para que no haya dos cuentas que puedan
 diferir.
 
-La línea solo aparece con horas mayores que 0. Si el alumno no tiene bloques, si la semana
-no viene en la respuesta, o si su total viene `null` o en 0 (una semana sin ocurrencias:
-todos sus días cancelados, o fuera de las fechas del bloque), no aparece. Nunca se pinta
-"0 h".
+La línea solo aparece si el total, redondeado a un decimal (la precisión con que se pinta),
+es mayor que 0. Si el alumno no tiene bloques, si la semana no viene en la respuesta, o si
+su total viene `null`, en 0 (una semana sin ocurrencias: todos sus días cancelados, o fuera
+de las fechas del bloque) o por debajo de 0.05 h (menos de 3 minutos, que redondeados dan
+0), no aparece. Nunca se pinta "0 h".
 
 `[@test] ../../../test/HU35_jeff/time_blocks_horas_test.dart`
 

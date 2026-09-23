@@ -621,10 +621,12 @@ class HorarioController extends GetxController {
   ///
   /// null si no hay línea que pintar: si la alumna no tiene bloques, si la
   /// semana del día activo no vino en `weeks` (queda fuera de la
-  /// [ventanaVisible]), o si vino con `hours` null o 0. Una semana sin
-  /// ocurrencias viene con `hours: 0` (RS-BE-34), y la línea solo sale con
-  /// horas mayores que 0 (D3): nunca se pinta "0 h" ni un 0 en lugar de un
-  /// dato que falta.
+  /// [ventanaVisible]), o si vino con `hours` null o con un total que,
+  /// redondeado a un decimal como lo pinta `HorarioPage.textoDeHoras`, da 0.
+  /// Una semana sin ocurrencias viene con `hours: 0` (RS-BE-34), y el servidor
+  /// no redondea: un bloque de dos minutos llega con 0.033. La línea solo sale
+  /// si la cifra que se va a pintar es mayor que 0 (D3): nunca se pinta "0 h"
+  /// ni un 0 en lugar de un dato que falta.
   double? get horasDeLaSemanaActiva {
     // Todo lo reactivo se lee ANTES de cualquier return: el Obx de la pantalla
     // que llama a este getter queda suscrito a los bloques, a la ventana y al
@@ -638,7 +640,9 @@ class HorarioController extends GetxController {
     final dia = currentDay;
     if (snapshot == null || reglas.isEmpty || dia == null) return null;
     final horas = _semanaQueContiene(dia, snapshot.weeks)?.hours;
-    return horas != null && horas > 0 ? horas : null;
+    // El mismo redondeo a décimas de textoDeHoras: menos de 3 minutos (0.05 h)
+    // se pintarían "0 h".
+    return horas != null && (horas * 10).round() > 0 ? horas : null;
   }
 
   /// La entrada de [semanas] de la semana que contiene a [dia], o null.

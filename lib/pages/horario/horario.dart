@@ -34,7 +34,9 @@ class HorarioPage extends StatelessWidget {
   /// para que 12.96 salga "13 h" y no "13.0 h".
   ///
   /// Pura y expuesta para poder probarla, igual que [blockGeometry]. Solo da
-  /// forma: el número lo manda el servidor y no se recalcula en la app.
+  /// forma: el número lo manda el servidor y no se recalcula en la app. La
+  /// pantalla nunca le pasa una cifra que redondeada dé 0: la filtra antes
+  /// `HorarioController.horasDeLaSemanaActiva` (D3).
   static String textoDeHoras(double horas) {
     final decimas = (horas * 10).round();
     final cifra = decimas % 10 == 0

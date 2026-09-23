@@ -367,6 +367,28 @@ void main() {
       expect(horario.horasDeLaSemanaActiva, isNull);
     });
 
+    test('con bloques, una semana que redondeada a un decimal da 0 no tiene total',
+        () async {
+      // Un bloque de 14:00 a 14:02 en un solo día de la semana llega con
+      // hours de 0.033 (el servidor no redondea) y el formulario lo acepta.
+      // Pintado saldría "0 h", así que la línea se oculta igual que con 0
+      // (D3). Tres minutos (0.05) ya redondean a 0.1 y sí tienen línea.
+      await _registrarBloques(
+        semanas: <Map<String, dynamic>>[
+          <String, dynamic>{'weekStart': '2026-09-21', 'hours': 0.03},
+          <String, dynamic>{'weekStart': '2026-09-28', 'hours': 3 / 60},
+        ],
+      );
+      final horario = _HorarioDePrueba(_cuatroSemanas());
+
+      expect(horario.horasDeLaSemanaActiva, isNull);
+
+      horario.currentDayIndex.value = _lunes28;
+
+      expect(horario.horasDeLaSemanaActiva, 3 / 60);
+      expect(HorarioPage.textoDeHoras(horario.horasDeLaSemanaActiva!), '0.1 h');
+    });
+
     test('ciclo sin semanas (isoDate null): cuenta la semana de hoy',
         () async {
       await _registrarBloques();
@@ -462,6 +484,22 @@ void main() {
         tester,
         semanas: <Map<String, dynamic>>[
           <String, dynamic>{'weekStart': '2026-09-21', 'hours': 0},
+        ],
+      );
+
+      expect(find.byKey(HorarioPage.horasSemanaKey), findsNothing);
+      expect(find.textContaining('Tus bloques'), findsNothing);
+      expect(find.textContaining('0 h'), findsNothing);
+      expect(find.text('Semana 5 del ciclo'), findsOneWidget);
+    });
+
+    testWidgets('con bloques y una semana de menos de 3 minutos, la línea no aparece',
+        (tester) async {
+      // 0.03 h redondeado a un decimal es 0: pintada, la línea diría "0 h".
+      await _montar(
+        tester,
+        semanas: <Map<String, dynamic>>[
+          <String, dynamic>{'weekStart': '2026-09-21', 'hours': 0.03},
         ],
       );
 
