@@ -155,6 +155,18 @@ class MaterialTheme {
   static Color descText(Brightness b) =>
       b == Brightness.light ? const Color(0xFF888888) : const Color(0xFF7A7A8A);
 
+  // ── Chat de sección (HU23, RF-CHAT-8) ────────────────────────────────────
+
+  /// Fondo de las burbujas propias del chat. Son los tonos de `specialtyBg`,
+  /// pero con token propio para que un cambio en la malla no las toque. Con
+  /// `textPrimary` da 15,16:1 en claro y 11,74:1 en oscuro.
+  static Color chatOwnBubbleBg(Brightness b) =>
+      b == Brightness.light ? const Color(0xFFFFE8DC) : const Color(0xFF3A2A22);
+
+  /// Fondo de los avisos de error y de la acción «Eliminar» del chat, igual en
+  /// los dos temas. Con texto blanco da 6,54:1.
+  static Color errorBg(Brightness b) => const Color(0xFFB3261E);
+
   // LIGHT SCHEME
   static ColorScheme lightScheme() {
     return const ColorScheme(
