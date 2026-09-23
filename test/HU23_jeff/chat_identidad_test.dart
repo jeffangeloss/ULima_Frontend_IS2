@@ -6,7 +6,7 @@
 //   negro, el que dé más contraste con el color del curso.
 // - Los dos tokens nuevos del chat en MaterialTheme: chatOwnBubbleBg y
 //   errorBg, con las cifras de contraste que fija la spec.
-// - El círculo del curso (CourseAvatar), el mismo widget para la bandeja y el
+// - El círculo del curso (CursoAvatar), el mismo widget para la bandeja y el
 //   AppBar.
 // Archivos: lib/pages/chat/chat_linea_tiempo.dart,
 // lib/pages/chat/curso_avatar.dart y lib/configs/themes.dart.
@@ -189,7 +189,7 @@ void main() {
     });
   });
 
-  group('WIDGET · CourseAvatar (RF-CHAT-8)', () {
+  group('WIDGET · CursoAvatar (RF-CHAT-8)', () {
     Future<void> montar(WidgetTester tester, Widget avatar) =>
         tester.pumpWidget(
           MaterialApp(
@@ -200,7 +200,7 @@ void main() {
     BoxDecoration decoracion(WidgetTester tester) {
       final caja = tester.widget<Container>(
         find.descendant(
-          of: find.byType(CourseAvatar),
+          of: find.byType(CursoAvatar),
           matching: find.byType(Container),
         ),
       );
@@ -213,7 +213,7 @@ void main() {
       final azul = kCoursePalette[0];
       await montar(
         tester,
-        CourseAvatar(nombre: 'Ingeniería de Software II', color: azul),
+        CursoAvatar(nombre: 'Ingeniería de Software II', color: azul),
       );
 
       expect(find.text('IS'), findsOneWidget);
@@ -229,19 +229,19 @@ void main() {
     ) async {
       await montar(
         tester,
-        CourseAvatar(nombre: 'CURSO DE PRUEBA A', color: kCoursePalette[3]),
+        CursoAvatar(nombre: 'CURSO DE PRUEBA A', color: kCoursePalette[3]),
       );
-      expect(tester.getSize(find.byType(CourseAvatar)), const Size(42, 42));
+      expect(tester.getSize(find.byType(CursoAvatar)), const Size(42, 42));
 
       await montar(
         tester,
-        CourseAvatar(
+        CursoAvatar(
           nombre: 'CURSO DE PRUEBA A',
           color: kCoursePalette[3],
           size: 36,
         ),
       );
-      expect(tester.getSize(find.byType(CourseAvatar)), const Size(36, 36));
+      expect(tester.getSize(find.byType(CursoAvatar)), const Size(36, 36));
     });
 
     testWidgets('las iniciales en blanco o negro según el color del curso', (
@@ -255,8 +255,8 @@ void main() {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CourseAvatar(nombre: 'Redes de Datos', color: indigo),
-            CourseAvatar(nombre: 'Cálculo I', color: amarillo),
+            CursoAvatar(nombre: 'Redes de Datos', color: indigo),
+            CursoAvatar(nombre: 'Cálculo I', color: amarillo),
           ],
         ),
       );
@@ -269,11 +269,11 @@ void main() {
       tester,
     ) async {
       final verde = kCoursePalette[1];
-      await montar(tester, CourseAvatar(nombre: '  123  ', color: verde));
+      await montar(tester, CursoAvatar(nombre: '  123  ', color: verde));
 
       expect(
         find.descendant(
-          of: find.byType(CourseAvatar),
+          of: find.byType(CursoAvatar),
           matching: find.byType(Text),
         ),
         findsNothing,
@@ -282,11 +282,11 @@ void main() {
     });
 
     testWidgets('con un nombre vacío tampoco pinta texto', (tester) async {
-      await montar(tester, CourseAvatar(nombre: '', color: kCoursePalette[2]));
+      await montar(tester, CursoAvatar(nombre: '', color: kCoursePalette[2]));
 
       expect(
         find.descendant(
-          of: find.byType(CourseAvatar),
+          of: find.byType(CursoAvatar),
           matching: find.byType(Text),
         ),
         findsNothing,

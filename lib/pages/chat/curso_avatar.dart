@@ -8,8 +8,8 @@ import 'package:flutter/material.dart';
 
 import 'chat_linea_tiempo.dart';
 
-class CourseAvatar extends StatelessWidget {
-  const CourseAvatar({
+class CursoAvatar extends StatelessWidget {
+  const CursoAvatar({
     super.key,
     required this.nombre,
     required this.color,
