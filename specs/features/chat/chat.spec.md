@@ -40,6 +40,10 @@ targets:
 > que cambian»).
 > Los `[@test]` que apuntan a archivos que todavía no existen nombran la prueba que fija cada
 > requisito, y estas pruebas se escriben con la fase 1.
+> Después de la aprobación, la revisión de la Tarea 2 suma tres aclaraciones que no cambian
+> ningún comportamiento aprobado. Son la base de las referencias por línea («Contexto»), el
+> toque del botón enviar deshabilitado (RF-CHAT-12 y «Pruebas existentes que cambian») y la
+> corrida con `TZ=UTC` (RF-CHAT-11 y «Verificación»).
 
 ## User Stories
 
@@ -53,6 +57,11 @@ targets:
 ## Contexto
 
 El diagnóstico del 2026-09-23, hecho sobre `main` (c18faa7), es lo que motiva la fase 1.
+
+Las referencias `archivo:línea` de esta spec apuntan a ese commit, también las de RF-CHAT-1 a
+RF-CHAT-4, que describen lo que se conserva, y las de las pruebas. La fase 1 mueve esas
+líneas y la spec no las sigue, así que cada referencia se lee en `c18faa7`, por ejemplo con
+`git show c18faa7:lib/pages/chat/chat_page.dart`.
 
 - El único acceso del alumno es un ícono de lista sin texto en el header de la pestaña
   Horario (`app_header.dart:95-115`). Queda a tres toques y desaparece en horizontal, porque
@@ -419,7 +428,10 @@ Rige para alumno y docente.
   mensaje de cada día y que la hora sale en hora de Lima cerca de la medianoche UTC. Un
   `createdAt` de 2026-09-15 03:30 UTC se muestra como «22:30» bajo «Lunes 14 de
   septiembre», y uno de 2026-09-15 05:10 UTC, como «00:10» bajo «Martes 15 de septiembre».
-  Son fechas pasadas, así que la prueba no depende del día en que corre.
+  Son fechas pasadas, así que la prueba no depende del día en que corre. En una máquina en
+  UTC−5 la hora local coincide con la de Lima, y ningún `createdAt` le permite a esa prueba
+  distinguir una hora calculada con `.toLocal()`. Por eso «Verificación» corre también
+  `test/HU23_jeff` con `TZ=UTC`.
 
 `[@test] ../../../test/HU23_jeff/chat_linea_tiempo_test.dart`
 `[@test] ../../../test/HU23_jeff/chat_page_test.dart`
@@ -438,7 +450,12 @@ Rige para alumno y docente.
   barra. En oscuro no sirve `primaryColor`, porque el blanco sobre `#FF6600` da 2,94:1.
 - **Enviar deshabilitado.** Mientras el campo, ya recortado, está vacío, el botón se ve
   deshabilitado. El relleno pasa a `tagBg` y el ícono a `textMuted` (4,34:1 y 3,36:1), sin
-  sombra ni ripple y con la semántica de un botón deshabilitado.
+  sombra ni ripple y con la semántica de un botón deshabilitado. Un toque sobre el botón
+  deshabilitado no envía nada ni muestra ningún aviso, porque llega a enviar y enviar descarta
+  el campo recortado vacío (RF-CHAT-3), igual que la tecla del teclado. El botón conserva esa
+  acción de toque en lugar de anularla, ya que las dos pruebas de enviar que no cambian
+  escriben y tocan sin un `pump()` de por medio («Pruebas existentes que cambian»), y su
+  toque cae en el botón tal como estaba antes de escribir.
 - El botón enviar lleva el tooltip «Enviar mensaje», que también es su etiqueta accesible,
   como «Enviar carnet».
 - Enviar con la tecla del teclado sigue funcionando con la misma regla, y con el campo vacío
@@ -520,7 +537,8 @@ comportamiento nuevo, y ninguna se usa para conservar el viejo.
   el mismo ícono en la burbuja (`:215`). Pasa a buscar `LucideIcons.idCard` (RF-CHAT-8).
 
 Las pruebas que tocan el botón enviar (`chat_page_test.dart:165` y `:178`) no cambian,
-porque el ícono sigue siendo `Icons.send`.
+porque el ícono sigue siendo `Icons.send`. Tampoco suman un `pump()` entre escribir y tocar,
+y por eso el botón deshabilitado de RF-CHAT-12 conserva su acción de toque.
 
 ## Contrato que se consume
 
@@ -618,6 +636,10 @@ la conversación, bajo el AppBar, sí cumple 4,5:1. En oscuro el blanco sobre `#
   `horario_controller.dart`, `home_page.dart` y `app_header.dart`, que usan otras features.
   Incluye `test/HU23_jeff`, `test/components/header/app_header_test.dart` y `test/HU35_jeff`
   sin las dos pruebas de la lista de chats.
+- `TZ=UTC flutter test --no-pub test/HU23_jeff`. Las pruebas corren solo en una máquina
+  local, porque `.github/workflows/build-apk.yml` no corre `flutter test`, y en UTC−5 la hora
+  local coincide con la de Lima. Con `TZ=UTC`, las pruebas de RF-CHAT-11 detectan una hora o
+  un día calculados en la zona del teléfono, como con `.toLocal()`.
 - `chats_pestana_test` monta el footer de un delegado a 375×667 con cada pestaña activa, y
   comprueba que no hay desborde y que las seis etiquetas se leen completas (RF-CHAT-5).
 - Una revisión manual en un iPhone SE, en los temas claro y oscuro, del footer del delegado,
