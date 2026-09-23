@@ -16,7 +16,10 @@ targets:
 # Bloques de horario propios
 
 > Estado: **diseñada con el dueño del proyecto el 2026-09-20**, sección por sección.
-> Aprobada por el dueño el 2026-09-22, con los targets de arriba.
+> Aprobada por el dueño el 2026-09-22, con los targets de arriba, **e implementada.** Está
+> probada entera contra dobles, pero **todavía no contra el backend desplegado**: las rutas
+> `/time-blocks/**`, su migración `0012_time_blocks.sql` y el `isoDate` de los días de
+> `GET /schedule/me/sessions` tienen que estar en producción antes de publicar el APK.
 > Contraparte de backend: `ULima_Backend_IS2/specs/features/time-blocks/time-blocks.spec.md`
 > (RS-BE-30 a RS-BE-36).
 > Ajustada el 2026-09-21 con las decisiones finales del dueño: fecha exacta de cada día
@@ -66,6 +69,7 @@ El servidor vuelve a validar todo: el mensaje que se muestra ante un error del s
 el que él manda, no uno inventado por la app.
 
 `[@test] ../../../test/HU35_jeff/time_blocks_form_test.dart`
+`[@test] ../../../test/HU35_jeff/time_blocks_conflicto_test.dart`
 
 ### RF-BLQ-3 — Aviso de choque antes de guardar
 
@@ -82,6 +86,7 @@ semana se cruzan si uno empieza antes de que el otro termine. Tocarse en el bord
 termina 18:00 y la otra empieza 18:00) **no** es cruce.
 
 `[@test] ../../../test/HU35_jeff/time_blocks_conflicto_test.dart`
+`[@test] ../../../test/HU35_jeff/time_blocks_form_test.dart`
 
 ### RF-BLQ-4 — Pintados junto a las clases, sin taparse
 
@@ -186,6 +191,7 @@ lunes de la semana del día activo, y vuelve a pedir al cambiar de semana. Si ni
 trae `isoDate`, la ventana es la de las cuatro semanas alrededor de hoy.
 
 `[@test] ../../../test/HU35_jeff/time_blocks_service_test.dart`
+`[@test] ../../../test/HU35_jeff/time_blocks_grilla_test.dart`
 
 ## Contrato que se consume
 
