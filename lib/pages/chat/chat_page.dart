@@ -445,6 +445,15 @@ class _ChatPageState extends State<ChatPage> {
 /// `primaryDark` en claro y en `primaryColor` en oscuro, porque el `#FF6600`
 /// da 2,94:1 sobre blanco y menos sobre el `tagBg` claro. Lo usan los candados
 /// de los estados (RF-CHAT-8) y «Enviar carnet» (RF-CHAT-12).
+///
+/// RF-CHAT-7 y RF-CHAT-13 piden la misma condición para los íconos de la ficha
+/// del curso (`descrip_cursos.dart`) y de la tarjeta del docente
+/// (`teacher_sections_page.dart`), y el botón de «Mis bloques»
+/// (`horario.dart`) ya la lleva. Cada archivo que la necesita la escribe por
+/// su cuenta, porque RF-CHAT-8 («Colores con nombre») limita los tokens nuevos
+/// a `chatOwnBubbleBg` y `errorBg`, y esta función sigue privada para que no
+/// haga de token fuera de `themes.dart`. Un token común para todas las copias
+/// pide cambiar primero esta regla de la spec.
 Color _naranjaDeIcono(Brightness brillo) => brillo == Brightness.light
     ? MaterialTheme.primaryDark
     : MaterialTheme.primaryColor;
