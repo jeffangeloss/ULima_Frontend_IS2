@@ -1,5 +1,38 @@
 # Bloques de horario propios (frontend) — Plan de implementación
 
+> Estado de este plan. La rama `feat/bloques-horario-fe` lo ejecuta entero, y su código se
+> aparta del texto de abajo en varios puntos, porque las revisiones de cada tarea y la
+> revisión final corrigen defectos del propio plan. Cuando el plan y la rama no coinciden,
+> mandan la spec (`specs/features/time-blocks/time-blocks.spec.md`) y el código de la rama,
+> y una nueva ejecución coteja con ellos cada bloque de código antes de copiarlo. El plan ya
+> incorpora el arreglo de `load()` de la Tarea 1 (`a1df656`) y la nota de `isoDate` del
+> contrato (`05b747b`), pero conserva el código y la prosa anteriores a estos cinco desvíos.
+> En la Tarea 3 (`4de67bb`), la prueba del reparto exige además que dos bloques que se
+> cruzan nunca compartan columna. En la Tarea 4 (`747c677`), `_fechaDelDia` devuelve null
+> con más de siete días sin `isoDate`, así que solo el ciclo sin semanas toma el día de la
+> semana en la semana de hoy, y un ciclo con semanas servido por un backend sin RS-BE-36 no
+> pinta bloques propios ni la línea de horas. En la Tarea 5 (`53b1a6c`), el botón de agregar
+> no abre `/bloque` mientras `Get.isRegistered<TimeBlockFormController>()` sea true, porque
+> get 4.7.3 borra ese controller recién al terminar la animación de salida, y la revisión
+> final pone la misma guarda en «Editar el bloque» de la hoja de la Tarea 6 (`404a688`). En
+> la Tarea 6 (`c824ff0`), cada acción de la hoja espera con un indicador sin texto que tapa
+> el horario, una `DialogRoute` que no se cierra con atrás y que se quita con `removeRoute`.
+> En la Tarea 7 (`bea7d45`), la línea de horas se oculta también cuando el total redondeado
+> a un decimal da 0, y RF-BLQ-6 cambia su texto en la spec. La revisión final suma otros
+> cambios. El service vuelve a pedir la ventana tras una recarga fallida o una escritura sin
+> respuesta, y deja en sus reglas la que devuelve el servidor (`01fb2ec`). `numeroDeDia` de
+> `time_block_conflicts.dart` reemplaza la copia del controller (`ccda4a4`), y elegir otra
+> acción en la hoja quita el «Deshacer» anterior (`4505c13`). Dos pruebas que ya existían
+> fijan ahora el borde de siete días y el borrado del formulario al cerrarse (`70ac5cc` y
+> `64e43c2`). Con esos cambios, el service tiene 21 pruebas, la hoja 25 y `test/HU35_jeff/`
+> 191, y las cifras de abajo quedan como historia de la ejecución. Por último, el plan trata
+> la publicación del paquete de instalación de Android (APK) como un paso manual, y no lo
+> es. `.github/workflows/build-apk.yml` compila y publica el APK de la landing en cada push
+> a `main`, de modo que el merge de la rama es la publicación. Antes del merge hacen falta
+> el backend en producción (con las rutas `/time-blocks/**`, la migración 0012 y el
+> `isoDate`) y las respuestas del dueño, y todo lo que las tareas dejan para «antes de
+> publicar» pasa a ser condición del merge.
+
 > **Para agentes:** SUB-SKILL REQUERIDA: usa superpowers:subagent-driven-development (recomendado) o superpowers:executing-plans para ejecutar este plan tarea por tarea. Los pasos usan casillas (`- [ ]`).
 
 **Objetivo:** Que la alumna registre en su horario bloques propios que se repiten por días de la semana, los vea junto a sus clases sin que se tapen, corrija un día suelto y lea cuántas horas le ocupan por semana, consumiendo el contrato `/time-blocks/me` del backend.
