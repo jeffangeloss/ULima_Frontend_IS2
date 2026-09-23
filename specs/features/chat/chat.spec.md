@@ -40,12 +40,14 @@ targets:
 > que cambian»).
 > Cada `[@test]` apunta a un archivo que existe y que tiene al menos un caso del requisito que
 > lo enlaza.
-> Después de la aprobación, la revisión de la Tarea 2 suma tres aclaraciones que no cambian
-> ningún comportamiento aprobado. Son la base de las referencias por línea («Contexto»), el
-> toque del botón enviar deshabilitado (RF-CHAT-12 y «Pruebas existentes que cambian») y la
-> corrida con `TZ=UTC` (RF-CHAT-11 y «Verificación»). La revisión de la Tarea 5 suma una
-> cuarta, que acota en «Verificación» lo que prueba `chats_pestana_test`, y esta espera la
-> confirmación del dueño.
+> Después de la aprobación, la revisión de la Tarea 2 suma tres aclaraciones. Son la base de
+> las referencias por línea («Contexto»), el toque del botón enviar deshabilitado (RF-CHAT-12 y
+> «Pruebas existentes que cambian») y la corrida con `TZ=UTC` (RF-CHAT-11 y «Verificación»).
+> La revisión de la Tarea 5 suma una cuarta, que acota en «Verificación» lo que prueba
+> `chats_pestana_test`, y reescribe la oración anterior sobre los `[@test]`, que en la versión
+> aprobada nombra pruebas por escribir. Los cinco textos esperan la confirmación del dueño, y
+> el del enviar deshabilitado precisa la decisión 9, porque el botón gris conserva su acción de
+> toque.
 
 ## User Stories
 
