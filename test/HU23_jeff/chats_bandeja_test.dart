@@ -5,6 +5,8 @@
 // - Una fila por sección de HorarioController.uniqueEnrolledCourses, en ese
 //   orden, con el círculo del curso del color de colorPorCurso, el nombre tal
 //   como llega, «Sección N» o «Sin sección» y un chevron.
+// - colorPorCurso trae un color para cada una de esas secciones, también en
+//   los bordes del reparto, porque la bandeja no tiene respaldo propio.
 // - La fila entera abre ChatPage con el curso, el código y el color, es un
 //   botón «Abrir el chat de <curso>» de al menos 48 px y lleva el ripple de un
 //   InkWell dentro de un Material con la forma de la tarjeta.
@@ -97,6 +99,36 @@ const List<String> _cursosEnOrden = <String>[
   'Seminario De Prueba D',
   'Laboratorio De Prueba E',
 ];
+
+/// Secciones en los bordes del reparto de colores: sin horarios, con la lista
+/// de horarios vacía, con el color del horario en blanco o sin hex, con el id
+/// en texto, repetida, y catorce cursos en total, más que los doce colores de
+/// la paleta. La asesoría y la sección sin id no son cursos de la bandeja.
+List<Map<String, dynamic>> _seccionesEnLosBordes() => <Map<String, dynamic>>[
+  _seccion(501, 'Curso De Prueba F', '806', colorDelHorario: 'sin-hex'),
+  <String, dynamic>{
+    'idSeccion': 502,
+    'curso': 'Curso De Prueba G',
+    'codigoSeccion': '807',
+  },
+  <String, dynamic>{
+    'idSeccion': 503,
+    'curso': 'Curso De Prueba H',
+    'codigoSeccion': '808',
+    'horarios': <Object>[],
+  },
+  _seccion(504, 'Curso De Prueba I', '809', colorDelHorario: '   '),
+  _seccion('505', 'Curso De Prueba J', '810'),
+  _seccion('505', 'Curso De Prueba J', '810'),
+  _seccion(506, 'Asesoría De Prueba', '901', asesoria: true),
+  <String, dynamic>{'idSeccion': null, 'curso': 'Sin Id De Prueba'},
+  <String, dynamic>{'idSeccion': '', 'curso': 'Id Vacío De Prueba'},
+  for (var i = 0; i < 9; i++)
+    _seccion(510 + i, 'Curso De Prueba N$i', '${820 + i}'),
+];
+
+/// Cuántos cursos de [_seccionesEnLosBordes] lista la bandeja.
+const int _cursosEnLosBordes = 14;
 
 // --- Dobles -------------------------------------------------------------------
 
@@ -280,6 +312,33 @@ void main() {
 
       segunda.complete(<String, dynamic>{'days': <Object>[]});
       await recarga;
+      await Get.delete<HorarioController>(force: true);
+    });
+  });
+
+  group('UNITARIA · colorPorCurso tiene un color para cada sección de '
+      'uniqueEnrolledCourses (RF-CHAT-6)', () {
+    testWidgets('las dos listan las mismas secciones con la misma clave, '
+        'también en los bordes del reparto', (tester) async {
+      // «Siempre hay uno»: la bandeja lee colorPorCurso[idSeccion] sin
+      // respaldo, así que esta igualdad es lo que la sostiene.
+      Get.put<AuthService>(_FakeAuthService(_alumna()));
+      final controller = Get.put<HorarioController>(
+        HorarioController(apiClient: _apiCon(_seccionesEnLosBordes())),
+      );
+      await tester.pump();
+      expect(controller.seccionesCargadas.value, isTrue);
+
+      final ids = [
+        for (final curso in controller.uniqueEnrolledCourses)
+          curso['idSeccion'].toString(),
+      ];
+      expect(ids, hasLength(_cursosEnLosBordes));
+      expect(controller.colorPorCurso.keys.toSet(), ids.toSet());
+      for (final color in controller.colorPorCurso.values) {
+        expect(kCoursePalette, contains(color));
+      }
+
       await Get.delete<HorarioController>(force: true);
     });
   });
@@ -789,26 +848,34 @@ void main() {
       await _desmontar(tester);
     });
 
-    testWidgets('un color que falta cae en el acento de la sección, como en '
-        'ChatPage', (tester) async {
-      // Un color sin hex válido no rompe la fila: colorPorCurso siempre da uno
-      // de la paleta, y la bandeja nunca deja el círculo sin color.
+    testWidgets('sin color válido en el horario, la fila también pinta el de '
+        'colorPorCurso: la bandeja no tiene respaldo propio', (tester) async {
+      // La bandeja lee colorPorCurso[idSeccion] sin respaldo (RF-CHAT-6), así
+      // que cada sección en los bordes del reparto tiene que salir con su
+      // fila y su color de la paleta, sin excepción al construirse.
       final semantica = tester.ensureSemantics();
       final controller = await _abrirBandeja(
         tester,
-        _apiCon(<Map<String, dynamic>>[
-          _seccion(501, 'Curso De Prueba F', '806', colorDelHorario: 'sin-hex'),
-        ]),
+        _apiCon(_seccionesEnLosBordes()),
       );
 
-      final avatar = tester.widget<CursoAvatar>(
-        _enLaFila('Curso De Prueba F', find.byType(CursoAvatar)),
-      );
-      expect(
-        avatar.color,
-        controller.colorPorCurso['501'] ?? courseAccentColor(501),
-      );
-      expect(kCoursePalette, contains(avatar.color));
+      expect(tester.takeException(), isNull);
+      final colores = controller.colorPorCurso;
+      final cursos = controller.uniqueEnrolledCourses;
+      expect(cursos, hasLength(_cursosEnLosBordes));
+      for (final curso in cursos) {
+        final nombre = curso['curso'] as String;
+        await tester.scrollUntilVisible(_fila(nombre), 200);
+        final avatar = tester.widget<CursoAvatar>(
+          _enLaFila(nombre, find.byType(CursoAvatar)),
+        );
+        expect(
+          avatar.color,
+          colores[curso['idSeccion'].toString()],
+          reason: nombre,
+        );
+        expect(kCoursePalette, contains(avatar.color), reason: nombre);
+      }
 
       semantica.dispose();
       await _desmontar(tester);

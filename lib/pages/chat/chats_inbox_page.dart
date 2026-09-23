@@ -9,7 +9,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../configs/course_colors.dart';
 import '../../configs/themes.dart';
 import '../../services/chat_repository.dart';
 import '../horario/horario_controller.dart';
@@ -51,11 +50,10 @@ class ChatsInboxPage extends StatelessWidget {
             final nombre = curso['curso']?.toString() ?? '';
             final codigo = curso['codigoSeccion']?.toString();
             // colorPorCurso reparte la paleta entre las mismas secciones que
-            // lista uniqueEnrolledCourses, así que siempre trae uno. El
-            // respaldo es el mismo de ChatPage.
-            final color =
-                colores[idSeccion] ??
-                courseAccentColor(int.tryParse(idSeccion) ?? 0);
+            // lista uniqueEnrolledCourses, con la misma clave, así que siempre
+            // trae uno (RF-CHAT-6). El único respaldo de color es el de
+            // ChatPage (RF-CHAT-8), para quien la abre sin color.
+            final color = colores[idSeccion]!;
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 10),
