@@ -1,11 +1,15 @@
 // test/HU23_jeff/chat_identidad_test.dart
 //
 // UNITARIA + WIDGET — HU23 (chat de sección): la identidad de la
-// conversación (RF-CHAT-8).
+// conversación (RF-CHAT-8) y la etiqueta de rol de los moderadores
+// (RF-CHAT-10).
 // - Las iniciales del curso con la regla de cuatro pasos y su color, blanco o
 //   negro, el que dé más contraste con el color del curso.
 // - Los dos tokens nuevos del chat en MaterialTheme: chatOwnBubbleBg y
 //   errorBg, con las cifras de contraste que fija la spec.
+// - Los pares de colores de ChatPage (nombre, etiqueta de rol, hora, carnet,
+//   lápida, error del stream, separador, estados, avisos, diálogo y AppBar),
+//   cada uno con 4,5:1 para texto y 3:1 para ícono en los dos temas.
 // - El círculo del curso (CursoAvatar), el mismo widget para la bandeja y el
 //   AppBar.
 // Archivos: lib/pages/chat/chat_linea_tiempo.dart,
@@ -26,6 +30,36 @@ const _blanco = Color(0xFFFFFFFF);
 
 String _hex(Color c) =>
     '#${c.toARGB32().toRadixString(16).padLeft(8, '0').substring(2)}';
+
+/// Una cifra con coma decimal para el nombre de la prueba, como la escribe la
+/// spec («4,5» o «3»).
+String _cifra(double x) =>
+    (x == x.roundToDouble() ? x.toInt().toString() : x.toString()).replaceAll(
+      '.',
+      ',',
+    );
+
+/// Un texto o un ícono de `ChatPage` sobre su fondo, con los tokens que fija
+/// la spec para cada tema. [minimo] es 4,5 para texto y 3 para un ícono que da
+/// información. [claro] y [oscuro] son las cifras exactas de la spec, cuando
+/// las da.
+class _Par {
+  const _Par(
+    this.que,
+    this.frente,
+    this.fondo, {
+    this.claro,
+    this.oscuro,
+    this.minimo = 4.5,
+  });
+
+  final String que;
+  final Color Function(Brightness) frente;
+  final Color Function(Brightness) fondo;
+  final double? claro;
+  final double? oscuro;
+  final double minimo;
+}
 
 void main() {
   group('UNITARIA · inicialesDeCurso (RF-CHAT-8)', () {
@@ -186,6 +220,145 @@ void main() {
         expect(contraste, greaterThanOrEqualTo(4.5));
         expect(contraste, closeTo(6.54, 0.005));
       }
+    });
+  });
+
+  group('UNITARIA · pares de colores de ChatPage (RF-CHAT-8 y RF-CHAT-10)', () {
+    // Cada par es un texto o un ícono de la conversación sobre su fondo, con
+    // los tokens que fija la spec. El texto llega a 4,5:1 y el ícono que da
+    // información, a 3:1, en los dos temas. Donde la spec da la cifra exacta,
+    // la prueba la fija también.
+    final pares = <_Par>[
+      _Par(
+        'RF-CHAT-10 · el nombre del remitente en textPrimary sobre la burbuja ajena',
+        MaterialTheme.textPrimary,
+        MaterialTheme.cardBg,
+        claro: 17.85,
+        oscuro: 14.22,
+      ),
+      _Par(
+        'RF-CHAT-10 · la etiqueta de rol en textSecondary sobre la burbuja ajena',
+        MaterialTheme.textSecondary,
+        MaterialTheme.cardBg,
+        claro: 10.35,
+        oscuro: 6.44,
+      ),
+      _Par(
+        'el cuerpo de un mensaje ajeno en textPrimary sobre cardBg',
+        MaterialTheme.textPrimary,
+        MaterialTheme.cardBg,
+        claro: 17.85,
+        oscuro: 14.22,
+      ),
+      _Par(
+        'la hora en textSecondary sobre la burbuja propia',
+        MaterialTheme.textSecondary,
+        MaterialTheme.chatOwnBubbleBg,
+        oscuro: 5.31,
+        minimo: 5.31,
+      ),
+      _Par(
+        'la hora en textSecondary sobre la burbuja ajena',
+        MaterialTheme.textSecondary,
+        MaterialTheme.cardBg,
+        minimo: 5.31,
+      ),
+      _Par(
+        'el ícono del recuadro del carnet en blanco sobre primaryDark',
+        (_) => Colors.white,
+        (_) => MaterialTheme.primaryDark,
+        claro: 4.12,
+        oscuro: 4.12,
+        minimo: 3,
+      ),
+      _Par(
+        'la lápida, con su texto y su ícono, en textSecondary sobre tagBg',
+        MaterialTheme.textSecondary,
+        MaterialTheme.tagBg,
+        claro: 9.45,
+        oscuro: 5.60,
+      ),
+      _Par(
+        'el error del stream en textSecondary sobre pageBg',
+        MaterialTheme.textSecondary,
+        MaterialTheme.pageBg,
+        claro: 9.90,
+        oscuro: 6.99,
+      ),
+      _Par(
+        'el separador de día en textSecondary sobre pageBg',
+        MaterialTheme.textSecondary,
+        MaterialTheme.pageBg,
+        claro: 9.90,
+        oscuro: 6.99,
+      ),
+      _Par(
+        'el título de los estados en textPrimary sobre cardBg',
+        MaterialTheme.textPrimary,
+        MaterialTheme.cardBg,
+        claro: 17.85,
+        oscuro: 14.22,
+      ),
+      _Par(
+        'el cuerpo de los estados en textSecondary sobre cardBg',
+        MaterialTheme.textSecondary,
+        MaterialTheme.cardBg,
+        claro: 10.35,
+        oscuro: 6.44,
+      ),
+      _Par(
+        'el candado de los estados en naranja de marca sobre cardBg',
+        (b) => b == Brightness.light
+            ? MaterialTheme.primaryDark
+            : MaterialTheme.primaryColor,
+        MaterialTheme.cardBg,
+        claro: 4.12,
+        oscuro: 5.65,
+        minimo: 3,
+      ),
+      _Par(
+        'el texto de un aviso que no es de error en textPrimary sobre cardBg',
+        MaterialTheme.textPrimary,
+        MaterialTheme.cardBg,
+        claro: 17.85,
+        oscuro: 14.22,
+      ),
+      _Par(
+        '«Eliminar» del diálogo de borrado en blanco sobre errorBg',
+        (_) => Colors.white,
+        MaterialTheme.errorBg,
+        claro: 6.54,
+        oscuro: 6.54,
+      ),
+    ];
+
+    for (final par in pares) {
+      for (final b in Brightness.values) {
+        final tema = b == Brightness.light ? 'claro' : 'oscuro';
+        final cifra = b == Brightness.light ? par.claro : par.oscuro;
+        test('${par.que} llega a ${_cifra(par.minimo)}:1 en $tema', () {
+          final contraste = contrasteWcag(par.frente(b), par.fondo(b));
+
+          expect(contraste, greaterThanOrEqualTo(par.minimo));
+          if (cifra != null) expect(contraste, closeTo(cifra, 0.005));
+        });
+      }
+    }
+
+    test('el AppBar toma headerColor, con 16,58:1 en oscuro', () {
+      final oscuro = MaterialTheme.headerColor(Brightness.dark);
+
+      expect(oscuro, const Color(0xFF1E1E24));
+      expect(contrasteWcag(Colors.white, oscuro), closeTo(16.58, 0.005));
+    });
+
+    test('el AppBar claro es la excepción del dueño, blanco sobre #FF6600', () {
+      // «AppBar en el tema claro» de la spec. Si el header cambia de color, la
+      // excepción deja de ser la misma y esta prueba lo avisa.
+      final claro = MaterialTheme.headerColor(Brightness.light);
+
+      expect(claro, MaterialTheme.primaryColor);
+      expect(contrasteWcag(Colors.white, claro), closeTo(2.94, 0.005));
     });
   });
 

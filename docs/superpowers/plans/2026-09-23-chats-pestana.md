@@ -95,7 +95,7 @@ class CursoAvatar extends StatelessWidget {
 
 **Requisitos:** RF-CHAT-8 a RF-CHAT-12 en `ChatPage`, conservando RF-CHAT-1 a RF-CHAT-4 tal como los describe la spec.
 
-**Archivos:** modificar `lib/pages/chat/chat_page.dart`; modificar `test/HU23_jeff/chat_page_test.dart`; crear `test/HU23_jeff/chat_moderacion_test.dart`; ampliar `test/HU23_jeff/chat_identidad_test.dart` y `chat_linea_tiempo_test.dart` si hace falta.
+**Archivos:** modificar `lib/pages/chat/chat_page.dart`; modificar `test/HU23_jeff/chat_page_test.dart`; crear `test/HU23_jeff/chat_moderacion_test.dart`; ampliar `test/HU23_jeff/chat_identidad_test.dart` (obligatorio, con los casos del Paso 1) y `chat_linea_tiempo_test.dart` si hace falta.
 
 **Consume:** todo lo que produce la Tarea 1, con los dos imports que indica «Estructura de archivos».
 **Produce:** `ChatPage({required String sectionId, required String courseName, String? sectionCode, Color? courseColor, ChatRepositoryContract? repository})`.
@@ -104,6 +104,7 @@ class CursoAvatar extends StatelessWidget {
   - AppBar con `CursoAvatar`, título = curso, subtítulo «Sección 801» y «Sin sección» con código vacío; sin «Chat grupal».
   - Fondo = `pageBg`; burbuja propia en `chatOwnBubbleBg`; ajena en `cardBg` con borde.
   - Nombre solo en ajenos que abren grupo; nunca en propios; la etiqueta de rol junto al nombre, sin borde ni fondo teñido en la burbuja del moderador.
+  - En `chat_identidad_test.dart`, que es el `[@test]` de RF-CHAT-8 y de RF-CHAT-10, las pruebas de widget sobre `ChatPage` en los dos temas. Para RF-CHAT-10, la etiqueta de rol sale solo junto al nombre (un mensaje ajeno de moderador que abre grupo), en `textSecondary`, en negrita y sin fondo, y no sale en el mensaje del mismo moderador que sigue al suyo el mismo día ni en uno propio; la burbuja del moderador es igual a la de otro ajeno. Para RF-CHAT-8, el AppBar en `headerColor` con `CursoAvatar` de 36 px y la flecha, el título y el subtítulo en blanco; el fondo en `pageBg`; la burbuja propia en `chatOwnBubbleBg` y la ajena en `cardBg` con borde `borderColor`; la burbuja de carnet sin borde naranja, con su recuadro en `primaryDark` y `LucideIcons.idCard` en blanco; la lápida en `tagBg` con borde `borderColor` y su texto y su ícono en `textSecondary`; el error del stream en `textSecondary`; los estados vacío y no disponible en `cardBg` con borde, el título en `textPrimary`, el cuerpo en `textSecondary` y el candado en `primaryDark` en claro y `primaryColor` en oscuro; los avisos de error en blanco sobre `errorBg` y los demás en `cardBg` con borde y texto en `textPrimary`; el diálogo de borrado en `cardBg`, con «Eliminar» en blanco sobre `errorBg`. Las cifras de contraste de cada par ya las fija el grupo «pares de colores de ChatPage» de la Tarea 1, así que estas pruebas comprueban que `ChatPage` usa esos tokens en cada elemento.
   - Separadores: con los dos `createdAt` de RF-CHAT-11 aparecen «Lunes 14 de septiembre» antes de «22:30» y «Martes 15 de septiembre» antes de «00:10».
   - Barra: «Enviar carnet» con `LucideIcons.idCard` y su tooltip; `Icons.send` con tooltip «Enviar mensaje»; con el campo vacío el botón está deshabilitado (no llama a enviar) y con texto sí envía.
   - Colores: ningún `Color(0x…)` ni `Colors.<fijo>` en `chat_page.dart` salvo los permitidos (una prueba que lee el archivo como texto y busca los patrones).
@@ -149,7 +150,7 @@ class CursoAvatar extends StatelessWidget {
 
 ### Tarea 5: Cierre
 
-- [ ] **Paso 1:** en `specs/features/chat/chat.spec.md`, el estado suma «e implementada» con la fecha; cada `[@test]` apunta a un archivo que existe. En `docs/specs/feature-index.md`, la fila 19 pasa a implementada.
+- [ ] **Paso 1:** en `specs/features/chat/chat.spec.md`, el estado suma «e implementada» con la fecha; cada `[@test]` apunta a un archivo que existe y que tiene al menos un caso del requisito que lo enlaza (por ejemplo, RF-CHAT-10 en `chat_identidad_test.dart` y en `chat_page_test.dart`). En `docs/specs/feature-index.md`, la fila 19 pasa a implementada.
 - [ ] **Paso 2:** `README.md`: actualiza las menciones de «Mis chats», el toggle del header y «Chat grupal» (buscar con `grep -n "Mis chats\|Chat grupal\|toggleListView\|format_list_bulleted" README.md`) para que describan la pestaña Chats y la cabecera nueva. Sin datos reales.
 - [ ] **Paso 3:** suite completa, `analyze` con la misma cantidad de issues que la línea base, ninguna ruta de una máquina concreta (carpetas de usuario o temporales) en las líneas agregadas fuera de `docs/superpowers/plans/`, y ningún código de ocho dígitos que no sea `20230001` en lo agregado.
 - [ ] **Paso 4: capturas para el dueño** (no van al repo): con una prueba descartable fuera del repo, PNG a 375×667 con DPR 2, en claro y en oscuro, de la pestaña Chats, una conversación con mensajes de varios días y de un moderador, la ficha con el botón, la pestaña Secciones del docente y el footer del delegado con «Delegado» activo. Guárdalas en el scratchpad y lista las rutas en el informe.
