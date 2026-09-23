@@ -32,7 +32,7 @@ targets:
 > Ajustada el 2026-09-22 en RF-BLQ-6, que ahora oculta la línea de horas también cuando el total redondeado a un decimal da 0; el dueño aprobó ese ajuste el 2026-09-23.
 > Ajustada el 2026-09-23 con el arreglo del bloque sin días reales y la lista Mis bloques, aprobado por el dueño ese día.
 > Ajustada el 2026-09-23 en RF-BLQ-8 con los retoques de la revisión visual, que cambian el cuerpo de la confirmación de borrado desde la lista y fijan el contraste de sus avisos y del botón.
-> Ajustada el 2026-09-23 en RF-BLQ-8 por la spec del chat de sección (`specs/features/chat/chat.spec.md`), que saca del horario la lista de chats. El botón de «Mis bloques» ya no tiene esa condición, y las pruebas «en la lista de chats no aparece» salen con ella. Pendiente de la aprobación del dueño de esa spec.
+> Ajustada el 2026-09-23 en RF-BLQ-8 por la spec del chat de sección (`specs/features/chat/chat.spec.md`), que saca del horario la lista de chats. El botón de «Mis bloques» ya no tiene esa condición, y las pruebas «en la lista de chats no aparece» salen con ella. Pendiente de la aprobación del dueño en esta spec, aunque la del chat ya está aprobada. La fase 1 del chat ya implementa este ajuste, y la aprobación sigue abierta.
 
 ## User Stories
 
