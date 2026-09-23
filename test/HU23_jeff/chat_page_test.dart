@@ -26,12 +26,17 @@ import 'chat_repo_falso.dart';
 
 const _teacher = sesionDocente;
 
+/// Mensaje armado con `ChatMessage.fromMap`, como los que llegan de Firebase.
+///
+/// [createdAt] va como en el mapa. Un entero son milisegundos, que `fromMap`
+/// vuelve una fecha local, y un texto ISO 8601 con «Z» da una fecha en UTC.
+/// Sin él, el `id` hace de milisegundos.
 ChatMessage _msg(
   String id,
   String senderId,
   String body, {
   String role = 'student',
-  int? createdAt,
+  Object? createdAt,
 }) => ChatMessage.fromMap(id, {
   'senderId': senderId,
   'senderName': senderId == '292' ? 'Docente De Prueba' : 'Alumno X',
@@ -370,6 +375,12 @@ void main() {
       // 03:30 UTC del 15 es 22:30 del lunes 14 en Lima; 05:10 UTC es 00:10
       // del martes 15, y 06:00 UTC es 01:00 del mismo martes. El tercero es
       // de otro remitente: abre grupo, pero no día.
+      //
+      // Los tres llegan como texto ISO con «Z», así que `fromMap` los deja en
+      // UTC. Como milisegundos serían fechas locales, y en una máquina en
+      // UTC−5 leer sus campos sin pasar a Lima ya daría 22:30 y el lunes 14,
+      // con lo que la prueba no distinguiría la hora de Lima. En UTC, leerlos
+      // sin convertir da 03:30 y el martes 15 en cualquier zona.
       final repo = ChatRepoFalso(
         session: _teacher,
         messages: [
@@ -377,22 +388,23 @@ void main() {
             '1',
             '6',
             'Mensaje de la noche',
-            createdAt: DateTime.utc(2026, 9, 15, 3, 30).millisecondsSinceEpoch,
+            createdAt: '2026-09-15T03:30:00Z',
           ),
           _msg(
             '2',
             '6',
             'Mensaje de la madrugada',
-            createdAt: DateTime.utc(2026, 9, 15, 5, 10).millisecondsSinceEpoch,
+            createdAt: '2026-09-15T05:10:00Z',
           ),
           _msg(
             '3',
             '7',
             'Mensaje de la una',
-            createdAt: DateTime.utc(2026, 9, 15, 6).millisecondsSinceEpoch,
+            createdAt: '2026-09-15T06:00:00Z',
           ),
         ],
       );
+      expect(repo.messages.map((m) => m.createdAt.isUtc), everyElement(isTrue));
       await tester.pumpWidget(_wrap(repo));
       await tester.pumpAndSettle();
 
