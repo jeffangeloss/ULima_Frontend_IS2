@@ -24,8 +24,8 @@ targets:
 
 # Chat de sección
 
-> Estado: **diseñada con el dueño el 2026-09-23. Pendiente de su aprobación de esta spec
-> escrita antes de implementar.**
+> Estado: **diseñada con el dueño el 2026-09-23 y aprobada por él ese mismo día**, con los
+> puntos que la spec fija por su cuenta y el AppBar en blanco sobre `#FF6600` (ver «Decisiones»).
 > Cubre la fase 1 de los chats de curso. Documenta el chat que ya existe y que se conserva
 > (RF-CHAT-1 a RF-CHAT-4) y suma la pestaña Chats del alumno, su bandeja, el botón de la
 > ficha del curso, el rediseño de la conversación y el acceso del docente (RF-CHAT-5 a
@@ -271,8 +271,8 @@ Rige para alumno y docente.
   como el avatar de hoy (`chat_page.dart:316-320`). El título es el nombre del curso tal
   como llega y el subtítulo es «Sección N» o «Sin sección». Salen el ícono de grupo, «Chat
   grupal» (`chat_page.dart:316-338`) y el `#FF5722` fijo (`chat_page.dart:344`). En oscuro,
-  la flecha, el título y el subtítulo van en blanco, que da 16,58:1. El color que llevan en
-  claro queda abierto («Pregunta abierta»).
+  la flecha, el título y el subtítulo van en blanco, que da 16,58:1. En claro también van en
+  blanco sobre `#FF6600`, como el header, por decisión del dueño («AppBar en el tema claro»).
 - **Círculo del curso.** Es un solo widget para la bandeja y el AppBar. Sus iniciales salen
   de una función pura con esta regla.
   1. El nombre se recorta y se parte en palabras por los espacios.
@@ -338,8 +338,8 @@ Rige para alumno y docente.
 - **Contraste.** Todo texto de `ChatPage` llega a 4,5:1 contra su fondo en los dos temas, y
   todo ícono que da información, a 3:1. Eso abarca el cuerpo, la hora, el nombre, la
   etiqueta de rol, el separador de día, la lápida, los estados vacío, no disponible y de
-  error, la pista del campo, los avisos y el diálogo de borrado. Lo único pendiente es el
-  texto del AppBar en claro, que decide el dueño («Pregunta abierta»). La hora deja
+  error, la pista del campo, los avisos y el diálogo de borrado. La única excepción es el
+  texto del AppBar en claro, blanco sobre `#FF6600` como el header («AppBar en el tema claro»). La hora deja
   `black45` y `white38` (`chat_page.dart:766` y `:821`) y pasa a `textSecondary`, que da
   5,31:1 o más sobre las burbujas de arriba.
 - **Colores con nombre.** Los colores del chat viven como tokens de `MaterialTheme`
@@ -569,7 +569,7 @@ El dueño aprobó estas doce decisiones el 2026-09-23.
 | 2 | Bandeja con una fila por sección (círculo con iniciales, nombre, «Sección N», chevron), sin último mensaje, hora ni no leídos | RF-CHAT-6 |
 | 3 | Horario sin el ícono de lista ni «Mis chats», solo calendario | schedule.spec.md y BR-SHELL-F-03 de app-shell |
 | 4 | Botón visible «Chat del curso» en la ficha del alumno | RF-CHAT-7 y course-detail.spec.md |
-| 5 | ChatPage con la identidad de la app y contraste de 4,5:1 en los dos temas | RF-CHAT-8 y «Pregunta abierta» |
+| 5 | ChatPage con la identidad de la app y contraste de 4,5:1 en los dos temas | RF-CHAT-8 y «AppBar en el tema claro» |
 | 6 | Nombre solo en mensajes ajenos y solo al cambiar de remitente o de día | RF-CHAT-9 |
 | 7 | Moderadores distinguidos solo por su etiqueta, con la burbuja igual a las demás | RF-CHAT-10 |
 | 8 | Separadores «Hoy», «Ayer» y «Lunes 21 de septiembre», en hora de Lima y sin `intl` | RF-CHAT-11 |
@@ -601,21 +601,14 @@ confirma o los cambia al aprobarla.
   explícitos de error. Sumarlo exige que `HorarioController` deje de tragarse el error de
   `_loadSecciones` y un texto nuevo.
 
-## Pregunta abierta
+## AppBar en el tema claro
 
-**Texto del AppBar en el tema claro.** La decisión 5 pide el AppBar en `#FF6600`, como el
-header, y texto de 4,5:1 en los dos temas. El blanco del header sobre ese naranja da 2,94:1,
-también en el subtítulo de 12 px, y la flecha tampoco llega al 3:1 de un ícono. RF-CHAT-8 no
-lo resuelve, y el dueño elige una de estas opciones al aprobar la spec. En oscuro no hay
-pregunta, porque el blanco sobre `#1E1E24` da 16,58:1.
-
-| Opción | Contraste en claro | Qué cumple y qué no |
-| --- | --- | --- |
-| Blanco sobre `#FF6600`, igual que el header (`app_header.dart:81-89`) | 2,94:1 | Se ve igual al header, pero no llega a 4,5:1 ni al 3:1 de la flecha |
-| Texto y flecha en `#000000` sobre `#FF6600` | 7,15:1 | Cumple el color y el contraste de la decisión 5, pero el texto deja de ser blanco como en el header |
-| AppBar en `primaryDark` con blanco | 4,12:1 | Tampoco llega a 4,5:1, y deja el `#FF6600` que pide la decisión 5 |
-
-Solo la segunda opción cumple a la vez el color y el contraste que pide la decisión 5.
+El dueño eligió el 2026-09-23 texto y flecha blancos sobre `#FF6600`, igual que el header
+(`app_header.dart:81-89`), para que el chat se vea como el resto de la app. Ese blanco da
+2,94:1 y no llega al 4,5:1 de la decisión 5; es el mismo contraste de la cabecera de toda la
+app, y se corrige en toda la app en un cambio aparte, no en esta fase. El resto del texto de
+la conversación, bajo el AppBar, sí cumple 4,5:1. En oscuro el blanco sobre `#1E1E24` da
+16,58:1.
 
 ## Verificación
 
