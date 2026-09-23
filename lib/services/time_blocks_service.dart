@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
@@ -51,9 +53,10 @@ class TimeBlocksService extends GetxService {
   String? _from;
   String? _to;
 
-  /// La ventana de la foto que hay en [_snapshot]. Cambia solo cuando una
-  /// carga termina bien: tras un fallo, o mientras llega la ventana nueva,
-  /// la foto sigue siendo la de la anterior y no cuenta como la pedida.
+  /// La ventana de la foto que hay en [_snapshot]. Se asigna solo cuando una
+  /// carga termina bien y se vacía cuando una falla: tras un fallo, o
+  /// mientras llega la ventana nueva, la foto que queda no cuenta como la
+  /// pedida.
   String? _loadedFrom;
   String? _loadedTo;
 
@@ -158,6 +161,12 @@ class TimeBlocksService extends GetxService {
       // horario de clases se sigue viendo.
       debugPrint('Error cargando los bloques de horario: $e');
       _hasError.value = true;
+      // La foto que quede no cuenta como la de esta ventana, así que el
+      // siguiente load() sin force la vuelve a pedir. Sin esto, la recarga
+      // fallida que sigue a una escritura dejaba la ventana marcada como
+      // cargada, y ni volver a la pestaña ni cambiar de día la reintentaban.
+      _loadedFrom = null;
+      _loadedTo = null;
     } finally {
       if (generation == _generation) {
         _loading.value = false;
@@ -190,12 +199,14 @@ class TimeBlocksService extends GetxService {
 
   /// `POST /time-blocks/me`. Devuelve la regla creada y recarga la ventana
   /// vigente, para que la grilla muestre el bloque sin que la pantalla haga
-  /// nada. Si falla, lanza [TimeBlocksFailure] y no recarga.
+  /// nada. Si falla, lanza [TimeBlocksFailure]: con un rechazo del servidor
+  /// no recarga, y sin respuesta recarga sin esperar ([_escribir]).
   Future<TimeBlockRule> create(TimeBlockInput input) async {
     final json = await _escribir(
       () => _api.postJson('/time-blocks/me', body: input.toJson()),
     );
     final bloque = TimeBlockRule.fromJson(json['block']);
+    _ponerRegla(bloque);
     await reload();
     return bloque;
   }
@@ -207,8 +218,23 @@ class TimeBlocksService extends GetxService {
       () => _api.patchJson('/time-blocks/me/$id', body: input.toJson()),
     );
     final bloque = TimeBlockRule.fromJson(json['block']);
+    _ponerRegla(bloque);
     await reload();
     return bloque;
+  }
+
+  /// Deja en [blocks] la regla que devolvió el servidor, en lugar de la del
+  /// mismo id si ya estaba, antes de recargar. Si la recarga falla, el aviso
+  /// de cruce del formulario ya ve el bloque guardado y la alumna no lo crea
+  /// otra vez. Solo completa la copia del usuario actual.
+  void _ponerRegla(TimeBlockRule regla) {
+    if (!_esDelUsuarioActual) return;
+    final i = _blocks.indexWhere((b) => b.id == regla.id);
+    if (i < 0) {
+      _blocks.add(regla);
+    } else {
+      _blocks[i] = regla;
+    }
   }
 
   /// `DELETE /time-blocks/me/:id`: el bloque y todos sus días.
@@ -262,6 +288,10 @@ class TimeBlocksService extends GetxService {
       throw TimeBlocksFailure(e.message);
     } catch (e) {
       debugPrint('Error escribiendo un bloque de horario: $e');
+      // Sin respuesta (red caída o plazo vencido), la escritura pudo quedar
+      // guardada en el servidor. Se recarga la ventana sin esperar: si se
+      // guardó, la grilla y el aviso de cruce la ven y la alumna no la repite.
+      unawaited(reload());
       throw const TimeBlocksFailure(genericErrorMessage);
     }
   }

@@ -724,7 +724,8 @@ void main() {
       expect(api.getOcurrencias, 1, reason: 'sin escritura no hay recarga');
     });
 
-    test('caso 16: un fallo de red sale con el mensaje genérico', () async {
+    test('caso 16: un fallo de red sale con el mensaje genérico y recarga, '
+        'porque la escritura pudo quedar guardada', () async {
       _loguear(_user());
       final api = _FakeBlocksApi()..errorDeEscritura = Exception('socket');
       final s = _servicio(api);
@@ -740,7 +741,19 @@ void main() {
           ),
         ),
       );
-      expect(api.getOcurrencias, 1);
+      // La recarga va sin esperar: se deja correr antes de contar.
+      await Future<void>.delayed(Duration.zero);
+      expect(
+        api.getOcurrencias,
+        2,
+        reason: 'sin respuesta no se sabe si el servidor la guardó (un plazo '
+            'vencido puede llegar después de guardar): se vuelve a pedir la '
+            'ventana',
+      );
+      expect(api.ultimaVentana, <String, String?>{
+        'from': _desde,
+        'to': _hasta,
+      });
     });
 
     test('caso 17: logout() vacía los bloques y el siguiente load vuelve a pedir',
@@ -835,6 +848,70 @@ void main() {
       expect(segundaTermino, isTrue);
       expect(api.getOcurrencias, 2, reason: 'una sola pareja de GET');
       expect(s.snapshot!.occurrences, isEmpty);
+    });
+
+    test('caso 20: una recarga fallida tras escribir no deja la ventana '
+        'marcada como cargada', () async {
+      // La escritura sale bien y su recarga falla: queda la foto de antes de
+      // escribir. El siguiente load() sin force de la misma ventana (volver a
+      // la pestaña, cambiar de día) la vuelve a pedir, en vez de quedarse con
+      // esa foto hasta la próxima escritura o un reinicio.
+      _loguear(_user());
+      final api = _FakeBlocksApi(
+        bloques: <Object>[
+          _sinBloquesJson(),
+          Exception('socket'),
+          _bloquesJson(),
+        ],
+        ocurrencias: <Object>[
+          _sinOcurrenciasJson(),
+          Exception('socket'),
+          _ocurrenciasJson(),
+        ],
+      );
+      final s = _servicio(api);
+      await s.load(from: _desde, to: _hasta);
+
+      await s.create(_entrada());
+      expect(s.hasError, isTrue, reason: 'la recarga falló');
+      expect(s.snapshot!.occurrences, isEmpty);
+
+      await s.load(from: _desde, to: _hasta);
+      expect(
+        api.getOcurrencias,
+        3,
+        reason: 'la foto que dejó la recarga fallida no cuenta como cargada',
+      );
+      expect(s.hasError, isFalse);
+      expect(s.snapshot!.occurrences, hasLength(2));
+    });
+
+    test('caso 21: create y update dejan en blocks la regla que devuelve el '
+        'servidor, aunque la recarga falle', () async {
+      // El aviso de cruce del formulario compara contra blocks. Si la recarga
+      // que sigue a una escritura buena falla, el bloque guardado ya está ahí
+      // y la alumna no lo crea otra vez sin enterarse.
+      _loguear(_user());
+      final api = _FakeBlocksApi(
+        bloques: <Object>[_sinBloquesJson(), Exception('socket')],
+        ocurrencias: <Object>[_sinOcurrenciasJson(), Exception('socket')],
+      );
+      final s = _servicio(api);
+      await s.load(from: _desde, to: _hasta);
+      expect(s.blocks, isEmpty);
+
+      final creado = await s.create(_entrada());
+      expect(s.hasError, isTrue, reason: 'la recarga falló');
+      expect(s.blocks.map((b) => b.id), <int>[creado.id]);
+      expect(s.blocks.single.title, 'PRÁCTICAS DE PRUEBA');
+
+      await s.update(creado.id, _entrada());
+      expect(
+        s.blocks,
+        hasLength(1),
+        reason: 'la editada reemplaza a la del mismo id, no se suma otra',
+      );
+      expect(s.blocks.single.title, 'PRÁCTICAS EDITADAS');
     });
   });
 }
