@@ -113,6 +113,11 @@ Future<void> mostrarAccionesDeBloque(
   switch (accion) {
     case AccionDeBloque.editar:
       if (regla == null) return;
+      // La misma guarda que el botón de agregar (HorarioPage): get 4.7.3
+      // borra el controller del formulario recién al terminar la animación
+      // de salida, y antes de eso el binding le daría a /bloque el viejo, que
+      // ignora esta regla y queda por liberar.
+      if (Get.isRegistered<TimeBlockFormController>()) return;
       await SystemChrome.setPreferredOrientations(_soloVertical);
       await Get.toNamed<dynamic>('/bloque', arguments: regla);
       await SystemChrome.setPreferredOrientations(_orientacionesDelHorario);

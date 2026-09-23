@@ -24,6 +24,7 @@ import 'package:ulima_plus/pages/descripcion_cursos/descrip_cursos_controller.da
 import 'package:ulima_plus/pages/horario/horario.dart';
 import 'package:ulima_plus/pages/horario/horario_controller.dart';
 import 'package:ulima_plus/pages/time_blocks/time_block_actions_sheet.dart';
+import 'package:ulima_plus/pages/time_blocks/time_block_form_controller.dart';
 import 'package:ulima_plus/pages/time_blocks/time_block_form_page.dart';
 import 'package:ulima_plus/pages/time_blocks/time_block_validators.dart';
 import 'package:ulima_plus/services/api_client.dart';
@@ -621,6 +622,28 @@ void main() {
         'DeviceOrientation.landscapeRight',
       ]);
       // Editar lo guarda el formulario, no la hoja.
+      expect(service.llamadas, isEmpty);
+    });
+
+    testWidgets(
+        'editar no abre /bloque mientras el formulario anterior sigue '
+        'cerrándose', (tester) async {
+      // get 4.7.3 borra el controller del formulario recién al terminar la
+      // animación de salida de /bloque. Mientras siga registrado, el binding
+      // se lo daría a la ruta nueva, que ignoraría esta regla y quedaría con
+      // un controller por liberar. La hoja no navega, igual que el botón de
+      // agregar del horario.
+      final service = await _abrirHoja(tester, ocurrencia: _miercoles23Movido);
+      Get.put<TimeBlockFormController>(TimeBlockFormController());
+
+      await _tocar(tester, TimeBlockActionsSheet.editar);
+
+      expect(find.byType(TimeBlockActionsSheet), findsNothing);
+      expect(Get.currentRoute, isNot('/bloque'));
+      expect(find.text('FORMULARIO'), findsNothing);
+      expect(_argumentoDelFormulario, isNull);
+      // Tampoco fija la orientación: no hay formulario al que volver.
+      expect(_orientaciones, isEmpty);
       expect(service.llamadas, isEmpty);
     });
 
