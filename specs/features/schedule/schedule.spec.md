@@ -14,7 +14,8 @@ targets:
 > (`specs/features/chat/chat.spec.md`). Horario queda solo como calendario y pierde la vista
 > de lista «Mis chats», que se abría con el ícono de lista del header. Los chats del alumno
 > pasan a su propia pestaña. Pendiente de la aprobación del dueño de la spec escrita antes de
-> implementar. El resto de esta spec no cambia.
+> implementar. La fase 1 del chat ya implementa este ajuste, y la aprobación sigue abierta. El
+> resto de esta spec no cambia.
 
 ## Requirements
 

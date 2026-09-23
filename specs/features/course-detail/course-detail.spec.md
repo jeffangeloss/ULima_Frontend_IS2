@@ -15,7 +15,8 @@ targets:
 > Ajustada el 2026-09-23 con las decisiones del dueño sobre los chats de curso
 > (`specs/features/chat/chat.spec.md`). La ficha del alumno suma el botón «Chat del curso»
 > en la franja de la sección (RF-CHAT-7). Pendiente de la aprobación del dueño de la spec
-> escrita antes de implementar. Las pestañas y los contratos de esta spec no cambian.
+> escrita antes de implementar. La fase 1 del chat ya implementa este ajuste, y la aprobación
+> sigue abierta. Las pestañas y los contratos de esta spec no cambian.
 
 ## Requirements
 

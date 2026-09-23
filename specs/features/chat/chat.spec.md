@@ -24,13 +24,8 @@ targets:
 
 # Chat de sección
 
-> Estado: **diseñada con el dueño el 2026-09-23, aprobada por él ese mismo día e implementada el
-> 2026-09-23**, con los puntos que la spec fija por su cuenta y el AppBar en blanco sobre
-> `#FF6600` (ver «Decisiones»).
-> La fase 1 no se da todavía por terminada, porque RF-CHAT-5 lo condiciona a que las seis
-> etiquetas del footer del delegado se lean completas en un iPhone SE. La revisión manual que
-> pide «Verificación» sigue pendiente, y una medida local con una aproximación de la fuente del
-> iPhone anticipa que «Delegado» no cabe, así que el ajuste del footer queda en manos del dueño.
+> Estado: **diseñada con el dueño el 2026-09-23 y aprobada por él ese mismo día**, con los
+> puntos que la spec fija por su cuenta y el AppBar en blanco sobre `#FF6600` (ver «Decisiones»).
 > Cubre la fase 1 de los chats de curso. Documenta el chat que ya existe y que se conserva
 > (RF-CHAT-1 a RF-CHAT-4) y suma la pestaña Chats del alumno, su bandeja, el botón de la
 > ficha del curso, el rediseño de la conversación y el acceso del docente (RF-CHAT-5 a
@@ -48,7 +43,9 @@ targets:
 > Después de la aprobación, la revisión de la Tarea 2 suma tres aclaraciones que no cambian
 > ningún comportamiento aprobado. Son la base de las referencias por línea («Contexto»), el
 > toque del botón enviar deshabilitado (RF-CHAT-12 y «Pruebas existentes que cambian») y la
-> corrida con `TZ=UTC` (RF-CHAT-11 y «Verificación»).
+> corrida con `TZ=UTC` (RF-CHAT-11 y «Verificación»). La revisión de la Tarea 5 suma una
+> cuarta, que acota en «Verificación» lo que prueba `chats_pestana_test`, y esta espera la
+> confirmación del dueño.
 
 ## User Stories
 
@@ -646,6 +643,9 @@ la conversación, bajo el AppBar, sí cumple 4,5:1. En oscuro el blanco sobre `#
   local coincide con la de Lima. Con `TZ=UTC`, las pruebas de RF-CHAT-11 detectan una hora o
   un día calculados en la zona del teléfono, como con `.toLocal()`.
 - `chats_pestana_test` monta el footer de un delegado a 375×667 con cada pestaña activa, y
-  comprueba que no hay desborde y que las seis etiquetas se leen completas (RF-CHAT-5).
+  comprueba que no hay desborde y que las seis etiquetas se leen completas (RF-CHAT-5). La
+  prueba mide las etiquetas con Roboto, la fuente de Android, porque la del iPhone no viene con
+  el SDK de Flutter. Su verde vale solo para Android en 375 dp y no prueba RF-CHAT-5 en el
+  iPhone SE, que depende de la revisión manual del punto siguiente.
 - Una revisión manual en un iPhone SE, en los temas claro y oscuro, del footer del delegado,
   de la bandeja y de la conversación.

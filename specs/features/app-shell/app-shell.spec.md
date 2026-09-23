@@ -15,7 +15,8 @@ targets:
 > (`specs/features/chat/chat.spec.md`). El footer del alumno suma la pestaña Chats
 > (BR-SHELL-F-02) y el header ya no tiene el toggle lista/calendario de Horario
 > (BR-SHELL-F-03). Pendiente de la aprobación del dueño de la spec escrita antes de
-> implementar. BR-SHELL-F-00 y BR-SHELL-F-01 no cambian.
+> implementar. La fase 1 del chat ya implementa los dos cambios, y la aprobación sigue abierta.
+> BR-SHELL-F-00 y BR-SHELL-F-01 no cambian.
 
 ## Scope
 
