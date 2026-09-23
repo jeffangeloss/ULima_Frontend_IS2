@@ -769,6 +769,27 @@ void main() {
       );
       expect(horario.bloquesDelDia(DaySchedule('Jueves', '', 'Semana actual')), isEmpty);
 
+      // Lo mismo con daysList como lo llena el backend en ese caso: los siete
+      // días sin isoDate. Siete no pasa el borde de la guarda (más de siete),
+      // así que el miércoles sigue siendo el de esta semana.
+      horario.daysList.assignAll([
+        for (final nombre in const [
+          'Lunes',
+          'Martes',
+          'Miércoles',
+          'Jueves',
+          'Viernes',
+          'Sábado',
+          'Domingo',
+        ])
+          DaySchedule(nombre, '', 'Semana actual'),
+      ]);
+      expect(
+        horario.bloquesDelDia(DaySchedule('Miércoles', '', 'Semana actual')).map((o) => o.date),
+        soloEste,
+        reason: 'el ciclo sin semanas llega con siete días y sí tiene fecha',
+      );
+
       // Un ciclo con semanas sin isoDate (un backend sin RS-BE-36): el
       // miércoles 23 no se distingue del 30, y la semana de hoy saldría en
       // cada semana del ciclo. No hay fecha, así que no se pinta nada.
