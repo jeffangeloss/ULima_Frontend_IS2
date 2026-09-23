@@ -290,8 +290,10 @@ pantalla da por hecho:
 - Repeticiones más ricas que "estos días de la semana".
 - Recordatorios, notificaciones o compartir bloques.
 - Bloques fuera de 7 am–10 pm: el formulario no los deja y el servidor los rechaza.
-- Reescribir la pantalla de horario: se toca lo que el reparto en columnas, el domingo y el
-  toque de un bloque propio obligan, y nada más.
+- Reescribir la pantalla de horario. Se toca solo lo que piden los requisitos de esta spec,
+  que son el botón de agregar, los bloques propios en la grilla, el reparto en columnas, el
+  domingo, el toque de un bloque propio, la línea de horas, la fecha de cada día y el botón
+  de «Mis bloques».
 - Mostrar las horas de las clases en la suma: solo cuentan los bloques propios.
 - El aviso de cruce al cambiar la hora de un solo día.
 

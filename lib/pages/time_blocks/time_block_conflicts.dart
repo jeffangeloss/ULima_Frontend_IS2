@@ -199,7 +199,8 @@ Set<int> _diasConFechaEnComun(
 ///   del miércoles 23 al 23 no tiene ninguna fecha real, y no choca con nada.
 ///
 /// Si [desde] o [hasta] faltan, el rango del bloque nuevo se toma como
-/// abierto y queda la comparación por día de la semana.
+/// abierto, así que contra las clases queda solo el día de la semana y contra
+/// otro bloque cuentan los días con fecha en el rango del bloque guardado.
 ///
 /// La lista sale ordenada por día y por hora de inicio, para que el aviso se
 /// lea siempre igual sin importar en qué orden llegaron las clases.
