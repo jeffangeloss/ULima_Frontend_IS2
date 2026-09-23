@@ -9,8 +9,8 @@
 //   siguen encontrando por su etiqueta, entrar a Chats recarga el horario solo
 //   si su controller ya existe, y la burbuja de Ulises sigue flotando sobre
 //   Chats.
-// - El footer del delegado en 375 x 667: las seis etiquetas se leen completas
-//   y sin desborde con cualquiera de ellas activa.
+// - El footer del delegado en 375 x 667, medido con Roboto: las seis
+//   etiquetas se leen completas y sin desborde con cualquiera de ellas activa.
 // Archivos: lib/pages/home/home_shell_config.dart y
 // lib/pages/home/home_page.dart.
 //
@@ -18,8 +18,10 @@
 // plataforma de las pruebas, que se carga del propio SDK de Flutter (la ruta
 // sale de FLUTTER_ROOT, que fija `flutter test`). Con la fuente de pruebas por
 // omisión cada letra mide 1 em y ninguna medida de ancho significaría nada. La
-// del iPhone (SF) no viene con el SDK: esa revisión es manual («Verificación»
-// de la spec).
+// del iPhone (SF) no viene con el SDK, así que el verde de estas pruebas vale
+// para Android y no para el iPhone SE que nombra la spec: allí «Delegado» es
+// más ancha que en Roboto, y el footer del iPhone lo decide la revisión manual
+// («Verificación» de la spec).
 //
 // Todos los datos son inventados; el repo es público. La alumna y el delegado
 // usan el código sintético 20230001 y el docente es "docente.test".
@@ -34,6 +36,7 @@ import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:ulima_plus/components/chatbot_bubble.dart';
 import 'package:ulima_plus/components/footer/app_footer.dart';
+import 'package:ulima_plus/components/header/app_header.dart';
 import 'package:ulima_plus/configs/themes.dart';
 import 'package:ulima_plus/models/advising_models.dart';
 import 'package:ulima_plus/models/curso_delegado_model.dart';
@@ -423,6 +426,38 @@ void main() {
       await _desmontar(tester);
     });
 
+    testWidgets('Horario no ofrece la vista de lista ni «Mis chats», y el '
+        'header del alumno en Horario solo muestra la campana '
+        '(schedule.spec.md)', (tester) async {
+      await _abrirShell(tester, _alumna());
+
+      await _tocarPestana(tester, 'Horario');
+      expect(find.byType(HorarioPage), findsOneWidget);
+
+      // Ni el texto de la lista ni los dos íconos del toggle que la
+      // alternaba, en ninguna parte de la pantalla.
+      expect(find.text('Mis chats'), findsNothing);
+      expect(find.byIcon(Icons.format_list_bulleted), findsNothing);
+      expect(find.byIcon(Icons.calendar_today), findsNothing);
+
+      // En el header, la campana es el único ícono.
+      final header = find.byType(AppHeader);
+      expect(header, findsOneWidget);
+      expect(
+        find.descendant(
+          of: header,
+          matching: find.byIcon(Icons.notifications_none),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: header, matching: find.byType(Icon)),
+        findsOneWidget,
+      );
+
+      await _desmontar(tester);
+    });
+
     testWidgets('el shell sigue encontrando «Horario» por su etiqueta con '
         'Chats en el footer', (tester) async {
       final horario = _HorarioEspia();
@@ -538,7 +573,9 @@ void main() {
     });
   });
 
-  group('WIDGET · el footer del delegado en 375 x 667 (RF-CHAT-5)', () {
+  group('WIDGET · el footer del delegado en 375 x 667, medido con Roboto '
+      '(RF-CHAT-5)', () {
+    // Solo Roboto: este verde no dice nada del iPhone (ver el encabezado).
     setUpAll(_cargarRoboto);
 
     for (var activa = 0; activa < _pestanasDelegado.length; activa++) {
