@@ -19,7 +19,8 @@ targets:
 > Aprobada por el dueño el 2026-09-22, con los targets de arriba, **e implementada.** Está
 > probada entera contra dobles, pero **todavía no contra el backend desplegado**: las rutas
 > `/time-blocks/**`, su migración `0012_time_blocks.sql` y el `isoDate` de los días de
-> `GET /schedule/me/sessions` tienen que estar en producción antes de publicar el APK.
+> `GET /schedule/me/sessions` tienen que estar en producción antes de mergear a `main`,
+> porque cada push a `main` publica el APK (`.github/workflows/build-apk.yml`).
 > Contraparte de backend: `ULima_Backend_IS2/specs/features/time-blocks/time-blocks.spec.md`
 > (RS-BE-30 a RS-BE-36).
 > Ajustada el 2026-09-21 con las decisiones finales del dueño: fecha exacta de cada día
