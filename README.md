@@ -1209,10 +1209,13 @@ obligatorios arriba, electivos abajo, separadas por un `_PoolDivider`.
 #### 12 · El mundo docente
 
 **Tab Secciones.** `TeacherSectionsPage` con `GET /advising/me/sections`. Cada card muestra curso,
-`sectionCode`, badge de rol (`Profesor` o `JP`) y, debajo, `LucideIcons.messagesSquare` con el texto «Chat»;
-**toda la tarjeta abre el chat de la sección** con el acento de la sección (`teacher_sections_page.dart:159-170`).
-La tarjeta es la `TarjetaDeChat` de la bandeja del alumno (`chats_inbox_page.dart:160`), un `InkWell` con
-ripple y la etiqueta accesible «Abrir el chat de <curso>» (RF-CHAT-13).
+la sección con `etiquetaDeSeccion` («Sección N» o «Sin sección», `teacher_sections_page.dart:202-209`), badge
+de rol (`Profesor` o `JP`) y, debajo, `LucideIcons.messagesSquare` con el texto «Chat»; **toda la tarjeta abre
+el chat de la sección** con el acento de la sección (`teacher_sections_page.dart:154-167`). La tarjeta es la
+`TarjetaDeChat` de la bandeja del alumno (`chats_inbox_page.dart:168-219`), un `InkWell` con ripple y la
+etiqueta accesible «Abrir el chat de <curso>, sección <N>», o «Abrir el chat de <curso>, sin sección» si el
+código llega nulo, vacío o con solo espacios (`etiquetaParaAbrirElChat`, `chat_linea_tiempo.dart:102-106`;
+RF-CHAT-13).
 
 **Tab Calificar** (solo Profesor titular).
 
@@ -1299,7 +1302,7 @@ en una clase abre `_TeacherCourseDetailSheet` (`horario.dart:923`):
    indicador hasta que termina la primera carga de secciones (`seccionesCargadas`).
 2. **Autenticación**: `POST /chat/token {sectionId}` devuelve un custom token de Firebase más la sesión
    `{uid, displayName, role, roleLabel, isModerator, weight}`. El login a Firebase solo se ejecuta si
-   `_auth.currentUser?.uid != session.uid` (`chat_repository.dart:80-83`). Timeout de **8 s** en la
+   `_auth.currentUser?.uid != session.uid` (`chat_repository.dart:83-86`). Timeout de **8 s** en la
    pantalla; al fallar, `No se pudo conectar al chat.`
 3. **Mensajes**: stream de Realtime Database en `sections/<sectionId>/messages`,
    `orderByKey().limitToLast(80)`, reordenados por timestamp en cliente.
@@ -1974,12 +1977,12 @@ Cabecera exacta del CSV
 
 | Service | Método | Endpoint backend | Modelo | Usado por |
 |:---|:---|:---|:---|:---|
-| `chat_repository.dart` | `signInWithCustomToken` :66 | `POST /chat/token` :68 body `{sectionId}`, luego `FirebaseAuth.signInWithCustomToken` :83 | `ChatSession{uid, displayName, role, roleLabel, isModerator, weight}` :9-42 | `ChatPage._initializeChat` :45 |
-| `chat_repository.dart` | `getMessages` :94 | **Firebase RTDB** `sections/$sectionId/messages`, `orderByKey().limitToLast(80)` :95 | `Stream<List<ChatMessage>>` | `ChatPage`, StreamBuilder |
-| `chat_repository.dart` | `sendMessage` :117 | **Firebase RTDB** `push()` + `set()` :128 | `void` | `ChatPage._sendMessage` :83 |
-| `chat_repository.dart` | `sendNetworkingCard` :146 | **Firebase RTDB** push con `body` prefijado por `ChatMessage.networkingBodyPrefix` :166 | `void` | `ChatPage._sendNetworkingCard` :110 |
-| `chat_repository.dart` | `fetchNetworkingCard` :176 | delega en `NetworkingService` → `GET /networking/users/:userId` | `PublicNetworkingCardDto` | `ChatPage._openNetworkingCard` :134 |
-| `chat_repository.dart` | `deleteMessage` :181 | `DELETE /chat/sections/:sectionId/messages/:messageId` :184 | `void`; la lápida la escribe el backend con Admin SDK | `ChatPage`, acción del autor sobre sus mensajes y del profesor titular sobre cualquiera |
+| `chat_repository.dart` | `signInWithCustomToken` :68 | `POST /chat/token` :70 body `{sectionId}`, luego `FirebaseAuth.signInWithCustomToken` :85 | `ChatSession{uid, displayName, role, roleLabel, isModerator, weight}` :9-42 | `ChatPage._initializeChat` :45 |
+| `chat_repository.dart` | `getMessages` :96 | **Firebase RTDB** `sections/$sectionId/messages`, `orderByKey().limitToLast(80)` :98-100 | `Stream<List<ChatMessage>>` | `ChatPage`, StreamBuilder |
+| `chat_repository.dart` | `sendMessage` :119 | **Firebase RTDB** `push()` + `set()` :130 | `void` | `ChatPage._sendMessage` :83 |
+| `chat_repository.dart` | `sendNetworkingCard` :148 | **Firebase RTDB** push con `body` prefijado por `ChatMessage.networkingBodyPrefix` :168 | `void` | `ChatPage._sendNetworkingCard` :110 |
+| `chat_repository.dart` | `fetchNetworkingCard` :178 | delega en `NetworkingService` → `GET /networking/users/:userId` | `PublicNetworkingCardDto` | `ChatPage._openNetworkingCard` :134 |
+| `chat_repository.dart` | `deleteMessage` :183 | `DELETE /chat/sections/:sectionId/messages/:messageId` :187 | `void`; la lápida la escribe el backend con Admin SDK | `ChatPage`, acción del autor sobre sus mensajes y del profesor titular sobre cualquiera |
 | `chatbot_service.dart` | `createSession` :7 | `POST /chatbot/sessions` | `ChatbotSession` | `ChatbotController` → `/chatbot` |
 | `chatbot_service.dart` | `listSessions` :14 | `GET /chatbot/sessions` | `List<ChatbotSession>` | `ChatbotController` |
 | `chatbot_service.dart` | `getSession` :22 | `GET /chatbot/sessions/:id` | `Map` con `session` + `messages` | `ChatbotController` |
@@ -1987,10 +1990,10 @@ Cabecera exacta del CSV
 | `chatbot_service.dart` | `ask` :31 | `POST /chatbot/sessions/:id/ask` :39 | `String` desde `response['answer']` | `ChatbotController.send` :108-112 |
 | `networking_service.dart` | `fetchMine` :18 | `GET /networking/me` | `NetworkingCardDto` | `NetworkingController.load` → `/networking` |
 | `networking_service.dart` | `updateMine` :24 | `PUT /networking/me` body `card.toJson()` | `NetworkingCardDto` | `NetworkingController.save` |
-| `networking_service.dart` | `fetchVisibleByUserId` :30 | `GET /networking/users/:userId` | `PublicNetworkingCardDto` | `ChatRepository.fetchNetworkingCard` :177 → `ChatPage` |
+| `networking_service.dart` | `fetchVisibleByUserId` :30 | `GET /networking/users/:userId` | `PublicNetworkingCardDto` | `ChatRepository.fetchNetworkingCard` :179 → `ChatPage` |
 
 `NetworkingService` implementa la interfaz `NetworkingGateway` (`networking_service.dart:4-10`) y
-`ChatRepository` implementa `ChatRepositoryContract` (`chat_repository.dart:46-57`). Las dos
+`ChatRepository` implementa `ChatRepositoryContract` (`chat_repository.dart:46-59`). Las dos
 interfaces existen por un solo motivo: poder inyectar dobles en los tests sin arrancar FlutterFire
 ni tocar la red.
 
@@ -2092,12 +2095,12 @@ propia, y es una excepción deliberada, no un descuido. El reparto es exacto:
 | Operación | Dónde ocurre | Por qué ahí |
 |:---|:---|:---|
 | Identidad y permisos del chat | **Backend**, `POST /chat/token` | El backend firma un custom token con `uid = app_user.id` y espeja el rol; el cliente no elige quién es |
-| Autenticación | `FirebaseAuth.signInWithCustomToken` :83 | Previo `signOut()` si el uid cambió :81-84 |
-| Leer mensajes | **RTDB** `sections/$sectionId/messages`, `limitToLast(80)` :95-99 | Es lo que justifica todo: un stream en vivo con latencia de milisegundos que un REST con polling no da |
-| Escribir mensaje | **RTDB** `push()` + `set()` :128-138 | `createdAt: ServerValue.timestamp`, fijado por el servidor de Firebase |
-| Compartir carnet | **RTDB**, mismo shape con `body` prefijado :166 | Es un mensaje más |
-| Resolver el carnet compartido | **Backend**, `GET /networking/users/:userId` :177 | La visibilidad del carnet es una regla de negocio, no de transporte |
-| Borrar mensaje | **Backend**, `DELETE /chat/sections/:sid/messages/:mid` :184-186 | El cliente **no puede** borrar |
+| Autenticación | `FirebaseAuth.signInWithCustomToken` :85 | Previo `signOut()` si el uid cambió :83-86 |
+| Leer mensajes | **RTDB** `sections/$sectionId/messages`, `limitToLast(80)` :97-101 | Es lo que justifica todo: un stream en vivo con latencia de milisegundos que un REST con polling no da |
+| Escribir mensaje | **RTDB** `push()` + `set()` :130-140 | `createdAt: ServerValue.timestamp`, fijado por el servidor de Firebase |
+| Compartir carnet | **RTDB**, mismo shape con `body` prefijado :168 | Es un mensaje más |
+| Resolver el carnet compartido | **Backend**, `GET /networking/users/:userId` :179 | La visibilidad del carnet es una regla de negocio, no de transporte |
+| Borrar mensaje | **Backend**, `DELETE /chat/sections/:sid/messages/:mid` :187-189 | El cliente **no puede** borrar |
 
 La última fila es la clave. Las reglas versionadas en [`database.rules.json`](database.rules.json)
 ponen la raíz en `.read/.write = false` y abren solo lo justo: `members/$sid/$uid` es legible por su

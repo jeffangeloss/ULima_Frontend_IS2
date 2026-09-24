@@ -5,7 +5,7 @@ void main() {
   test('parsea mensajes nuevos con nombre completo y rol moderador', () {
     final message = ChatMessage.fromMap('m1', {
       'senderId': '603',
-      'senderName': 'Ada Lovelace',
+      'senderName': 'Docente De Prueba',
       'senderRole': 'teacher',
       'senderRoleLabel': 'Profesor',
       'moderator': true,
@@ -14,7 +14,7 @@ void main() {
       'createdAt': 1783573983742,
     });
 
-    expect(message.senderName, 'Ada Lovelace');
+    expect(message.senderName, 'Docente De Prueba');
     expect(message.senderRole, 'teacher');
     expect(message.senderRoleLabel, 'Profesor');
     expect(message.isModerator, isTrue);
