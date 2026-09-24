@@ -10,6 +10,7 @@ targets:
   - ../../../lib/models/message.dart
   - ../../../lib/pages/home/home_shell_config.dart
   - ../../../lib/pages/home/home_page.dart
+  - ../../../lib/components/footer/app_footer.dart
   - ../../../lib/components/header/app_header.dart
   - ../../../lib/pages/horario/horario.dart
   - ../../../lib/pages/horario/horario_controller.dart
@@ -45,9 +46,16 @@ targets:
 > «Pruebas existentes que cambian») y la corrida con `TZ=UTC` (RF-CHAT-11 y «Verificación»).
 > La revisión de la Tarea 5 suma una cuarta, que acota en «Verificación» lo que prueba
 > `chats_pestana_test`, y reescribe la oración anterior sobre los `[@test]`, que en la versión
-> aprobada nombra pruebas por escribir. Los cinco textos esperan la confirmación del dueño, y
-> el del enviar deshabilitado precisa la decisión 9, porque el botón gris conserva su acción de
-> toque.
+> aprobada nombra pruebas por escribir. Las cuatro aclaraciones quedan aceptadas el 2026-09-23
+> y no cambian ninguna decisión del dueño. La oración reescrita tampoco cambia ninguna, porque
+> solo dice que las pruebas ya existen.
+> Los ajustes de cierre de la fase 1, del mismo 2026-09-23, fijan la etiqueta activa en 13 px
+> cuando el footer tiene seis pestañas, que decide el dueño (RF-CHAT-5). Suman también el
+> espacio para la burbuja de Ulises al final de la bandeja y la sección en la etiqueta accesible
+> de cada tarjeta (RF-CHAT-6 y RF-CHAT-13), el contraste del código y de la insignia de rol en
+> la tarjeta del docente (RF-CHAT-13), el token `iconoNaranja` (RF-CHAT-8), el enviar
+> deshabilitado sin respuesta de toque (RF-CHAT-12) y la excepción de formato de
+> «Verificación».
 
 ## User Stories
 
@@ -182,12 +190,15 @@ de Firebase actual es otro (`chat_repository.dart:81-84`).
 - Las pestañas que el shell busca por su etiqueta («Horario» y «Asesorias»,
   `home_page.dart:42-43` y `:74-76`) se siguen encontrando igual con la pestaña nueva en
   medio.
-- El footer no cambia de forma. Sigue con `BottomNavigationBarType.fixed`, la etiqueta
-  activa en 14 px y las demás en 12 px (`app_footer.dart:27-51`), y en 375 pt de ancho cada
-  una de las seis pestañas del delegado recibe unos 62 pt. En esa pantalla las seis
-  etiquetas se leen completas y sin desborde, con cualquiera de ellas activa, «Delegado»
-  incluida. Si no caben, la fase 1 no se da por terminada y el ajuste del footer vuelve al
-  dueño.
+- El footer sigue con `BottomNavigationBarType.fixed` (`app_footer.dart:27-51`). Con cinco
+  pestañas o menos, la etiqueta activa va en 14 px y las demás en 12 px, como hoy. Con seis,
+  que es el footer del delegado, la activa baja a 13 px y las demás siguen en 12, por
+  decisión del dueño del 2026-09-23.
+- Cada una de las seis pestañas recibe la sexta parte del ancho, 62,50 pt en el iPhone SE y
+  60 dp en un Android de 360 dp. A 13 px «Delegado» mide 60,35 pt con SF, la fuente del
+  iPhone, y 56,56 dp con Roboto, la de Android, así que en las dos pantallas las seis
+  etiquetas se leen completas y sin desborde, con cualquiera de ellas activa y «Delegado»
+  incluida. A 14 px no cabe, porque mide 64,84 pt con SF y 60,76 dp con Roboto.
 - El footer del docente no cambia. Su entrada al chat es la pestaña Secciones (RF-CHAT-13).
 
 `[@test] ../../../test/HU23_jeff/chats_pestana_test.dart`
@@ -225,7 +236,13 @@ app, `MaterialTheme.pageBg`.
 - **Toque.** La fila entera es un `InkWell` con ripple, dentro de un `Material` con el color
   y la forma de la tarjeta para que el ripple se vea, y abre `ChatPage` de esa sección con
   su nombre, su código y su color. Su semántica es la de un botón con la etiqueta «Abrir el
-  chat de <curso>», y su alto es de al menos 48 px.
+  chat de <curso>, sección <N>», o «Abrir el chat de <curso>, sin sección» cuando la fila
+  dice «Sin sección», para que dos secciones del mismo curso se distingan. Su alto es de al
+  menos 48 px.
+- **Espacio para Ulises.** La lista deja 96 px de relleno al final. La burbuja de Ulises mide
+  60 × 60 y el shell la pone encima de la pestaña, abajo a la izquierda y con 12 px de margen
+  (`chatbot_bubble.dart:16`, `:31` y `:76`), así que con la lista al final la última fila
+  queda por encima de la burbuja.
 - **Contraste.** Sobre `cardBg`, el nombre da 17,85:1 en claro y 14,22:1 en oscuro,
   «Sección N» da 10,35:1 y 6,44:1, y el chevron 4,76:1 y 3,86:1. Así el texto llega a 4,5:1
   y el chevron a 3:1 en los dos temas. «Sección N» deja el color del curso que usa hoy
@@ -360,7 +377,14 @@ Rige para alumno y docente.
   `Color(0x…)` y los colores fijos de `Colors`, como `Colors.redAccent`, `Colors.red[600]`,
   `Colors.grey[600]`, `Colors.white70` o `Colors.black45`. Solo quedan `Colors.white`,
   `Colors.black` (también con opacidad, en las sombras) y `Colors.transparent`. Los tokens
-  nuevos son `chatOwnBubbleBg` y `errorBg`, y el resto son los que la app ya tiene.
+  nuevos son tres, `chatOwnBubbleBg`, `errorBg` e `iconoNaranja`, y el resto son los que la
+  app ya tiene.
+- **Naranja de un ícono.** `MaterialTheme.iconoNaranja` vale `primaryDark` en claro y
+  `primaryColor` en oscuro, el naranja que lleva a 3:1 un ícono que da información (4,12:1 y
+  5,65:1 sobre `cardBg`). Lo leen los candados de los estados y «Enviar carnet» (RF-CHAT-12),
+  el botón de la ficha (RF-CHAT-7), la tarjeta del docente (RF-CHAT-13) y el botón de «Mis
+  bloques» del horario (`horario.dart:1115-1121`), en lugar de repetir la condición del tema
+  en cada archivo. Ninguno de ellos cambia de color.
 
 `[@test] ../../../test/HU23_jeff/chat_identidad_test.dart`
 
@@ -454,7 +478,8 @@ Rige para alumno y docente.
   barra. En oscuro no sirve `primaryColor`, porque el blanco sobre `#FF6600` da 2,94:1.
 - **Enviar deshabilitado.** Mientras el campo, ya recortado, está vacío, el botón se ve
   deshabilitado. El relleno pasa a `tagBg` y el ícono a `textMuted` (4,34:1 y 3,36:1), sin
-  sombra ni ripple y con la semántica de un botón deshabilitado. Un toque sobre el botón
+  sombra, sin ripple y sin la respuesta de toque de la plataforma (`enableFeedback`, el clic
+  de Android), y con la semántica de un botón deshabilitado. Un toque sobre el botón
   deshabilitado no envía nada ni muestra ningún aviso, porque llega a enviar y enviar descarta
   el campo recortado vacío (RF-CHAT-3), igual que la tecla del teclado. El botón conserva esa
   acción de toque en lugar de anularla, ya que las dos pruebas de enviar que no cambian
@@ -482,7 +507,8 @@ Rige para alumno y docente.
   la tarjeta (radio de 16 px y borde `borderColor`), con el `InkWell` dentro, porque el
   `Container` decorado de hoy (`teacher_sections_page.dart:142-148`) taparía el ripple. Es
   lo mismo que pide la bandeja (RF-CHAT-6). Su semántica es la de un botón «Abrir el chat
-  de <curso>», como en la bandeja.
+  de <curso>, sección <N>», o «Abrir el chat de <curso>, sin sección» si el código llega
+  vacío, como en la bandeja.
 - **«Chat».** El ícono de la columna derecha sigue bajo la insignia de rol
   (`teacher_sections_page.dart:192-205`), cambia `Icons.forum_outlined` por
   `LucideIcons.messagesSquare` y suma a su derecha, en la misma fila, el texto visible
@@ -490,6 +516,13 @@ Rige para alumno y docente.
 - «Chat» llega a 4,5:1 y el ícono a 3:1 contra la tarjeta en los dos temas. El naranja de
   marca sobre blanco da 2,94:1, así que el ícono va en `primaryDark` en claro (4,12:1) y en
   `primaryColor` en oscuro (5,65:1), y el texto en `textSecondary` en los dos.
+- **Contraste de la tarjeta.** El código de la sección deja el naranja de marca
+  (`teacher_sections_page.dart:181-183`), que da 2,94:1 sobre blanco, y pasa a
+  `textSecondary`, con 10,35:1 y 6,44:1 contra la tarjeta. La insignia de rol
+  (`teacher_sections_page.dart:195-197`) pasa de `textMuted` a `textSecondary`, en su texto
+  y en su tinte al 12 %. Contra este tinte mezclado sobre la tarjeta, como lo mezcla
+  `Color.alphaBlend`, sube de 4,11:1 y 3,37:1 a 8,45:1 y 5,26:1. Así el código y la
+  insignia llegan a 4,5:1 en los dos temas.
 - La tarjeta abre `ChatPage` con el código de la sección y `courseAccentColor(sectionId)`
   como color, el mismo acento que usa Calificar (`teacher_grades_page.dart:100`).
 - El rediseño de RF-CHAT-8 a RF-CHAT-12 vale igual para el docente, y la moderación de
@@ -500,11 +533,12 @@ Rige para alumno y docente.
 ## Textos nuevos
 
 «Chats» (la pestaña), «Sección N» y «Sin sección» (la fila de la bandeja y el subtítulo del
-AppBar; «Sin sección» va solo, sin el «Sección» delante), «Abrir el chat de <curso>» (la
-etiqueta accesible de una fila de la bandeja y de una tarjeta del docente), «Chat del
-curso» (el botón de la ficha), «Chat» (la tarjeta del docente), «Enviar mensaje» (el
-tooltip y la etiqueta accesible del botón enviar), «Hoy», «Ayer» y «<Día> <n> de <mes>»
-(los separadores). Sale «Chat grupal». Los demás textos del chat no cambian.
+AppBar; «Sin sección» va solo, sin el «Sección» delante), «Abrir el chat de <curso>, sección
+<N>» y «Abrir el chat de <curso>, sin sección» (la etiqueta accesible de una fila de la
+bandeja y de una tarjeta del docente), «Chat del curso» (el botón de la ficha), «Chat» (la
+tarjeta del docente), «Enviar mensaje» (el tooltip y la etiqueta accesible del botón enviar),
+«Hoy», «Ayer» y «<Día> <n> de <mes>» (los separadores). Sale «Chat grupal». Los demás textos
+del chat no cambian.
 
 ## Lo que sale del horario
 
@@ -603,8 +637,9 @@ El dueño aprobó estas doce decisiones el 2026-09-23.
 Algunos puntos no están en las decisiones y esta spec los fija por su cuenta. El dueño los
 confirma o los cambia al aprobarla.
 
-- **Delegado.** Con Chats, su footer tiene seis pestañas (RF-CHAT-5), y la fase 1 comprueba
-  que sus etiquetas caben en 375 pt («Verificación»).
+- **Delegado.** Con Chats, su footer tiene seis pestañas (RF-CHAT-5). El dueño decide el
+  2026-09-23 que con seis pestañas la etiqueta activa vaya en 13 px, y «Verificación»
+  comprueba que las seis etiquetas caben en 360 y en 375 de ancho.
 - **Subdelegado.** Recibe la misma regla de etiqueta que Profesor, Jefe de Práctica y Delegado,
   porque el modelo también lo marca como moderador (RF-CHAT-10).
 - **Color del nombre.** Sale el color por remitente y todos los nombres van en
@@ -634,7 +669,11 @@ la conversación, bajo el AppBar, sí cumple 4,5:1. En oscuro el blanco sobre `#
 
 ## Verificación
 
-- `dart format` sobre los archivos Dart que cambien.
+- `dart format` sobre los archivos Dart que cambien, salvo `lib/pages/horario/horario.dart`,
+  `test/HU35_jeff/time_blocks_form_test.dart` y `test/HU35_jeff/time_blocks_lista_test.dart`.
+  Estos tres no pasan el formato desde antes de esta rama, ya en `c18faa7`, y reformatearlos
+  cambia cientos de líneas que no son del chat. La fase 1 no los reformatea, y sus cambios en
+  ellos siguen el estilo de cada archivo.
 - `flutter analyze --no-pub`.
 - `flutter test --no-pub`, con la suite completa, porque la fase 1 toca `horario.dart`,
   `horario_controller.dart`, `home_page.dart` y `app_header.dart`, que usan otras features.
@@ -644,10 +683,11 @@ la conversación, bajo el AppBar, sí cumple 4,5:1. En oscuro el blanco sobre `#
   local, porque `.github/workflows/build-apk.yml` no corre `flutter test`, y en UTC−5 la hora
   local coincide con la de Lima. Con `TZ=UTC`, las pruebas de RF-CHAT-11 detectan una hora o
   un día calculados en la zona del teléfono, como con `.toLocal()`.
-- `chats_pestana_test` monta el footer de un delegado a 375×667 con cada pestaña activa, y
-  comprueba que no hay desborde y que las seis etiquetas se leen completas (RF-CHAT-5). La
-  prueba mide las etiquetas con Roboto, la fuente de Android, porque la del iPhone no viene con
-  el SDK de Flutter. Su verde vale solo para Android en 375 dp y no prueba RF-CHAT-5 en el
-  iPhone SE, que depende de la revisión manual del punto siguiente.
+- `chats_pestana_test` comprueba que con seis pestañas la etiqueta activa va en 13 px y que
+  con cinco o menos sigue en 14. Monta además el footer de un delegado a 360×640 y a 375×667
+  con cada pestaña activa, y comprueba que no hay desborde y que las seis etiquetas se leen
+  completas (RF-CHAT-5). La prueba mide las etiquetas con Roboto, la fuente de Android, porque
+  la del iPhone no viene con el SDK de Flutter. Su verde vale para Android en 360 y en 375 dp,
+  y en el iPhone SE la medida con SF la confirma la revisión manual del punto siguiente.
 - Una revisión manual en un iPhone SE, en los temas claro y oscuro, del footer del delegado,
   de la bandeja y de la conversación.

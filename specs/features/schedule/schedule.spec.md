@@ -13,9 +13,8 @@ targets:
 > Ajustada el 2026-09-23 con las decisiones del dueño sobre los chats de curso
 > (`specs/features/chat/chat.spec.md`). Horario queda solo como calendario y pierde la vista
 > de lista «Mis chats», que se abría con el ícono de lista del header. Los chats del alumno
-> pasan a su propia pestaña. Pendiente de la aprobación del dueño de la spec escrita antes de
-> implementar. La fase 1 del chat ya implementa este ajuste, y la aprobación sigue abierta. El
-> resto de esta spec no cambia.
+> pasan a su propia pestaña. Aprobada por el dueño el 2026-09-23, junto con la spec del chat.
+> La fase 1 del chat ya implementa este ajuste. El resto de esta spec no cambia.
 
 ## Requirements
 

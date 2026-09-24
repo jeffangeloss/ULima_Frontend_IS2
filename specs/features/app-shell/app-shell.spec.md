@@ -6,6 +6,7 @@ targets:
   - ../../../lib/components/header/app_header.dart
   - ../../../lib/pages/home/home_page.dart
   - ../../../lib/pages/home/home_shell_config.dart
+  - ../../../lib/components/footer/app_footer.dart
   - ../../../test/components/header/app_header_test.dart
 ---
 
@@ -14,9 +15,10 @@ targets:
 > Ajustada el 2026-09-23 con las decisiones del dueño sobre los chats de curso
 > (`specs/features/chat/chat.spec.md`). El footer del alumno suma la pestaña Chats
 > (BR-SHELL-F-02) y el header ya no tiene el toggle lista/calendario de Horario
-> (BR-SHELL-F-03). Pendiente de la aprobación del dueño de la spec escrita antes de
-> implementar. La fase 1 del chat ya implementa los dos cambios, y la aprobación sigue abierta.
-> BR-SHELL-F-00 y BR-SHELL-F-01 no cambian.
+> (BR-SHELL-F-03). Aprobada por el dueño el 2026-09-23, junto con la spec del chat. La fase 1
+> del chat ya implementa los dos cambios. El mismo día el dueño decide que con seis pestañas
+> la etiqueta activa del footer vaya en 13 px (BR-SHELL-F-02). BR-SHELL-F-00 y BR-SHELL-F-01
+> no cambian.
 
 ## Scope
 
@@ -65,6 +67,10 @@ targets:
   toda pestaña salvo Horario (BR-SHELL-F-00).
 - La aplicación sigue abriendo en la primera pestaña, Malla para el alumno.
 - El footer del docente no cambia.
+- Con cinco pestañas o menos, la etiqueta activa del footer va en 14 px y las demás en 12 px.
+  Con seis, el footer del delegado, la activa va en 13 px y las demás en 12, para que las
+  seis etiquetas se lean completas en un Android de 360 dp y en el iPhone SE (RF-CHAT-5 de
+  `specs/features/chat/chat.spec.md`, con sus medidas).
   `[@test] ../../../test/HU23_jeff/chats_pestana_test.dart`
 
 ### BR-SHELL-F-03: Controles del header
