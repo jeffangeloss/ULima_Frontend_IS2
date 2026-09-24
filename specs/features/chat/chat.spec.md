@@ -539,6 +539,11 @@ Rige para alumno y docente.
   lo mismo que pide la bandeja (RF-CHAT-6). Su semántica es la de un botón «Abrir el chat
   de <curso>, sección <N>», o «Abrir el chat de <curso>, sin sección» si el código llega
   vacío, como en la bandeja.
+- **Sección.** Bajo el nombre del curso, la línea de la sección deja el código tal como llega
+  (`teacher_sections_page.dart:180-181`) y dice «Sección N» con el código recortado, o solo
+  «Sin sección» si el código llega vacío o con solo espacios. Usa la misma
+  `etiquetaDeSeccion` de la fila de la bandeja (RF-CHAT-6) y del subtítulo del AppBar
+  (RF-CHAT-8), así que el docente lee su sección igual que el alumno.
 - **«Chat».** El ícono de la columna derecha sigue bajo la insignia de rol
   (`teacher_sections_page.dart:192-205`), cambia `Icons.forum_outlined` por
   `LucideIcons.messagesSquare` y suma a su derecha, en la misma fila, el texto visible
@@ -546,13 +551,13 @@ Rige para alumno y docente.
 - «Chat» llega a 4,5:1 y el ícono a 3:1 contra la tarjeta en los dos temas. El naranja de
   marca sobre blanco da 2,94:1, así que el ícono va en `primaryDark` en claro (4,12:1) y en
   `primaryColor` en oscuro (5,65:1), y el texto en `textSecondary` en los dos.
-- **Contraste de la tarjeta.** El código de la sección deja el naranja de marca
+- **Contraste de la tarjeta.** La línea de la sección deja el naranja de marca
   (`teacher_sections_page.dart:181-183`), que da 2,94:1 sobre blanco, y pasa a
   `textSecondary`, con 10,35:1 y 6,44:1 contra la tarjeta. La insignia de rol
   (`teacher_sections_page.dart:195-197`) pasa de `textMuted` a `textSecondary`, en su texto
   y en su tinte al 12 %. Contra este tinte mezclado sobre la tarjeta, como lo mezcla
-  `Color.alphaBlend`, sube de 4,11:1 y 3,37:1 a 8,45:1 y 5,26:1. Así el código y la
-  insignia llegan a 4,5:1 en los dos temas.
+  `Color.alphaBlend`, sube de 4,11:1 y 3,37:1 a 8,45:1 y 5,26:1. Así la línea de la sección
+  y la insignia llegan a 4,5:1 en los dos temas.
 - La tarjeta abre `ChatPage` con el código de la sección y `courseAccentColor(sectionId)`
   como color, el mismo acento que usa Calificar (`teacher_grades_page.dart:100`).
 - El rediseño de RF-CHAT-8 a RF-CHAT-12 vale igual para el docente, y el borrado de
@@ -562,8 +567,8 @@ Rige para alumno y docente.
 
 ## Textos nuevos
 
-«Chats» (la pestaña), «Sección N» y «Sin sección» (la fila de la bandeja y el subtítulo del
-AppBar; «Sin sección» va solo, sin el «Sección» delante), «Abrir el chat de <curso>, sección
+«Chats» (la pestaña), «Sección N» y «Sin sección» (la fila de la bandeja, el subtítulo del
+AppBar y la tarjeta del docente; «Sin sección» va solo, sin el «Sección» delante), «Abrir el chat de <curso>, sección
 <N>» y «Abrir el chat de <curso>, sin sección» (la etiqueta accesible de una fila de la
 bandeja y de una tarjeta del docente), «Chat del curso» (el botón de la ficha), «Chat» (la
 tarjeta del docente), «Enviar mensaje» (el tooltip y la etiqueta accesible del botón enviar),

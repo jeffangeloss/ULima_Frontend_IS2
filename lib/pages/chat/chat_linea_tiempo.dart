@@ -84,9 +84,10 @@ Color colorDeIniciales(Color fondo) {
 
 // ── Subtítulo del AppBar y etiqueta de la tarjeta (RF-CHAT-8, 6 y 13) ──────
 
-/// Subtítulo del AppBar del chat: «Sección N» con el código recortado, o solo
-/// «Sin sección» si el código llega nulo, vacío o con solo espacios, como la
-/// fila de la bandeja.
+/// La sección de un chat en el subtítulo del AppBar (RF-CHAT-8), la fila de la
+/// bandeja (RF-CHAT-6) y la tarjeta del docente (RF-CHAT-13): «Sección N» con
+/// el código recortado, o solo «Sin sección» si el código llega nulo, vacío o
+/// con solo espacios.
 String etiquetaDeSeccion(String? codigo) {
   final limpio = codigo?.trim() ?? '';
   return limpio.isEmpty ? 'Sin sección' : 'Sección $limpio';

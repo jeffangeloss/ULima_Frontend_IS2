@@ -7,6 +7,7 @@ import '../../configs/course_colors.dart';
 import '../../configs/themes.dart';
 import '../../models/advising_models.dart';
 import '../../services/chat_repository.dart';
+import '../chat/chat_linea_tiempo.dart';
 import '../chat/chat_page.dart';
 import '../chat/chats_inbox_page.dart';
 import 'teacher_sections_controller.dart';
@@ -195,10 +196,11 @@ class _SectionCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 5),
-                // En textSecondary, que da 10,35:1 y 6,44:1 contra la
-                // tarjeta; el naranja de marca daba 2,94:1 en claro.
+                // «Sección N» o «Sin sección», como la fila de la bandeja. En
+                // textSecondary, que da 10,35:1 y 6,44:1 contra la tarjeta;
+                // el naranja de marca daba 2,94:1 en claro.
                 Text(
-                  section.sectionCode,
+                  etiquetaDeSeccion(section.sectionCode),
                   style: TextStyle(
                     color: MaterialTheme.textSecondary(brightness),
                     fontSize: 12,

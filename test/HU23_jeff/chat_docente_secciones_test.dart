@@ -9,13 +9,16 @@
 //   «…, sin sección»), como en la bandeja del alumno, porque la tarjeta es la
 //   misma TarjetaDeChat de la bandeja con el nombre del curso y el código de
 //   la sección. Así dos secciones del mismo curso se distinguen.
+// - Bajo el nombre del curso, la línea de la sección dice «Sección <N>» con el
+//   código recortado, o solo «Sin sección», con la misma etiquetaDeSeccion de
+//   la fila de la bandeja, y nunca el código crudo.
 // - La columna derecha lleva LucideIcons.messagesSquare bajo la insignia de
 //   rol y, a su derecha en la misma fila, el texto visible «Chat».
 // - «Chat» va en textSecondary (4,5:1) y el ícono en iconoNaranja, que es
 //   primaryDark en claro y primaryColor en oscuro (3:1), contra la tarjeta en
 //   los dos temas.
-// - El código de la sección y la insignia de rol llegan a 4,5:1 en los dos
-//   temas: el código en textSecondary sobre la tarjeta y la insignia en
+// - La línea de la sección y la insignia de rol llegan a 4,5:1 en los dos
+//   temas: la línea en textSecondary sobre la tarjeta y la insignia en
 //   textSecondary sobre su tinte.
 // - La tarjeta abre ChatPage con el código de la sección y
 //   courseAccentColor(sectionId) como color.
@@ -53,8 +56,14 @@ const Map<String, String> _etiquetas = <String, String>{
   _cursoC: 'Abrir el chat de $_cursoC, sin sección',
 };
 
+/// La línea visible de la sección en la tarjeta de cada curso.
+const Map<String, String> _lineas = <String, String>{
+  _cursoA: 'Sección 801',
+  _cursoC: 'Sin sección',
+};
+
 /// Dos secciones del docente, una de profesor con código y una de JP sin
-/// código, que ChatPage muestra como «Sin sección».
+/// código, que la tarjeta y ChatPage muestran como «Sin sección».
 List<TeacherSectionOption> _secciones() => <TeacherSectionOption>[
   TeacherSectionOption(
     sectionId: 301,
@@ -192,6 +201,67 @@ void main() {
         expect(widget.codigoDeSeccion, curso == _cursoA ? '801' : '');
         expect(widget.brillo, Brightness.light);
       }
+
+      semantica.dispose();
+    });
+
+    testWidgets('la línea de la sección dice «Sección <N>» o «Sin sección», '
+        'como la fila de la bandeja, y no el código crudo', (tester) async {
+      final semantica = tester.ensureSemantics();
+      await _abrirSecciones(tester);
+
+      for (final curso in <String>[_cursoA, _cursoC]) {
+        expect(
+          _enLaTarjeta(curso, find.text(_lineas[curso]!)),
+          findsOneWidget,
+          reason: curso,
+        );
+      }
+      expect(_enLaTarjeta(_cursoA, find.text('801')), findsNothing);
+      // La misma función que la bandeja y el subtítulo del AppBar.
+      expect(_lineas[_cursoA], etiquetaDeSeccion('801'));
+      expect(_lineas[_cursoC], etiquetaDeSeccion(''));
+
+      semantica.dispose();
+    });
+
+    testWidgets('la línea recorta el código y dice «Sin sección» si solo trae '
+        'espacios', (tester) async {
+      final semantica = tester.ensureSemantics();
+      await _abrirSecciones(
+        tester,
+        secciones: <TeacherSectionOption>[
+          TeacherSectionOption(
+            sectionId: 321,
+            courseName: _cursoA,
+            sectionCode: '  803 ',
+            rol: 'Profesor',
+          ),
+          TeacherSectionOption(
+            sectionId: 322,
+            courseName: _cursoC,
+            sectionCode: '   ',
+            rol: 'JP',
+          ),
+        ],
+      );
+
+      final conCodigo = find.bySemanticsLabel(
+        'Abrir el chat de $_cursoA, sección 803',
+      );
+      final sinCodigo = find.bySemanticsLabel(
+        'Abrir el chat de $_cursoC, sin sección',
+      );
+      expect(
+        find.descendant(of: conCodigo, matching: find.text('Sección 803')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: sinCodigo, matching: find.text('Sin sección')),
+        findsOneWidget,
+      );
+      expect(find.text('  803 '), findsNothing);
+      expect(find.text('   '), findsNothing);
 
       semantica.dispose();
     });
@@ -342,7 +412,7 @@ void main() {
       final naranja = brillo == Brightness.light
           ? MaterialTheme.primaryDark
           : MaterialTheme.primaryColor;
-      // El código de la sección sobre la tarjeta y la insignia de rol sobre
+      // La línea de la sección sobre la tarjeta y la insignia de rol sobre
       // su tinte, que es su propio color al 12 % sobre la tarjeta.
       final cifrasDeLaSeccion = brillo == Brightness.light
           ? (codigo: 10.35, insignia: 8.45)
@@ -390,25 +460,33 @@ void main() {
         semantica.dispose();
       });
 
-      testWidgets('en $tema: el código de la sección y la insignia de rol van '
+      testWidgets('en $tema: la línea de la sección y la insignia de rol van '
           'en textSecondary y llegan a 4,5:1', (tester) async {
         final semantica = tester.ensureSemantics();
         await _abrirSecciones(tester, brillo: brillo);
         final tarjeta = MaterialTheme.cardBg(brillo);
 
-        final codigo = _estiloPintado(
-          tester,
-          _enLaTarjeta(_cursoA, find.text('801')),
-        );
-        expect(codigo.color, MaterialTheme.textSecondary(brillo));
-        expect(
-          contrasteWcag(codigo.color!, tarjeta),
-          moreOrLessEquals(cifrasDeLaSeccion.codigo, epsilon: 0.01),
-        );
-        expect(
-          contrasteWcag(codigo.color!, tarjeta),
-          greaterThanOrEqualTo(4.5),
-        );
+        for (final curso in <String>[_cursoA, _cursoC]) {
+          final linea = _estiloPintado(
+            tester,
+            _enLaTarjeta(curso, find.text(_lineas[curso]!)),
+          );
+          expect(
+            linea.color,
+            MaterialTheme.textSecondary(brillo),
+            reason: curso,
+          );
+          expect(
+            contrasteWcag(linea.color!, tarjeta),
+            moreOrLessEquals(cifrasDeLaSeccion.codigo, epsilon: 0.01),
+            reason: curso,
+          );
+          expect(
+            contrasteWcag(linea.color!, tarjeta),
+            greaterThanOrEqualTo(4.5),
+            reason: curso,
+          );
+        }
 
         for (final (curso, rol) in <(String, String)>[
           (_cursoA, 'Profesor'),
