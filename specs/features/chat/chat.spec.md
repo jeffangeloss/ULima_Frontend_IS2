@@ -603,7 +603,7 @@ comportamiento nuevo, y ninguna se usa para conservar el viejo.
   `time_blocks_lista_test.dart:999`. Salen, porque ese estado deja de existir. RF-BLQ-8 de
   `specs/features/time-blocks/time-blocks.spec.md` queda ajustado en ese punto.
 - «un mensaje de moderador muestra su etiqueta de rol» (`chat_page_test.dart:218-230`). La
-  sesión es la del profesor, con uid '292', y el mensaje es del remitente '292', así que es
+  sesión es la del profesor y el mensaje tiene su mismo uid como remitente, así que es
   propio y con RF-CHAT-9 y RF-CHAT-10 ya no muestra etiqueta. La prueba pasa a un mensaje de
   moderador de otro `senderId`, que sí la muestra, y suma el caso inverso, en el que un
   mensaje propio de moderador no la muestra.

@@ -4,7 +4,7 @@ import 'package:ulima_plus/models/message.dart';
 void main() {
   test('parsea mensajes nuevos con nombre completo y rol moderador', () {
     final message = ChatMessage.fromMap('m1', {
-      'senderId': '12',
+      'senderId': '603',
       'senderName': 'Ada Lovelace',
       'senderRole': 'teacher',
       'senderRoleLabel': 'Profesor',
@@ -39,14 +39,14 @@ void main() {
 
   test('parsea mensaje especial de carnet de networking', () {
     final message = ChatMessage.fromMap('m3', {
-      'senderId': '4',
-      'senderName': 'Melissa Ruiz',
-      'body': '${ChatMessage.networkingBodyPrefix}4',
+      'senderId': '505',
+      'senderName': 'Alumna De Prueba',
+      'body': '${ChatMessage.networkingBodyPrefix}505',
       'createdAt': 1783573983742,
     });
 
     expect(message.isNetworkingCard, isTrue);
-    expect(message.networkingOwnerId, 4);
+    expect(message.networkingOwnerId, 505);
     expect(message.messageType, 'networking_card');
   });
 
@@ -132,7 +132,7 @@ void main() {
 
   test('HU23: parsea el borrado suave (deleted + deletedBy)', () {
     final m = ChatMessage.fromMap('x', {
-      'senderId': '6',
+      'senderId': '502',
       'body': 'texto original',
       'deleted': true,
       'deletedBy': 'Docente De Prueba',
@@ -152,7 +152,7 @@ void main() {
   });
 
   group('RF-CHAT-4 · quién borró', () {
-    ChatMessage lapida({String senderId = '6', Object? deletedByUid}) =>
+    ChatMessage lapida({String senderId = '502', Object? deletedByUid}) =>
         ChatMessage.fromMap('z', {
           'senderId': senderId,
           'body': 'texto original',
@@ -163,8 +163,8 @@ void main() {
         });
 
     test('lee deletedByUid tal como llega', () {
-      expect(lapida(deletedByUid: '6').deletedByUid, '6');
-      expect(lapida(deletedByUid: '292').deletedByUid, '292');
+      expect(lapida(deletedByUid: '502').deletedByUid, '502');
+      expect(lapida(deletedByUid: '601').deletedByUid, '601');
     });
 
     test('sin deletedByUid queda nulo, sin inventar un valor', () {
@@ -172,11 +172,11 @@ void main() {
     });
 
     test('lo borró su autor si deletedByUid es su senderId', () {
-      expect(lapida(deletedByUid: '6').deletedBySender, isTrue);
+      expect(lapida(deletedByUid: '502').deletedBySender, isTrue);
     });
 
     test('lo borró otra persona si deletedByUid es otro uid', () {
-      expect(lapida(deletedByUid: '292').deletedBySender, isFalse);
+      expect(lapida(deletedByUid: '601').deletedBySender, isFalse);
     });
 
     test('sin deletedByUid, o vacío, cuenta como borrado por otra persona', () {

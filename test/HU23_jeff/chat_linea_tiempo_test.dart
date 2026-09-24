@@ -216,7 +216,7 @@ void main() {
     test('el primero de la lista abre día', () {
       final primero = _msg(
         id: '1',
-        senderId: '7',
+        senderId: '503',
         createdAt: DateTime.utc(2026, 9, 15, 15),
       );
 
@@ -227,12 +227,12 @@ void main() {
       // 04:58 UTC del 15 es 23:58 del 14 en Lima; 05:02 UTC es 00:02 del 15.
       final anterior = _msg(
         id: '1',
-        senderId: '7',
+        senderId: '503',
         createdAt: DateTime.utc(2026, 9, 15, 4, 58),
       );
       final actual = _msg(
         id: '2',
-        senderId: '7',
+        senderId: '503',
         createdAt: DateTime.utc(2026, 9, 15, 5, 2),
       );
 
@@ -243,12 +243,12 @@ void main() {
       // 23:50 UTC del 14 y 00:10 UTC del 15 son 18:50 y 19:10 del 14 en Lima.
       final anterior = _msg(
         id: '1',
-        senderId: '7',
+        senderId: '503',
         createdAt: DateTime.utc(2026, 9, 14, 23, 50),
       );
       final actual = _msg(
         id: '2',
-        senderId: '8',
+        senderId: '504',
         createdAt: DateTime.utc(2026, 9, 15, 0, 10),
       );
 
@@ -258,18 +258,18 @@ void main() {
     test('una lápida cuenta como mensaje de su día', () {
       final lapida = _msg(
         id: '1',
-        senderId: '7',
+        senderId: '503',
         createdAt: DateTime.utc(2026, 9, 15, 15),
         deleted: true,
       );
       final mismoDia = _msg(
         id: '2',
-        senderId: '7',
+        senderId: '503',
         createdAt: DateTime.utc(2026, 9, 15, 16),
       );
       final lapidaOtroDia = _msg(
         id: '3',
-        senderId: '8',
+        senderId: '504',
         createdAt: DateTime.utc(2026, 9, 16, 16),
         deleted: true,
       );
@@ -336,7 +336,7 @@ void main() {
     final base = DateTime.utc(2026, 9, 15, 15);
 
     test('el primero de la lista abre grupo; ajeno con nombre, propio sin', () {
-      final ajeno = _msg(id: '1', senderId: '7', createdAt: base);
+      final ajeno = _msg(id: '1', senderId: '503', createdAt: base);
       final propio = _msg(id: '2', senderId: _yo, createdAt: base);
 
       expect(abreGrupo(ajeno, null), isTrue);
@@ -346,10 +346,10 @@ void main() {
     });
 
     test('mismo remitente y mismo día no abre grupo ni lleva nombre', () {
-      final anterior = _msg(id: '1', senderId: '7', createdAt: base);
+      final anterior = _msg(id: '1', senderId: '503', createdAt: base);
       final actual = _msg(
         id: '2',
-        senderId: '7',
+        senderId: '503',
         createdAt: base.add(const Duration(hours: 3)),
       );
 
@@ -360,13 +360,13 @@ void main() {
     test('otro senderId con el mismo nombre abre grupo y lleva nombre', () {
       final anterior = _msg(
         id: '1',
-        senderId: '7',
+        senderId: '503',
         createdAt: base,
         senderName: 'Alumno De Prueba',
       );
       final actual = _msg(
         id: '2',
-        senderId: '8',
+        senderId: '504',
         createdAt: base.add(const Duration(minutes: 1)),
         senderName: 'Alumno De Prueba',
       );
@@ -379,12 +379,12 @@ void main() {
       // 04:58 UTC del 15 es 23:58 del 14 en Lima; 05:02 UTC es 00:02 del 15.
       final anterior = _msg(
         id: '1',
-        senderId: '7',
+        senderId: '503',
         createdAt: DateTime.utc(2026, 9, 15, 4, 58),
       );
       final actual = _msg(
         id: '2',
-        senderId: '7',
+        senderId: '503',
         createdAt: DateTime.utc(2026, 9, 15, 5, 2),
       );
 
@@ -396,12 +396,12 @@ void main() {
       // 23:50 UTC del 14 y 00:10 UTC del 15 son 18:50 y 19:10 del 14 en Lima.
       final anterior = _msg(
         id: '1',
-        senderId: '7',
+        senderId: '503',
         createdAt: DateTime.utc(2026, 9, 14, 23, 50),
       );
       final actual = _msg(
         id: '2',
-        senderId: '7',
+        senderId: '503',
         createdAt: DateTime.utc(2026, 9, 15, 0, 10),
       );
 
@@ -413,13 +413,13 @@ void main() {
       () {
         final lapida = _msg(
           id: '1',
-          senderId: '7',
+          senderId: '503',
           createdAt: base,
           deleted: true,
         );
         final actual = _msg(
           id: '2',
-          senderId: '7',
+          senderId: '503',
           createdAt: base.add(const Duration(minutes: 1)),
         );
 
@@ -429,10 +429,10 @@ void main() {
     );
 
     test('una lápida nunca lleva nombre', () {
-      final anterior = _msg(id: '1', senderId: '8', createdAt: base);
+      final anterior = _msg(id: '1', senderId: '504', createdAt: base);
       final lapida = _msg(
         id: '2',
-        senderId: '7',
+        senderId: '503',
         createdAt: base.add(const Duration(minutes: 1)),
         deleted: true,
       );
@@ -443,7 +443,7 @@ void main() {
     });
 
     test('un mensaje propio nunca lleva nombre, aunque abra grupo', () {
-      final anterior = _msg(id: '1', senderId: '7', createdAt: base);
+      final anterior = _msg(id: '1', senderId: '503', createdAt: base);
       final propio = _msg(
         id: '2',
         senderId: _yo,
@@ -455,16 +455,16 @@ void main() {
     });
 
     test('un mensaje de carnet sigue la misma regla', () {
-      final anterior = _msg(id: '1', senderId: '7', createdAt: base);
+      final anterior = _msg(id: '1', senderId: '503', createdAt: base);
       final carnetMismo = _msg(
         id: '2',
-        senderId: '7',
+        senderId: '503',
         createdAt: base.add(const Duration(minutes: 1)),
         messageType: 'networking_card',
       );
       final carnetOtro = _msg(
         id: '3',
-        senderId: '8',
+        senderId: '504',
         createdAt: base.add(const Duration(minutes: 2)),
         messageType: 'networking_card',
       );

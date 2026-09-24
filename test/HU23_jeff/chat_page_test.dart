@@ -46,7 +46,7 @@ ChatMessage _msg(
   Object? createdAt,
 }) => ChatMessage.fromMap(id, {
   'senderId': senderId,
-  'senderName': senderId == '292' ? 'Docente De Prueba' : 'Alumno X',
+  'senderName': senderId == '601' ? 'Docente De Prueba' : 'Alumno X',
   'senderRole': role,
   'body': body,
   'createdAt': createdAt ?? int.parse(id),
@@ -83,8 +83,8 @@ void main() {
     final repo = ChatRepoFalso(
       session: _teacher,
       messages: [
-        _msg('100', '6', 'Hola profe!'),
-        _msg('200', '292', 'Buen día alumnos', role: 'teacher'),
+        _msg('100', '502', 'Hola profe!'),
+        _msg('200', '601', 'Buen día alumnos', role: 'teacher'),
       ],
     );
     await tester.pumpWidget(_wrap(repo));
@@ -179,10 +179,10 @@ void main() {
       session: _teacher,
       messages: [
         ChatMessage.fromMap('400', {
-          'senderId': '6',
+          'senderId': '502',
           'senderName': 'Alumno X',
           'senderRole': 'student',
-          'body': '${ChatMessage.networkingBodyPrefix}6',
+          'body': '${ChatMessage.networkingBodyPrefix}502',
           'createdAt': 400,
         }),
       ],
@@ -199,11 +199,11 @@ void main() {
   testWidgets('un mensaje ajeno de moderador muestra su etiqueta de rol', (
     tester,
   ) async {
-    // RF-CHAT-9 y RF-CHAT-10: la sesión es la del profesor ('292') y el
+    // RF-CHAT-9 y RF-CHAT-10: la sesión es la del profesor ('601') y el
     // mensaje es del delegado, otro senderId, así que lleva nombre y etiqueta.
     final repo = ChatRepoFalso(
       session: _teacher,
-      messages: [_msg('100', '7', 'Mañana hay práctica', role: 'delegate')],
+      messages: [_msg('100', '503', 'Mañana hay práctica', role: 'delegate')],
     );
     await tester.pumpWidget(_wrap(repo));
     await tester.pumpAndSettle();
@@ -215,10 +215,10 @@ void main() {
   testWidgets('un mensaje propio de moderador no muestra nombre ni etiqueta', (
     tester,
   ) async {
-    // La sesión es la del profesor ('292') y el mensaje también: es propio.
+    // La sesión es la del profesor ('601') y el mensaje también: es propio.
     final repo = ChatRepoFalso(
       session: _teacher,
-      messages: [_msg('100', '292', 'Bienvenidos', role: 'teacher')],
+      messages: [_msg('100', '601', 'Bienvenidos', role: 'teacher')],
     );
     await tester.pumpWidget(_wrap(repo));
     await tester.pumpAndSettle();
@@ -232,7 +232,7 @@ void main() {
     'HU23: un mensaje eliminado muestra la lápida y oculta el cuerpo',
     (tester) async {
       final deletedMsg = ChatMessage.fromMap('300', {
-        'senderId': '6',
+        'senderId': '502',
         'senderName': 'Alumno X',
         'senderRole': 'student',
         'body': 'texto original que no debe verse',
@@ -385,10 +385,10 @@ void main() {
       testWidgets('las dos lápidas nuevas llevan los estilos de RF-CHAT-8, en '
           '$tema', (tester) async {
         final otroAutor = lapida(
-          senderId: '6',
+          senderId: '502',
           senderName: 'Alumno X',
           deletedBy: 'Alumno X',
-          deletedByUid: '6',
+          deletedByUid: '502',
         );
         final propia = ChatMessage.fromMap('400', {
           'senderId': sesionAlumno.uid,
@@ -475,11 +475,11 @@ void main() {
       final repo = ChatRepoFalso(
         session: _teacher,
         messages: [
-          _msg('100', '6', 'Primero del alumno'),
-          _msg('200', '6', 'Segundo del alumno'),
-          _msg('300', '292', 'Primero del profe', role: 'teacher'),
-          _msg('400', '292', 'Segundo del profe', role: 'teacher'),
-          _msg('500', '6', 'Tercero del alumno'),
+          _msg('100', '502', 'Primero del alumno'),
+          _msg('200', '502', 'Segundo del alumno'),
+          _msg('300', '601', 'Primero del profe', role: 'teacher'),
+          _msg('400', '601', 'Segundo del profe', role: 'teacher'),
+          _msg('500', '502', 'Tercero del alumno'),
         ],
       );
       await tester.pumpWidget(_wrap(repo));
@@ -505,10 +505,10 @@ void main() {
       final repo = ChatRepoFalso(
         session: _teacher,
         messages: [
-          _msg('100', '6', 'Primero del alumno'),
-          _msg('200', '6', 'Segundo del alumno'),
-          _msg('300', '292', 'Primero del profe', role: 'teacher'),
-          _msg('400', '292', 'Segundo del profe', role: 'teacher'),
+          _msg('100', '502', 'Primero del alumno'),
+          _msg('200', '502', 'Segundo del alumno'),
+          _msg('300', '601', 'Primero del profe', role: 'teacher'),
+          _msg('400', '601', 'Segundo del profe', role: 'teacher'),
         ],
       );
       await tester.pumpWidget(_wrap(repo));
@@ -525,7 +525,7 @@ void main() {
       tester,
     ) async {
       final lapida = ChatMessage.fromMap('100', {
-        'senderId': '6',
+        'senderId': '502',
         'senderName': 'Alumno X',
         'senderRole': 'student',
         'body': 'texto borrado',
@@ -535,7 +535,7 @@ void main() {
       });
       final repo = ChatRepoFalso(
         session: _teacher,
-        messages: [lapida, _msg('200', '6', 'Después de la lápida')],
+        messages: [lapida, _msg('200', '502', 'Después de la lápida')],
       );
       await tester.pumpWidget(_wrap(repo));
       await tester.pumpAndSettle();
@@ -567,19 +567,19 @@ void main() {
         messages: [
           _msg(
             '1',
-            '6',
+            '502',
             'Mensaje de la noche',
             createdAt: '2026-09-15T03:30:00Z',
           ),
           _msg(
             '2',
-            '6',
+            '502',
             'Mensaje de la madrugada',
             createdAt: '2026-09-15T05:10:00Z',
           ),
           _msg(
             '3',
-            '7',
+            '503',
             'Mensaje de la una',
             createdAt: '2026-09-15T06:00:00Z',
           ),

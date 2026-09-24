@@ -101,7 +101,7 @@ PublicNetworkingCardDto carnetPublico(int userId) => PublicNetworkingCardDto(
 
 /// Sesión del profesor de la sección.
 const sesionDocente = ChatSession(
-  uid: '292',
+  uid: '601',
   displayName: 'Docente De Prueba',
   role: 'teacher',
   roleLabel: 'Profesor',
@@ -112,7 +112,7 @@ const sesionDocente = ChatSession(
 /// Sesión del Jefe de Práctica de la sección: moderador que solo borra sus
 /// propios mensajes (RF-CHAT-4).
 const sesionJp = ChatSession(
-  uid: '293',
+  uid: '602',
   displayName: 'Jefe De Prueba',
   role: 'jp',
   roleLabel: 'Jefe de Práctica',

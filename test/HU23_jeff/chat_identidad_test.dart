@@ -130,20 +130,20 @@ ChatMessage _mensaje(
 List<ChatMessage> _conversacion() => [
   _mensaje(
     '1',
-    '292',
+    '601',
     'Docente De Prueba',
     'Bienvenidos al curso',
     role: 'teacher',
   ),
   _mensaje(
     '2',
-    '292',
+    '601',
     'Docente De Prueba',
     'Recuerden la práctica',
     role: 'teacher',
     minuto: 1,
   ),
-  _mensaje('3', '6', 'Compañero De Prueba', 'Hola a todos', minuto: 2),
+  _mensaje('3', '502', 'Compañero De Prueba', 'Hola a todos', minuto: 2),
   _mensaje(
     '4',
     '20230001',
@@ -154,9 +154,9 @@ List<ChatMessage> _conversacion() => [
   ),
   _mensaje(
     '5',
-    '6',
+    '502',
     'Compañero De Prueba',
-    '${ChatMessage.networkingBodyPrefix}6',
+    '${ChatMessage.networkingBodyPrefix}502',
     minuto: 4,
   ),
   _mensaje(
@@ -169,7 +169,7 @@ List<ChatMessage> _conversacion() => [
   ),
   _mensaje(
     '7',
-    '6',
+    '502',
     'Compañero De Prueba',
     'texto borrado',
     minuto: 6,

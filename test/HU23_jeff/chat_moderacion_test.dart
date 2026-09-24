@@ -47,7 +47,7 @@ String _textoDelCuerpo(WidgetTester tester) =>
 ChatMessage _mensaje(
   String id,
   String body, {
-  String senderId = '6',
+  String senderId = '502',
   String senderName = 'Compañero De Prueba',
   bool deleted = false,
   String? deletedBy,
@@ -81,7 +81,7 @@ Future<ChatRepoFalso> _abrir(
         'texto borrado',
         deleted: true,
         deletedBy: 'Docente De Prueba',
-        deletedByUid: '292',
+        deletedByUid: '601',
       ),
       _mensaje(
         'm3',
