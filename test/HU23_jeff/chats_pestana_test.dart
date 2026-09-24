@@ -9,23 +9,25 @@
 //   siguen encontrando por su etiqueta, entrar a Chats recarga el horario solo
 //   si su controller ya existe, y la burbuja de Ulises sigue flotando sobre
 //   Chats.
-// - El footer del delegado en 375 x 667, medido con Roboto: las seis
-//   etiquetas se leen completas y sin desborde con cualquiera de ellas activa.
-// Archivos: lib/pages/home/home_shell_config.dart y
-// lib/pages/home/home_page.dart.
+// - El tamaño de las etiquetas del footer: con las seis pestañas del
+//   delegado, la activa va a 13 px y las demás a 12; con cinco o menos, la
+//   activa sigue en 14 y las demás en 12.
+// - El footer del delegado en 360 x 640 y en 375 x 667, medido con Roboto: las
+//   seis etiquetas se leen completas y sin desborde con cualquiera de ellas
+//   activa.
+// Archivos: lib/pages/home/home_shell_config.dart,
+// lib/pages/home/home_page.dart y lib/components/footer/app_footer.dart.
 //
 // Las etiquetas del footer se miden con Roboto, la fuente del tema en la
 // plataforma de las pruebas, que se carga del propio SDK de Flutter (la ruta
 // sale de FLUTTER_ROOT, que fija `flutter test`). Con la fuente de pruebas por
 // omisión cada letra mide 1 em y ninguna medida de ancho significaría nada.
 //
-// El verde de estas pruebas vale solo para Android en 375 dp y no cierra
-// RF-CHAT-5. La fuente del iPhone (SF) no viene con el SDK, y en una medida
-// local con SF «Delegado» ocupa unos 64,8 pt, más que los 62,5 pt que recibe
-// en el iPhone SE que nombra la spec. Con Roboto ocupa unos 60,8 dp, así que
-// tampoco cabe en los 60 dp que recibe en un Android de 360 dp, un ancho que
-// la spec no fija. RF-CHAT-5 deja ese ajuste del footer al dueño, y la fase 1
-// no se da por terminada mientras él no lo decida.
+// El verde de estas pruebas vale para Android en 360 y en 375 dp. Con Roboto a
+// 13 px, «Delegado» ocupa unos 56,6 dp y recibe 60 en un Android de 360 dp. La
+// fuente del iPhone (SF) no viene con el SDK; en una medida local con SF a
+// 13 px «Delegado» ocupa unos 60,4 pt de los 62,5 que recibe en el iPhone SE,
+// y esa pantalla la confirma la revisión manual de «Verificación».
 //
 // Todos los datos son inventados; el repo es público. La alumna y el delegado
 // usan el código sintético 20230001 y el docente es "docente.test".
@@ -215,11 +217,21 @@ class _AsesoriasSinRed extends AdvisingService {
 final _orientaciones = <List<Object?>>[];
 
 /// Un iPhone SE en vertical (375 x 667).
-void _telefonoVertical(WidgetTester tester) {
-  tester.view.physicalSize = const Size(750, 1334);
+void _telefonoVertical(WidgetTester tester) => _telefono(tester, 375, 667);
+
+/// Un teléfono en vertical de [ancho] x [alto] puntos, a 2x.
+void _telefono(WidgetTester tester, double ancho, double alto) {
+  tester.view.physicalSize = Size(ancho * 2, alto * 2);
   tester.view.devicePixelRatio = 2.0;
   addTearDown(tester.view.reset);
 }
+
+/// Los anchos en que se mide el footer del delegado: un Android de 360 dp
+/// (360 x 640) y el iPhone SE (375 x 667).
+const List<(double, double)> _pantallasDelFooter = <(double, double)>[
+  (360, 640),
+  (375, 667),
+];
 
 /// Un teléfono en vertical más alto que el SE (400 x 1400), para el shell
 /// entero. Con la fuente de pruebas, en la que cada letra mide 1 em, el aviso
@@ -312,6 +324,59 @@ Future<void> _cargarRoboto() async {
       Future<ByteData>.value(ByteData.sublistView(archivo.readAsBytesSync())),
     );
   await cargador.load();
+}
+
+/// Las seis pestañas del footer del delegado, como las arma el shell.
+List<AppFooterItem> _footerDelDelegado() {
+  Get.put<DelegadoCursosController>(
+    DelegadoCursosController(delegateService: _DelegadoSinRed()),
+  );
+  return HomeShellConfig.student(_delegado()).footerItems;
+}
+
+/// Monta solo el footer con [items] y [activa] como pestaña activa. Si
+/// [conTamano], antes fija el iPhone SE.
+Future<void> _montarFooter(
+  WidgetTester tester,
+  List<AppFooterItem> items, {
+  required int activa,
+  bool conTamano = true,
+}) async {
+  if (conTamano) _telefonoVertical(tester);
+  await tester.pumpWidget(
+    GetMaterialApp(
+      theme: _temaDeLaApp(Brightness.light),
+      home: Scaffold(
+        bottomNavigationBar: AppFooter(
+          currentIndex: activa,
+          items: items,
+          onTap: (_) {},
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+/// El tamaño con que se ve la etiqueta [etiqueta] del footer. El footer
+/// compone cada etiqueta con el tamaño de la activa y achica las demás con
+/// una transformación, así que el tamaño visible es el del texto por la escala
+/// de esa transformación.
+double _tamanoPintado(WidgetTester tester, String etiqueta) {
+  final texto = _pestana(etiqueta);
+  final estilo = tester
+      .widget<RichText>(
+        find.descendant(of: texto, matching: find.byType(RichText)),
+      )
+      .text
+      .style!;
+  final escala = tester
+      .widget<Transform>(
+        find.ancestor(of: texto, matching: find.byType(Transform)).first,
+      )
+      .transform
+      .getMaxScaleOnAxis();
+  return estilo.fontSize! * escala;
 }
 
 void main() {
@@ -577,76 +642,131 @@ void main() {
     });
   });
 
-  group('WIDGET · el footer del delegado en 375 x 667, medido con Roboto '
-      '(RF-CHAT-5)', () {
-    // Solo Roboto y solo 375 dp. Este verde no dice nada del iPhone SE ni de
-    // un Android de 360 dp (ver el encabezado).
+  group('WIDGET · el tamaño de las etiquetas del footer (RF-CHAT-5)', () {
+    testWidgets('con las seis pestañas del delegado, la activa va a 13 px y '
+        'las demás a 12', (tester) async {
+      await _montarFooter(tester, _footerDelDelegado(), activa: 4);
+
+      final barra = tester.widget<BottomNavigationBar>(
+        find.byType(BottomNavigationBar),
+      );
+      expect(barra.selectedFontSize, 13);
+      expect(barra.unselectedFontSize, 12);
+      for (final etiqueta in _pestanasDelegado) {
+        expect(
+          _tamanoPintado(tester, etiqueta),
+          moreOrLessEquals(etiqueta == 'Delegado' ? 13 : 12),
+          reason: etiqueta,
+        );
+      }
+    });
+
+    testWidgets('con las cinco pestañas del alumno, la activa sigue en 14 y '
+        'las demás en 12', (tester) async {
+      await _montarFooter(
+        tester,
+        HomeShellConfig.student(_alumna()).footerItems,
+        activa: 3,
+      );
+
+      final barra = tester.widget<BottomNavigationBar>(
+        find.byType(BottomNavigationBar),
+      );
+      expect(barra.selectedFontSize, 14);
+      expect(barra.unselectedFontSize, 12);
+      for (final etiqueta in _pestanasAlumno) {
+        expect(
+          _tamanoPintado(tester, etiqueta),
+          moreOrLessEquals(etiqueta == 'Chats' ? 14 : 12),
+          reason: etiqueta,
+        );
+      }
+    });
+
+    testWidgets('el footer del docente, con cinco o cuatro pestañas, también '
+        'queda en 14 y 12', (tester) async {
+      for (final canGrade in <bool>[true, false]) {
+        final items = HomeShellConfig.teacher(canGrade: canGrade).footerItems;
+        await _montarFooter(tester, items, activa: 0);
+
+        final barra = tester.widget<BottomNavigationBar>(
+          find.byType(BottomNavigationBar),
+        );
+        expect(barra.selectedFontSize, 14, reason: '${items.length} pestañas');
+        expect(barra.unselectedFontSize, 12, reason: '${items.length}');
+        expect(_tamanoPintado(tester, 'Secciones'), moreOrLessEquals(14));
+        expect(_tamanoPintado(tester, 'Perfil'), moreOrLessEquals(12));
+      }
+    });
+  });
+
+  group('WIDGET · el footer del delegado en 360 x 640 y en 375 x 667, medido '
+      'con Roboto (RF-CHAT-5)', () {
+    // Solo Roboto: este verde vale para Android y no mide el iPhone SE, que
+    // usa SF (ver el encabezado).
     setUpAll(_cargarRoboto);
 
-    for (var activa = 0; activa < _pestanasDelegado.length; activa++) {
-      testWidgets('con «${_pestanasDelegado[activa]}» activa, las seis '
-          'etiquetas se leen completas y sin desborde', (tester) async {
-        _telefonoVertical(tester);
-        Get.put<DelegadoCursosController>(
-          DelegadoCursosController(delegateService: _DelegadoSinRed()),
-        );
-        final config = HomeShellConfig.student(_delegado());
-        await tester.pumpWidget(
-          GetMaterialApp(
-            theme: _temaDeLaApp(Brightness.light),
-            home: Scaffold(
-              bottomNavigationBar: AppFooter(
-                currentIndex: activa,
-                items: config.footerItems,
-                onTap: (_) {},
-              ),
-            ),
-          ),
-        );
-        await tester.pumpAndSettle();
-
-        expect(tester.takeException(), isNull);
-        expect(tester.getSize(find.byType(AppFooter)).width, 375);
-
-        for (final etiqueta in _pestanasDelegado) {
-          final texto = _pestana(etiqueta);
-          expect(texto, findsOneWidget, reason: etiqueta);
-          final parrafo = tester.renderObject<RenderParagraph>(
-            find.descendant(of: texto, matching: find.byType(RichText)),
+    for (final (ancho, alto) in _pantallasDelFooter) {
+      for (var activa = 0; activa < _pestanasDelegado.length; activa++) {
+        testWidgets('a ${ancho.toInt()} de ancho, con '
+            '«${_pestanasDelegado[activa]}» activa, las seis etiquetas se leen '
+            'completas y sin desborde', (tester) async {
+          _telefono(tester, ancho, alto);
+          await _montarFooter(
+            tester,
+            _footerDelDelegado(),
+            activa: activa,
+            conTamano: false,
           );
 
-          // La premisa de la spec: unos 62 pt por pestaña (375 / 6).
+          expect(tester.takeException(), isNull);
+          expect(tester.getSize(find.byType(AppFooter)).width, ancho);
           expect(
-            parrafo.constraints.maxWidth,
-            moreOrLessEquals(375 / 6, epsilon: 0.01),
-            reason: etiqueta,
+            _tamanoPintado(tester, _pestanasDelegado[activa]),
+            moreOrLessEquals(13),
           );
-          // La etiqueta entera, en una línea, cabe en ese ancho: ni se parte
-          // ni lleva puntos suspensivos.
-          final natural = TextPainter(
-            text: parrafo.text,
-            textDirection: TextDirection.ltr,
-            textScaler: parrafo.textScaler,
-          )..layout();
-          expect(
-            natural.width,
-            lessThanOrEqualTo(parrafo.constraints.maxWidth),
-            reason: '«$etiqueta» mide ${natural.width} px',
-          );
-          expect(parrafo.didExceedMaxLines, isFalse, reason: etiqueta);
-          expect(
-            parrafo.size.height,
-            moreOrLessEquals(natural.height, epsilon: 0.5),
-            reason: '«$etiqueta» ocupa una sola línea',
-          );
-          natural.dispose();
 
-          // Y se pinta dentro de la pantalla.
-          final caja = tester.getRect(texto);
-          expect(caja.left, greaterThanOrEqualTo(0), reason: etiqueta);
-          expect(caja.right, lessThanOrEqualTo(375), reason: etiqueta);
-        }
-      });
+          for (final etiqueta in _pestanasDelegado) {
+            final texto = _pestana(etiqueta);
+            expect(texto, findsOneWidget, reason: etiqueta);
+            final parrafo = tester.renderObject<RenderParagraph>(
+              find.descendant(of: texto, matching: find.byType(RichText)),
+            );
+
+            // Cada pestaña recibe la sexta parte del ancho: 60 dp en 360 y
+            // unos 62 en 375.
+            expect(
+              parrafo.constraints.maxWidth,
+              moreOrLessEquals(ancho / 6, epsilon: 0.01),
+              reason: etiqueta,
+            );
+            // La etiqueta entera, en una línea, cabe en ese ancho: ni se parte
+            // ni lleva puntos suspensivos.
+            final natural = TextPainter(
+              text: parrafo.text,
+              textDirection: TextDirection.ltr,
+              textScaler: parrafo.textScaler,
+            )..layout();
+            expect(
+              natural.width,
+              lessThanOrEqualTo(parrafo.constraints.maxWidth),
+              reason: '«$etiqueta» mide ${natural.width} px',
+            );
+            expect(parrafo.didExceedMaxLines, isFalse, reason: etiqueta);
+            expect(
+              parrafo.size.height,
+              moreOrLessEquals(natural.height, epsilon: 0.5),
+              reason: '«$etiqueta» ocupa una sola línea',
+            );
+            natural.dispose();
+
+            // Y se pinta dentro de la pantalla.
+            final caja = tester.getRect(texto);
+            expect(caja.left, greaterThanOrEqualTo(0), reason: etiqueta);
+            expect(caja.right, lessThanOrEqualTo(ancho), reason: etiqueta);
+          }
+        });
+      }
     }
   });
 }
