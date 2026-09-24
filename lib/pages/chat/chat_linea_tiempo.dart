@@ -3,7 +3,9 @@
 // Piezas puras de la conversación de una sección (HU23), sin widgets ni
 // estado, para probarlas aparte:
 // - las iniciales del curso y su color (RF-CHAT-8);
-// - el subtítulo del AppBar, «Sección N» o «Sin sección» (RF-CHAT-8);
+// - el subtítulo del AppBar, «Sección N» o «Sin sección» (RF-CHAT-8), y la
+//   etiqueta accesible de la tarjeta que abre el chat (RF-CHAT-6 y
+//   RF-CHAT-13);
 // - el día y la hora de un mensaje en hora de Lima, la etiqueta del día y si
 //   antes de un mensaje va un separador (RF-CHAT-11);
 // - si un mensaje abre grupo y si lleva el nombre del remitente (RF-CHAT-9).
@@ -80,7 +82,7 @@ Color colorDeIniciales(Color fondo) {
   return conBlanco >= conNegro ? Colors.white : Colors.black;
 }
 
-// ── Subtítulo del AppBar (RF-CHAT-8) ────────────────────────────────────────
+// ── Subtítulo del AppBar y etiqueta de la tarjeta (RF-CHAT-8, 6 y 13) ──────
 
 /// Subtítulo del AppBar del chat: «Sección N» con el código recortado, o solo
 /// «Sin sección» si el código llega nulo, vacío o con solo espacios, como la
@@ -88,6 +90,18 @@ Color colorDeIniciales(Color fondo) {
 String etiquetaDeSeccion(String? codigo) {
   final limpio = codigo?.trim() ?? '';
   return limpio.isEmpty ? 'Sin sección' : 'Sección $limpio';
+}
+
+/// Etiqueta accesible de la tarjeta que abre el chat de un curso, en la
+/// bandeja (RF-CHAT-6) y en Secciones del docente (RF-CHAT-13):
+/// `Abrir el chat de <curso>, sección <N>` con el código recortado, o
+/// `…, sin sección` si el código llega nulo, vacío o con solo espacios. La
+/// sección va en la etiqueta para que dos secciones del mismo curso se
+/// distingan.
+String etiquetaParaAbrirElChat(String curso, String? codigo) {
+  final limpio = codigo?.trim() ?? '';
+  final seccion = limpio.isEmpty ? 'sin sección' : 'sección $limpio';
+  return 'Abrir el chat de $curso, $seccion';
 }
 
 // ── Día y hora en Lima (RF-CHAT-11) ─────────────────────────────────────────

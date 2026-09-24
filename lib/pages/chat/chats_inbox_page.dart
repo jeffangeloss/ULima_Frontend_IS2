@@ -45,7 +45,10 @@ class ChatsInboxPage extends StatelessWidget {
         final colores = controller.colorPorCurso;
 
         return ListView.builder(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+          // Abajo quedan 96 px para la burbuja de Ulises, de 60 x 60 con
+          // 12 px de margen, que el shell pone encima abajo a la izquierda:
+          // al final de la lista la última fila queda por encima de ella.
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
           itemCount: cursos.length,
           itemBuilder: (context, index) {
             final curso = cursos[index];
@@ -63,7 +66,7 @@ class ChatsInboxPage extends StatelessWidget {
               child: _FilaDeChat(
                 brillo: brillo,
                 nombre: nombre,
-                seccion: etiquetaDeSeccion(codigo),
+                codigo: codigo,
                 color: color,
                 onTap: () => Get.to<void>(
                   () => ChatPage(
@@ -89,14 +92,16 @@ class _FilaDeChat extends StatelessWidget {
   const _FilaDeChat({
     required this.brillo,
     required this.nombre,
-    required this.seccion,
+    required this.codigo,
     required this.color,
     required this.onTap,
   });
 
   final Brightness brillo;
   final String nombre;
-  final String seccion;
+
+  /// El código de la sección tal como llega, que puede ser nulo o vacío.
+  final String? codigo;
   final Color color;
   final VoidCallback onTap;
 
@@ -105,6 +110,7 @@ class _FilaDeChat extends StatelessWidget {
     return TarjetaDeChat(
       brillo: brillo,
       nombreDelCurso: nombre,
+      codigoDeSeccion: codigo,
       onTap: onTap,
       child: Row(
         children: [
@@ -127,7 +133,7 @@ class _FilaDeChat extends StatelessWidget {
                 ),
                 const SizedBox(height: 5),
                 Text(
-                  seccion,
+                  etiquetaDeSeccion(codigo),
                   style: TextStyle(
                     color: MaterialTheme.textSecondary(brillo),
                     fontSize: 12,
@@ -154,14 +160,17 @@ class _FilaDeChat extends StatelessWidget {
 /// spec pide iguales, así que la forma, la semántica y el relleno viven solo
 /// aquí y cada página pone su contenido.
 ///
-/// Es un botón con la etiqueta `Abrir el chat de <curso>`, y el lector de
-/// pantalla lee solo esa etiqueta, con la acción de toque del `InkWell`,
-/// porque el contenido queda callado.
+/// Es un botón con la etiqueta `Abrir el chat de <curso>, sección <N>`, o
+/// `…, sin sección` (`etiquetaParaAbrirElChat`), y el lector de pantalla lee
+/// solo esa etiqueta, con la acción de toque del `InkWell`, porque el
+/// contenido queda callado. La sección va en la etiqueta para que dos
+/// secciones del mismo curso se distingan.
 class TarjetaDeChat extends StatelessWidget {
   const TarjetaDeChat({
     super.key,
     required this.brillo,
     required this.nombreDelCurso,
+    required this.codigoDeSeccion,
     required this.onTap,
     required this.child,
   });
@@ -170,6 +179,11 @@ class TarjetaDeChat extends StatelessWidget {
 
   /// El nombre del curso tal como llega, que va en la etiqueta accesible.
   final String nombreDelCurso;
+
+  /// El código de la sección tal como llega, que también va en la etiqueta
+  /// accesible. Nulo, vacío o con solo espacios, la etiqueta dice «sin
+  /// sección».
+  final String? codigoDeSeccion;
 
   final VoidCallback onTap;
 
@@ -188,7 +202,7 @@ class TarjetaDeChat extends StatelessWidget {
     return Semantics(
       container: true,
       button: true,
-      label: 'Abrir el chat de $nombreDelCurso',
+      label: etiquetaParaAbrirElChat(nombreDelCurso, codigoDeSeccion),
       child: Material(
         color: MaterialTheme.cardBg(brillo),
         shape: forma,

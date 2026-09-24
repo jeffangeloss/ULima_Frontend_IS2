@@ -5,13 +5,18 @@
 // - Cada tarjeta es un InkWell con ripple dentro de un Material con cardBg y
 //   la forma de la tarjeta (radio de 16 px y borde borderColor), sin un
 //   GestureDetector ni un Container decorado por fuera que tape el ripple.
-// - Su semántica es la de un botón «Abrir el chat de <curso>», como en la
-//   bandeja del alumno, porque la tarjeta es la misma TarjetaDeChat de la
-//   bandeja con el nombre del curso de la sección.
+// - Su semántica es la de un botón «Abrir el chat de <curso>, sección <N>» (o
+//   «…, sin sección»), como en la bandeja del alumno, porque la tarjeta es la
+//   misma TarjetaDeChat de la bandeja con el nombre del curso y el código de
+//   la sección. Así dos secciones del mismo curso se distinguen.
 // - La columna derecha lleva LucideIcons.messagesSquare bajo la insignia de
 //   rol y, a su derecha en la misma fila, el texto visible «Chat».
-// - «Chat» va en textSecondary (4,5:1) y el ícono en primaryDark en claro y en
-//   primaryColor en oscuro (3:1), contra la tarjeta en los dos temas.
+// - «Chat» va en textSecondary (4,5:1) y el ícono en iconoNaranja, que es
+//   primaryDark en claro y primaryColor en oscuro (3:1), contra la tarjeta en
+//   los dos temas.
+// - El código de la sección y la insignia de rol llegan a 4,5:1 en los dos
+//   temas: el código en textSecondary sobre la tarjeta y la insignia en
+//   textSecondary sobre su tinte.
 // - La tarjeta abre ChatPage con el código de la sección y
 //   courseAccentColor(sectionId) como color.
 // Archivos: lib/pages/teacher/teacher_sections_page.dart y
@@ -42,6 +47,12 @@ import 'chat_repo_falso.dart';
 const String _cursoA = 'CURSO DE PRUEBA A';
 const String _cursoC = 'Taller De Prueba C';
 
+/// La etiqueta accesible de la tarjeta de cada curso, con su sección.
+const Map<String, String> _etiquetas = <String, String>{
+  _cursoA: 'Abrir el chat de $_cursoA, sección 801',
+  _cursoC: 'Abrir el chat de $_cursoC, sin sección',
+};
+
 /// Dos secciones del docente, una de profesor con código y una de JP sin
 /// código, que ChatPage muestra como «Sin sección».
 List<TeacherSectionOption> _secciones() => <TeacherSectionOption>[
@@ -61,10 +72,16 @@ List<TeacherSectionOption> _secciones() => <TeacherSectionOption>[
 
 // --- Dobles -------------------------------------------------------------------
 
-/// El service de asesorías sin red, que devuelve las secciones fijas.
+/// El service de asesorías sin red, que devuelve las secciones fijas, o
+/// [secciones] si llegan.
 class _SeccionesFijas extends AdvisingService {
+  _SeccionesFijas([this.secciones]);
+
+  final List<TeacherSectionOption>? secciones;
+
   @override
-  Future<List<TeacherSectionOption>> fetchSections() async => _secciones();
+  Future<List<TeacherSectionOption>> fetchSections() async =>
+      secciones ?? _secciones();
 }
 
 // --- Montaje ------------------------------------------------------------------
@@ -88,10 +105,11 @@ Future<void> _abrirSecciones(
   WidgetTester tester, {
   Brightness brillo = Brightness.light,
   ChatRepoFalso? repo,
+  List<TeacherSectionOption>? secciones,
 }) async {
   _telefonoVertical(tester);
   Get.put<TeacherSectionsController>(
-    TeacherSectionsController(service: _SeccionesFijas()),
+    TeacherSectionsController(service: _SeccionesFijas(secciones)),
   );
   await tester.pumpWidget(
     GetMaterialApp(
@@ -108,8 +126,7 @@ Future<void> _abrirSecciones(
 }
 
 /// La tarjeta de [curso], que es el nodo con su etiqueta accesible.
-Finder _tarjeta(String curso) =>
-    find.bySemanticsLabel('Abrir el chat de $curso');
+Finder _tarjeta(String curso) => find.bySemanticsLabel(_etiquetas[curso]!);
 
 Finder _enLaTarjeta(String curso, Finder finder) =>
     find.descendant(of: _tarjeta(curso), matching: finder);
@@ -134,8 +151,8 @@ void main() {
   tearDown(Get.reset);
 
   group('WIDGET · la tarjeta de una sección (RF-CHAT-13)', () {
-    testWidgets('cada tarjeta es un botón «Abrir el chat de <curso>» de al '
-        'menos 48 px', (tester) async {
+    testWidgets('cada tarjeta es un botón «Abrir el chat de <curso>, sección '
+        '<N>», o «…, sin sección», de al menos 48 px', (tester) async {
       final semantica = tester.ensureSemantics();
       await _abrirSecciones(tester);
 
@@ -145,12 +162,14 @@ void main() {
         expect(
           tester.getSemantics(tarjeta),
           isSemantics(
-            label: 'Abrir el chat de $curso',
+            label: _etiquetas[curso],
             isButton: true,
             hasTapAction: true,
           ),
         );
         expect(tester.getSize(tarjeta).height, greaterThanOrEqualTo(48));
+        // La etiqueta de antes, sin la sección, ya no existe.
+        expect(find.bySemanticsLabel('Abrir el chat de $curso'), findsNothing);
       }
 
       semantica.dispose();
@@ -170,8 +189,46 @@ void main() {
         expect(tarjeta, findsOneWidget, reason: curso);
         final widget = tester.widget<TarjetaDeChat>(tarjeta);
         expect(widget.nombreDelCurso, curso);
+        expect(widget.codigoDeSeccion, curso == _cursoA ? '801' : '');
         expect(widget.brillo, Brightness.light);
       }
+
+      semantica.dispose();
+    });
+
+    testWidgets('dos secciones del mismo curso se distinguen por su etiqueta y '
+        'cada una abre su chat', (tester) async {
+      final semantica = tester.ensureSemantics();
+      await _abrirSecciones(
+        tester,
+        secciones: <TeacherSectionOption>[
+          TeacherSectionOption(
+            sectionId: 311,
+            courseName: _cursoA,
+            sectionCode: '801',
+            rol: 'Profesor',
+          ),
+          TeacherSectionOption(
+            sectionId: 312,
+            courseName: _cursoA,
+            sectionCode: '802',
+            rol: 'Profesor',
+          ),
+        ],
+      );
+
+      const primera = 'Abrir el chat de $_cursoA, sección 801';
+      const segunda = 'Abrir el chat de $_cursoA, sección 802';
+      expect(find.bySemanticsLabel(primera), findsOneWidget);
+      expect(find.bySemanticsLabel(segunda), findsOneWidget);
+
+      await tester.tap(find.bySemanticsLabel(segunda));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      final chat = tester.widget<ChatPage>(find.byType(ChatPage));
+      expect(chat.sectionId, '312');
+      expect(chat.sectionCode, '802');
 
       semantica.dispose();
     });
@@ -285,6 +342,11 @@ void main() {
       final naranja = brillo == Brightness.light
           ? MaterialTheme.primaryDark
           : MaterialTheme.primaryColor;
+      // El código de la sección sobre la tarjeta y la insignia de rol sobre
+      // su tinte, que es su propio color al 12 % sobre la tarjeta.
+      final cifrasDeLaSeccion = brillo == Brightness.light
+          ? (codigo: 10.35, insignia: 8.45)
+          : (codigo: 6.44, insignia: 5.26);
 
       testWidgets('en $tema: «Chat» en textSecondary y el ícono en el naranja '
           'de un ícono, con su contraste contra la tarjeta', (tester) async {
@@ -318,11 +380,70 @@ void main() {
           _enLaTarjeta(_cursoA, find.byIcon(LucideIcons.messagesSquare)),
         );
         expect(icono.color, naranja);
+        expect(icono.color, MaterialTheme.iconoNaranja(brillo));
         expect(
           contrasteWcag(icono.color!, tarjeta),
           moreOrLessEquals(cifras.icono, epsilon: 0.01),
         );
         expect(contrasteWcag(icono.color!, tarjeta), greaterThanOrEqualTo(3));
+
+        semantica.dispose();
+      });
+
+      testWidgets('en $tema: el código de la sección y la insignia de rol van '
+          'en textSecondary y llegan a 4,5:1', (tester) async {
+        final semantica = tester.ensureSemantics();
+        await _abrirSecciones(tester, brillo: brillo);
+        final tarjeta = MaterialTheme.cardBg(brillo);
+
+        final codigo = _estiloPintado(
+          tester,
+          _enLaTarjeta(_cursoA, find.text('801')),
+        );
+        expect(codigo.color, MaterialTheme.textSecondary(brillo));
+        expect(
+          contrasteWcag(codigo.color!, tarjeta),
+          moreOrLessEquals(cifrasDeLaSeccion.codigo, epsilon: 0.01),
+        );
+        expect(
+          contrasteWcag(codigo.color!, tarjeta),
+          greaterThanOrEqualTo(4.5),
+        );
+
+        for (final (curso, rol) in <(String, String)>[
+          (_cursoA, 'Profesor'),
+          (_cursoC, 'JP'),
+        ]) {
+          final insignia = _enLaTarjeta(curso, find.text(rol));
+          final texto = _estiloPintado(tester, insignia);
+          expect(texto.color, MaterialTheme.textSecondary(brillo), reason: rol);
+          final tinte =
+              tester
+                      .widget<Container>(
+                        find
+                            .ancestor(
+                              of: insignia,
+                              matching: find.byWidgetPredicate(
+                                (w) => w is Container && w.decoration != null,
+                              ),
+                            )
+                            .first,
+                      )
+                      .decoration!
+                  as BoxDecoration;
+          // El tinte es translúcido: lo que se ve es su mezcla con la tarjeta.
+          final fondo = Color.alphaBlend(tinte.color!, tarjeta);
+          expect(
+            contrasteWcag(texto.color!, fondo),
+            moreOrLessEquals(cifrasDeLaSeccion.insignia, epsilon: 0.01),
+            reason: rol,
+          );
+          expect(
+            contrasteWcag(texto.color!, fondo),
+            greaterThanOrEqualTo(4.5),
+            reason: rol,
+          );
+        }
 
         semantica.dispose();
       });

@@ -441,23 +441,6 @@ class _ChatPageState extends State<ChatPage> {
   }
 }
 
-/// Naranja de un ícono informativo, que pide 3:1 contra su fondo. Va en
-/// `primaryDark` en claro y en `primaryColor` en oscuro, porque el `#FF6600`
-/// da 2,94:1 sobre blanco y menos sobre el `tagBg` claro. Lo usan los candados
-/// de los estados (RF-CHAT-8) y «Enviar carnet» (RF-CHAT-12).
-///
-/// RF-CHAT-7 y RF-CHAT-13 piden la misma condición para los íconos de la ficha
-/// del curso (`descrip_cursos.dart`) y de la tarjeta del docente
-/// (`teacher_sections_page.dart`), y el botón de «Mis bloques»
-/// (`horario.dart`) ya la lleva. Cada archivo que la necesita la escribe por
-/// su cuenta, porque RF-CHAT-8 («Colores con nombre») limita los tokens nuevos
-/// a `chatOwnBubbleBg` y `errorBg`, y esta función sigue privada para que no
-/// haga de token fuera de `themes.dart`. Un token común para todas las copias
-/// pide cambiar primero esta regla de la spec.
-Color _naranjaDeIcono(Brightness brillo) => brillo == Brightness.light
-    ? MaterialTheme.primaryDark
-    : MaterialTheme.primaryColor;
-
 /// Estado vacío o de chat no disponible: la tarjeta de la app con un candado
 /// naranja, el título en `textPrimary` y el cuerpo en `textSecondary`.
 class _TarjetaDeEstado extends StatelessWidget {
@@ -481,7 +464,7 @@ class _TarjetaDeEstado extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final candado = _naranjaDeIcono(brillo);
+    final candado = MaterialTheme.iconoNaranja(brillo);
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -563,7 +546,7 @@ class _BarraDeEscritura extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final naranja = _naranjaDeIcono(brillo);
+    final naranja = MaterialTheme.iconoNaranja(brillo);
 
     return Container(
       decoration: BoxDecoration(
@@ -637,8 +620,8 @@ class _BarraDeEscritura extends StatelessWidget {
 
 /// Botón enviar: círculo `primaryDark` con `Icons.send` en blanco. Con el
 /// campo recortado vacío se ve deshabilitado: `tagBg` con el ícono en
-/// `textMuted`, sin sombra ni ripple y con la semántica de un botón
-/// deshabilitado (RF-CHAT-12).
+/// `textMuted`, sin sombra, ripple ni respuesta de toque y con la semántica de
+/// un botón deshabilitado (RF-CHAT-12).
 class _BotonEnviar extends StatelessWidget {
   const _BotonEnviar({
     required this.brillo,
@@ -671,8 +654,10 @@ class _BotonEnviar extends StatelessWidget {
             // llega justo después de escribir, antes de que el botón se
             // repinte habilitado.
             onTap: onEnviar,
-            // Deshabilitado: sin ripple, sin resaltado y sin la acción de
+            // Deshabilitado: sin ripple, sin resaltado, sin la respuesta de
+            // toque de la plataforma (el clic de Android) y sin la acción de
             // toque en la semántica.
+            enableFeedback: habilitado,
             excludeFromSemantics: !habilitado,
             canRequestFocus: habilitado,
             splashFactory: habilitado ? null : NoSplash.splashFactory,

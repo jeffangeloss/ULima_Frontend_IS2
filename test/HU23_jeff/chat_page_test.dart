@@ -10,11 +10,14 @@
 // - RF-CHAT-11: el separador de día antes del primer mensaje de cada día, con
 //   la hora en hora de Lima.
 // - RF-CHAT-12: la barra de escritura, con sus íconos, tooltips, colores y el
-//   botón enviar deshabilitado con el campo vacío.
+//   botón enviar deshabilitado con el campo vacío, que tampoco da la
+//   respuesta de toque de la plataforma (el clic de Android).
 //
 // Todos los datos son inventados; el repo es público.
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -499,6 +502,58 @@ void main() {
       expect(repo.sent, ['Hola equipo']);
 
       semantica.dispose();
+    });
+
+    testWidgets('deshabilitado, el botón enviar no da la respuesta de toque de '
+        'Android; habilitado, sí', (tester) async {
+      // Las pruebas corren como Android, donde la respuesta de toque de un
+      // InkWell es el clic del sistema, un SystemSound.play por el canal de
+      // plataforma.
+      expect(defaultTargetPlatform, TargetPlatform.android);
+      final sonidos = <Object?>[];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (llamada) async {
+          if (llamada.method == 'SystemSound.play') {
+            sonidos.add(llamada.arguments);
+          }
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+      final repo = ChatRepoFalso(session: _teacher);
+      await tester.pumpWidget(_wrap(repo));
+      await tester.pumpAndSettle();
+
+      InkWell tinta() => tester.widget<InkWell>(
+        find
+            .ancestor(
+              of: find.byIcon(Icons.send),
+              matching: find.byType(InkWell),
+            )
+            .first,
+      );
+
+      // Con el campo vacío, el toque llega a enviar, que no manda nada, y no
+      // suena.
+      expect(tinta().enableFeedback, isFalse);
+      await tester.tap(find.byIcon(Icons.send), warnIfMissed: false);
+      await tester.pump();
+      expect(sonidos, isEmpty);
+      expect(repo.sent, isEmpty);
+
+      await tester.enterText(find.byType(TextField), 'Hola equipo');
+      await tester.pump();
+      expect(tinta().enableFeedback, isTrue);
+      await tester.tap(find.byIcon(Icons.send));
+      await tester.pump();
+      expect(sonidos, <Object?>['SystemSoundType.click']);
+      expect(repo.sent, ['Hola equipo']);
     });
 
     testWidgets('la tecla de enviar del teclado sigue la misma regla', (

@@ -8,6 +8,8 @@
 // - RF-CHAT-11: si antes de un mensaje va un separador de día.
 // - RF-CHAT-9: si un mensaje abre grupo y si lleva el nombre del remitente.
 // - RF-CHAT-8: el subtítulo del AppBar, «Sección N» o «Sin sección».
+// - RF-CHAT-6 y RF-CHAT-13: la etiqueta accesible de la tarjeta que abre el
+//   chat, «Abrir el chat de <curso>, sección <N>» o «…, sin sección».
 // Archivo: lib/pages/chat/chat_linea_tiempo.dart.
 //
 // Todos los datos son inventados; el repo es público. Los remitentes son
@@ -290,6 +292,43 @@ void main() {
       expect(etiquetaDeSeccion(null), 'Sin sección');
       expect(etiquetaDeSeccion(''), 'Sin sección');
       expect(etiquetaDeSeccion('   '), 'Sin sección');
+    });
+  });
+
+  group('UNITARIA · etiquetaParaAbrirElChat (RF-CHAT-6 y RF-CHAT-13)', () {
+    test('con código dice «Abrir el chat de <curso>, sección <N>»', () {
+      expect(
+        etiquetaParaAbrirElChat('Curso De Prueba A', '801'),
+        'Abrir el chat de Curso De Prueba A, sección 801',
+      );
+    });
+
+    test('recorta los espacios del código y deja el curso tal como llega', () {
+      expect(
+        etiquetaParaAbrirElChat('CURSO DE PRUEBA B', ' 802  '),
+        'Abrir el chat de CURSO DE PRUEBA B, sección 802',
+      );
+    });
+
+    test('con código nulo, vacío o solo espacios dice «…, sin sección»', () {
+      for (final codigo in <String?>[null, '', '   ']) {
+        expect(
+          etiquetaParaAbrirElChat('Curso De Prueba A', codigo),
+          'Abrir el chat de Curso De Prueba A, sin sección',
+          reason: '«$codigo»',
+        );
+      }
+    });
+
+    test('dos secciones del mismo curso dan etiquetas distintas', () {
+      expect(
+        etiquetaParaAbrirElChat('Curso De Prueba A', '801'),
+        isNot(etiquetaParaAbrirElChat('Curso De Prueba A', '802')),
+      );
+      expect(
+        etiquetaParaAbrirElChat('Curso De Prueba A', '801'),
+        isNot(etiquetaParaAbrirElChat('Curso De Prueba A', null)),
+      );
     });
   });
 

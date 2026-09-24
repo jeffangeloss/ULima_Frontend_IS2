@@ -1118,9 +1118,10 @@ class HorarioPage extends StatelessWidget {
                   // claro el naranja de marca da 2,89:1 sobre
                   // #FEFDFC y el naranja oscuro del tema, 4,05:1; en
                   // oscuro el de marca ya da 5,65:1 sobre #1E1E24.
-                  foregroundColor: isDark
-                      ? colors.primary
-                      : MaterialTheme.primaryDark,
+                  // iconoNaranja elige entre los dos por el tema.
+                  foregroundColor: MaterialTheme.iconoNaranja(
+                    Theme.of(context).brightness,
+                  ),
                   onPressed: () async {
                     // La misma guarda que el de agregar: mientras la
                     // lista anterior termina de cerrarse, el binding

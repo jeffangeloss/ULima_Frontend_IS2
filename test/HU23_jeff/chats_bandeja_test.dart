@@ -8,8 +8,9 @@
 // - colorPorCurso trae un color para cada una de esas secciones, también en
 //   los bordes del reparto, porque la bandeja no tiene respaldo propio.
 // - La fila entera abre ChatPage con el curso, el código y el color, es un
-//   botón «Abrir el chat de <curso>» de al menos 48 px y lleva el ripple de un
-//   InkWell dentro de un Material con la forma de la tarjeta.
+//   botón «Abrir el chat de <curso>, sección <N>» (o «…, sin sección») de al
+//   menos 48 px, así que dos secciones del mismo curso se distinguen, y lleva
+//   el ripple de un InkWell dentro de un Material con la forma de la tarjeta.
 // - Esa tarjeta es TarjetaDeChat, la misma de Secciones del docente
 //   (RF-CHAT-13), que reúne en un solo widget la etiqueta, el Material, el
 //   InkWell con su forma y el relleno de 16 px.
@@ -19,6 +20,8 @@
 //   (HorarioController.seccionesCargadas) y «No hay cursos matriculados.» si
 //   terminó sin secciones o falló.
 // - La bandeja no hace pedidos propios y Ulises no aparece en ella.
+// - Al final de la lista queda un espacio para que la burbuja de Ulises, que
+//   el shell pone encima abajo a la izquierda, no tape la última fila.
 // Archivos: lib/pages/chat/chats_inbox_page.dart y
 // lib/pages/horario/horario_controller.dart.
 //
@@ -102,6 +105,18 @@ const List<String> _cursosEnOrden = <String>[
   'Seminario De Prueba D',
   'Laboratorio De Prueba E',
 ];
+
+/// La etiqueta accesible de cada fila de [_secciones]: el curso y su sección,
+/// o «sin sección» si el código llega nulo, vacío o con solo espacios.
+const Map<String, String> _etiquetas = <String, String>{
+  'Taller De Prueba C': 'Abrir el chat de Taller De Prueba C, sección 803',
+  'Curso De Prueba A': 'Abrir el chat de Curso De Prueba A, sección 801',
+  'CURSO DE PRUEBA B': 'Abrir el chat de CURSO DE PRUEBA B, sin sección',
+  'Seminario De Prueba D':
+      'Abrir el chat de Seminario De Prueba D, sin sección',
+  'Laboratorio De Prueba E':
+      'Abrir el chat de Laboratorio De Prueba E, sin sección',
+};
 
 /// Secciones en los bordes del reparto de colores: sin horarios, con la lista
 /// de horarios vacía, con el color del horario en blanco o sin hex, con el id
@@ -221,8 +236,15 @@ Future<void> _desmontar(WidgetTester tester) async {
   await Get.delete<HorarioController>(force: true);
 }
 
-/// La fila de [curso]: el nodo con la etiqueta accesible de la fila.
-Finder _fila(String curso) => find.bySemanticsLabel('Abrir el chat de $curso');
+/// La fila de [curso]: el nodo cuya etiqueta accesible abre el chat de ese
+/// curso, con su sección o sin ella. Sirve cuando el curso tiene una sola
+/// sección en la bandeja; la etiqueta exacta la miran las pruebas de la
+/// semántica.
+Finder _fila(String curso) => find.bySemanticsLabel(
+  RegExp(
+    '^Abrir el chat de ${RegExp.escape(curso)}, (sección \\S.*|sin sección)\$',
+  ),
+);
 
 Finder _enLaFila(String curso, Finder finder) =>
     find.descendant(of: _fila(curso), matching: finder);
@@ -538,24 +560,59 @@ void main() {
       await _desmontar(tester);
     });
 
-    testWidgets('la fila es un botón «Abrir el chat de <curso>» de al menos '
-        '48 px', (tester) async {
+    testWidgets('la fila es un botón «Abrir el chat de <curso>, sección <N>», '
+        'o «…, sin sección», de al menos 48 px', (tester) async {
       final semantica = tester.ensureSemantics();
       await _abrirBandeja(tester, _apiCon(_secciones));
 
       for (final curso in _cursosEnOrden) {
-        final fila = _fila(curso);
+        final etiqueta = _etiquetas[curso]!;
+        final fila = find.bySemanticsLabel(etiqueta);
         expect(fila, findsOneWidget, reason: curso);
         expect(
           tester.getSemantics(fila),
-          isSemantics(
-            label: 'Abrir el chat de $curso',
-            isButton: true,
-            hasTapAction: true,
-          ),
+          isSemantics(label: etiqueta, isButton: true, hasTapAction: true),
         );
         expect(tester.getSize(fila).height, greaterThanOrEqualTo(48));
       }
+      // Ninguna fila se queda con la etiqueta de antes, sin la sección.
+      for (final curso in _cursosEnOrden) {
+        expect(
+          find.bySemanticsLabel('Abrir el chat de $curso'),
+          findsNothing,
+          reason: curso,
+        );
+      }
+
+      semantica.dispose();
+      await _desmontar(tester);
+    });
+
+    testWidgets('dos secciones del mismo curso se distinguen por su etiqueta y '
+        'cada una abre su chat', (tester) async {
+      final semantica = tester.ensureSemantics();
+      final repo = ChatRepoFalso(session: sesionDelegado);
+      await _abrirBandeja(
+        tester,
+        _apiCon(<Map<String, dynamic>>[
+          _seccion(321, 'Curso De Prueba A', '801'),
+          _seccion(322, 'Curso De Prueba A', '802', colorDelHorario: '#EB5757'),
+        ]),
+        repo: repo,
+      );
+
+      const primera = 'Abrir el chat de Curso De Prueba A, sección 801';
+      const segunda = 'Abrir el chat de Curso De Prueba A, sección 802';
+      expect(find.bySemanticsLabel(primera), findsOneWidget);
+      expect(find.bySemanticsLabel(segunda), findsOneWidget);
+
+      await tester.tap(find.bySemanticsLabel(segunda));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      final chat = tester.widget<ChatPage>(find.byType(ChatPage));
+      expect(chat.sectionId, '322');
+      expect(chat.sectionCode, '802');
 
       semantica.dispose();
       await _desmontar(tester);
@@ -895,6 +952,7 @@ void main() {
           'misma forma y 16 px de relleno', (tester) async {
         final semantica = tester.ensureSemantics();
         const curso = 'Curso De Prueba A';
+        const etiqueta = 'Abrir el chat de $curso, sección 801';
         const contenido = Key('contenido');
         var toques = 0;
         await tester.pumpWidget(
@@ -907,6 +965,7 @@ void main() {
                   child: TarjetaDeChat(
                     brillo: brillo,
                     nombreDelCurso: curso,
+                    codigoDeSeccion: ' 801 ',
                     onTap: () => toques++,
                     child: const SizedBox(
                       key: contenido,
@@ -920,16 +979,12 @@ void main() {
           ),
         );
 
-        final tarjeta = find.bySemanticsLabel('Abrir el chat de $curso');
+        final tarjeta = find.bySemanticsLabel(etiqueta);
         expect(tarjeta, findsOneWidget);
         // La etiqueta es solo la del botón, porque el contenido queda callado.
         expect(
           tester.getSemantics(tarjeta),
-          isSemantics(
-            label: 'Abrir el chat de $curso',
-            isButton: true,
-            hasTapAction: true,
-          ),
+          isSemantics(label: etiqueta, isButton: true, hasTapAction: true),
         );
         expect(find.bySemanticsLabel('Texto De Prueba'), findsNothing);
 
@@ -975,6 +1030,82 @@ void main() {
         expect(widget.nombreDelCurso, curso);
         expect(widget.brillo, Brightness.light);
       }
+      // Cada tarjeta lleva el código de su sección, tal como llega.
+      final codigos = <String, String?>{
+        for (final tarjeta in tester.widgetList<TarjetaDeChat>(
+          find.byType(TarjetaDeChat),
+        ))
+          tarjeta.nombreDelCurso: tarjeta.codigoDeSeccion,
+      };
+      expect(codigos, <String, String?>{
+        'Taller De Prueba C': '803',
+        'Curso De Prueba A': '801',
+        'CURSO DE PRUEBA B': null,
+        'Seminario De Prueba D': '',
+        'Laboratorio De Prueba E': '   ',
+      });
+
+      semantica.dispose();
+      await _desmontar(tester);
+    });
+  });
+
+  group('WIDGET · la burbuja de Ulises y el final de la lista (RF-CHAT-6)', () {
+    testWidgets('con la lista al final, la última fila queda por encima de la '
+        'burbuja, que el shell pone abajo a la izquierda', (tester) async {
+      final semantica = tester.ensureSemantics();
+      _telefonoVertical(tester);
+      Get.put<AuthService>(_FakeAuthService(_alumna()));
+      final controller = Get.put<HorarioController>(
+        HorarioController(apiClient: _apiCon(_seccionesEnLosBordes())),
+      );
+      // Como el cuerpo del shell (home_page.dart): la pestaña y, encima, la
+      // burbuja en un Stack.
+      await tester.pumpWidget(
+        GetMaterialApp(
+          theme: _temaDeLaApp(Brightness.light),
+          home: const Scaffold(
+            body: Stack(children: [ChatsInboxPage(), ChatbotBubble()]),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      // La premisa: la burbuja mide 60 x 60 y está abajo a la izquierda.
+      final burbuja = tester.getRect(
+        find
+            .descendant(
+              of: find.byType(ChatbotBubble),
+              matching: find.byType(GestureDetector),
+            )
+            .first,
+      );
+      final bandeja = tester.getRect(find.byType(ChatsInboxPage));
+      expect(burbuja.size, const Size(60, 60));
+      expect(burbuja.left - bandeja.left, lessThan(bandeja.width / 2));
+      expect(bandeja.bottom - burbuja.bottom, lessThan(bandeja.height / 4));
+
+      // La lista desborda la pantalla y se lleva hasta el final.
+      final lista = tester.state<ScrollableState>(
+        find.descendant(
+          of: find.byType(ChatsInboxPage),
+          matching: find.byType(Scrollable),
+        ),
+      );
+      expect(lista.position.maxScrollExtent, greaterThan(0));
+      lista.position.jumpTo(lista.position.maxScrollExtent);
+      await tester.pump();
+
+      final ultimo = controller.uniqueEnrolledCourses.last['curso'] as String;
+      final fila = tester.getRect(_fila(ultimo));
+      expect(
+        fila.bottom,
+        lessThanOrEqualTo(burbuja.top),
+        reason:
+            'la fila termina en ${fila.bottom} y la burbuja empieza en '
+            '${burbuja.top}',
+      );
 
       semantica.dispose();
       await _desmontar(tester);

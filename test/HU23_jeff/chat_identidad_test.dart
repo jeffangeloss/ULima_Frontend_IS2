@@ -5,8 +5,10 @@
 // (RF-CHAT-10).
 // - Las iniciales del curso con la regla de cuatro pasos y su color, blanco o
 //   negro, el que dé más contraste con el color del curso.
-// - Los dos tokens nuevos del chat en MaterialTheme: chatOwnBubbleBg y
-//   errorBg, con las cifras de contraste que fija la spec.
+// - Los tres tokens nuevos del chat en MaterialTheme: chatOwnBubbleBg,
+//   errorBg e iconoNaranja, con las cifras de contraste que fija la spec, y
+//   los cuatro archivos que pintan el naranja de un ícono leyéndolo de
+//   iconoNaranja en lugar de repetir la condición del tema.
 // - Los pares de colores de ChatPage (nombre, etiqueta de rol, hora, carnet,
 //   lápida, error del stream, separador, estados, avisos, diálogo y AppBar),
 //   cada uno con 4,5:1 para texto y 3:1 para ícono en los dos temas.
@@ -342,7 +344,76 @@ void main() {
         expect(contraste, closeTo(6.54, 0.005));
       }
     });
+
+    test('iconoNaranja es primaryDark en claro y primaryColor en oscuro', () {
+      expect(
+        MaterialTheme.iconoNaranja(Brightness.light),
+        MaterialTheme.primaryDark,
+      );
+      expect(
+        MaterialTheme.iconoNaranja(Brightness.dark),
+        MaterialTheme.primaryColor,
+      );
+    });
+
+    test('iconoNaranja sobre cardBg da 4,12:1 y 5,65:1, sobre el 3:1 de un '
+        'ícono', () {
+      final claro = contrasteWcag(
+        MaterialTheme.iconoNaranja(Brightness.light),
+        MaterialTheme.cardBg(Brightness.light),
+      );
+      final oscuro = contrasteWcag(
+        MaterialTheme.iconoNaranja(Brightness.dark),
+        MaterialTheme.cardBg(Brightness.dark),
+      );
+
+      expect(claro, greaterThanOrEqualTo(3));
+      expect(oscuro, greaterThanOrEqualTo(3));
+      expect(claro, closeTo(4.12, 0.005));
+      expect(oscuro, closeTo(5.65, 0.005));
+    });
   });
+
+  group(
+    'UNITARIA · el naranja de un ícono sale de iconoNaranja (RF-CHAT-8)',
+    () {
+      // Solo cuenta el código: los comentarios pueden nombrar la condición.
+      String codigo(String ruta) =>
+          File(ruta).readAsStringSync().replaceAll(RegExp(r'//[^\n]*'), '');
+
+      // Las dos formas en que los archivos escribían la condición: con el
+      // brillo claro primero o con isDark, y con primaryColor o colors.primary.
+      final condicion = RegExp(
+        r'Brightness\.light\s*\?\s*MaterialTheme\.primaryDark|'
+        r'MaterialTheme\.primaryDark\s*:\s*MaterialTheme\.primaryColor|'
+        r'isDark\s*\?\s*colors\.primary\s*:\s*MaterialTheme\.primaryDark',
+      );
+
+      for (final ruta in <String>[
+        'lib/pages/chat/chat_page.dart',
+        'lib/pages/horario/horario.dart',
+        'lib/pages/descripcion_cursos/descrip_cursos.dart',
+        'lib/pages/teacher/teacher_sections_page.dart',
+      ]) {
+        test(
+          '$ruta usa MaterialTheme.iconoNaranja y no repite la condición',
+          () {
+            final fuente = codigo(ruta);
+
+            expect(fuente, contains('MaterialTheme.iconoNaranja('));
+            expect(condicion.allMatches(fuente), isEmpty);
+          },
+        );
+      }
+
+      test('chat_page.dart ya no define su propio _naranjaDeIcono', () {
+        expect(
+          codigo('lib/pages/chat/chat_page.dart'),
+          isNot(contains('_naranjaDeIcono')),
+        );
+      });
+    },
+  );
 
   group('UNITARIA · pares de colores de ChatPage (RF-CHAT-8 y RF-CHAT-10)', () {
     // Cada par es un texto o un ícono de la conversación sobre su fondo, con
@@ -428,10 +499,8 @@ void main() {
         oscuro: 6.44,
       ),
       _Par(
-        'el candado de los estados en naranja de marca sobre cardBg',
-        (b) => b == Brightness.light
-            ? MaterialTheme.primaryDark
-            : MaterialTheme.primaryColor,
+        'el candado de los estados en iconoNaranja sobre cardBg',
+        MaterialTheme.iconoNaranja,
         MaterialTheme.cardBg,
         claro: 4.12,
         oscuro: 5.65,

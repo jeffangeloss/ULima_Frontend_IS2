@@ -135,7 +135,8 @@ class _Header extends StatelessWidget {
 
 /// Tarjeta de una sección, que abre su chat (RF-CHAT-13). Es la misma
 /// [TarjetaDeChat] de la fila de la bandeja del alumno, con la etiqueta
-/// `Abrir el chat de <curso>`, y solo su contenido es propio.
+/// `Abrir el chat de <curso>, sección <N>` (o `…, sin sección`), y solo su
+/// contenido es propio.
 class _SectionCard extends StatelessWidget {
   const _SectionCard({
     required this.section,
@@ -149,16 +150,10 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Un ícono pide 3:1 contra la tarjeta. El naranja de marca da 2,94:1 sobre
-    // el blanco, así que en claro va el naranja oscuro (4,12:1); en oscuro, el
-    // de marca da 5,65:1.
-    final naranja = brightness == Brightness.light
-        ? MaterialTheme.primaryDark
-        : MaterialTheme.primaryColor;
-
     return TarjetaDeChat(
       brillo: brightness,
       nombreDelCurso: section.courseName,
+      codigoDeSeccion: section.sectionCode,
       onTap: () => Get.to<void>(
         () => ChatPage(
           sectionId: section.sectionId.toString(),
@@ -200,10 +195,12 @@ class _SectionCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 5),
+                // En textSecondary, que da 10,35:1 y 6,44:1 contra la
+                // tarjeta; el naranja de marca daba 2,94:1 en claro.
                 Text(
                   section.sectionCode,
-                  style: const TextStyle(
-                    color: MaterialTheme.primaryColor,
+                  style: TextStyle(
+                    color: MaterialTheme.textSecondary(brightness),
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
                   ),
@@ -215,15 +212,24 @@ class _SectionCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
+              // En textSecondary sobre su tinte llega a 4,5:1 en los dos
+              // temas (8,45:1 y 5,26:1); textMuted se quedaba en 4,11:1 y
+              // 3,37:1.
               _Badge(
                 text: section.rol,
-                color: MaterialTheme.textMuted(brightness),
+                color: MaterialTheme.textSecondary(brightness),
               ),
               const SizedBox(height: 10),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(LucideIcons.messagesSquare, size: 20, color: naranja),
+                  // Un ícono pide 3:1 contra la tarjeta: iconoNaranja da
+                  // 4,12:1 en claro y 5,65:1 en oscuro.
+                  Icon(
+                    LucideIcons.messagesSquare,
+                    size: 20,
+                    color: MaterialTheme.iconoNaranja(brightness),
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     'Chat',

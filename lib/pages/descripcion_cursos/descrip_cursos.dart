@@ -121,12 +121,6 @@ class DescripCursosPage extends StatelessWidget {
   /// la sección con el color del curso (RF-CHAT-7).
   Widget _chatDelCurso(BuildContext context, Seccion seccion) {
     final brillo = Theme.of(context).brightness;
-    // Un ícono pide 3:1 contra el botón. El naranja de marca da 2,94:1 sobre
-    // el blanco de la tarjeta, así que en claro va el naranja oscuro, como el
-    // botón de «Mis bloques» (horario.dart); en oscuro, el de marca da 5,65:1.
-    final naranja = brillo == Brightness.light
-        ? MaterialTheme.primaryDark
-        : MaterialTheme.primaryColor;
 
     return OutlinedButton.icon(
       onPressed: () => Get.to<void>(
@@ -138,7 +132,12 @@ class DescripCursosPage extends StatelessWidget {
           repository: chatRepository,
         ),
       ),
-      icon: Icon(LucideIcons.messagesSquare, color: naranja),
+      // Un ícono pide 3:1 contra el botón: iconoNaranja da 4,12:1 en claro y
+      // 5,65:1 en oscuro, como el botón de «Mis bloques» (horario.dart).
+      icon: Icon(
+        LucideIcons.messagesSquare,
+        color: MaterialTheme.iconoNaranja(brillo),
+      ),
       label: const Text('Chat del curso'),
       style: OutlinedButton.styleFrom(
         backgroundColor: MaterialTheme.cardBg(brillo),

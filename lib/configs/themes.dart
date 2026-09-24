@@ -167,6 +167,12 @@ class MaterialTheme {
   /// los dos temas. Con texto blanco da 6,54:1.
   static Color errorBg(Brightness b) => const Color(0xFFB3261E);
 
+  /// Naranja de un ícono informativo, que pide 3:1 contra su fondo. Va en
+  /// `primaryDark` en claro y en `primaryColor` en oscuro, porque el
+  /// `#FF6600` da 2,94:1 sobre blanco; con `cardBg` da 4,12:1 y 5,65:1.
+  static Color iconoNaranja(Brightness b) =>
+      b == Brightness.light ? primaryDark : primaryColor;
+
   // LIGHT SCHEME
   static ColorScheme lightScheme() {
     return const ColorScheme(
