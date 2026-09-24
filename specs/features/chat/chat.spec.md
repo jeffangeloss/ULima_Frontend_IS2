@@ -27,6 +27,9 @@ targets:
 
 > Estado: **diseñada con el dueño el 2026-09-23 y aprobada por él ese mismo día**, con los
 > puntos que la spec fija por su cuenta y el AppBar en blanco sobre `#FF6600` (ver «Decisiones»).
+> Queda **implementada el 2026-09-23; falta la revisión manual en un iPhone SE** que pide
+> «Verificación», en claro y en oscuro, del footer del delegado, de la bandeja y de la
+> conversación.
 > Cubre la fase 1 de los chats de curso. Documenta el chat que ya existe y que se conserva
 > (RF-CHAT-1 a RF-CHAT-4) y suma la pestaña Chats del alumno, su bandeja, el botón de la
 > ficha del curso, el rediseño de la conversación y el acceso del docente (RF-CHAT-5 a
@@ -62,6 +65,9 @@ targets:
 > moderación sin cambios de la decisión 11 y el backend sin cambios de la decisión 12
 > («Decisiones»). Es también el único punto en que la app modifica `message.dart`, que pasa a
 > leer `deletedByUid`, y `chat_repository.dart`, solo en el comentario de `deleteMessage`.
+> El retoque final del mismo día cambia el cuerpo del diálogo de borrado, con sus dos textos
+> en «Textos nuevos» (RF-CHAT-4), y la línea de la sección en la tarjeta del docente, que pasa
+> a «Sección N» o «Sin sección» como en la bandeja (RF-CHAT-13).
 
 ## User Stories
 
@@ -573,11 +579,11 @@ AppBar y la tarjeta del docente; «Sin sección» va solo, sin el «Sección» d
 bandeja y de una tarjeta del docente), «Chat del curso» (el botón de la ficha), «Chat» (la
 tarjeta del docente), «Enviar mensaje» (el tooltip y la etiqueta accesible del botón enviar),
 «Hoy», «Ayer» y «<Día> <n> de <mes>» (los separadores), «Eliminaste este mensaje» y «Se
-eliminó este mensaje» (la lápida de un mensaje que borra su autor, RF-CHAT-4), «Se eliminará
-para todos.» y «Se eliminará para todos y verán que lo eliminaste tú.» (el cuerpo del diálogo
-de borrado, RF-CHAT-4). Salen «Chat grupal» y el cuerpo anterior del diálogo de borrado, el
-de «eliminado por ti» o «eliminado por el profesor» entre comillas rectas. Los demás textos
-del chat no cambian.
+eliminó este mensaje» (la lápida de un mensaje que borra su autor, RF-CHAT-4). El cuerpo del
+diálogo de borrado dice «Se eliminará para todos.» o «Se eliminará para todos y verán que lo
+eliminaste tú.» (RF-CHAT-4). Salen «Chat grupal» y el cuerpo anterior de este diálogo, el de
+«eliminado por ti» o «eliminado por el profesor» entre comillas rectas. Los demás textos del
+chat no cambian.
 
 ## Lo que sale del horario
 
@@ -653,7 +659,7 @@ ajuste de RF-CHAT-4. Por lo demás, la app consume lo mismo que hoy.
   (`horario_controller.dart:183-185`) y la bandeja, como hoy «Mis chats», cae en el estado
   vacío.
 - Cambiar los textos de hoy, entre ellos el error crudo del stream
-  (`chat_page.dart:372`), salvo el cuerpo del diálogo de borrado (RF-CHAT-4).
+  (`chat_page.dart:372`). El cuerpo del diálogo de borrado sí cambia (RF-CHAT-4).
 - El contenido del diálogo del carnet (`NetworkingCardPreview`, `chat_page.dart:161-182`),
   que es de `specs/features/networking/networking.spec.md`. Los avisos y el diálogo de
   borrado sí entran (RF-CHAT-8).
