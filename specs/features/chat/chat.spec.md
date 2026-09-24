@@ -56,6 +56,12 @@ targets:
 > la tarjeta del docente (RF-CHAT-13), el token `iconoNaranja` (RF-CHAT-8), el enviar
 > deshabilitado sin respuesta de toque (RF-CHAT-12) y la excepción de formato de
 > «Verificación».
+> Ajustada el 2026-09-23: cada participante borra sus propios mensajes; aprobado por el dueño
+> ese día. El ajuste reescribe RF-CHAT-4, suma dos textos a «Textos nuevos» y consume el
+> cambio del backend del mismo día (R-CHAT-4 de su spec). Para el borrado deja atrás la
+> moderación sin cambios de la decisión 11 y el backend sin cambios de la decisión 12
+> («Decisiones»). Es también el único punto en que la app modifica `message.dart`, que pasa a
+> leer `deletedByUid`, y `chat_repository.dart`, solo en el comentario de `deleteMessage`.
 
 ## User Stories
 
@@ -65,6 +71,7 @@ targets:
 - Como integrante de una sección, quiero leer la conversación con claridad y saber quién
   escribe y en qué día.
 - Como profesor, quiero seguir entrando al chat desde mis secciones y moderar sus mensajes.
+- Como integrante de una sección, quiero borrar mis propios mensajes.
 
 ## Contexto
 
@@ -154,22 +161,42 @@ de Firebase actual es otro (`chat_repository.dart:81-84`).
 
 `[@test] ../../../test/HU23_jeff/chat_page_test.dart`
 
-### RF-CHAT-4 — Moderación del profesor (se conserva)
+### RF-CHAT-4 — Borrar mensajes (ajustada el 2026-09-23)
 
-- Solo una sesión con rol `teacher` puede borrar, y solo mensajes que no estén borrados
-  (`chat_page.dart:453-455`). El JP y los representantes no ven la acción, y el backend exige
-  además que sea el profesor titular (R-CHAT-4 de su spec).
-- La acción es un toque largo sobre la burbuja (`chat_page.dart:662-664`), que abre la
-  confirmación «¿Eliminar mensaje?» con «Cancelar» y «Eliminar»
-  (`chat_page.dart:194-221`).
-- Al confirmar, la app llama a `DELETE /chat/sections/{sectionId}/messages/{messageId}`
+En la versión aprobada de esta spec solo borra el profesor (`chat_page.dart:453-455`), y el
+ajuste del 2026-09-23 trae a este requisito las decisiones que el dueño toma el mismo día.
+
+- **Quién borra.** Todo participante, sea alumno, delegado, subdelegado, JP o profesor, borra
+  sus propios mensajes, sin límite de tiempo. Un mensaje es propio si su `senderId` es el
+  `uid` de la sesión, la misma comparación de RF-CHAT-9. El profesor titular, la sesión con
+  rol `teacher`, borra además los de cualquiera. Nadie borra un mensaje ya borrado.
+- **La acción.** Es un toque largo sobre la burbuja (`chat_page.dart:662-664`). Lo tiene el
+  autor en sus mensajes no borrados, con cualquier rol, y la sesión `teacher` en cualquier
+  mensaje no borrado. En un mensaje ajeno, el alumno, el delegado, el subdelegado y el JP no
+  ven la acción. La autorización real es del backend, que compara el `senderId` guardado con
+  el `uid` del participante y deja borrar cualquier mensaje solo al profesor titular
+  (R-CHAT-4 de su spec).
+- **Confirmación.** El toque largo abre el mismo diálogo «¿Eliminar mensaje?» con «Cancelar» y
+  «Eliminar» (`chat_page.dart:194-221`), con sus textos de siempre. Su cuerpo dice
+  «eliminado por ti» si el mensaje es propio y «eliminado por el profesor» si no, y lo propio
+  se decide por `senderId`, no por el nombre.
+- **Borrado.** Al confirmar, la app llama a
+  `DELETE /chat/sections/{sectionId}/messages/{messageId}` con el repositorio de siempre
   (`chat_repository.dart:180-187`). El backend marca el mensaje como borrado y el stream trae
-  la lápida.
-- Un mensaje borrado se pinta como lápida «Mensaje eliminado por <nombre>», del lado de su
-  remitente y sin su cuerpo (`chat_page.dart:829-889`). Si no llega el nombre, dice «el
-  profesor».
-- Si el borrado falla, el aviso es «No se pudo eliminar» con «Inténtalo de nuevo en unos
-  segundos.» (`chat_page.dart:223-234`).
+  la lápida, con `deleted`, `deletedBy` (el nombre de quien borra), `deletedByUid`,
+  `deletedByRole` y `deletedAt`. `ChatMessage` lee `deletedByUid` tal como llega, y queda
+  nulo si no viene. Borrar un mensaje ya borrado responde 200 sin reescribir la lápida.
+- **Lápida.** Va del lado de su remitente y sin su cuerpo (`chat_page.dart:829-889`), con los
+  estilos de RF-CHAT-8 en sus tres variantes.
+  - Si `deletedByUid` es el `senderId` del mensaje, el borrado es de su autor. El autor lee
+    «Eliminaste este mensaje» y los demás, «Se eliminó este mensaje».
+  - Si el borrado es de otra persona, el profesor titular, todos leen «Mensaje eliminado por
+    <deletedBy>», y si no llega el nombre, «Mensaje eliminado por el profesor».
+  - Si `deletedByUid` no llega o llega vacío, la lápida cuenta como borrada por otra persona.
+- **Errores.** Un 403 (`CHAT_DELETE_FORBIDDEN`) muestra el aviso de error «No se pudo
+  eliminar» con el texto del servidor, como «Solo puedes eliminar tus propios mensajes.».
+  Cualquier otro fallo sigue con «Inténtalo de nuevo en unos segundos.»
+  (`chat_page.dart:223-234`). Los dos avisos van en blanco sobre `errorBg` (RF-CHAT-8).
 
 `[@test] ../../../test/HU23_jeff/chat_moderacion_test.dart`
 `[@test] ../../../test/HU23_jeff/chat_page_test.dart`
@@ -525,8 +552,8 @@ Rige para alumno y docente.
   insignia llegan a 4,5:1 en los dos temas.
 - La tarjeta abre `ChatPage` con el código de la sección y `courseAccentColor(sectionId)`
   como color, el mismo acento que usa Calificar (`teacher_grades_page.dart:100`).
-- El rediseño de RF-CHAT-8 a RF-CHAT-12 vale igual para el docente, y la moderación de
-  RF-CHAT-4 no cambia.
+- El rediseño de RF-CHAT-8 a RF-CHAT-12 vale igual para el docente, y el borrado de
+  RF-CHAT-4 también.
 
 `[@test] ../../../test/HU23_jeff/chat_docente_secciones_test.dart`
 
@@ -537,8 +564,9 @@ AppBar; «Sin sección» va solo, sin el «Sección» delante), «Abrir el chat 
 <N>» y «Abrir el chat de <curso>, sin sección» (la etiqueta accesible de una fila de la
 bandeja y de una tarjeta del docente), «Chat del curso» (el botón de la ficha), «Chat» (la
 tarjeta del docente), «Enviar mensaje» (el tooltip y la etiqueta accesible del botón enviar),
-«Hoy», «Ayer» y «<Día> <n> de <mes>» (los separadores). Sale «Chat grupal». Los demás textos
-del chat no cambian.
+«Hoy», «Ayer» y «<Día> <n> de <mes>» (los separadores), «Eliminaste este mensaje» y «Se
+eliminó este mensaje» (la lápida de un mensaje que borra su autor, RF-CHAT-4). Sale «Chat
+grupal». Los demás textos del chat no cambian.
 
 ## Lo que sale del horario
 
@@ -580,14 +608,17 @@ y por eso el botón deshabilitado de RF-CHAT-12 conserva su acción de toque.
 
 ## Contrato que se consume
 
-Esta fase no cambia ningún contrato (decisión 12). La app consume lo mismo que hoy.
+Esta fase no cambia ningún contrato (decisión 12), salvo quién puede usar el borrado desde el
+ajuste de RF-CHAT-4. Por lo demás, la app consume lo mismo que hoy.
 
 - `POST /chat/token` con `{sectionId}`, que devuelve `{token, uid, displayName, role,
   roleLabel, isModerator, weight}` (R-CHAT-1 del backend).
 - Firebase RTDB, con lectura de los últimos 80 mensajes de `sections/{sectionId}/messages` y
   creación con `push()`. Las reglas (`database.rules.json`) no cambian.
-- `DELETE /chat/sections/{sectionId}/messages/{messageId}`, solo para el profesor titular
-  (R-CHAT-4 del backend).
+- `DELETE /chat/sections/{sectionId}/messages/{messageId}`, que desde el ajuste acepta a
+  cualquier participante para sus mensajes y al profesor titular para cualquiera (R-CHAT-4
+  del backend). Responde 200 `{deleted, messageId, deletedBy}`, 403
+  `CHAT_DELETE_FORBIDDEN` y 404 `CHAT_MESSAGE_NOT_FOUND`.
 - El carnet visible de un usuario, por `NetworkingService.fetchVisibleByUserId`
   (`chat_repository.dart:175-178`).
 - Las secciones de `GET /schedule/me/sessions`, que el horario ya pide
@@ -598,10 +629,13 @@ Esta fase no cambia ningún contrato (decisión 12). La app consume lo mismo que
 - La fase 2, con último mensaje, hora y no leídos en la bandeja. Pide un cambio del backend
   por las reglas de Firebase.
 - Ulises en la bandeja (decisión 10).
-- Dependencias nuevas y cambios del backend o de las reglas de Firebase (decisión 12).
+- Dependencias nuevas y cambios del backend o de las reglas de Firebase (decisión 12). El
+  cambio del borrado en el backend es del ajuste de RF-CHAT-4 y la app solo lo consume.
 - Notificaciones de mensajes nuevos.
-- Cambios en la moderación (quién borra, cómo confirma, qué dice la lápida), salvo sus
-  colores.
+- Cambios en cómo se confirma un borrado, salvo los colores del diálogo (RF-CHAT-8) y la
+  comparación por `senderId` que elige su cuerpo (RF-CHAT-4). Quién borra y qué dice la lápida
+  cambian con el ajuste del 2026-09-23.
+- Un límite de tiempo para borrar un mensaje propio.
 - Editar mensajes, adjuntar archivos, buscar en el chat o cargar más allá de los últimos 80.
 - El año en el separador de día. Un chat de sección vive dentro de un ciclo.
 - Un estado de error propio de la bandeja. `_loadSecciones` se traga el error
@@ -633,6 +667,12 @@ El dueño aprobó estas doce decisiones el 2026-09-23.
 | 10 | Ulises no entra en la pestaña Chats y sigue en su burbuja | RF-CHAT-5 y «Qué NO entra» |
 | 11 | El docente sigue entrando desde Secciones, con el texto «Chat» y ripple; moderación sin cambios | RF-CHAT-13 y RF-CHAT-4 |
 | 12 | Sin dependencias nuevas y sin cambios en el backend ni en las reglas de Firebase | «Contrato que se consume» y «Qué NO entra» |
+
+El mismo 2026-09-23 el dueño decide además que cada participante borre sus propios mensajes,
+sin límite de tiempo, que el profesor titular siga borrando los de cualquiera y que la lápida
+avise al estilo de WhatsApp. Esta decisión deja atrás, solo para el borrado, «moderación sin
+cambios» de la decisión 11 y «sin cambios en el backend» de la decisión 12, y queda en
+RF-CHAT-4.
 
 Algunos puntos no están en las decisiones y esta spec los fija por su cuenta. El dueño los
 confirma o los cambia al aprobarla.

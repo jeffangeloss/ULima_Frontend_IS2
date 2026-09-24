@@ -109,7 +109,8 @@ const sesionDocente = ChatSession(
   weight: 100,
 );
 
-/// Sesión del Jefe de Práctica de la sección, moderador sin poder de borrar.
+/// Sesión del Jefe de Práctica de la sección: moderador que solo borra sus
+/// propios mensajes (RF-CHAT-4).
 const sesionJp = ChatSession(
   uid: '293',
   displayName: 'Jefe De Prueba',
@@ -127,6 +128,27 @@ const sesionDelegado = ChatSession(
   roleLabel: 'Delegado',
   isModerator: true,
   weight: 70,
+);
+
+/// Sesión del subdelegado de la sección, el mismo alumno sintético.
+const sesionSubdelegado = ChatSession(
+  uid: '20230001',
+  displayName: 'Alumno De Prueba',
+  role: 'subdelegate',
+  roleLabel: 'Subdelegado',
+  isModerator: true,
+  weight: 60,
+);
+
+/// Sesión de un alumno de la sección, el mismo alumno sintético, sin
+/// representación.
+const sesionAlumno = ChatSession(
+  uid: '20230001',
+  displayName: 'Alumno De Prueba',
+  role: 'student',
+  roleLabel: 'Alumno',
+  isModerator: false,
+  weight: 10,
 );
 
 /// ChatPage dentro de una app de GetX con el tema real de la app, claro u

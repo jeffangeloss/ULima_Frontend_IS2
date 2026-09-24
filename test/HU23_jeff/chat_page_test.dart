@@ -1,8 +1,11 @@
 // test/HU23_jeff/chat_page_test.dart
 //
 // WIDGET — HU23 (chat de sección): ChatPage con un repositorio falso.
-// - RF-CHAT-1 a RF-CHAT-4: conexión, mensajes en vivo, envío de texto y de
-//   carnet y lápida, como antes del rediseño.
+// - RF-CHAT-1 a RF-CHAT-3: conexión, mensajes en vivo y envío de texto y de
+//   carnet, como antes del rediseño.
+// - RF-CHAT-4: la lápida según quién borró. El autor lee «Eliminaste este
+//   mensaje», los demás «Se eliminó este mensaje» y, si lo borró el profesor,
+//   todos leen «Mensaje eliminado por <profesor>».
 // - RF-CHAT-8: el AppBar con el círculo del curso y «Sección N» o «Sin
 //   sección».
 // - RF-CHAT-9 y RF-CHAT-10: el nombre solo en el ajeno que abre grupo, con la
@@ -24,6 +27,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:ulima_plus/configs/themes.dart';
 import 'package:ulima_plus/models/message.dart';
 import 'package:ulima_plus/pages/chat/curso_avatar.dart';
+import 'package:ulima_plus/services/chat_repository.dart';
 
 import 'chat_repo_falso.dart';
 
@@ -249,6 +253,180 @@ void main() {
       expect(find.text('texto original que no debe verse'), findsNothing);
     },
   );
+
+  group('RF-CHAT-4 · la lápida según quién borró', () {
+    /// Lápida del mensaje '300' de [senderId], borrado por [deletedByUid].
+    ChatMessage lapida({
+      required String senderId,
+      required String senderName,
+      String? deletedBy,
+      String? deletedByUid,
+      String deletedByRole = 'student',
+    }) => ChatMessage.fromMap('300', {
+      'senderId': senderId,
+      'senderName': senderName,
+      'senderRole': 'student',
+      'body': 'texto original que no debe verse',
+      'createdAt': 300,
+      'deleted': true,
+      'deletedBy': ?deletedBy,
+      'deletedByUid': ?deletedByUid,
+      'deletedByRole': deletedByRole,
+    });
+
+    Future<void> abrir(
+      WidgetTester tester,
+      ChatSession sesion,
+      ChatMessage mensaje,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(ChatRepoFalso(session: sesion, messages: [mensaje])),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    /// Lo borró su autor, el alumno sintético.
+    final borradoPorSuAutor = lapida(
+      senderId: sesionAlumno.uid,
+      senderName: sesionAlumno.displayName,
+      deletedBy: sesionAlumno.displayName,
+      deletedByUid: sesionAlumno.uid,
+    );
+
+    testWidgets('el autor lee «Eliminaste este mensaje»', (tester) async {
+      await abrir(tester, sesionAlumno, borradoPorSuAutor);
+
+      expect(find.text('Eliminaste este mensaje'), findsOneWidget);
+      expect(find.text('Se eliminó este mensaje'), findsNothing);
+      expect(find.textContaining('Mensaje eliminado por'), findsNothing);
+      expect(find.text('texto original que no debe verse'), findsNothing);
+      // Va del lado del autor, a la derecha.
+      expect(
+        tester.getCenter(find.text('Eliminaste este mensaje')).dx,
+        greaterThan(tester.getSize(find.byType(Scaffold)).width / 2),
+      );
+    });
+
+    for (final sesion in [sesionDocente, sesionJp]) {
+      testWidgets('${sesion.roleLabel}, que no es su autor, lee «Se eliminó '
+          'este mensaje»', (tester) async {
+        await abrir(tester, sesion, borradoPorSuAutor);
+
+        expect(find.text('Se eliminó este mensaje'), findsOneWidget);
+        expect(find.text('Eliminaste este mensaje'), findsNothing);
+        expect(find.textContaining('Mensaje eliminado por'), findsNothing);
+        expect(find.text('texto original que no debe verse'), findsNothing);
+      });
+    }
+
+    /// Lo borró el profesor titular, que no es su autor.
+    final borradoPorElProfesor = lapida(
+      senderId: sesionAlumno.uid,
+      senderName: sesionAlumno.displayName,
+      deletedBy: 'Docente De Prueba',
+      deletedByUid: sesionDocente.uid,
+      deletedByRole: 'teacher',
+    );
+
+    for (final sesion in [sesionAlumno, sesionJp, sesionDocente]) {
+      testWidgets('si lo borró el profesor, ${sesion.roleLabel} lee «Mensaje '
+          'eliminado por <profesor>»', (tester) async {
+        await abrir(tester, sesion, borradoPorElProfesor);
+
+        expect(
+          find.text('Mensaje eliminado por Docente De Prueba'),
+          findsOneWidget,
+        );
+        expect(find.text('Eliminaste este mensaje'), findsNothing);
+        expect(find.text('Se eliminó este mensaje'), findsNothing);
+      });
+    }
+
+    testWidgets('si lo borró el profesor sin nombre, dice «el profesor»', (
+      tester,
+    ) async {
+      await abrir(
+        tester,
+        sesionAlumno,
+        lapida(
+          senderId: sesionAlumno.uid,
+          senderName: sesionAlumno.displayName,
+          deletedByUid: sesionDocente.uid,
+          deletedByRole: 'teacher',
+        ),
+      );
+
+      expect(find.text('Mensaje eliminado por el profesor'), findsOneWidget);
+    });
+
+    testWidgets('sin deletedByUid cuenta como borrado por otra persona', (
+      tester,
+    ) async {
+      await abrir(
+        tester,
+        sesionAlumno,
+        lapida(
+          senderId: sesionAlumno.uid,
+          senderName: sesionAlumno.displayName,
+          deletedBy: 'Docente De Prueba',
+        ),
+      );
+
+      expect(
+        find.text('Mensaje eliminado por Docente De Prueba'),
+        findsOneWidget,
+      );
+      expect(find.text('Eliminaste este mensaje'), findsNothing);
+    });
+
+    for (final brillo in Brightness.values) {
+      final tema = brillo == Brightness.light ? 'claro' : 'oscuro';
+
+      testWidgets('las dos lápidas nuevas llevan los estilos de RF-CHAT-8, en '
+          '$tema', (tester) async {
+        final otroAutor = lapida(
+          senderId: '6',
+          senderName: 'Alumno X',
+          deletedBy: 'Alumno X',
+          deletedByUid: '6',
+        );
+        final propia = ChatMessage.fromMap('400', {
+          'senderId': sesionAlumno.uid,
+          'senderName': sesionAlumno.displayName,
+          'senderRole': 'student',
+          'body': 'otro texto que no debe verse',
+          'createdAt': 400,
+          'deleted': true,
+          'deletedBy': sesionAlumno.displayName,
+          'deletedByUid': sesionAlumno.uid,
+        });
+        await tester.pumpWidget(
+          chatEnApp(
+            ChatRepoFalso(session: sesionAlumno, messages: [otroAutor, propia]),
+            brillo: brillo,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        for (final texto in [
+          'Se eliminó este mensaje',
+          'Eliminaste este mensaje',
+        ]) {
+          final caja = _burbujaDe(tester, texto).decoration! as BoxDecoration;
+          expect(caja.color, MaterialTheme.tagBg(brillo));
+          expect(
+            caja.border,
+            Border.all(color: MaterialTheme.borderColor(brillo)),
+          );
+          expect(
+            tester.widget<Text>(find.text(texto)).style!.color,
+            MaterialTheme.textSecondary(brillo),
+          );
+          expect(_margenArriba(tester, texto), 8);
+        }
+      });
+    }
+  });
 
   group('RF-CHAT-8 · AppBar', () {
     testWidgets('lleva el círculo del curso, el curso y «Sección 801»', (

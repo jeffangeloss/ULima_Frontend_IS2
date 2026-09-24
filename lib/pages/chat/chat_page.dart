@@ -203,12 +203,14 @@ class _ChatPageState extends State<ChatPage> {
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
-  /// HU23: el profesor confirma y elimina un mensaje (borrado suave). El backend
-  /// valida que sea el profesor de la sección; el stream de RTDB refleja la
-  /// lápida "eliminado por…".
+  /// HU23: el autor o el profesor titular confirma y elimina un mensaje
+  /// (borrado suave, RF-CHAT-4). El backend valida la autoría contra el
+  /// `senderId` guardado; el stream de RTDB trae la lápida.
   Future<void> _confirmDelete(ChatMessage msg) async {
     final brillo = _brillo;
     final texto = MaterialTheme.textPrimary(brillo);
+    // Lo propio se decide por senderId, como en RF-CHAT-9, no por el nombre.
+    final esPropio = _esPropio(msg);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -220,7 +222,7 @@ class _ChatPageState extends State<ChatPage> {
           style: TextStyle(fontWeight: FontWeight.w800, color: texto),
         ),
         content: Text(
-          'El mensaje quedará marcado como "eliminado por ${msg.senderName == _session?.displayName ? 'ti' : 'el profesor'}". '
+          'El mensaje quedará marcado como "eliminado por ${esPropio ? 'ti' : 'el profesor'}". '
           'Esta acción no se puede deshacer.',
           style: TextStyle(fontSize: 13.5, color: texto),
         ),
@@ -245,6 +247,15 @@ class _ChatPageState extends State<ChatPage> {
 
     try {
       await _chatRepository.deleteMessage(widget.sectionId, msg.id);
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      // Un 403 (CHAT_DELETE_FORBIDDEN) trae el motivo del servidor.
+      _avisoDeError(
+        'No se pudo eliminar',
+        error.statusCode == 403 && error.message.trim().isNotEmpty
+            ? error.message
+            : 'Inténtalo de nuevo en unos segundos.',
+      );
     } catch (_) {
       if (!mounted) return;
       _avisoDeError(
@@ -252,6 +263,12 @@ class _ChatPageState extends State<ChatPage> {
         'Inténtalo de nuevo en unos segundos.',
       );
     }
+  }
+
+  /// El mensaje es de la sesión actual: su `senderId` es el `uid` de la sesión.
+  bool _esPropio(ChatMessage msg) {
+    final uid = _session?.uid ?? '';
+    return uid.isNotEmpty && msg.senderId == uid;
   }
 
   void _scrollToBottom() {
@@ -407,12 +424,15 @@ class _ChatPageState extends State<ChatPage> {
           itemBuilder: (context, index) {
             final msg = messages[index];
             final anterior = index > 0 ? messages[index - 1] : null;
-            // Solo el PROFESOR de la sección puede eliminar.
-            final canDelete = session.role == 'teacher' && !msg.deleted;
+            final esPropio = _esPropio(msg);
+            // RF-CHAT-4: el autor borra los suyos, con cualquier rol, y el
+            // profesor titular, cualquiera. Nadie borra una lápida.
+            final canDelete =
+                !msg.deleted && (esPropio || session.role == 'teacher');
 
             final burbuja = _MessageBubble(
               message: msg,
-              isMe: msg.senderId == session.uid,
+              isMe: esPropio,
               abreGrupo: abreGrupo(msg, anterior),
               muestraNombre: llevaNombre(msg, anterior, session.uid),
               timeText: horaDeMensaje(msg.createdAt),
@@ -693,8 +713,8 @@ class _MessageBubble extends StatelessWidget {
   final String timeText;
   final Brightness brillo;
 
-  /// Solo se pasa cuando el usuario actual es el profesor y el mensaje no está
-  /// eliminado: habilita el long-press para eliminar.
+  /// Solo se pasa cuando el mensaje no está eliminado y es propio o la sesión
+  /// es el profesor titular: habilita el long-press para eliminar (RF-CHAT-4).
   final VoidCallback? onDelete;
   final VoidCallback? onOpenNetworkingCard;
 
@@ -725,7 +745,7 @@ class _MessageBubble extends StatelessWidget {
 
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      // Long-press: solo el profesor (onDelete != null) puede eliminar.
+      // Long-press: solo si se puede eliminar (onDelete != null).
       child: GestureDetector(
         onLongPress: onDelete,
         onTap: message.isNetworkingCard ? onOpenNetworkingCard : null,
@@ -870,9 +890,11 @@ class _NetworkingCardMessage extends StatelessWidget {
   }
 }
 
-/// HU23: lápida de un mensaje eliminado por el profesor. Reemplaza al bubble
+/// HU23: lápida de un mensaje eliminado (RF-CHAT-4). Reemplaza al bubble
 /// normal; mantiene el lado (izq/der) del emisor original, en `tagBg` con el
-/// texto y el ícono en `textSecondary`.
+/// texto y el ícono en `textSecondary`. Si lo borró su autor, el autor lee
+/// «Eliminaste este mensaje» y los demás «Se eliminó este mensaje»; si lo borró
+/// otra persona, todos leen «Mensaje eliminado por» y el nombre de `deletedBy`.
 class _DeletedTombstone extends StatelessWidget {
   const _DeletedTombstone({
     required this.message,
@@ -884,11 +906,18 @@ class _DeletedTombstone extends StatelessWidget {
   final bool isMe;
   final Brightness brillo;
 
-  @override
-  Widget build(BuildContext context) {
+  String get _texto {
+    if (message.deletedBySender) {
+      return isMe ? 'Eliminaste este mensaje' : 'Se eliminó este mensaje';
+    }
     final by = (message.deletedBy != null && message.deletedBy!.isNotEmpty)
         ? message.deletedBy!
         : 'el profesor';
+    return 'Mensaje eliminado por $by';
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final fg = MaterialTheme.textSecondary(brillo);
 
     return Align(
@@ -916,7 +945,7 @@ class _DeletedTombstone extends StatelessWidget {
             const SizedBox(width: 6),
             Flexible(
               child: Text(
-                'Mensaje eliminado por $by',
+                _texto,
                 style: TextStyle(
                   fontSize: 13,
                   fontStyle: FontStyle.italic,

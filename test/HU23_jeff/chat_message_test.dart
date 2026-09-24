@@ -147,5 +147,42 @@ void main() {
     final m = ChatMessage.fromMap('y', {'body': 'hola'});
     expect(m.deleted, isFalse);
     expect(m.deletedBy, isNull);
+    expect(m.deletedByUid, isNull);
+    expect(m.deletedBySender, isFalse);
+  });
+
+  group('RF-CHAT-4 · quién borró', () {
+    ChatMessage lapida({String senderId = '6', Object? deletedByUid}) =>
+        ChatMessage.fromMap('z', {
+          'senderId': senderId,
+          'body': 'texto original',
+          'deleted': true,
+          'deletedBy': 'Compañero De Prueba',
+          'deletedByRole': 'student',
+          'deletedByUid': ?deletedByUid,
+        });
+
+    test('lee deletedByUid tal como llega', () {
+      expect(lapida(deletedByUid: '6').deletedByUid, '6');
+      expect(lapida(deletedByUid: '292').deletedByUid, '292');
+    });
+
+    test('sin deletedByUid queda nulo, sin inventar un valor', () {
+      expect(lapida().deletedByUid, isNull);
+    });
+
+    test('lo borró su autor si deletedByUid es su senderId', () {
+      expect(lapida(deletedByUid: '6').deletedBySender, isTrue);
+    });
+
+    test('lo borró otra persona si deletedByUid es otro uid', () {
+      expect(lapida(deletedByUid: '292').deletedBySender, isFalse);
+    });
+
+    test('sin deletedByUid, o vacío, cuenta como borrado por otra persona', () {
+      expect(lapida().deletedBySender, isFalse);
+      expect(lapida(deletedByUid: '').deletedBySender, isFalse);
+      expect(lapida(senderId: '', deletedByUid: '').deletedBySender, isFalse);
+    });
   });
 }
