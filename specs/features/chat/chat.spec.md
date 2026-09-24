@@ -177,9 +177,11 @@ ajuste del 2026-09-23 trae a este requisito las decisiones que el dueño toma el
   el `uid` del participante y deja borrar cualquier mensaje solo al profesor titular
   (R-CHAT-4 de su spec).
 - **Confirmación.** El toque largo abre el mismo diálogo «¿Eliminar mensaje?» con «Cancelar» y
-  «Eliminar» (`chat_page.dart:194-221`), con sus textos de siempre. Su cuerpo dice
-  «eliminado por ti» si el mensaje es propio y «eliminado por el profesor» si no, y lo propio
-  se decide por `senderId`, no por el nombre.
+  «Eliminar» (`chat_page.dart:194-221`), con su título y sus botones de siempre. Su cuerpo
+  dice «Se eliminará para todos.» si el mensaje es propio, con cualquier rol, y «Se eliminará
+  para todos y verán que lo eliminaste tú.» cuando el profesor titular borra el mensaje de
+  otra persona. Lo propio se decide por `senderId`, no por el nombre, y ningún texto del
+  diálogo lleva comillas rectas.
 - **Borrado.** Al confirmar, la app llama a
   `DELETE /chat/sections/{sectionId}/messages/{messageId}` con el repositorio de siempre
   (`chat_repository.dart:180-187`). El backend marca el mensaje como borrado y el stream trae
@@ -391,7 +393,8 @@ Rige para alumno y docente.
   `textPrimary` (17,85:1 y 14,22:1). El diálogo de borrado (`chat_page.dart:194-221`) va
   sobre `cardBg`, con el título, el cuerpo y «Cancelar» en `textPrimary`, y «Eliminar» en
   blanco sobre `errorBg`, en lugar de `Colors.red[600]` (4,23:1). «Cancelar» deja el naranja
-  del tema, que da 2,94:1 sobre blanco. Los textos no cambian.
+  del tema, que da 2,94:1 sobre blanco. Los textos de los avisos no cambian, y el cuerpo del
+  diálogo lo fija RF-CHAT-4.
 - **Contraste.** Todo texto de `ChatPage` llega a 4,5:1 contra su fondo en los dos temas, y
   todo ícono que da información, a 3:1. Eso abarca el cuerpo, la hora, el nombre, la
   etiqueta de rol, el separador de día, la lápida, los estados vacío, no disponible y de
@@ -565,8 +568,11 @@ AppBar; «Sin sección» va solo, sin el «Sección» delante), «Abrir el chat 
 bandeja y de una tarjeta del docente), «Chat del curso» (el botón de la ficha), «Chat» (la
 tarjeta del docente), «Enviar mensaje» (el tooltip y la etiqueta accesible del botón enviar),
 «Hoy», «Ayer» y «<Día> <n> de <mes>» (los separadores), «Eliminaste este mensaje» y «Se
-eliminó este mensaje» (la lápida de un mensaje que borra su autor, RF-CHAT-4). Sale «Chat
-grupal». Los demás textos del chat no cambian.
+eliminó este mensaje» (la lápida de un mensaje que borra su autor, RF-CHAT-4), «Se eliminará
+para todos.» y «Se eliminará para todos y verán que lo eliminaste tú.» (el cuerpo del diálogo
+de borrado, RF-CHAT-4). Salen «Chat grupal» y el cuerpo anterior del diálogo de borrado, el
+de «eliminado por ti» o «eliminado por el profesor» entre comillas rectas. Los demás textos
+del chat no cambian.
 
 ## Lo que sale del horario
 
@@ -632,9 +638,9 @@ ajuste de RF-CHAT-4. Por lo demás, la app consume lo mismo que hoy.
 - Dependencias nuevas y cambios del backend o de las reglas de Firebase (decisión 12). El
   cambio del borrado en el backend es del ajuste de RF-CHAT-4 y la app solo lo consume.
 - Notificaciones de mensajes nuevos.
-- Cambios en cómo se confirma un borrado, salvo los colores del diálogo (RF-CHAT-8) y la
-  comparación por `senderId` que elige su cuerpo (RF-CHAT-4). Quién borra y qué dice la lápida
-  cambian con el ajuste del 2026-09-23.
+- Cambios en cómo se confirma un borrado, salvo los colores del diálogo (RF-CHAT-8) y su
+  cuerpo, que RF-CHAT-4 elige por `senderId`. Quién borra, qué dice la lápida y el cuerpo del
+  diálogo cambian con el ajuste del 2026-09-23.
 - Un límite de tiempo para borrar un mensaje propio.
 - Editar mensajes, adjuntar archivos, buscar en el chat o cargar más allá de los últimos 80.
 - El año en el separador de día. Un chat de sección vive dentro de un ciclo.
@@ -642,7 +648,7 @@ ajuste de RF-CHAT-4. Por lo demás, la app consume lo mismo que hoy.
   (`horario_controller.dart:183-185`) y la bandeja, como hoy «Mis chats», cae en el estado
   vacío.
 - Cambiar los textos de hoy, entre ellos el error crudo del stream
-  (`chat_page.dart:372`).
+  (`chat_page.dart:372`), salvo el cuerpo del diálogo de borrado (RF-CHAT-4).
 - El contenido del diálogo del carnet (`NetworkingCardPreview`, `chat_page.dart:161-182`),
   que es de `specs/features/networking/networking.spec.md`. Los avisos y el diálogo de
   borrado sí entran (RF-CHAT-8).

@@ -1060,7 +1060,9 @@ void main() {
           expect(
             _colorPintado(
               tester,
-              find.textContaining('Esta acción no se puede'),
+              find.text(
+                'Se eliminará para todos y verán que lo eliminaste tú.',
+              ),
             ),
             MaterialTheme.textPrimary(b),
           );

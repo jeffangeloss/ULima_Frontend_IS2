@@ -221,9 +221,11 @@ class _ChatPageState extends State<ChatPage> {
           '¿Eliminar mensaje?',
           style: TextStyle(fontWeight: FontWeight.w800, color: texto),
         ),
+        // Solo el profesor titular llega aquí con un mensaje ajeno (RF-CHAT-4).
         content: Text(
-          'El mensaje quedará marcado como "eliminado por ${esPropio ? 'ti' : 'el profesor'}". '
-          'Esta acción no se puede deshacer.',
+          esPropio
+              ? 'Se eliminará para todos.'
+              : 'Se eliminará para todos y verán que lo eliminaste tú.',
           style: TextStyle(fontSize: 13.5, color: texto),
         ),
         actions: [

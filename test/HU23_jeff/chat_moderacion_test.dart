@@ -7,8 +7,10 @@
 //   confirmar, lo borra por su id.
 // - En un mensaje ajeno, solo el profesor titular (rol teacher) ve la acción.
 // - Ninguna lápida abre el borrado, ni la propia ni la ajena.
-// - El cuerpo del diálogo dice «eliminado por ti» en un mensaje propio y
-//   «eliminado por el profesor» en uno ajeno, decidido por senderId.
+// - El cuerpo del diálogo dice «Se eliminará para todos.» en un mensaje propio,
+//   con cualquier rol, y «Se eliminará para todos y verán que lo eliminaste
+//   tú.» cuando el profesor titular borra uno ajeno, decidido por senderId y
+//   sin comillas rectas.
 // - Un 403 muestra el texto del servidor en el aviso de error y cualquier otro
 //   fallo, el texto de siempre. «Eliminar» y los avisos de error van en blanco
 //   sobre errorBg.
@@ -30,6 +32,17 @@ const _blanco = Color(0xFFFFFFFF);
 
 const _ajeno = 'Mensaje a moderar';
 const _propio = 'Mi mensaje';
+
+/// El cuerpo del diálogo sobre un mensaje propio, con cualquier rol.
+const _cuerpoPropio = 'Se eliminará para todos.';
+
+/// El cuerpo del diálogo cuando el profesor titular borra uno ajeno.
+const _cuerpoAjeno = 'Se eliminará para todos y verán que lo eliminaste tú.';
+
+/// El texto del cuerpo del diálogo abierto, que es su `content`.
+String _textoDelCuerpo(WidgetTester tester) =>
+    (tester.widget<AlertDialog>(find.byType(AlertDialog)).content! as Text)
+        .data!;
 
 ChatMessage _mensaje(
   String id,
@@ -239,16 +252,28 @@ void main() {
   });
 
   group('RF-CHAT-4 · el cuerpo del diálogo', () {
-    testWidgets('en un mensaje propio dice «eliminado por ti»', (tester) async {
-      await _abrir(tester, sesionAlumno);
+    for (final sesion in [
+      sesionAlumno,
+      sesionDelegado,
+      sesionSubdelegado,
+      sesionJp,
+      sesionDocente,
+    ]) {
+      testWidgets(
+        '${sesion.roleLabel}: en un mensaje propio dice «$_cuerpoPropio»',
+        (tester) async {
+          await _abrir(tester, sesion);
 
-      await tester.longPress(find.text(_propio));
-      await tester.pumpAndSettle();
+          await tester.longPress(find.text(_propio));
+          await tester.pumpAndSettle();
 
-      expect(find.textContaining('"eliminado por ti"'), findsOneWidget);
-    });
+          expect(find.text(_cuerpoPropio), findsOneWidget);
+          expect(_textoDelCuerpo(tester), _cuerpoPropio);
+        },
+      );
+    }
 
-    testWidgets('en uno ajeno, el profesor lee «eliminado por el profesor»', (
+    testWidgets('en uno ajeno, el profesor lee «$_cuerpoAjeno»', (
       tester,
     ) async {
       await _abrir(tester, sesionDocente);
@@ -256,10 +281,8 @@ void main() {
       await tester.longPress(find.text(_ajeno));
       await tester.pumpAndSettle();
 
-      expect(
-        find.textContaining('"eliminado por el profesor"'),
-        findsOneWidget,
-      );
+      expect(find.text(_cuerpoAjeno), findsOneWidget);
+      expect(_textoDelCuerpo(tester), _cuerpoAjeno);
     });
 
     testWidgets('lo propio se decide por senderId y no por el nombre', (
@@ -278,11 +301,37 @@ void main() {
       await tester.longPress(find.text('Mismo nombre'));
       await tester.pumpAndSettle();
 
-      expect(
-        find.textContaining('"eliminado por el profesor"'),
-        findsOneWidget,
-      );
-      expect(find.textContaining('"eliminado por ti"'), findsNothing);
+      expect(_textoDelCuerpo(tester), _cuerpoAjeno);
+      expect(find.text(_cuerpoPropio), findsNothing);
+    });
+
+    testWidgets('ningún texto del diálogo lleva comillas rectas', (
+      tester,
+    ) async {
+      await _abrir(tester, sesionDocente);
+
+      for (final mensaje in [_propio, _ajeno]) {
+        await tester.longPress(find.text(mensaje));
+        await tester.pumpAndSettle();
+
+        final textos = tester
+            .widgetList<Text>(
+              find.descendant(
+                of: find.byType(AlertDialog),
+                matching: find.byType(Text),
+              ),
+            )
+            .map((t) => t.data ?? '')
+            .toList();
+        expect(textos, isNotEmpty, reason: mensaje);
+        for (final texto in textos) {
+          expect(texto, isNot(contains('"')), reason: texto);
+          expect(texto, isNot(contains("'")), reason: texto);
+        }
+
+        await tester.tap(find.text('Cancelar'));
+        await tester.pumpAndSettle();
+      }
     });
   });
 
