@@ -78,10 +78,10 @@ Salen de `decisiones.md`, el registro del dueño.
 | --- | --- | --- |
 | 1 | El test es el paso central de `/setup-carrera`, con la opción «Saltar y elegir por mi cuenta», y se puede rehacer desde el Perfil. | RF-TEST-1, RF-TEST-3, RF-TEST-10 |
 | 2 | El puntaje es transparente y lo calcula el backend. Cohere solo redacta el motivo y, si falla o tarda, el resultado sale con el motivo de las plantillas. | RF-TEST-7, RF-TEST-8 |
-| 3 | El contenido está aprobado y va versionado. | RF-TEST-2, RF-TEST-4 |
+| 3 | El contenido está aprobado y va versionado. Las dudas del revisor se adoptan con la opción recomendada, entre ellas que la línea `low` de Ulises sale cuando la afinidad de la ganadora es menor que 50 y que la línea `second` no se usa. | RF-TEST-2, RF-TEST-4, RF-TEST-8 |
 | 4 | Diseño «Conversación con Ulises», con la misma imagen del chatbot (`assets/images/ulises_chatbot.png`), según la maqueta `ulises-v2.html` de cinco pantallas. Las tarjetas del duelo son grises y se encienden en el color de su especialidad al tocarlas. El resultado va sin scroll, en claro y en oscuro, con la número uno, su porcentaje, el motivo, sus electivos, las otras tres con un corazón y los botones «Elegir como principal», «Decidir después» y «Rehacer el test». Modo oscuro obligatorio. | RF-TEST-3 a RF-TEST-9, RF-TEST-12 |
 | 5 | Se guarda solo el último resultado por alumno, con el ranking, la fecha y la versión, para mostrarlo en el Perfil. Las respuestas una por una no se guardan. | RF-TEST-2, RF-TEST-10 |
-| 6 | Solo se muestran y se eligen los cuatro diplomas oficiales, con el filtro en el backend. `getEspecialidadName()` devolvería una cadena vacía para un id antiguo en caché, y esta spec lo cubre. | RF-TEST-14 |
+| 6 | Solo se muestran y se eligen los cuatro diplomas oficiales, con el filtro en el backend y sin tocar los datos de especialidades. `getEspecialidadName()` devolvería una cadena vacía para un id antiguo en caché, y esta spec lo cubre. | RF-TEST-14 |
 | 7 | La validación del contenido está hecha. | RF-TEST-2 |
 
 ## Requisitos
@@ -91,9 +91,13 @@ Salen de `decisiones.md`, el registro del dueño.
 El asistente pasa de tres pasos a este recorrido.
 
 1. **Carrera.** Igual que hoy, con la carrera fija y «Continuar». Si el catálogo de carreras no
-   cargó, la tarjeta muestra «No pudimos cargar tu carrera.» y «Reintentar», que llama a
+   carga, la tarjeta muestra «No pudimos cargar tu carrera.» y «Reintentar», que llama a
    `AuthService.reloadCatalogs()` (RF-TEST-14). «Continuar» sigue activo, porque la carrera sale
-   del usuario (`careerId`) y el catálogo solo pone su nombre.
+   del usuario (`careerId`) y el catálogo solo pone su nombre. El atrás del sistema sigue como
+   hoy, sin `PopScope`. El asistente es la única ruta de la pila, porque se llega a él por
+   `initialRoute` o por `Get.offAllNamed` (`main.dart:88` y `login_controller.dart:46`), así
+   que Android sale de la app, y al abrirla el alumno vuelve al asistente porque
+   `setupComplete` sigue en `false`.
 2. **Test.** «Continuar» abre la ruta nueva `/test-especialidad` con el argumento
    `origen: asistente`, sobre el asistente, que queda debajo en la pila. La ruta muestra la
    bienvenida (RF-TEST-3), las preguntas (RF-TEST-4 a RF-TEST-7) y el resultado (RF-TEST-8 y
@@ -110,7 +114,7 @@ El asistente pasa de tres pasos a este recorrido.
    botones «Saltar por ahora» y «Finalizar configuración». Muestra solo las especialidades
    oficiales (RF-TEST-14). Si el catálogo de especialidades llega vacío por un fallo, muestra
    «No pudimos cargar las especialidades.» y «Reintentar» en lugar de la lista en blanco. El
-   atrás del sistema vuelve al paso de carrera.
+   atrás del sistema vuelve al paso de carrera, con un `PopScope` que hoy la página no tiene.
 
 Sale el paso «Decisión» (`_DecisionStep` y `_DecisionCard`, `setup_carrera_page.dart:219-363`)
 con sus tres opciones, y con él `SpecialtyDecision`, `decision`, `chooseSi`, `chooseNoSe` y
@@ -125,11 +129,13 @@ primero» por el propio test. `SetupStep` queda con `carrera` y `seleccion`.
   del `Get.put` dentro de `build` (`setup_carrera_page.dart:17`), como pide la regla del repo que
   recuerda `main.dart`. `/test-especialidad` tiene el suyo (`SpecialtyTestBinding`), con
   `lazyPut` sin `fenix`, para que el controlador muera al cerrar la ruta.
-- **Precarga.** Al abrir el paso de carrera, el controlador pide el contenido del test en segundo
-  plano (RF-TEST-2), para que la bienvenida no espere. Un fallo de esa precarga no se muestra en
-  el paso de carrera; la bienvenida lo vuelve a pedir.
+- **Precarga.** Al montarse, el controlador del asistente pide el contenido del test en segundo
+  plano, una sola vez, para que la bienvenida no espere. Un fallo de esa precarga no se muestra
+  en el paso de carrera. La precarga es el pedido del contenido de la primera apertura del test
+  (RF-TEST-2), así que esa bienvenida usa su copia si ya está, la espera con el estado
+  «Cargando» si sigue en vuelo y pide el contenido otra vez si la precarga termina en error.
 - **Modo oscuro.** Los pasos de carrera y de selección manual dejan sus 40 `Color(0x…)` fijos y
-  pasan a los tokens de `MaterialTheme` (RF-TEST-12), como hizo el chat (RF-CHAT-8). Los textos de
+  pasan a los tokens de `MaterialTheme` (RF-TEST-12), como en el chat (RF-CHAT-8). Los textos de
   esos pasos no cambian.
 - **Botón inferior.** `_BottomButton` (`setup_carrera_page.dart:766`) pasa al estilo del botón
   principal del test, a lo ancho, con 52 px de alto y texto en tinta sobre naranja (RF-TEST-12),
@@ -154,20 +160,29 @@ primero» por el propio test. `SetupStep` queda con `carrera` y `seleccion`.
 - **Plazos.** `ApiClient` no impone plazo (`api_client.dart:140`), así que el service pone el
   suyo, como `TimeBlocksService` y `AcademicRecordService`. Son 15 s para el contenido y para el
   último resultado, y 20 s para la evaluación, que incluye hasta 5 s de Cohere y el arranque en
-  frío del servidor (decisión abierta 17).
+  frío del servidor (decisión abierta 17). Los guardados que lanza el test (RF-TEST-9) van por
+  `AuthService.completeSetup`, que suma un parámetro opcional `timeout`. El test lo usa con
+  15 s, y la hoja «Editar» del Perfil y la selección manual siguen sin él. Al vencer,
+  `completeSetup` lanza `TimeoutException` antes de tocar el usuario y las preferencias, así
+  que una respuesta tardía no cambia nada en la app (decisión abierta 24).
 - **Guarda por dueño.** El estado queda atado al código del alumno, igual que en
   `TimeBlocksService`. Una respuesta que llega para otro alumno, o después de un `clear()`, se
   descarta. `AuthService.logout()` llama a `clear()` con la misma guarda `Get.isRegistered` que
   usa con el récord y los bloques (`auth_service.dart:398-402`).
-- **Contenido.** Cada inicio del test, en la bienvenida, pide el contenido otra vez, para no
-  arrancar con una versión vieja. La copia queda en memoria durante la sesión, porque la tarjeta
-  del Perfil usa sus colores y sus íconos (RF-TEST-10). Nunca se guarda en disco.
+- **Contenido.** Cada apertura de `/test-especialidad` pide el contenido una vez, en la
+  bienvenida, para no arrancar con una versión vieja. La excepción es la primera apertura desde
+  el asistente, cuyo pedido es la precarga del paso de carrera (RF-TEST-1). Las aperturas
+  siguientes, como la de después de una pausa o la que sale del Perfil, lo piden de nuevo.
+  «Rehacer el test» no abre la ruta otra vez y sigue con la misma copia (RF-TEST-9). La copia
+  vigente queda en memoria durante la sesión, porque la tarjeta del Perfil usa sus colores y sus
+  íconos (RF-TEST-10), y un test en pausa guarda además la copia con la que arranca
+  (RF-TEST-4). Nunca se guarda en disco.
 - **Respuestas.** Viven solo en la memoria del service mientras el test está en curso o en
   pausa (RF-TEST-4). No se guardan en disco ni viajan a otro lado que no sea el cuerpo de la
   evaluación (decisión 5). Se borran al terminar, al «Empezar de nuevo», al saltar el test y al
   cerrar sesión.
 - **Cuerpo de la evaluación.** Es exactamente `{ "version", "answers", "tiebreakAnswers" }`, con
-  la versión del contenido con que se respondió, las respuestas por id de pregunta y los
+  la versión del contenido con la que el alumno responde, las respuestas por id de pregunta y los
   desempates en orden (RS-BE-39). Nunca lleva datos del alumno.
 - **Modelos.** `specialty_test_models.dart` tiene el contenido (versión, especialidades con
   electivos, líneas de Ulises, opciones y preguntas), el paso de la evaluación (desempate o
@@ -176,12 +191,16 @@ primero» por el propio test. `SetupStep` queda con `carrera` y `seleccion`.
 - **Contenido utilizable.** Antes de usar el contenido, el modelo comprueba lo que la app
   necesita para no pintar un test roto. Cada pregunta es `duel`, con `top` y `bottom`, o
   `scale`, con `task`; cada tarea trae id, texto y una clave que está entre las especialidades;
-  y cada especialidad trae `specialtyId`, nombre y sus dos colores. Si algo falla, la bienvenida
-  muestra el mismo estado que sin conexión (RF-TEST-11) y el registro dice solo que el contenido
-  no es válido, sin datos. La app no fija el número de preguntas ni la versión, así que la
-  `2026-09-25.2` o la `2026-09-25.3` le dan lo mismo.
+  y cada especialidad trae `specialtyId`, nombre y sus dos colores. Además, `scaleOptions` trae
+  exactamente cuatro opciones, porque RF-TEST-6 ata un emoji a cada una por su orden, y
+  `duelOptions` trae `both` y `none`, cuyas etiquetas usa RF-TEST-5. Un color presente con un
+  hex que no se puede leer no invalida el contenido y cuenta como neutro (RF-TEST-12). Si algo
+  falla, la bienvenida muestra el mismo estado que sin conexión (RF-TEST-11) y el registro dice
+  solo que el contenido no es válido, sin datos. La app no fija el número de preguntas ni la
+  versión, así que la `2026-09-25.2` o la `2026-09-25.3` le dan lo mismo.
 - **Errores.** El service traduce cada fallo a un tipo propio con estos casos.
-  - `notAvailable`, por `404 SPECIALTY_TEST_NOT_AVAILABLE`.
+  - `notAvailable`, por `404 SPECIALTY_TEST_NOT_AVAILABLE`, al pedir el contenido o al evaluar
+    (paso 6 de RS-BE-39).
   - `versionOutdated`, por `409 SPECIALTY_TEST_VERSION_OUTDATED`, con `details.currentVersion`.
   - `invalidAnswers`, por `400 SPECIALTY_TEST_INVALID_ANSWERS`.
   - `tiebreakMismatch`, por `400 SPECIALTY_TEST_TIEBREAK_MISMATCH`, con `details.expected`.
@@ -191,9 +210,10 @@ primero» por el propio test. `SetupStep` queda con `carrera` y `seleccion`.
     `http.ClientException`, que en Android e iOS envuelve a `SocketException`).
   - `server`, por cualquier otro `ApiException`, con su mensaje.
 - **Último resultado.** `loadLastResult()` deja uno de cinco estados, que son cargando, sin
-  test, con resultado, error y no disponible. Tras una evaluación que termina en resultado, el
-  service marca el último resultado como viejo, y la tarjeta del Perfil lo vuelve a pedir al
-  montarse, porque solo `GET /specialty-test/me/result` trae `isCurrentVersion` (RS-BE-45).
+  test, con resultado, error y no disponible. Tras una evaluación que termina en resultado,
+  aunque la app descarte ese paso por un atrás desde la espera (RF-TEST-4), el service marca el
+  último resultado como viejo, y la tarjeta del Perfil lo vuelve a pedir al montarse, porque
+  solo `GET /specialty-test/me/result` trae `isCurrentVersion` (RS-BE-45).
 
 `[@test] ../../../test/HU36_jeff/specialty_test_service_test.dart` *(pendiente)*
 `[@test] ../../../test/HU36_jeff/specialty_test_models_test.dart` *(pendiente)*
@@ -221,9 +241,10 @@ Es la pantalla 1 de la maqueta.
   secundario. Con `origen: perfil`, el secundario es «Ahora no» y cierra la ruta. El
   `startButton` del contenido («Vamos») no se usa, porque la decisión 4 nombra el botón «Empezar
   el test» (decisión abierta 7).
-- **Test en pausa.** Si hay respuestas en memoria para la misma versión (RF-TEST-4), el botón
-  principal dice «Seguir el test» y vuelve a la pregunta en que quedó, y aparece un segundo
-  botón secundario, «Empezar de nuevo», que borra las respuestas y abre la pregunta 1.
+- **Test en pausa.** Si hay respuestas en memoria (RF-TEST-4), el botón principal dice «Seguir
+  el test» y vuelve al primer paso sin responder, con la copia del contenido de ese test, y
+  aparece un segundo botón secundario, «Empezar de nuevo», que borra las respuestas y abre la
+  pregunta 1 con la copia vigente.
 - **Cargando.** Mientras llega el contenido, el héroe se ve completo, las burbujas son dos
   bloques de `SkeletonPulse` y el botón principal está desactivado. El secundario sigue activo.
 - **Error.** Las burbujas dejan su lugar a «No pudimos cargar el test.» y a «Reintentar». El
@@ -232,7 +253,8 @@ Es la pantalla 1 de la maqueta.
   selección manual (RF-TEST-1). Con `origen: perfil`, un aviso muestra el mensaje del servidor
   («El test de especialidad no está disponible para tu carrera.») y la ruta se cierra.
 - **Espacio.** Si las líneas de bienvenida no caben, el cuerpo desplaza y los botones quedan
-  fijos abajo.
+  fijos abajo. Con las cuatro líneas de `welcome` de la versión `2026-09-25.3`, a 375 × 667,
+  nada desborda y los botones siguen a la vista.
 
 `[@test] ../../../test/HU36_jeff/specialty_test_bienvenida_test.dart` *(pendiente)*
 
@@ -270,15 +292,22 @@ Rige para el duelo, la escala, el desempate y la espera.
   La lista va sin colores de especialidad y solo se lee. Otro toque la pliega.
 - **Atrás.** «Pregunta anterior» y el atrás del sistema llevan al paso previo. Desde la
   pregunta 1 van a la bienvenida, desde el desempate 1 a la última pregunta, desde el desempate
-  2 al desempate 1 y desde la espera al paso que la lanzó, y la respuesta que llegue después se
-  descarta. La respuesta previa aparece marcada. Cambiar la respuesta de cualquier pregunta
-  borra todos los desempates, y cambiar el desempate 1 borra el 2, porque el servidor decide
-  cuáles tocan. Responder de nuevo, aunque sea lo mismo, vuelve a evaluar.
-- **Pausa.** Cierra la ruta y deja las respuestas en la memoria del service (RF-TEST-2). En el
-  asistente, el alumno queda en el paso de carrera; en el Perfil, vuelve a su tarjeta, que
-  ofrece seguir (RF-TEST-10). Cerrar la app o la sesión pierde el avance (decisión abierta 9).
-  Al volver, si la versión del contenido cambió, la app descarta el avance y muestra «El test se
-  actualizó. Vuelve a empezarlo.», el mismo texto del `409` del servidor.
+  2 al desempate 1 y desde la espera al paso que la dispara. La respuesta previa aparece
+  marcada. Cambiar la respuesta de cualquier pregunta borra todos los desempates, y cambiar el
+  desempate 1 borra el 2, porque el servidor decide cuáles tocan. Responder de nuevo, aunque sea
+  lo mismo, vuelve a evaluar.
+- **Atrás desde la espera.** La evaluación en vuelo no se cancela, y su paso se descarta al
+  llegar. Si ese paso es un resultado, el servidor ya lo tiene guardado (RS-BE-44), así que el
+  service marca igual el último resultado como viejo (RF-TEST-2). Si el alumno responde de
+  nuevo antes de que llegue, la evaluación nueva sale cuando la anterior termina o vence su
+  plazo, y mientras tanto se ve la espera, de modo que nunca hay dos en vuelo (RF-TEST-7).
+- **Pausa.** Cierra la ruta y deja en la memoria del service las respuestas y la copia del
+  contenido con la que arranca el test (RF-TEST-2). En el asistente, el alumno queda en el paso
+  de carrera; en el Perfil, vuelve a su tarjeta, que ofrece seguir (RF-TEST-10). Cerrar la app
+  o la sesión pierde el avance (decisión abierta 9). Al seguir, el test usa esa copia aunque la
+  versión vigente sea otra, y la evaluación manda su versión, que el servidor acepta mientras
+  siga en su registro (RS-BE-37). Si el servidor la retira antes, responde
+  `409 SPECIALTY_TEST_VERSION_OUTDATED` y rige su fila de RF-TEST-11 (decisión abierta 25).
 - **Transiciones.** La reacción y la pregunta siguiente entran juntas en 180 ms, sin puntos de
   «escribiendo», y el par anterior se encoge dentro de la pastilla del historial.
 
@@ -362,8 +391,9 @@ Es la pantalla 3 de la maqueta.
   según `order`, en la barra.
 - **Resultado.** Si llega `status: "result"`, la app abre el resultado (RF-TEST-8), borra las
   respuestas de la memoria y marca el último resultado como viejo (RF-TEST-2).
-- **Una sola a la vez.** Mientras la evaluación está en vuelo, las tarjetas, las opciones y los
-  botones no responden, y nunca salen dos evaluaciones juntas.
+- **Una sola a la vez.** Durante la espera, las tarjetas, las opciones y los botones no
+  responden. Nunca salen dos evaluaciones juntas, y tras un atrás desde la espera la evaluación
+  nueva aguarda a que termine la anterior (RF-TEST-4).
 - **La app no calcula.** La app no calcula afinidades, no decide si toca un desempate ni ordena
   el ranking. Muestra lo que llega (decisión 2).
 
@@ -374,25 +404,29 @@ Es la pantalla 3 de la maqueta.
 Son las pantallas 4 y 5 de la maqueta. De arriba abajo, van estas piezas.
 
 1. **Entrada.** Confeti decorativo, una sola vez, y `HapticFeedback.heavyImpact`.
-2. **Ulises.** Su avatar de 34 px y una burbuja con `ulises.intro` y, si no es `null`,
-   `ulises.tiebreakOutcome`, separados por un espacio. `headline` no se pinta, porque la tarjeta
-   dice lo mismo, y es la etiqueta accesible de la tarjeta (RF-TEST-13). `closing` y `retake` no
-   se pintan (decisión abierta 6).
+2. **Ulises.** Su avatar de 34 px y una burbuja con `ulises.headline` y, si no es `null`,
+   `ulises.tiebreakOutcome`, separados por un espacio. `headline` va siempre, así que la línea
+   `low` sale tal cual llega cuando la afinidad de la ganadora es menor que 50, como fija la
+   decisión 3, sin que la app calcule ese corte. `intro`, `closing` y `retake` no se pintan
+   (decisión abierta 6).
 3. **Tarjeta de la número uno.**
    - En claro, el fondo es un degradado del `color.light` de la ganadora a ese mismo color un
      20 % más oscuro, con el texto en blanco salvo el de la pastilla. En oscuro, el fondo es el
      `color.dark` al 18 % sobre `cardBg`, con un borde de 1 px en ese color al 35 %, el texto en
-     `textPrimary` y el título en `color.dark`.
+     `textPrimary` y el título en `color.dark`. Es un cambio frente a la pantalla 5 de la
+     maqueta, que usa un degradado saturado con texto blanco (decisión abierta 22).
    - Arriba, «Tu n.º 1» con el ícono de la especialidad en una baldosa de 22 px, y a la derecha la
      pastilla «75 % afinidad», en tinta `#1A0E05` sobre un degradado de `#FFD166` a `#FFB020`.
    - El título es el `name` de la ganadora en 20,5 px y negrita, en hasta dos líneas y sin
      puntos suspensivos, porque «Tecnologías de la Información» no cabe en una.
    - Un medidor de 6 px con la afinidad, decorativo, porque el número ya está en la pastilla.
-   - El motivo, `reason`, en 12,5 px. Si `reasonSource` es `"ai"`, lo encabeza la insignia «IA»;
-     con `"templates"` va sin insignia. Con la escala de texto en 1,0, el motivo se corta en
-     cuatro líneas y «Leer más» lo despliega dentro de la tarjeta, con «Leer menos» para
-     volver, porque los motivos del contenido miden de 190 a 549 caracteres y el de la maqueta
-     104 (decisión abierta 5).
+   - El motivo, `reason`, en 12,5 px. Si `reasonSource` es `"ai"`, lo encabeza la insignia «IA»,
+     con `LucideIcons.sparkles`, en 10 px y negrita, sobre `testAiBadgeBg`, con el texto en
+     blanco en claro y en `color.dark` en oscuro (RF-TEST-12). Con `"templates"` va sin
+     insignia. Con la escala de texto en 1,0, el motivo se corta en cuatro líneas y «Leer más»
+     lo despliega dentro de la tarjeta, con «Leer menos» para volver, porque los motivos de los
+     ocho ejemplos del contenido `2026-09-25.3` miden de 190 a 541 caracteres y el de la
+     maqueta 104 (decisión abierta 5).
    - Al entrar, la tarjeta gira una vez en 600 ms y la afinidad cuenta desde 0 hasta su valor en
      600 ms.
 4. **Electivos.** Una fila con el ícono de libro en una baldosa del color de la ganadora, el
@@ -406,14 +440,17 @@ Son las pantallas 4 y 5 de la maqueta. De arriba abajo, van estas piezas.
    el ícono en una baldosa de su color y el número del puesto encima, el nombre en 12,5 px y
    negrita, la afinidad «65 %» en su color y negrita, una barra de 4 px decorativa y el corazón
    de 48 px (RF-TEST-9). Si esa especialidad es la principal actual del alumno, en lugar del
-   corazón va una estrella con «Tu principal», sin acción.
+   corazón va una estrella rellena con «Tu principal» en 11,5 px, las dos en `testAccentText`
+   (RF-TEST-12) y sin acción.
 6. **Botones.** «Elegir como principal», principal y a lo ancho, y debajo, en dos columnas,
    «Decidir después» y «Rehacer el test», con `LucideIcons.rotateCcw`.
 
 - **Empate.** Con `tie: true`, el rótulo de la tarjeta es «Empate» y lleva los dos nombres, uno
   por línea, con una sola pastilla de afinidad, porque es la misma. El color de la tarjeta es el
   de la primera del ranking. La fila de electivos dice «Electivos de las dos» y su hoja trae una
-  sección por especialidad. Las filas de abajo empiezan en el puesto 3.
+  sección por especialidad. Las filas de abajo empiezan en el puesto 3, así que las dos
+  ganadoras no tienen corazón. Por eso, al elegir una en la hoja del empate, la otra pasa a
+  interés (RF-TEST-9 y decisión abierta 11).
 - **Sin scroll.** A 375 × 667, el iPhone SE, con la escala de texto en 1,0 y el motivo cortado,
   todo cabe sin desplazar, en claro y en oscuro. Con más escala de texto o con el motivo
   desplegado, desplaza la parte del medio y los botones quedan fijos abajo.
@@ -422,9 +459,15 @@ Son las pantallas 4 y 5 de la maqueta. De arriba abajo, van estas piezas.
   manda y calcularla en la app repetiría reglas del backend (decisión abierta 3). El nombre corto
   de «Elegir Software como principal» y de «7 electivos de Software» tampoco, porque el contrato
   no trae nombres cortos de especialidad, y el botón dice «Elegir como principal», como la
-  decisión 4 (decisión abierta 4).
+  decisión 4 (decisión abierta 4). El «Desde VI ciclo» del subtítulo de electivos tampoco,
+  porque el contrato no trae un ciclo por especialidad y cada electivo tiene su propio
+  `prerequisite`. En su lugar van los dos primeros `shortName`.
 - **Atrás del sistema.** En el asistente no hace nada, porque los tres botones deciden. En el
   Perfil hace lo mismo que «Decidir después» (decisión abierta 12).
+- **Cierre de la app.** Si el alumno cierra la app en el resultado del asistente sin tocar
+  nada, `setupComplete` sigue en `false`, y al abrirla vuelve al paso de carrera y a la
+  bienvenida, con el test desde cero, aunque el servidor ya tiene guardado el resultado
+  (decisión abierta 12).
 
 `[@test] ../../../test/HU36_jeff/specialty_test_resultado_test.dart` *(pendiente)*
 
@@ -433,27 +476,36 @@ Son las pantallas 4 y 5 de la maqueta. De arriba abajo, van estas piezas.
 `PUT /academic-profile/me/specialties` reemplaza la selección entera (BR-AP-04), así que la app
 siempre manda la principal y los intereses completos, con `AuthService.completeSetup`
 (`auth_service.dart:330-376`), que ya pone al día el usuario y las preferencias. Los ids que
-manda son solo los cuatro `specialtyId` del ranking, que el servidor resolvió entre las
+manda son solo los cuatro `specialtyId` del ranking, que el servidor resuelve entre las
 especialidades activas, y la principal nunca viaja también como interés (RF-TEST-14).
 
+- **Uno a la vez y con plazo.** Los tres guardados del resultado siguen la misma regla. Nunca
+  hay dos en vuelo, cada uno vence a los 15 s (RF-TEST-2) y, si falla o vence, la pantalla
+  vuelve al último estado confirmado y un aviso lo dice (RF-TEST-11). Como cada `PUT` manda la
+  selección entera, repetirlo no duplica nada, y el siguiente guardado deja en el servidor lo
+  que muestra la pantalla.
 - **Elegir como principal.** Manda como principal el `specialtyId` de la ganadora y como
-  intereses los corazones marcados, sin la ganadora. Con empate, el botón abre una hoja «¿Cuál
-  eliges como principal?» con las dos ganadoras y «Cancelar» (decisión abierta 11). Si la
-  ganadora ya es la principal, el botón se desactiva y dice «Ya es tu principal». Al guardar,
-  en el asistente termina con `Get.offAllNamed('/home')`, y en el Perfil cierra la ruta y
-  muestra el aviso de siempre, «Especialidades actualizadas» y «Tu selección se guardó
-  correctamente.» (`perfil.dart:939-942`).
+  intereses los corazones marcados, sin la ganadora. Si el alumno ya tiene otra principal y es
+  una de las cuatro del ranking, esa principal anterior va también como interés, para que no
+  salga de su selección sin que el alumno lo decida (decisión abierta 23). Con empate, el botón
+  abre una hoja «¿Cuál eliges como principal?» con las dos ganadoras y «Cancelar», y la
+  ganadora que no se elige va también como interés (decisión abierta 11). Si la ganadora ya es
+  la principal, el botón se desactiva y dice «Ya es tu principal». Al guardar, en el asistente
+  termina con `Get.offAllNamed('/home')`, y en el Perfil cierra la ruta y muestra el aviso de
+  siempre, «Especialidades actualizadas» y «Tu selección se guardó correctamente.»
+  (`perfil.dart:939-942`).
 - **Corazón.** Marca o desmarca como interés la especialidad de su fila y guarda enseguida, con
-  la principal actual sin cambios. El corazón cambia al tocarlo y, si el guardado falla, vuelve
-  a su estado y un aviso lo dice (RF-TEST-11). Nunca hay dos guardados en vuelo; los toques
-  seguidos se juntan y se manda el último estado. Al abrir el resultado, los corazones marcados
-  son los de las especialidades que ya son interés del alumno. En el asistente, el primer
+  la principal actual sin cambios. El corazón cambia al tocarlo y, si el guardado falla o vence,
+  vuelve a su estado y un aviso lo dice (RF-TEST-11). Nunca hay dos guardados en vuelo; los
+  toques seguidos se juntan y se manda el último estado, y si ese guardado falla o vence, los
+  toques juntados se descartan con él. Al abrir el resultado, los corazones marcados son los de
+  las especialidades que ya son interés del alumno. En el asistente, el primer
   guardado marca además la configuración como completa (BR-AP-04), así que si el alumno cierra
   la app después de un corazón, la próxima vez entra a `/home` (decisión abierta 10).
 - **Decidir después.** En el asistente, manda la selección actual, con la principal como está y
   los corazones marcados, para marcar la configuración como completa, y termina con
   `Get.offAllNamed('/home')`. En el Perfil cierra la ruta sin guardar nada, porque los
-  corazones ya se guardaron. El último resultado ya quedó guardado en el servidor aunque el
+  corazones ya están guardados. El último resultado ya está guardado en el servidor aunque el
   alumno no elija nada (RS-BE-44).
 - **Rehacer el test.** Vuelve a la pregunta 1 con el mismo contenido y sin respuestas, sin pasar
   por la bienvenida. Los corazones ya guardados se quedan. El resultado guardado cambia solo
@@ -466,7 +518,11 @@ especialidades activas, y la principal nunca viaja también como interés (RF-TE
 El Perfil suma la tarjeta `SpecialtyTestProfileCard` en «Configuración académica», debajo de
 «Especialización» (`perfil.dart:310-337`). Como las demás tarjetas académicas, solo la ve un
 alumno (`perfil.dart:44-51`). La maqueta no tiene esta tarjeta, así que su diseño lo fija esta
-spec con las piezas del resultado (decisión abierta 16).
+spec con las piezas del resultado (decisión abierta 16). La tarjeta se monta solo si
+`SpecialtyTestService` está registrado, con la misma guarda `Get.isRegistered` que usa
+`logout()` (`auth_service.dart:398-402`). En la app, `main.dart` siempre lo registra. La guarda
+existe para que las pruebas que montan el Perfil sin ese service, como
+`test/HU34_jeff/record_card_test.dart:253-271`, sigan pasando sin tocarlas y sin HTTP real.
 
 - **Cargando.** Un `SkeletonPulse`, como la tarjeta del récord.
 - **Sin test.** Ulises a 28 px, el título «Test de especialidad», «Todavía no hiciste el test.» y
@@ -496,21 +552,26 @@ spec con las piezas del resultado (decisión abierta 16).
 Entre pregunta y pregunta el test no usa la red, así que una caída de conexión solo se nota al
 cargar, al evaluar y al guardar. Los textos de error van en `textPrimary` sobre `cardBg`, con el
 ícono en `iconoNaranja`, y «Reintentar» va como botón secundario en `testAccentText`. Los avisos
-pasajeros van en `cardBg` con borde `borderColor` y texto en `textPrimary`, como en el chat
-(RF-CHAT-8).
+pasajeros de un guardado que falla o vence («No se pudo guardar…», «No se pudo confirmar el
+guardado…» o el mensaje del servidor) van en blanco sobre `errorBg` (6,54:1), como los avisos
+de error del chat (RF-CHAT-8). Los avisos que solo informan, como el de no disponible, van en
+`cardBg` con borde `borderColor` y texto en `textPrimary`, como los demás avisos del chat. El
+aviso de éxito del Perfil («Especialidades actualizadas») no cambia.
 
 | Momento | Caso | Qué ve el alumno |
 | --- | --- | --- |
-| Bienvenida | Sin conexión, plazo vencido o contenido no válido | «No pudimos cargar el test.» y «Reintentar». El botón secundario sigue activo |
+| Bienvenida | Sin conexión, plazo vencido, contenido no válido, `500` u otro error | «No pudimos cargar el test.» y «Reintentar». El botón secundario sigue activo |
 | Bienvenida | `404 SPECIALTY_TEST_NOT_AVAILABLE` | En el asistente, la selección manual sin aviso. En el Perfil, el mensaje del servidor y el cierre de la ruta |
 | Preguntas | Sin conexión | Nada. El test sigue |
 | Espera | Sin conexión o plazo vencido | En lugar de la burbuja de espera, «No pudimos conectarnos. Revisa tu conexión e inténtalo de nuevo.» y «Reintentar», con las respuestas intactas y «Pregunta anterior» disponible |
-| Espera | `409 SPECIALTY_TEST_VERSION_OUTDATED` o `400 SPECIALTY_TEST_INVALID_ANSWERS` | Un diálogo con el mensaje del servidor y «Empezar de nuevo», que pide el contenido otra vez y abre la pregunta 1 |
+| Espera | `409 SPECIALTY_TEST_VERSION_OUTDATED` (versión retirada, también la de un test en pausa) o `400 SPECIALTY_TEST_INVALID_ANSWERS` | Un diálogo con el mensaje del servidor y «Empezar de nuevo», que pide el contenido otra vez y abre la pregunta 1 |
+| Espera | `404 SPECIALTY_TEST_NOT_AVAILABLE` (paso 6 de RS-BE-39) | Un aviso con el mensaje del servidor y las respuestas borradas. En el asistente, la selección manual; en el Perfil, el cierre de la ruta. No hay «Reintentar», porque repetir da lo mismo |
 | Espera | `400 SPECIALTY_TEST_TIEBREAK_MISMATCH` | La app descarta sus desempates y repite una sola vez con `tiebreakAnswers` vacío, y sigue con lo que responda el servidor. Si vuelve a fallar, el estado de error de la espera |
 | Espera | `429 RATE_LIMITED` | El mensaje del servidor tal cual, que dice los minutos, y «Reintentar». Las respuestas se conservan |
 | Espera | `413`, `500` u otro error con mensaje | El mensaje del servidor y «Reintentar» |
 | Espera | Cohere falla o tarda | Nada. Llega `reasonSource: "templates"` y el motivo va sin la insignia «IA» |
 | Resultado | El `PUT` falla | Un aviso con el mensaje del servidor o, sin mensaje, «No se pudo guardar. Revisa tu conexión e inténtalo de nuevo.». El corazón vuelve a su estado y el resultado sigue en pantalla |
+| Resultado | El `PUT` no responde en 15 s | «No se pudo confirmar el guardado. Revisa tu conexión e inténtalo de nuevo.», porque el guardado puede estar hecho en el servidor. Los corazones vuelven al último estado confirmado y, en el asistente, los botones responden otra vez y el asistente no termina. Repetir es seguro, porque cada `PUT` manda la selección entera (RF-TEST-9) |
 | Perfil | El último resultado falla | «No se pudo cargar tu último test.» y «Reintentar» |
 | Cualquiera | `401` | `ApiClient` cierra la sesión y lleva al login, como en toda la app (`api_client.dart:143-161`) |
 | Cualquiera | `403` | No ocurre, porque la app nunca abre el test para un docente |
@@ -545,13 +606,16 @@ pasajeros van en `cardBg` con borde `borderColor` y texto en `textPrimary`, como
 | `testFeatherOff` | `#CBD5E1` | `#3A3A46` | Plumas vacías |
 | `testIllustrationBg` | `#F1F5F9` | `#25252D` | Fondo de la ilustración |
 | `testIllustrationInk` | `#64748B` | `#8A8A9C` | Ilustración neutra |
+| `testAiBadgeBg` | `#140A50` al 38 % | `#16161C` | Fondo de la insignia «IA» de la tarjeta del resultado |
 
   La pluma llena de la maqueta es `#FF6600`, que sobre `#F8FAFC` da 2,81:1 y no llega al 3:1 de
   un ícono, así que en claro va en `#D45500`, con 3,94:1 (decisión abierta 15).
 
 - **Colores de las especialidades.** Son los del contenido, `color.light` y `color.dark`, que
-  manda el servidor, y no los de la maqueta (`#5B4BDB`, `#0B7A71`, `#2563EB` y `#C0267E`), que
-  eran ilustrativos (decisión abierta 1). Con la versión `2026-09-25.2` dan estos contrastes.
+  manda el servidor, y no los de la maqueta (`#5B4BDB`, `#0B7A71`, `#2563EB` y `#C0267E`). La
+  spec toma los de la maqueta como ilustrativos, y esa lectura espera la aprobación del dueño
+  (decisión abierta 1). Las versiones `2026-09-25.2` y `2026-09-25.3` traen los mismos colores,
+  que dan estos contrastes.
 
 | Clave | Claro | Sobre `#FFFFFF` y `#F8FAFC` | Blanco sobre el color | Tinta sobre la tarjeta encendida | Oscuro | Sobre `#1E1E24` y `#16161C` | Tinta y color sobre la tarjeta del resultado |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -562,14 +626,15 @@ pasajeros van en `cardBg` con borde `borderColor` y texto en `textPrimary`, como
 
   La tarjeta encendida es el color al 12 % sobre `cardBg`, con el texto en `textPrimary`. La
   tarjeta del resultado en oscuro es el color al 18 % sobre `#1E1E24`, con el texto en
-  `textPrimary` y el título en el color. En claro, el extremo más oscuro del degradado solo sube
+  `textPrimary` y el título en el color, porque el blanco sobre los `color.dark` da solo de
+  1,48:1 a 2,61:1 (decisión abierta 22). En claro, el extremo más oscuro del degradado solo sube
   el contraste del blanco (de 5,38:1 a 7,49:1 en el peor caso, `si`).
 
 - **Guarda en tiempo de ejecución.** El contenido puede cambiar de versión sin otro APK, así que
   la app no confía a ciegas en sus colores. Una función pura calcula el contraste WCAG, y si un
   color servido no llega a 4,5:1 contra el fondo donde va como texto, o a 3:1 donde va como
   ícono, ese texto o ícono va en `textPrimary` y el color queda solo en las piezas decorativas.
-  Un hex que no se puede leer cuenta como neutro.
+  Un hex que no se puede leer cuenta como neutro y no invalida el contenido (RF-TEST-2).
 - **Contraste del resto.** Todo texto del test, del asistente y de la tarjeta del Perfil llega a
   4,5:1 contra su fondo en los dos temas, y todo ícono que da información, a 3:1.
 
@@ -588,6 +653,9 @@ pasajeros van en `cardBg` con borde `borderColor` y texto en `textPrimary`, como
 | `testHeartOff` sobre la página | 4,55:1 | 6,51:1 |
 | Tinta `#1A0E05` sobre el naranja del héroe `#FF6600` | 6,45:1 | 6,45:1 |
 | Tinta `#1A0E05` sobre la pastilla `#FFB020` | 10,36:1 | 10,36:1 |
+| Insignia «IA» | Blanco sobre `testAiBadgeBg` encima del `color.light`, de 8,79:1 a 13,69:1 | `color.dark` sobre `testAiBadgeBg`, de 6,91:1 a 12,16:1 |
+| Estrella y «Tu principal» en `testAccentText` sobre la página | 5,00:1 | 8,59:1 |
+| Blanco sobre `errorBg` (`#B3261E`) en los avisos de error | 6,54:1 | 6,54:1 |
 
 - **Piezas decorativas.** El medidor y las barras de afinidad, el halo, el confeti, el punto
   verde, la moneda «o», los orbes del héroe, las plumas y las ilustraciones no llevan un
@@ -606,11 +674,17 @@ pasajeros van en `cardBg` con borde `borderColor` y texto en `textPrimary`, como
     `inMutuallyExclusiveGroup`, su etiqueta y el estado `checked`.
   - La burbuja de Ulises es una región viva (`liveRegion`), así que al avanzar se lee la
     reacción, y el `prompt` de la pregunta nueva es un encabezado (`header`).
+  - Al cambiar de pregunta, el foco del lector pasa al `prompt` de la pregunta nueva, y al
+    volver con «Pregunta anterior», al de esa pregunta. En la espera queda en la burbuja de
+    espera, y al abrir el resultado pasa a la burbuja de Ulises. El foco nunca se queda en una
+    tarjeta que ya no está en pantalla.
   - «Pregunta anterior» y «Pausar el test y seguir luego» son las etiquetas de sus botones, y
     el subtítulo de la barra se lee. La pastilla del historial dice «Ver tus N respuestas
     anteriores» u «Ocultar tus respuestas anteriores», con su estado desplegado.
-  - La tarjeta del resultado es un solo nodo con `headline` y el motivo. La insignia «IA» se lee
-    «Motivo redactado con IA». «Leer más» es un botón.
+  - La tarjeta del resultado es un solo nodo con «Tu n.º 1, <nombre>, <afinidad> % de
+    afinidad», o «Empate, <nombre> y <nombre>, <afinidad> % de afinidad», y el motivo. La
+    insignia «IA» se lee «Motivo redactado con IA». «Leer más» es un botón. La estrella de «Tu
+    principal» queda fuera del árbol y su texto se lee con la fila.
   - Cada fila del ranking se lee «Puesto N, <nombre>, <afinidad> % de afinidad». El corazón es
     un botón con `toggled`, cuya etiqueta es «Marcar <nombre> como interés» o «Quitar <nombre>
     de tus intereses», como en la maqueta.
@@ -651,11 +725,12 @@ que el caso es de defensa.
 
 - **`getEspecialidadName` no cambia.** Sigue devolviendo `''` para un id desconocido, porque la
   malla depende de eso. `electiveMatchesUserSpecialties` (`malla_service.dart:180-194`) descarta
-  los nombres vacíos, así que los electivos de una especialidad antigua dejan de aparecer, que es
-  lo que pide la decisión 6. `_PrincipalChip._pendingCount` ya devuelve 0 con un nombre vacío.
+  los nombres vacíos, así que los electivos de una especialidad antigua dejan de aparecer en la
+  malla, lo que es coherente con mostrar solo lo oficial (decisión 6).
+  `_PrincipalChip._pendingCount` ya devuelve 0 con un nombre vacío.
 - **Consultas nuevas.** `AuthService` suma `isOfficialSpecialty(int id)`, que dice si el id está
-  en el catálogo cargado, y `catalogsFailed`, que distingue un catálogo que no cargó de uno que
-  cargó vacío, como el de una carrera sin especialidades. Suma también `reloadCatalogs()`, el
+  en el catálogo cargado, y `catalogsFailed`, que distingue un catálogo que no carga de uno que
+  carga vacío, como el de una carrera sin especialidades. Suma también `reloadCatalogs()`, el
   mismo `_loadCatalogs` expuesto para «Reintentar».
 - **Selección oficial.** Una función pura recibe la principal, los intereses y los ids oficiales
   y devuelve la principal solo si es oficial y los intereses oficiales sin la principal.
@@ -667,9 +742,11 @@ que el caso es de defensa.
 - **Nunca se manda un id antiguo.** La hoja de «Editar» (`perfil.dart:875-889`) y la selección
   manual del asistente (`setup_carrera_controller.dart:37-45`) arrancan con la selección
   oficial, así que su `PUT` no lleva un id antiguo, que con BR-AP-07 daría
-  `404 SPECIALTY_NOT_FOUND`. Al guardar, el id antiguo sale de la base, que es lo que pide la
-  decisión 6. El resultado del test usa como ids oficiales los cuatro `specialtyId` del ranking
-  (RF-TEST-9), así que no depende del catálogo.
+  `404 SPECIALTY_NOT_FOUND`. Como el `PUT` reemplaza la selección entera, al guardar el id
+  antiguo sale de la selección del alumno en la base. La decisión 6 no lo pide, porque solo
+  pide mostrar y elegir lo oficial sin tocar los datos de especialidades. Es una consecuencia
+  de mandar solo ids oficiales (decisión abierta 26). El resultado del test usa como ids
+  oficiales los cuatro `specialtyId` del ranking (RF-TEST-9), así que no depende del catálogo.
 - **El test no usa `getEspecialidadName`.** El resultado y la tarjeta del Perfil toman el
   `name` y el `specialtyId` que manda el servidor.
 - **El filtro del cliente se queda.** La app sigue filtrando `is_active == true`
@@ -691,16 +768,16 @@ Los textos propios de la app son estos.
 - **Conversación.** «Pregunta N de T», «Desempate 1», «Desempate 2», «Pregunta anterior»,
   «Pausar el test y seguir luego», «N respuestas anteriores», «1 respuesta anterior», «Ver tus N
   respuestas anteriores», «Ocultar tus respuestas anteriores», «Cierra el bloque k de B», «Esto o
-  aquello», «Escala de gusto», «Desempate», «o», «Siguiente» y «El test se actualizó. Vuelve a
-  empezarlo.».
+  aquello», «Escala de gusto», «Desempate», «o» y «Siguiente».
 - **Espera.** «No pudimos conectarnos. Revisa tu conexión e inténtalo de nuevo.» y «Reintentar».
-- **Resultado.** «Tu n.º 1», «Empate», «N % afinidad», «IA», «Motivo redactado con IA», «Leer
+- **Resultado.** «Tu n.º 1», «Empate», «N % afinidad», «Tu n.º 1, <nombre>, N % de afinidad»,
+  «Empate, <nombre> y <nombre>, N % de afinidad», «IA», «Motivo redactado con IA», «Leer
   más», «Leer menos», «N electivos», «Electivos de las dos», «Ver», «Electivos de <nombre>»,
   «<código> · N créditos», «También te puede interesar», «guárdala», «Puesto N, <nombre>, N % de
   afinidad», «Marcar <nombre> como interés», «Quitar <nombre> de tus intereses», «Tu principal»,
   «Elegir como principal», «Ya es tu principal», «¿Cuál eliges como principal?», «Cancelar»,
-  «Decidir después», «Rehacer el test» y «No se pudo guardar. Revisa tu conexión e inténtalo de
-  nuevo.».
+  «Decidir después», «Rehacer el test», «No se pudo guardar. Revisa tu conexión e inténtalo de
+  nuevo.» y «No se pudo confirmar el guardado. Revisa tu conexión e inténtalo de nuevo.».
 - **Perfil.** «Test de especialidad», «Hecho el dd/mm/aaaa», «El test cambió desde que lo
   hiciste.», «Todavía no hiciste el test.», «Hacer el test», «Tienes un test a medias, N de T.»,
   «Seguir el test», «No se pudo cargar tu último test.», «No se pudieron cargar tus
@@ -756,9 +833,9 @@ estoy seguro», «Quiero explorar primero» y sus subtítulos.
 | --- | --- |
 | `lib/main.dart` | Registra `SpecialtyTestService` y agrega `/test-especialidad` con su binding y el binding de `/setup-carrera` |
 | `lib/pages/setup_carrera/setup_carrera_controller.dart` | Sin el paso «Decisión», con la precarga, la vuelta de la ruta del test y la selección oficial |
-| `lib/pages/setup_carrera/setup_carrera_page.dart` | Sin el paso «Decisión», sin `Get.put` en `build`, con tokens en lugar de hex, los estados de catálogo y el botón nuevo |
-| `lib/pages/perfil/perfil.dart` | La tarjeta del test en «Configuración académica» y el caso del id antiguo en «Especialización» y en su hoja |
-| `lib/services/auth_service.dart` | `isOfficialSpecialty`, `catalogsFailed`, `reloadCatalogs` y `clear()` del test en `logout()` |
+| `lib/pages/setup_carrera/setup_carrera_page.dart` | Sin el paso «Decisión», sin `Get.put` en `build`, con tokens en lugar de hex, los estados de catálogo, el atrás de la selección manual y el botón nuevo |
+| `lib/pages/perfil/perfil.dart` | La tarjeta del test en «Configuración académica», montada solo con `SpecialtyTestService` registrado, y el caso del id antiguo en «Especialización» y en su hoja |
+| `lib/services/auth_service.dart` | `isOfficialSpecialty`, `catalogsFailed`, `reloadCatalogs`, el parámetro opcional `timeout` de `completeSetup` y `clear()` del test en `logout()` |
 | `lib/configs/themes.dart` | Los tokens de RF-TEST-12 |
 | `pubspec.yaml` | La carpeta `assets/specialty_test/tasks/`, si el dueño aprueba las ilustraciones |
 
@@ -768,7 +845,8 @@ estoy seguro», «Quiero explorar primero» y sus subtítulos.
 | --- | --- |
 | `lib/services/post_login_route.dart` | El alumno sin configuración sigue entrando a `/setup-carrera` |
 | `lib/services/storage_service.dart` | El test no guarda nada en disco y las claves viejas de especialidades no se leen para pintar |
-| `lib/services/api_client.dart` | Los plazos van en el service, como en los demás |
+| `lib/services/api_client.dart` | Los plazos van en el service y en `completeSetup`, como en los demás |
+| `test/HU34_jeff/record_card_test.dart` | Monta el Perfil sin `SpecialtyTestService`, y la guarda de RF-TEST-10 deja fuera la tarjeta |
 | `lib/services/malla_service.dart` | Ya descarta los nombres vacíos (RF-TEST-14) |
 | `lib/models/user_model.dart` | La principal y los intereses siguen igual |
 | `lib/pages/chatbot/**` | El chatbot no lee el resultado (RS-BE-47) |
@@ -800,18 +878,18 @@ widget usan un `ApiClient` falso y datos inventados, con el alumno de prueba 202
 
 | Requisito | Pruebas | Qué fijan |
 | --- | --- | --- |
-| RF-TEST-1 | `setup_carrera_flujo_test.dart` | Carrera, test y selección manual; sin el paso «Decisión»; «Saltar» y el `404` llevan a la selección manual; el atrás en cada paso; el binding; los estados de catálogo vacío y fallido; el botón nuevo sin corte a 375 de ancho; ningún hex fijo en el asistente en oscuro |
-| RF-TEST-2 | `specialty_test_service_test.dart`, `specialty_test_models_test.dart` | Las tres rutas y sus cuerpos; los plazos de 15 y 20 s; la guarda por dueño; `clear()` en `logout()`; el contenido pedido en cada inicio; la traducción de cada error; los `null` conservados; el contenido no válido rechazado |
-| RF-TEST-3 | `specialty_test_bienvenida_test.dart` | Las líneas de bienvenida en orden y sin nombre; las pastillas y los botones según el origen; «Seguir el test» y «Empezar de nuevo» con un test en pausa; cargando, error y no disponible |
-| RF-TEST-4 | `specialty_test_conversacion_test.dart`, `specialty_test_logic_test.dart` | La regla de cada burbuja, con reacción propia, rotación de `pick`, `both`, `none` y `scale`, `duelHelp` y `scaleHelp`; el sello con k y B contados; el historial; el atrás con el descarte de desempates; la pausa y la versión cambiada |
+| RF-TEST-1 | `setup_carrera_flujo_test.dart` | Carrera, test y selección manual; sin el paso «Decisión»; «Saltar» y el `404` llevan a la selección manual; el atrás del sistema en cada paso, con la salida de la app en el de carrera; la precarga pedida una sola vez al montar el asistente; el binding; los estados de catálogo vacío y fallido; el botón nuevo sin corte a 375 de ancho; ningún hex fijo en el asistente en oscuro |
+| RF-TEST-2 | `specialty_test_service_test.dart`, `specialty_test_models_test.dart` | Las tres rutas y sus cuerpos; los plazos de 15 y 20 s; la guarda por dueño; `clear()` en `logout()`; un pedido del contenido por apertura de la ruta, con la precarga como el de la primera apertura en el asistente (copia reusada si ya está, espera si sigue en vuelo y pedido nuevo si termina en error); el plazo de 15 s de `completeSetup` con `timeout`, sin tocar el usuario al vencer; la traducción de cada error; los `null` conservados; el contenido no válido rechazado, también sin cuatro `scaleOptions` o sin `both` y `none`; el hex ilegible que no lo invalida |
+| RF-TEST-3 | `specialty_test_bienvenida_test.dart` | Las líneas de bienvenida en orden y sin nombre; las pastillas y los botones según el origen; «Seguir el test» y «Empezar de nuevo» con un test en pausa; cargando, error y no disponible; las cuatro líneas de `welcome` de `2026-09-25.3` a 375 × 667, con el cuerpo que desplaza, sin desborde y con los botones a la vista |
+| RF-TEST-4 | `specialty_test_conversacion_test.dart`, `specialty_test_logic_test.dart` | La regla de cada burbuja, con reacción propia, rotación de `pick`, `both`, `none` y `scale`, `duelHelp` y `scaleHelp`; el sello con k y B contados; el historial; el atrás con el descarte de desempates; el atrás desde la espera, con el paso tardío descartado, el resultado tardío marcado como viejo y la evaluación siguiente en cola; la pausa con la versión vigente cambiada, que sigue con su copia |
 | RF-TEST-5 y RF-TEST-6 | `specialty_test_preguntas_test.dart` | Tarjetas neutras antes del toque; el encendido con el color del tema; las dos y ninguna; el avance a los 350 ms y los toques ignorados; la ilustración teñida y la baldosa neutra sin SVG; la escala en cuatro y en dos por dos |
 | RF-TEST-7 | `specialty_test_evaluacion_test.dart` | La evaluación tras la última pregunta; el texto de espera; uno y dos desempates; el resultado; ninguna evaluación doble; el mismo cuerpo en el reintento |
-| RF-TEST-8 | `specialty_test_resultado_test.dart` | Las piezas en orden; `intro` y `tiebreakOutcome`; la insignia «IA» solo con `"ai"`; el motivo cortado y «Leer más»; el empate; sin desplazar a 375 × 667 con 1,0 en claro y en oscuro; la hoja de electivos; «Tu principal» |
-| RF-TEST-9 | `specialty_test_eleccion_test.dart` | El cuerpo del `PUT` al elegir, con empate y con la ganadora ya principal; el corazón que guarda, revierte y junta toques; «Decidir después» en el asistente y en el Perfil; «Rehacer el test» |
-| RF-TEST-10 | `specialty_test_perfil_test.dart` | Los seis estados de la tarjeta; la fecha en hora de Lima con `TZ=UTC`; «El test cambió desde que lo hiciste.»; los colores neutros sin contenido; la recarga al volver |
+| RF-TEST-8 | `specialty_test_resultado_test.dart` | Las piezas en orden; `headline` y `tiebreakOutcome` en la burbuja, con la línea `low` tal cual llega, y sin `intro`; la insignia «IA» solo con `"ai"`; el motivo cortado y «Leer más»; el empate; sin desplazar a 375 × 667 con 1,0 en claro y en oscuro; la hoja de electivos; «Tu principal» con su estrella; el atrás del sistema, sin efecto en el asistente e igual a «Decidir después» en el Perfil |
+| RF-TEST-9 | `specialty_test_eleccion_test.dart` | El cuerpo del `PUT` al elegir, con empate y la otra ganadora como interés, con la ganadora ya principal y con una principal anterior distinta que pasa a interés; los corazones marcados al abrir según los intereses del alumno; el corazón que guarda, revierte y junta toques; el primer corazón en el asistente, que completa la configuración; el plazo de 15 s, con el estado confirmado de vuelta y el aviso propio; ningún guardado doble entre corazones y botones; «Decidir después» en el asistente y en el Perfil; «Rehacer el test» |
+| RF-TEST-10 | `specialty_test_perfil_test.dart` | Los seis estados de la tarjeta; la fecha en hora de Lima con `TZ=UTC`; «El test cambió desde que lo hiciste.»; los colores neutros sin contenido; la recarga al volver; la tarjeta ausente, sin fallo del Perfil, cuando `SpecialtyTestService` no está registrado |
 | RF-TEST-11 | `specialty_test_errores_test.dart` | Cada fila de la tabla de errores |
-| RF-TEST-12 | `specialty_test_contraste_test.dart` | Cada token en los dos temas; los colores del contenido de la tabla; la guarda con un color que no llega y con un hex roto |
-| RF-TEST-13 | `specialty_test_accesibilidad_test.dart` | Las etiquetas, estados y regiones vivas; lo excluido del árbol; «Siguiente» con lector de pantalla; sin desborde con 1,0, 1,3 y 2,0; sin animaciones con menos movimiento; los blancos de 48 |
+| RF-TEST-12 | `specialty_test_contraste_test.dart` | Cada token en los dos temas; los colores del contenido de la tabla; la guarda con un color que no llega y con un hex roto; la insignia «IA», la estrella y los avisos sobre `errorBg` |
+| RF-TEST-13 | `specialty_test_accesibilidad_test.dart` | Las etiquetas, estados y regiones vivas; el foco al cambiar de pregunta, al volver y al abrir el resultado; lo excluido del árbol; «Siguiente» con lector de pantalla; sin desborde con 1,0, 1,3 y 2,0; sin animaciones con menos movimiento; los blancos de 48 |
 | RF-TEST-14 | `perfil_especialidad_antigua_test.dart`, `specialty_test_logic_test.dart` | El chip vacío que ya no aparece; «Sin especialización seleccionada» con solo ids antiguos; el catálogo fallido con «Reintentar»; la hoja y el asistente que no mandan un id antiguo; `getEspecialidadName` igual; la malla sin cambios |
 
 ## Cambios en otras specs
@@ -819,6 +897,10 @@ widget usan un `ApiClient` falso y datos inventados, con el alumno de prueba 202
 - `specs/features/academic-profile/academic-profile.spec.md`. La enmienda del asistente, que
   queda en carrera, test y selección manual, y del Perfil, con la tarjeta del test y el caso del
   id antiguo. Hasta la aprobación rige el texto sin enmendar.
+- `docs/images/UI`. `ConfiguracionCarrera.png` queda superada por el asistente nuevo, y
+  `Perfil.png`, por la tarjeta del test. `AGENTS.md` pide respetar esas maquetas salvo un cambio
+  aprobado, así que ese cambio queda aprobado solo si el dueño aprueba esta spec. Las imágenes
+  no se tocan.
 - `docs/specs/api-contracts.md`. La sección «Specialty Test» con las tres rutas y, en «Academic
   Profile», el filtro del listado, el `404` por especialidad inactiva y los campos que la app
   lee del listado.
@@ -866,14 +948,18 @@ Cada punto trae la opción que la spec adopta por defecto. Ninguno está aprobad
 4. **Nombre corto (hallazgo).** La maqueta dice «Elegir Software como principal» y «7 electivos
    de Software». El contrato no trae nombres cortos de especialidad, así que el botón dice
    «Elegir como principal», como la decisión 4, y la fila dice «7 electivos».
-5. **Motivo largo (hallazgo).** Los motivos de las plantillas miden de 190 a 549 caracteres en
-   los ocho ejemplos del contenido, y el de Cohere hasta 500, frente a los 104 de la maqueta. Para
-   cumplir «sin scroll», el motivo se corta en cuatro líneas con «Leer más».
+5. **Motivo largo (hallazgo).** Los motivos de las plantillas miden de 190 a 541 caracteres en
+   los ocho ejemplos del contenido `2026-09-25.3`, y el de Cohere hasta 500, frente a los 104 de
+   la maqueta. Para cumplir «sin scroll», el motivo se corta en cuatro líneas con «Leer más».
 6. **Líneas de Ulises en el resultado (hallazgo).** El contrato manda `intro`, `headline`,
    `tiebreakOutcome`, `closing` y `retake`, y la maqueta tiene lugar para una burbuja. La
-   burbuja lleva `intro` y `tiebreakOutcome`, `headline` es la etiqueta accesible de la tarjeta,
-   y `closing` y `retake` no se muestran. La alternativa es una segunda burbuja con `closing`,
-   que obliga a desplazar en el iPhone SE.
+   burbuja lleva `headline` y `tiebreakOutcome`, y `intro`, `closing` y `retake` no se
+   muestran. `headline` va siempre, porque la decisión 3 fija que la línea `low` sale con
+   afinidad menor que 50, y esa línea dice algo distinto de la tarjeta. Pintarla siempre evita
+   que la app calcule el corte de 50. `headline` ocupa el lugar de la línea de la maqueta («Lo
+   tuyo es esto»), que dice lo mismo que `winner`. Las alternativas son sumar `intro` delante,
+   que alarga la burbuja, o una segunda burbuja con `closing`, que obliga a desplazar en el
+   iPhone SE.
 7. **«Empezar el test» o «Vamos».** La decisión 4 nombra el botón «Empezar el test» y el
    contenido aprobado trae `startButton: "Vamos"`. La spec usa «Empezar el test».
 8. **Textos de la maqueta.** Las líneas de Ulises de la maqueta («¡Craa! Hola, Valeria 👋» o
@@ -885,13 +971,19 @@ Cada punto trae la opción que la spec adopta por defecto. Ninguno está aprobad
 10. **Corazón que guarda enseguida.** En el asistente, el primer corazón marca la configuración
     como completa. La alternativa, guardar los corazones solo al salir del resultado, pierde lo
     marcado si el alumno cierra la app.
-11. **Empate.** «Elegir como principal» abre una hoja con las dos ganadoras.
-12. **Atrás en el resultado.** En el asistente no hace nada y en el Perfil equivale a «Decidir
-    después».
+11. **Empate.** «Elegir como principal» abre una hoja con las dos ganadoras, y la que no se
+    elige pasa a interés, porque en el resultado no tiene corazón. La alternativa es un corazón
+    junto a cada nombre de la tarjeta del empate, que la maqueta no tiene.
+12. **Atrás y cierre en el resultado.** El atrás del sistema no hace nada en el asistente y en
+    el Perfil equivale a «Decidir después». Si el alumno cierra la app en el resultado del
+    asistente sin tocar nada, vuelve al asistente y hace el test desde cero, aunque el servidor
+    ya tiene guardado el resultado, porque marcar la configuración como completa sin una acción
+    suya le quitaría la selección manual. La alternativa es que la bienvenida del asistente
+    ofrezca el último resultado guardado.
 13. **Héroe de la bienvenida en oscuro.** La maqueta lo muestra solo en claro. La spec lo deja
     naranja en los dos temas, con la tinta a 6,45:1.
 14. **Cabecera del asistente.** Pasa a tinta sobre naranja en claro (6,45:1). El header de la app
-    sigue en blanco sobre naranja (2,94:1), como decidió el dueño para el chat.
+    sigue en blanco sobre naranja (2,94:1), por la decisión del dueño sobre el chat.
 15. **Plumas en claro.** Van en `#D45500` en lugar del `#FF6600` de la maqueta, que da 2,81:1.
 16. **Tarjeta del Perfil.** Sin maqueta, la spec la arma con las piezas del resultado y sin
     «Elegir como principal». El backend guarda el `specialtyId` pensando en elegir desde ahí
@@ -902,11 +994,47 @@ Cada punto trae la opción que la spec adopta por defecto. Ninguno está aprobad
 20. **Choque con el backend sobre la escala de TI y `tb-sw-si-2`.** `decisiones.md` dice que
     esas dos tareas se quedan con su texto actual, porque el cotejo con las sumillas desaconseja
     los reemplazos. La spec del backend (decisión abierta 1 y RS-BE-37) todavía propone
-    reemplazarlas y fija la primera versión en `2026-09-25.3`. La app no depende de esos textos
-    ni de la versión, pero la spec del backend tiene que alinearse antes de su aprobación.
+    reemplazarlas y fija la primera versión en `2026-09-25.3`. Además, `contenido-test.json` ya
+    está en la versión `2026-09-25.3`, con los cambios por sumillas y el cotejo de Videojuegos
+    aprobados por el dueño y el código 550090. Esa `2026-09-25.3` es distinta de la que
+    describe la spec del backend, así que el backend tiene que renumerar al alinearse. La app no
+    depende de esos textos ni de la versión, pero la spec del backend tiene que alinearse antes
+    de su aprobación.
 21. **`[@test]` pendientes.** `docs/specs/spec-template.md` pide no enlazar pruebas que no
     existen. Como en la spec del backend, cada enlace lleva *(pendiente)* hasta que la prueba
     exista.
+22. **Tarjeta de la n.º 1 en oscuro.** La pantalla 5 de la maqueta usa un degradado saturado
+    (de `#4C41B8` a `#2D2484`, una versión oscurecida del color claro) con texto blanco y un aro
+    al 35 %. La spec usa en cambio el `color.dark` del contenido al 18 % sobre `cardBg`, con el
+    texto en `textPrimary` y el título en el color, como la tarjeta encendida del duelo, porque
+    el contenido fija `color.dark` para el tema oscuro y esos colores son pasteles que no
+    sostienen texto blanco (de 1,48:1 a 2,61:1). La alternativa fiel a la maqueta es un
+    degradado que parte del `color.light` oscurecido un 20 % y baja a un tono más oscuro, con
+    texto blanco, el aro de 1 px del `color.dark` al 35 % y la insignia «IA» como en claro. El
+    blanco da ahí de 7,45:1 (`ti`) a 12,92:1 (`vj`) con los cuatro colores del contenido, así
+    que las dos opciones cumplen el contraste.
+23. **Principal anterior.** Si el alumno ya tiene una principal y elige otra desde el
+    resultado, la anterior pasa a interés, así que no sale de su selección sin que él lo
+    decida. La estrella «Tu principal» de su fila no tiene acción. La alternativa es un diálogo
+    que confirma el cambio antes del `PUT` y deja elegir si la anterior queda como interés.
+    Ninguna de las dos está en `decisiones.md`.
+24. **Plazo de los guardados.** Los `PUT` del resultado vencen a los 15 s, como los demás
+    plazos del test. Al vencer, los corazones vuelven al último estado confirmado, el asistente
+    no termina y el aviso dice «No se pudo confirmar el guardado…», porque el guardado puede
+    estar hecho en el servidor. El plazo va como parámetro opcional de `completeSetup`, así que
+    la hoja «Editar» del Perfil y la selección manual siguen sin plazo. La alternativa es
+    ponérselo a todos los llamadores.
+25. **Test en pausa y versión nueva.** Al seguir un test en pausa, la app usa la copia del
+    contenido con la que arranca y manda su versión, que el servidor acepta mientras esté en su
+    registro (RS-BE-37 y decisión abierta 11 del backend). Solo una versión retirada da el `409`
+    y obliga a empezar de nuevo. La alternativa, descartar el avance ante cualquier versión
+    nueva, hace empezar de nuevo a quien el backend dejaría terminar.
+26. **Selecciones antiguas al guardar.** Como la app manda solo ids oficiales y el `PUT`
+    reemplaza la selección entera, el primer guardado de un alumno con un id antiguo lo saca de
+    su selección. La decisión 6 no lo pide, porque solo pide mostrar y elegir lo oficial sin
+    tocar los datos de especialidades. Según la comprobación del 2026-09-25, hoy no afecta a
+    nadie. La alternativa, conservar el id antiguo, choca con BR-AP-07, que responde
+    `404 SPECIALTY_NOT_FOUND` a una especialidad inactiva.
 
 ## Verificación
 
@@ -914,7 +1042,9 @@ Cada punto trae la opción que la spec adopta por defecto. Ninguno está aprobad
 - `flutter analyze --no-pub`.
 - `flutter test --no-pub` con la suite completa, porque cambian `main.dart`, `auth_service.dart` y
   `perfil.dart`, que usan otras funcionalidades. Incluye `test/HU36_jeff`,
-  `test/HU01_jeff/login_navigation_paths_test.dart` y `test/HU19_jeff`.
+  `test/HU01_jeff/login_navigation_paths_test.dart`, `test/HU19_jeff` y
+  `test/HU34_jeff/record_card_test.dart`, que monta el Perfil sin `SpecialtyTestService` y pasa
+  sin cambios gracias a la guarda de RF-TEST-10.
 - `TZ=UTC flutter test --no-pub test/HU36_jeff`, para que la fecha de la tarjeta del Perfil no
   dependa de la zona del equipo.
 - La app no se publica antes de que el backend tenga desplegadas las tres rutas y aplicada la
