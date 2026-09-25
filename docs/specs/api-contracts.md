@@ -604,7 +604,7 @@ En la app, `TimeBlocksService` es el único que llama a estas siete rutas. El me
 
 ## Specialty Test (test de especialidad), PROPUESTO y pendiente de aprobación
 
-Test que conduce Ulises y que recomienda uno de los cuatro diplomas oficiales. El backend sirve el contenido versionado, calcula el puntaje con la fórmula del contenido, decide los desempates, pide a Cohere el motivo con respaldo de plantillas y guarda solo el último resultado del alumno. Ver `specs/features/specialty-test/specialty-test.spec.md` (RF-TEST-1 a RF-TEST-14) y, en el backend, RS-BE-37 a RS-BE-47 de `ULima_Backend_IS2/specs/features/specialty-test/specialty-test.spec.md` (rama `feat/test-especialidad`, commit `5d8b82b`). El resultado vive en `student_specialty_test_result` (migración `0014` del backend, cambio de BD pendiente de la aprobación del dueño).
+Test que conduce Ulises y que recomienda uno de los cuatro diplomas oficiales. El backend sirve el contenido versionado, calcula el puntaje con la fórmula del contenido, decide los desempates, pide a Cohere el motivo con respaldo de plantillas y guarda solo el último resultado del alumno. Ver `specs/features/specialty-test/specialty-test.spec.md` (RF-TEST-1 a RF-TEST-14) y, en el backend, RS-BE-37 a RS-BE-47 de `ULima_Backend_IS2/specs/features/specialty-test/specialty-test.spec.md` (rama `feat/test-especialidad`, commit `9a07a55`). El resultado vive en `student_specialty_test_result` (migración `0014` del backend, cambio de BD pendiente de la aprobación del dueño).
 
 Las tres rutas comparten estas reglas.
 

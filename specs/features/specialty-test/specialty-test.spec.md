@@ -26,7 +26,7 @@ targets:
 > pide la maqueta van ahí mismo como hallazgos, sin campos inventados.
 > La contraparte de backend es
 > `ULima_Backend_IS2/specs/features/specialty-test/specialty-test.spec.md` (RS-BE-37 a RS-BE-47,
-> rama `feat/test-especialidad`, commit `5d8b82b`), también propuesta y sin aprobar. Esta spec
+> rama `feat/test-especialidad`, commit `9a07a55`), también propuesta y sin aprobar. Esta spec
 > consume sus tres rutas nuevas y `PUT /academic-profile/me/specialties` con la enmienda
 > BR-AP-07 y BR-AP-08 de esa rama.
 > Enmienda la spec de frontend `specs/features/academic-profile/academic-profile.spec.md` en el
@@ -78,7 +78,7 @@ Salen de `decisiones.md`, el registro del dueño.
 | --- | --- | --- |
 | 1 | El test es el paso central de `/setup-carrera`, con la opción «Saltar y elegir por mi cuenta», y se puede rehacer desde el Perfil. | RF-TEST-1, RF-TEST-3, RF-TEST-10 |
 | 2 | El puntaje es transparente y lo calcula el backend. Cohere solo redacta el motivo y, si falla o tarda, el resultado sale con el motivo de las plantillas. | RF-TEST-7, RF-TEST-8 |
-| 3 | El contenido está aprobado y va versionado. Las dudas del revisor se adoptan con la opción recomendada, entre ellas que la línea `low` de Ulises sale cuando la afinidad de la ganadora es menor que 50 y que la línea `second` no se usa. | RF-TEST-2, RF-TEST-4, RF-TEST-8 |
+| 3 | El contenido está aprobado y va versionado. El backend publica la `2026-09-25.3`, que es la `2026-09-25.2` aprobada más los cambios que el dueño aprueba el 2026-09-25 en la página de revisión. Son cuatro por las sumillas oficiales de Sistemas (la pregunta 13 abajo, `tb-ti-si-1` arriba y `tb-si-vj-2` abajo cambian de texto, y `tb-sw-si-1` arriba solo de ilustración), dos por los sílabos de Videojuegos de cactus (la pregunta 2 abajo se ancla en Proyecto de Videojuegos, 650081, y luego en Diseño de Videojuegos, y `tb-sw-vj-1` abajo cambia de texto), el código 550090 de Diseño de Videojuegos en lugar del 550043, que conserva el requisito del diploma (Storytelling) y suma una nota en `meta.diplomaNotes`, y la puesta al día de `meta.sources` y `meta.sourceLimits`. El mismo día el dueño deja la escala de TI (pregunta 4) y `tb-sw-si-2` con su texto actual. La línea `low` de Ulises, la línea `second` sin usar, el Metropolitano de la pregunta 10 y la línea `tie` en un empate con afinidad menor que 50 no forman parte de esta decisión y van en las decisiones abiertas 27 y 28. | RF-TEST-2, RF-TEST-4, RF-TEST-8 |
 | 4 | Diseño «Conversación con Ulises», con la misma imagen del chatbot (`assets/images/ulises_chatbot.png`), según la maqueta `ulises-v2.html` de cinco pantallas. Las tarjetas del duelo son grises y se encienden en el color de su especialidad al tocarlas. El resultado va sin scroll, en claro y en oscuro, con la número uno, su porcentaje, el motivo, sus electivos, las otras tres con un corazón y los botones «Elegir como principal», «Decidir después» y «Rehacer el test». Modo oscuro obligatorio. | RF-TEST-3 a RF-TEST-9, RF-TEST-12 |
 | 5 | Se guarda solo el último resultado por alumno, con el ranking, la fecha y la versión, para mostrarlo en el Perfil. Las respuestas una por una no se guardan. | RF-TEST-2, RF-TEST-10 |
 | 6 | Solo se muestran y se eligen los cuatro diplomas oficiales, con el filtro en el backend y sin tocar los datos de especialidades. `getEspecialidadName()` devolvería una cadena vacía para un id antiguo en caché, y esta spec lo cubre. | RF-TEST-14 |
@@ -197,7 +197,8 @@ primero» por el propio test. `SetupStep` queda con `carrera` y `seleccion`.
   hex que no se puede leer no invalida el contenido y cuenta como neutro (RF-TEST-12). Si algo
   falla, la bienvenida muestra el mismo estado que sin conexión (RF-TEST-11) y el registro dice
   solo que el contenido no es válido, sin datos. La app no fija el número de preguntas ni la
-  versión, así que la `2026-09-25.2` o la `2026-09-25.3` le dan lo mismo.
+  versión, así que le da lo mismo la `2026-09-25.3` que publica el backend (RS-BE-37) o una
+  versión posterior.
 - **Errores.** El service traduce cada fallo a un tipo propio con estos casos.
   - `notAvailable`, por `404 SPECIALTY_TEST_NOT_AVAILABLE`, al pedir el contenido o al evaluar
     (paso 6 de RS-BE-39).
@@ -405,10 +406,11 @@ Son las pantallas 4 y 5 de la maqueta. De arriba abajo, van estas piezas.
 
 1. **Entrada.** Confeti decorativo, una sola vez, y `HapticFeedback.heavyImpact`.
 2. **Ulises.** Su avatar de 34 px y una burbuja con `ulises.headline` y, si no es `null`,
-   `ulises.tiebreakOutcome`, separados por un espacio. `headline` va siempre, así que la línea
-   `low` sale tal cual llega cuando la afinidad de la ganadora es menor que 50, como fija la
-   decisión 3, sin que la app calcule ese corte. `intro`, `closing` y `retake` no se pintan
-   (decisión abierta 6).
+   `ulises.tiebreakOutcome`, separados por un espacio. `headline` va siempre y tal cual llega.
+   El servidor pone ahí la línea `tie` con empate, aunque la afinidad sea menor que 50, la
+   `low` sin empate y con la afinidad de la ganadora por debajo de 50, y la `winner` en otro
+   caso (RS-BE-42 y decisiones abiertas 27 y 28). La app no calcula ese corte. `intro`,
+   `closing` y `retake` no se pintan (decisión abierta 6).
 3. **Tarjeta de la número uno.**
    - En claro, el fondo es un degradado del `color.light` de la ganadora a ese mismo color un
      20 % más oscuro, con el texto en blanco salvo el de la pastilla. En oscuro, el fondo es el
@@ -614,8 +616,8 @@ aviso de éxito del Perfil («Especialidades actualizadas») no cambia.
 - **Colores de las especialidades.** Son los del contenido, `color.light` y `color.dark`, que
   manda el servidor, y no los de la maqueta (`#5B4BDB`, `#0B7A71`, `#2563EB` y `#C0267E`). La
   spec toma los de la maqueta como ilustrativos, y esa lectura espera la aprobación del dueño
-  (decisión abierta 1). Las versiones `2026-09-25.2` y `2026-09-25.3` traen los mismos colores,
-  que dan estos contrastes.
+  (decisión abierta 1). La `2026-09-25.3` que publica el backend trae estos colores, que dan
+  estos contrastes.
 
 | Clave | Claro | Sobre `#FFFFFF` y `#F8FAFC` | Blanco sobre el color | Tinta sobre la tarjeta encendida | Oscuro | Sobre `#1E1E24` y `#16161C` | Tinta y color sobre la tarjeta del resultado |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -884,7 +886,7 @@ widget usan un `ApiClient` falso y datos inventados, con el alumno de prueba 202
 | RF-TEST-4 | `specialty_test_conversacion_test.dart`, `specialty_test_logic_test.dart` | La regla de cada burbuja, con reacción propia, rotación de `pick`, `both`, `none` y `scale`, `duelHelp` y `scaleHelp`; el sello con k y B contados; el historial; el atrás con el descarte de desempates; el atrás desde la espera, con el paso tardío descartado, el resultado tardío marcado como viejo y la evaluación siguiente en cola; la pausa con la versión vigente cambiada, que sigue con su copia |
 | RF-TEST-5 y RF-TEST-6 | `specialty_test_preguntas_test.dart` | Tarjetas neutras antes del toque; el encendido con el color del tema; las dos y ninguna; el avance a los 350 ms y los toques ignorados; la ilustración teñida y la baldosa neutra sin SVG; la escala en cuatro y en dos por dos |
 | RF-TEST-7 | `specialty_test_evaluacion_test.dart` | La evaluación tras la última pregunta; el texto de espera; uno y dos desempates; el resultado; ninguna evaluación doble; el mismo cuerpo en el reintento |
-| RF-TEST-8 | `specialty_test_resultado_test.dart` | Las piezas en orden; `headline` y `tiebreakOutcome` en la burbuja, con la línea `low` tal cual llega, y sin `intro`; la insignia «IA» solo con `"ai"`; el motivo cortado y «Leer más»; el empate; sin desplazar a 375 × 667 con 1,0 en claro y en oscuro; la hoja de electivos; «Tu principal» con su estrella; el atrás del sistema, sin efecto en el asistente e igual a «Decidir después» en el Perfil |
+| RF-TEST-8 | `specialty_test_resultado_test.dart` | Las piezas en orden; `headline` y `tiebreakOutcome` en la burbuja, con las líneas `low` y `tie` tal cual llegan, y sin `intro`; la insignia «IA» solo con `"ai"`; el motivo cortado y «Leer más»; el empate; sin desplazar a 375 × 667 con 1,0 en claro y en oscuro; la hoja de electivos; «Tu principal» con su estrella; el atrás del sistema, sin efecto en el asistente e igual a «Decidir después» en el Perfil |
 | RF-TEST-9 | `specialty_test_eleccion_test.dart` | El cuerpo del `PUT` al elegir, con empate y la otra ganadora como interés, con la ganadora ya principal y con una principal anterior distinta que pasa a interés; los corazones marcados al abrir según los intereses del alumno; el corazón que guarda, revierte y junta toques; el primer corazón en el asistente, que completa la configuración; el plazo de 15 s, con el estado confirmado de vuelta y el aviso propio; ningún guardado doble entre corazones y botones; «Decidir después» en el asistente y en el Perfil; «Rehacer el test» |
 | RF-TEST-10 | `specialty_test_perfil_test.dart` | Los seis estados de la tarjeta; la fecha en hora de Lima con `TZ=UTC`; «El test cambió desde que lo hiciste.»; los colores neutros sin contenido; la recarga al volver; la tarjeta ausente, sin fallo del Perfil, cuando `SpecialtyTestService` no está registrado |
 | RF-TEST-11 | `specialty_test_errores_test.dart` | Cada fila de la tabla de errores |
@@ -954,10 +956,10 @@ Cada punto trae la opción que la spec adopta por defecto. Ninguno está aprobad
 6. **Líneas de Ulises en el resultado (hallazgo).** El contrato manda `intro`, `headline`,
    `tiebreakOutcome`, `closing` y `retake`, y la maqueta tiene lugar para una burbuja. La
    burbuja lleva `headline` y `tiebreakOutcome`, y `intro`, `closing` y `retake` no se
-   muestran. `headline` va siempre, porque la decisión 3 fija que la línea `low` sale con
-   afinidad menor que 50, y esa línea dice algo distinto de la tarjeta. Pintarla siempre evita
-   que la app calcule el corte de 50. `headline` ocupa el lugar de la línea de la maqueta («Lo
-   tuyo es esto»), que dice lo mismo que `winner`. Las alternativas son sumar `intro` delante,
+   muestran. `headline` va siempre, porque con afinidad menor que 50 el servidor manda ahí la
+   línea `low` (decisión abierta 27), que dice algo distinto de la tarjeta. Pintarla siempre
+   evita que la app calcule el corte de 50. `headline` ocupa el lugar de la línea de la
+   maqueta («Lo tuyo es esto»), que dice lo mismo que `winner`. Las alternativas son sumar `intro` delante,
    que alarga la burbuja, o una segunda burbuja con `closing`, que obliga a desplazar en el
    iPhone SE.
 7. **«Empezar el test» o «Vamos».** La decisión 4 nombra el botón «Empezar el test» y el
@@ -991,15 +993,9 @@ Cada punto trae la opción que la spec adopta por defecto. Ninguno está aprobad
 17. **Plazo de la evaluación.** 20 s, por los 5 s de Cohere y el arranque en frío.
 18. **Lector de pantalla.** Sin avance solo y con «Siguiente».
 19. **Desempate que no coincide.** Un reintento sin desempates y, si falla, el error.
-20. **Choque con el backend sobre la escala de TI y `tb-sw-si-2`.** `decisiones.md` dice que
-    esas dos tareas se quedan con su texto actual, porque el cotejo con las sumillas desaconseja
-    los reemplazos. La spec del backend (decisión abierta 1 y RS-BE-37) todavía propone
-    reemplazarlas y fija la primera versión en `2026-09-25.3`. Además, `contenido-test.json` ya
-    está en la versión `2026-09-25.3`, con los cambios por sumillas y el cotejo de Videojuegos
-    aprobados por el dueño y el código 550090. Esa `2026-09-25.3` es distinta de la que
-    describe la spec del backend, así que el backend tiene que renumerar al alinearse. La app no
-    depende de esos textos ni de la versión, pero la spec del backend tiene que alinearse antes
-    de su aprobación.
+20. **Retirada.** Ya no aplica, porque la spec del backend (commit `9a07a55`) describe la
+    misma `2026-09-25.3` que esta spec (decisión 3). El número se conserva para no mover las
+    referencias de la spec del backend.
 21. **`[@test]` pendientes.** `docs/specs/spec-template.md` pide no enlazar pruebas que no
     existen. Como en la spec del backend, cada enlace lleva *(pendiente)* hasta que la prueba
     exista.
@@ -1035,6 +1031,20 @@ Cada punto trae la opción que la spec adopta por defecto. Ninguno está aprobad
     tocar los datos de especialidades. Según la comprobación del 2026-09-25, hoy no afecta a
     nadie. La alternativa, conservar el id antiguo, choca con BR-AP-07, que responde
     `404 SPECIALTY_NOT_FOUND` a una especialidad inactiva.
+27. **Las tres dudas del revisor que el dueño no marca una por una (decisión 3).** La spec las
+    adopta con la opción recomendada, como la decisión abierta 1 del backend. La línea `low` de
+    Ulises sale cuando la afinidad de la ganadora es menor que 50, el mismo corte de la
+    plantilla `low` del motivo. La línea `second` de Ulises no se usa, porque el ranking del
+    resultado siempre muestra el segundo lugar y la plantilla `second` del motivo lo nombra
+    cuando su afinidad llega a 50. La pregunta 10 nombra el Metropolitano, como ya lo hace la
+    `2026-09-25.3`. La app no depende de ninguna de las tres, porque pinta `headline` tal cual
+    llega (RF-TEST-8) y el contrato no manda la línea `second`. Si el dueño cambia alguna,
+    cambia la lógica de RS-BE-42 o la pregunta 10 en una versión nueva del contenido, sin tocar
+    la app.
+28. **Empate con afinidad menor que 50.** El titular de Ulises es la línea `tie` y no la `low`,
+    igual que el motivo, que con empate usa solo la plantilla `tie`. Es la decisión abierta 3
+    del backend, que estima el caso en el 2,9 % de los juegos al azar de su simulación. La app
+    pinta el titular tal cual llega (RF-TEST-8), así que no cambia si el dueño elige la `low`.
 
 ## Verificación
 
