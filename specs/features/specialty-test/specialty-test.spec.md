@@ -26,7 +26,7 @@ targets:
 > pide la maqueta van ahí mismo como hallazgos, sin campos inventados.
 > La contraparte de backend es
 > `ULima_Backend_IS2/specs/features/specialty-test/specialty-test.spec.md` (RS-BE-37 a RS-BE-47,
-> rama `feat/test-especialidad`, commit `9a07a55`), también propuesta y sin aprobar. Esta spec
+> rama `feat/test-especialidad`), también propuesta y sin aprobar. Esta spec
 > consume sus tres rutas nuevas y `PUT /academic-profile/me/specialties` con la enmienda
 > BR-AP-07 y BR-AP-08 de esa rama.
 > Enmienda la spec de frontend `specs/features/academic-profile/academic-profile.spec.md` en el
@@ -993,9 +993,9 @@ Cada punto trae la opción que la spec adopta por defecto. Ninguno está aprobad
 17. **Plazo de la evaluación.** 20 s, por los 5 s de Cohere y el arranque en frío.
 18. **Lector de pantalla.** Sin avance solo y con «Siguiente».
 19. **Desempate que no coincide.** Un reintento sin desempates y, si falla, el error.
-20. **Retirada.** Ya no aplica, porque la spec del backend (commit `9a07a55`) describe la
-    misma `2026-09-25.3` que esta spec (decisión 3). El número se conserva para no mover las
-    referencias de la spec del backend.
+20. **Sin uso.** Ya no aplica, porque la spec del backend describe la misma `2026-09-25.3`
+    que esta spec (decisión 3). El número se conserva para no mover las referencias de la spec
+    del backend.
 21. **`[@test]` pendientes.** `docs/specs/spec-template.md` pide no enlazar pruebas que no
     existen. Como en la spec del backend, cada enlace lleva *(pendiente)* hasta que la prueba
     exista.
@@ -1043,8 +1043,9 @@ Cada punto trae la opción que la spec adopta por defecto. Ninguno está aprobad
     la app.
 28. **Empate con afinidad menor que 50.** El titular de Ulises es la línea `tie` y no la `low`,
     igual que el motivo, que con empate usa solo la plantilla `tie`. Es la decisión abierta 3
-    del backend, que estima el caso en el 2,9 % de los juegos al azar de su simulación. La app
-    pinta el titular tal cual llega (RF-TEST-8), así que no cambia si el dueño elige la `low`.
+    del backend, cuyo cálculo exacto con respuestas al azar da el caso en el 2,8 % de los tests.
+    La app pinta el titular tal cual llega (RF-TEST-8), así que no cambia si el dueño elige la
+    `low`.
 
 ## Verificación
 

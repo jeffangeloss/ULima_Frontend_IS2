@@ -604,7 +604,7 @@ En la app, `TimeBlocksService` es el único que llama a estas siete rutas. El me
 
 ## Specialty Test (test de especialidad), PROPUESTO y pendiente de aprobación
 
-Test que conduce Ulises y que recomienda uno de los cuatro diplomas oficiales. El backend sirve el contenido versionado, calcula el puntaje con la fórmula del contenido, decide los desempates, pide a Cohere el motivo con respaldo de plantillas y guarda solo el último resultado del alumno. Ver `specs/features/specialty-test/specialty-test.spec.md` (RF-TEST-1 a RF-TEST-14) y, en el backend, RS-BE-37 a RS-BE-47 de `ULima_Backend_IS2/specs/features/specialty-test/specialty-test.spec.md` (rama `feat/test-especialidad`, commit `9a07a55`). El resultado vive en `student_specialty_test_result` (migración `0014` del backend, cambio de BD pendiente de la aprobación del dueño).
+Test que conduce Ulises y que recomienda uno de los cuatro diplomas oficiales. El backend sirve el contenido versionado, calcula el puntaje con la fórmula del contenido, decide los desempates, pide a Cohere el motivo con respaldo de plantillas y guarda solo el último resultado del alumno. Ver `specs/features/specialty-test/specialty-test.spec.md` (RF-TEST-1 a RF-TEST-14) y, en el backend, RS-BE-37 a RS-BE-47 de `ULima_Backend_IS2/specs/features/specialty-test/specialty-test.spec.md` (rama `feat/test-especialidad`). El resultado vive en `student_specialty_test_result` (migración `0014` del backend, cambio de BD pendiente de la aprobación del dueño).
 
 Las tres rutas comparten estas reglas.
 
@@ -660,8 +660,8 @@ Contenido de la versión vigente, con lo necesario para conducir el test sin red
     ]
   }
   ```
-- **Qué no viaja**: resúmenes y electivos de cada tarea, pesos, umbral, plantillas del motivo, líneas de Ulises del resultado y del desempate, desempates, ejemplos y balance.
-- **En la app**: `SpecialtyTestService.fetchContent()` lo pide en cada inicio del test y guarda una copia en memoria para la sesión. La app usa `specialty` de cada tarea solo para encender la tarjeta tocada; antes del toque las tarjetas son neutras. `illustration` no se muestra. `icon` se traduce a un ícono de `lucide_icons_flutter` y uno desconocido cae a un ícono neutro. Un contenido que no pasa la validación del modelo cuenta como error de carga.
+- **Qué no viaja**: el nombre del ícono en Flutter (`icon.flutter`), resúmenes y electivos de cada tarea, pesos, umbral, plantillas del motivo, líneas de Ulises del resultado salvo la de espera (`ulises.loading`), líneas del desempate, desempates, ejemplos, balance y fuentes. Son del cálculo y del motivo, que hace el servidor.
+- **En la app**: `SpecialtyTestService.fetchContent()` lo pide una vez por cada apertura de `/test-especialidad`, y en la primera apertura desde el asistente ese pedido es la precarga del paso de carrera. «Rehacer el test» sigue con la misma copia, que queda en memoria durante la sesión (RF-TEST-2). La app usa `specialty` de cada tarea solo para encender la tarjeta tocada; antes del toque las tarjetas son neutras. `illustration` no se muestra. `icon` se traduce a un ícono de `lucide_icons_flutter` y uno desconocido cae a un ícono neutro. Un contenido que no pasa la validación del modelo cuenta como error de carga.
 
 ### POST /specialty-test/me/evaluate
 
@@ -708,7 +708,7 @@ Evaluación sin estado. Recibe todas las respuestas dadas hasta ese momento y de
   ```
 - `reasonSource` es `"ai"` si el motivo lo redacta Cohere o `"templates"` si sale de las plantillas; un fallo o una demora de Cohere nunca es un error para la app. `tiebreakOutcome` es `null` sin desempate. Con empate, `tie` es `true` y las dos primeras del ranking son las ganadoras.
 - `Cache-Control: no-store`. Límite de 30 evaluaciones por alumno por hora.
-- **Errors**: `400` `INVALID_JSON_BODY`, `400` `INVALID_REQUEST_BODY`, `400` `SPECIALTY_TEST_INVALID_ANSWERS` (`details.missing`, `details.unexpected`, `details.invalid`), `400` `SPECIALTY_TEST_TIEBREAK_MISMATCH` (`details.expected`), `409` `SPECIALTY_TEST_VERSION_OUTDATED` (`details.currentVersion`), `413` `PAYLOAD_TOO_LARGE`, `429` `RATE_LIMITED` (`details.retryAfterMinutes`), y los comunes.
+- **Errors**: `400` `INVALID_JSON_BODY`, `400` `INVALID_REQUEST_BODY`, `400` `SPECIALTY_TEST_INVALID_ANSWERS` (`details.missing`, `details.unexpected`, `details.invalid`), `400` `SPECIALTY_TEST_TIEBREAK_MISMATCH` (`details.expected`), `409` `SPECIALTY_TEST_VERSION_OUTDATED` (`details.currentVersion`), `413` `PAYLOAD_TOO_LARGE`, `429` `RATE_LIMITED` (`details.retryAfterMinutes`), `500` `INTERNAL_SERVER_ERROR` si falla el guardado del resultado, que va antes de la llamada a Cohere, y los comunes.
 - **En la app**: `SpecialtyTestService.evaluate()` la llama con un plazo de 20 s. Las respuestas viven solo en memoria y un reintento manda el mismo cuerpo. Un `409` o un `400 SPECIALTY_TEST_INVALID_ANSWERS` vuelven a pedir el contenido y empiezan de nuevo; un `400 SPECIALTY_TEST_TIEBREAK_MISMATCH` se reintenta una vez sin desempates; un `429` muestra el mensaje del servidor. Detalle en RF-TEST-7 y RF-TEST-11.
 
 ### GET /specialty-test/me/result
