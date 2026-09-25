@@ -20,10 +20,10 @@ targets:
 > Estado: **APROBADA** por el dueño del proyecto el 2026-09-25 en la página de revisión, junto
 > con la spec del backend. Recoge las decisiones 1 a 7 del dueño de ese día y los dos cambios
 > con los que aprueba esta spec, que son los íconos de Lucide en lugar de las ilustraciones
-> (decisión 8) y el texto blanco en la cabecera del asistente (decisión 9) (ver «Decisiones del
-> dueño»). Todas las demás decisiones abiertas quedan aprobadas en la opción que la spec
-> adopta por defecto, y los hallazgos del contrato frente a la maqueta quedan en esa lista con
-> su resolución. La aprobación incluye el cambio de base de datos del backend, la tabla
+> (decisión 8) y el texto blanco en la cabecera del asistente (decisión 9), las dos en
+> «Decisiones del dueño». Todas las demás decisiones abiertas quedan aprobadas en la opción
+> que la spec adopta por defecto, y los hallazgos del contrato frente a la maqueta quedan en
+> esa lista con su resolución. La aprobación incluye el cambio de base de datos del backend, la tabla
 > `student_specialty_test_result` de la migración `0014`. Aplicar la `0014` en producción pide
 > además, en el momento del despliegue, el respaldo y el permiso explícito del dueño, como con
 > la `0012` y la `0013`. Pendiente de implementar.
@@ -960,10 +960,10 @@ widget usan un `ApiClient` falso y datos inventados, con el alumno de prueba 202
 ## Decisiones abiertas
 
 Cada punto nace como decisión abierta, con la opción que la spec adopta por defecto. El dueño
-los aprueba todos el 2026-09-25 en esa opción, salvo el 2 y el 14, que cambia con las
-decisiones 8 y 9. Los que dicen «hallazgo» son huecos del contrato del backend frente a la
-maqueta. La numeración se conserva, porque el texto de arriba y la spec del backend citan cada
-punto por su número.
+los aprueba todos el 2026-09-25 en esa opción, salvo el 2 y el 14, que cambian con las
+decisiones 8 y 9, y el 20, que queda sin uso. Los que dicen «hallazgo» son huecos del contrato
+del backend frente a la maqueta. La numeración se conserva, porque el texto de arriba y la spec
+del backend citan cada punto por su número.
 
 1. **Colores.** Aprobada. La app usa los colores del contenido que manda el servidor (por
    ejemplo `#1E3A8A` y `#A5C0F7` para Software), que llegan al contraste pedido, y no los de la
@@ -1021,8 +1021,8 @@ punto por su número.
     lo deja naranja en los dos temas, con la tinta a 6,45:1.
 14. **Cabecera del asistente.** Cambiada por el dueño (decisión 9). La cabecera lleva texto
     blanco sobre el naranja en claro, como el header de la app y el AppBar del chat, en lugar de
-    la tinta oscura que propone la primera versión de la spec. Su contraste real en claro, de 2,94:1, queda como
-    riesgo conocido que el dueño acepta (RF-TEST-1 y RF-TEST-12).
+    la tinta oscura que propone la primera versión de la spec. Su contraste real en claro, de
+    2,94:1, queda como riesgo conocido que el dueño acepta (RF-TEST-1 y RF-TEST-12).
 15. **Plumas en claro.** Aprobada. Van en `#D45500` en lugar del `#FF6600` de la maqueta, que da
     2,81:1.
 16. **Tarjeta del Perfil.** Aprobada. Sin maqueta, la spec la arma con las piezas del resultado y
