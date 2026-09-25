@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../components/seis_siete/tambaleo_seis_siete.dart';
 import '../../components/skeleton.dart';
 import '../../configs/themes.dart';
 import '../../models/chatbot_models.dart';
@@ -19,6 +20,54 @@ class ChatbotPage extends StatelessWidget {
     final brightness = Theme.brightnessOf(context);
     final colors = Theme.of(context).colorScheme;
 
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth <= 600) {
+          // Teléfono. El truco del 67 inclina toda la pantalla, también el
+          // AppBar con su título (RF-67-2 y RF-67-5).
+          return _ConTambaleo(
+            controller: controller,
+            child: _pantalla(
+              context,
+              controller,
+              brightness,
+              body: _buildBody(controller, colors, brightness),
+            ),
+          );
+        }
+        return Obx(() {
+          if (controller.loadingSessions.value) {
+            return _pantalla(
+              context,
+              controller,
+              brightness,
+              body: const Center(child: CircularProgressIndicator()),
+            );
+          }
+          if (controller.sessions.isEmpty) {
+            return _pantalla(
+              context,
+              controller,
+              brightness,
+              body: _EmptyConversations(
+                brightness: brightness,
+                onCreate: () => controller.createSession(),
+              ),
+            );
+          }
+          return _pantallaDividida(context, controller, colors, brightness);
+        });
+      },
+    );
+  }
+
+  /// La pantalla con un solo AppBar a todo el ancho.
+  Widget _pantalla(
+    BuildContext context,
+    ChatbotController controller,
+    Brightness brightness, {
+    required Widget body,
+  }) {
     return Scaffold(
       backgroundColor: MaterialTheme.pageBg(brightness),
       appBar: AppBar(
@@ -38,49 +87,97 @@ class ChatbotPage extends StatelessWidget {
             }
           },
         ),
-        title: Row(
-          children: [
-            const _BotAvatar(size: 30),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: const [
-                Text(
-                  'ULimaBot',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
-                ),
-                Text(
-                  'Asistente académico',
-                  style: TextStyle(fontSize: 11.5, color: Colors.white70),
-                ),
-              ],
-            ),
-          ],
-        ),
+        title: const _TituloUlises(),
         actions: [
-          IconButton(
-            icon: const Icon(LucideIcons.plus),
-            tooltip: 'Nueva conversación',
-            onPressed: () => controller.createSession(),
-          ),
+          _BotonNuevaConversacion(controller: controller),
           const SizedBox(width: 4),
         ],
       ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final isWide = constraints.maxWidth > 600;
-          return _buildBody(controller, colors, brightness, isWide);
-        },
+      body: body,
+    );
+  }
+
+  /// Pantalla ancha con conversaciones. Cada panel lleva su propio tramo de
+  /// barra, así que el panel del chat se inclina con su barra y la lista queda
+  /// quieta (RF-67-2 y D4).
+  Widget _pantallaDividida(
+    BuildContext context,
+    ChatbotController controller,
+    ColorScheme colors,
+    Brightness brightness,
+  ) {
+    return Scaffold(
+      backgroundColor: MaterialTheme.pageBg(brightness),
+      body: Row(
+        children: [
+          SizedBox(
+            width: 288,
+            child: Column(
+              children: [
+                AppBar(
+                  backgroundColor: MaterialTheme.headerColor(brightness),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  automaticallyImplyLeading: false,
+                  leading: IconButton(
+                    icon: const Icon(LucideIcons.arrowLeft),
+                    onPressed: () => Get.back(),
+                  ),
+                ),
+                Expanded(
+                  child: MediaQuery.removePadding(
+                    context: context,
+                    removeTop: true,
+                    child: _buildSessionList(controller, colors, brightness),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          VerticalDivider(
+            width: 1,
+            color: MaterialTheme.borderColor(brightness),
+          ),
+          Expanded(
+            child: _ConTambaleo(
+              controller: controller,
+              child: Column(
+                children: [
+                  AppBar(
+                    backgroundColor: MaterialTheme.headerColor(brightness),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    automaticallyImplyLeading: false,
+                    title: const _TituloUlises(),
+                    actions: [
+                      _BotonNuevaConversacion(controller: controller),
+                      const SizedBox(width: 4),
+                    ],
+                  ),
+                  Expanded(
+                    child: MediaQuery.removePadding(
+                      context: context,
+                      removeTop: true,
+                      child: _ChatArea(
+                        controller: controller,
+                        brightness: brightness,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
+  /// Cuerpo del teléfono. La pantalla ancha arma el suyo en `build`.
   Widget _buildBody(
     ChatbotController controller,
     ColorScheme colors,
     Brightness brightness,
-    bool isWide,
   ) {
     return Obx(() {
       if (controller.loadingSessions.value) {
@@ -91,24 +188,6 @@ class ChatbotPage extends StatelessWidget {
         return _EmptyConversations(
           brightness: brightness,
           onCreate: () => controller.createSession(),
-        );
-      }
-
-      if (isWide) {
-        return Row(
-          children: [
-            SizedBox(
-              width: 288,
-              child: _buildSessionList(controller, colors, brightness),
-            ),
-            VerticalDivider(
-              width: 1,
-              color: MaterialTheme.borderColor(brightness),
-            ),
-            Expanded(
-              child: _ChatArea(controller: controller, brightness: brightness),
-            ),
-          ],
         );
       }
 
@@ -241,6 +320,71 @@ class ChatbotPage extends StatelessWidget {
     if (diff.inDays < 1) return '${diff.inHours}h';
     if (diff.inDays == 1) return 'Ayer';
     return '${date.day}/${date.month}/${date.year}';
+  }
+}
+
+/// Envuelve [child] con el tambaleo del 67. El `Obx` solo lee
+/// `disparosSeisSiete` y [child] llega ya armado, así que cada disparo
+/// reconstruye solo el envoltorio (RF-67-5).
+class _ConTambaleo extends StatelessWidget {
+  const _ConTambaleo({required this.controller, required this.child});
+
+  final ChatbotController controller;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(
+      () => TambaleoSeisSiete(
+        disparos: controller.disparosSeisSiete.value,
+        child: child,
+      ),
+    );
+  }
+}
+
+/// Avatar de Ulises con «ULimaBot» y «Asistente académico».
+class _TituloUlises extends StatelessWidget {
+  const _TituloUlises();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
+      children: [
+        _BotAvatar(size: 30),
+        SizedBox(width: 10),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'ULimaBot',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+            ),
+            Text(
+              'Asistente académico',
+              style: TextStyle(fontSize: 11.5, color: Colors.white70),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Botón «Nueva conversación» del AppBar.
+class _BotonNuevaConversacion extends StatelessWidget {
+  const _BotonNuevaConversacion({required this.controller});
+
+  final ChatbotController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      icon: const Icon(LucideIcons.plus),
+      tooltip: 'Nueva conversación',
+      onPressed: () => controller.createSession(),
+    );
   }
 }
 
