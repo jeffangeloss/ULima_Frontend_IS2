@@ -71,10 +71,11 @@ targets:
 > Ajustada el 2026-09-25 por la spec del truco del 67
 > (`specs/features/six-seven/six-seven.spec.md`, RF-67-6 y RF-67-7). `ChatPage` crea el
 > stream de mensajes una sola vez y lo guarda en su estado, en lugar de pedirlo en cada
-> `build` (RF-CHAT-2). Un 67 que llega en vivo inclina la conversación unos 2 s y muestra el
-> rótulo pasajero «SIX SEVEN!!!», que cumple el contraste de RF-CHAT-8. El mensaje se envía y
-> se guarda como cualquier otro, y el contrato no cambia. Pendiente de la aprobación del dueño
-> de la spec escrita antes de implementar.
+> `build` (RF-CHAT-2). Un 67 que llega en vivo inclina toda la pantalla de la conversación unos
+> 2 s, también el AppBar con el nombre del curso, y muestra el rótulo pasajero «SIX SEVEN!!!»,
+> que cumple el contraste de RF-CHAT-8. El mensaje se envía y se guarda como cualquier otro, y
+> el contrato no cambia. Aprobada por el dueño el 2026-09-25, junto con la spec del truco del
+> 67, con la elección de «toda la pantalla» en su D4.
 
 ## User Stories
 

@@ -15,10 +15,14 @@ Pantalla de chat con IA (ULimaBot) accesible mediante un FAB flotante visible en
 
 > Ajustada el 2026-09-25 por la spec del truco del 67 (`specs/features/six-seven/six-seven.spec.md`,
 > RF-67-5). Un mensaje que es un 67 no llega al backend. La pantalla agrega en local la burbuja del
-> alumno y la de Ulises con «SIX SEVEN!!!» e inclina el área del chat unos 2 s, sin gastar el
-> límite de preguntas ni guardar nada en el historial. `ChatbotController` acepta además un
-> `ChatbotService` inyectable para pruebas. Pendiente de la aprobación del dueño de la spec escrita
-> antes de implementar. El resto de esta spec no cambia.
+> alumno y la de Ulises con «SIX SEVEN!!!» e inclina toda la pantalla del chat unos 2 s, también el
+> AppBar con su título, sin gastar el límite de preguntas ni guardar nada en el historial. En
+> pantalla ancha, con conversaciones, la barra superior se parte en dos tramos del mismo alto y
+> color, el de la lista con la flecha de volver y el del chat con Ulises, su título y el botón
+> «Nueva conversación», y solo se inclina el panel del chat con su tramo (D4 de esa spec).
+> `ChatbotController` acepta además un `ChatbotService` inyectable para pruebas. Aprobada por el
+> dueño el 2026-09-25, junto con la spec del truco del 67, con la elección de «toda la pantalla» en
+> D4. El resto de esta spec no cambia.
 
 ## Requirements
 

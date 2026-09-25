@@ -14,10 +14,22 @@ targets:
 
 # Truco del 67
 
-> Estado: **diseñada el 2026-09-25 a partir de las decisiones del dueño de ese día. Pendiente
-> de su aprobación de esta spec escrita antes de implementar.**
-> Lo que el dueño decide y lo que la spec propone por defecto van separados en «Decisiones».
-> Ninguna propuesta cuenta como aprobada hasta que el dueño la apruebe.
+> Estado: **diseñada el 2026-09-25 a partir de las decisiones del dueño de ese día y aprobada
+> por él ese mismo día**, con las propuestas P1 a P4 y los puntos D1 a D15 en su valor por
+> defecto, salvo D4, donde elige «toda la pantalla» (ver «Decisiones»). Pendiente de
+> implementación.
+> Ajustada el 2026-09-25 en D4 con esa elección del dueño, que forma parte de su aprobación.
+> Se inclina todo el chat, también el AppBar con su título, como el truco de Google, y solo
+> quedan quietos la barra de estado del teléfono y el teclado del sistema. En el chat de
+> Ulises en pantalla ancha, con la lista de conversaciones al lado, se inclina el panel del
+> chat con su propia barra superior y la lista queda quieta. El ajuste reescribe RF-67-2
+> («Qué se inclina», «Movimiento», «Cuánto se nota», «Recorte y fondo» y «Teclado y foco»),
+> RF-67-5 («Dónde se envuelve» y «Abrir el chat no dispara»), RF-67-7 («Dónde»), D4, D12,
+> el flujo de datos, las pruebas y la revisión manual. Como hoy un solo AppBar cubre las dos
+> columnas de la pantalla ancha, la spec deriva de la elección del dueño que esa barra se
+> parta en dos tramos, uno por panel (RF-67-5).
+> Lo que el dueño decide, lo que propone por defecto y lo que la spec fija por su cuenta van
+> separados en «Decisiones».
 > El truco toca dos features. El chat de Ulises (`specs/features/chatbot/chatbot.spec.md`) y el
 > chat de sección (`specs/features/chat/chat.spec.md`) llevan una nota que remite aquí
 > («Cambios en otras specs»). El disparador, el tambaleo y la regla de movimiento reducido
@@ -115,27 +127,37 @@ Prueba por escribir `test/six_seven/seis_siete_test.dart`.
 Un solo widget, `TambaleoSeisSiete` (`lib/components/seis_siete/tambaleo_seis_siete.dart`),
 envuelve la interfaz del chat y la inclina de un lado a otro, como el gesto de las manos del meme.
 
-- **Qué se inclina.** La lista de mensajes y la barra de escritura, juntas y como una sola
-  pieza. En el chat de Ulises es la columna de `_ChatArea` (`chatbot_page.dart:306-362`) y en el
-  chat de sección, la columna de mensajes y barra (`chat_page.dart:364-374`). No se inclinan el
-  AppBar, la barra de estado, el teclado del sistema ni, en el chat de Ulises en pantalla ancha,
-  la lista de conversaciones de la izquierda.
-- **Movimiento.** Es una rotación en el plano alrededor del centro del área inclinada. El ángulo
+- **Qué se inclina.** Toda la pantalla del chat, como el truco de Google, por decisión del
+  dueño (D4). El AppBar con su título, la lista de mensajes y la barra de escritura se inclinan
+  juntos, como una sola pieza. En el chat de sección es el `Scaffold` entero de `ChatPage`
+  (`chat_page.dart:319-375`). En el chat de Ulises es el `Scaffold` entero de `ChatbotPage`
+  (`chatbot_page.dart:22-76`), salvo en pantalla ancha con la lista de conversaciones al lado,
+  donde se inclina solo el panel del chat con su propia barra superior y la lista queda quieta
+  (RF-67-5). Solo quedan quietos la barra de estado del teléfono y el teclado del sistema, que
+  el sistema operativo dibuja fuera de la app, igual que la barra de navegación de Android.
+- **Movimiento.** Es una rotación en el plano alrededor del centro de la parte visible del área
+  inclinada, que es el área sin lo que tapa el teclado del sistema
+  (`MediaQuery.viewInsetsOf(context).bottom`). Sin teclado es el centro del área, y con el
+  teclado abierto, el centro de lo que queda sobre él. El ángulo
   en el instante t, con t entre 0 y T, es θ(t) = −A · sen(2π · n · t / T), con A = 3° (0,05236
   rad), n = 4 ciclos completos y T = 2000 ms. El `AnimationController` avanza lineal de 0 a 1 y
   el seno es la curva, así que el giro frena suave en cada extremo y pasa más rápido por el
   centro. El primer vaivén va hacia la izquierda, en sentido antihorario, que en Flutter es un
   ángulo negativo. Cada ciclo dura 500 ms, la velocidad pico ronda los 38° por segundo y el
   tambaleo termina justo en 0°, sin salto.
-- **Cuánto se nota.** En un iPhone SE sin teclado, el área inclinada mide unos 375 × 591 pt, y
-  con 3° sus esquinas se corren unos 16 pt de lado y 9 pt de alto. Con el teclado abierto mide
-  unos 375 × 331 pt, y las esquinas se corren unos 9 pt de lado y 10 pt de alto.
+- **Cuánto se nota.** En un iPhone SE sin teclado, el área inclinada es la pantalla entera, de
+  unos 375 × 667 pt, y con 3° sus esquinas se corren unos 18 pt de lado y 9 pt de alto. Con el
+  teclado abierto, de unos 260 pt, la parte visible mide unos 375 × 407 pt, y sus esquinas se
+  corren unos 11 pt de lado y 10 pt de alto.
 - **La curva como función.** El ángulo sale de una función pura, `anguloSeisSiete(double
   progreso)`, en el archivo de RF-67-1. Recibe el avance entre 0 y 1 y devuelve radianes, y fuera
   de ese rango devuelve 0. A, n y T viven como constantes en ese mismo archivo.
 - **Recorte y fondo.** El área inclinada va dentro de un `ClipRect` de su mismo tamaño, así que
-  nada se pinta sobre el AppBar ni sobre la lista de conversaciones. Las esquinas que quedan al
-  descubierto muestran el fondo del `Scaffold`, `MaterialTheme.pageBg`, en claro y en oscuro.
+  nada se pinta fuera de ella, tampoco sobre la lista de conversaciones del chat de Ulises en
+  pantalla ancha. Debajo del área, el envoltorio pinta `MaterialTheme.pageBg`, en claro y en
+  oscuro, porque el `Scaffold` gira con ella. Las esquinas que el giro deja al descubierto
+  muestran ese fondo, también la cuña que asoma bajo la barra de estado, de hasta unos 20 pt de
+  alto en un extremo.
 - **Disparo.** El widget recibe un contador de disparos, un entero que solo sube. Al montarse toma
   el valor que trae como punto de partida y no se mueve. Cada vez que se reconstruye con un valor
   mayor pide un tambaleo (RF-67-3), y reconstruirlo con el mismo valor no hace nada. Así, abrir el
@@ -152,9 +174,10 @@ envuelve la interfaz del chat y la inclina de un lado a otro, como el gesto de l
   abierto sigue abierto y quieto, porque es del sistema y no se dibuja dentro de la app, y el
   cerrado sigue cerrado. Con la tecla de enviar del teclado, en el chat de Ulises, el teclado se
   cierra como hoy con cualquier pregunta («Contexto»), y el truco no cambia eso. Un 67 enviado
-  con esa tecla tambalea mientras el teclado se cierra, y en un iPhone SE el área inclinada crece
-  durante el giro de unos 331 a unos 591 pt de alto. Conservar el foco en ese envío es el punto
-  D15. En el chat de sección no aplica, porque su tecla no envía.
+  con esa tecla tambalea mientras el teclado se cierra, y en un iPhone SE la parte visible del
+  área inclinada crece durante el giro de unos 407 a unos 667 pt de alto, con el centro del giro
+  bajando con ella. Conservar el foco en ese envío es el punto D15. En el chat de sección no
+  aplica, porque su tecla no envía.
 - **Scroll.** El tambaleo no cambia la posición del scroll, no reemplaza su controlador y no corta
   un arrastre ni un desplazamiento en curso. Durante el tambaleo, los toques y los arrastres
   llegan a lo que se ve inclinado, como en cualquier `Transform`.
@@ -217,14 +240,23 @@ Prueba por escribir `test/six_seven/tambaleo_seis_siete_test.dart`.
   mismo instante, la burbuja del alumno con el texto tal como lo envía, ya recortado por
   `_submit`, y la de Ulises con «SIX SEVEN!!!», con `role` igual a `assistant`. Las dos llevan un
   id local que empieza con `local-`, distinto de cualquier id del backend. Después sube su
-  contador de disparos, `disparosSeisSiete`, un `RxInt` que lee el `TambaleoSeisSiete` de la
-  columna de `_ChatArea`.
-- **Dónde se envuelve.** En un solo sitio, `_ChatAreaState.build`, que envuelve su columna de
-  mensajes y barra (`chatbot_page.dart:306-362`) con un `Obx` que solo lee `disparosSeisSiete`. La
-  columna se construye fuera del `Obx` y le llega ya hecha, así que cada subida del contador
+  contador de disparos, `disparosSeisSiete`, un `RxInt` que lee el `TambaleoSeisSiete` de
+  `ChatbotPage`.
+- **Dónde se envuelve.** `ChatbotPage.build` elige el sitio según el ancho, y en cada pantalla
+  hay un solo envoltorio, dentro de un `Obx` que solo lee `disparosSeisSiete`.
+  - En un teléfono envuelve el `Scaffold` entero, con su AppBar, así que se inclina toda la
+    pantalla.
+  - En pantalla ancha con conversaciones, la barra superior se parte en dos tramos del mismo
+    alto y color, porque hoy un solo AppBar cubre las dos columnas (`chatbot_page.dart:24-69` y
+    `:93-103`). El tramo de la lista lleva la flecha de volver, y el del chat, a Ulises con
+    «ULimaBot», «Asistente académico» y el botón «Nueva conversación». El envoltorio cubre solo
+    el panel del chat con su tramo de barra, así que la lista y su tramo quedan quietos (D4).
+  - En pantalla ancha, mientras cargan las conversaciones o si no hay ninguna, la pantalla queda
+    como hoy, con un solo AppBar y sin envoltorio, porque no hay chat desde donde enviar.
+
+  Lo envuelto se arma fuera del `Obx` y le llega ya hecho, así que cada subida del contador
   reconstruye solo el envoltorio y no `_ChatArea`, su lista ni su campo (RF-67-2, «Árbol
-  estable»). `_buildBody` no cambia, ni en pantalla ancha (`chatbot_page.dart:101`) ni en
-  teléfono (`:110`).
+  estable»).
 - **Qué no pasa.** No enciende «escribiendo…», no lee las notas locales, no llama a
   `POST /chatbot/sessions/:id/ask` ni a ningún otro endpoint, tampoco al refresco de la lista de
   conversaciones (`chatbot_controller.dart:135`), y no muestra avisos. Como el backend no recibe
@@ -243,8 +275,13 @@ Prueba por escribir `test/six_seven/tambaleo_seis_siete_test.dart`.
   desplazamiento.
 - **Abrir el chat no dispara.** En el chat de Ulises el truco nace solo del envío. Un historial
   que trae un «67» anterior a este truco no inclina nada. Reconstruir o volver a montar
-  `_ChatArea`, por ejemplo al pasar de la lista de conversaciones al chat en un teléfono, tampoco,
-  porque el envoltorio toma el contador actual como punto de partida (RF-67-2).
+  `_ChatArea`, por ejemplo al pasar de la lista de conversaciones al chat en un teléfono,
+  tampoco. Lo mismo vale cuando se vuelve a montar el envoltorio, como al cambiar el ancho de la
+  pantalla o al aparecer la primera conversación en pantalla ancha, porque el envoltorio toma el
+  contador actual como punto de partida (RF-67-2).
+- **Volver a la lista.** En un teléfono, volver a la lista de conversaciones con la flecha
+  durante el tambaleo no lo corta, y la lista se inclina hasta que termina, porque es la misma
+  pantalla.
 - **Un texto que no es un 67.** Sigue el camino de hoy sin cambios, también «67 soles» o «tengo
   67 de nota».
 - **Inyección para pruebas.** `ChatbotController` acepta un `ChatbotService` opcional en su
@@ -280,8 +317,8 @@ Prueba por escribir `test/six_seven/chatbot_seis_siete_test.dart`.
   como vistos, disparen o no.
 - **Dónde se revisa.** Cada lista se revisa una sola vez, cuando llega del stream, dentro de ese
   `map`, y nunca dentro de `build`. Si dispara, la página sube un contador propio, un
-  `ValueNotifier<int>`, y un `ValueListenableBuilder` pasa ese valor al envoltorio sin reconstruir
-  el resto de la página.
+  `ValueNotifier<int>`, y un `ValueListenableBuilder` pasa ese valor al envoltorio, que cubre el
+  `Scaffold` entero de `ChatPage` (RF-67-2), sin reconstruir el resto de la página.
 - **Quién lo ve.** Quien envía el 67 lo ve porque Firebase entrega el mensaje propio al stream
   apenas se escribe, y quien tiene el chat abierto, cuando el mensaje le llega en vivo. Quien abre
   el chat después solo ve el mensaje en el historial, sin tambaleo ni rótulo. Rige para todos los
@@ -332,11 +369,12 @@ pasajero sobre el chat y no como mensaje.
 
 - **Qué es.** Un texto de la pantalla que no se guarda, no se envía, no entra en la lista de
   mensajes y que nadie más recibe.
-- **Dónde.** Va centrado sobre el área inclinada entera, la lista de mensajes y la barra de
-  escritura juntas, pintado por encima de ella y fuera del giro, así que no se inclina y se lee
-  quieto. Lo pinta el mismo `TambaleoSeisSiete`, con un parámetro que lo enciende solo en el chat
-  de sección, y por eso su centro es el del envoltorio. Con el teclado abierto queda centrado en
-  el área visible, de unos 331 pt de alto en un iPhone SE.
+- **Dónde.** Va centrado sobre el área inclinada, que es toda la pantalla del chat con su
+  AppBar, pintado por encima de ella y fuera del giro, así que no se inclina y se lee quieto. Lo
+  pinta el mismo `TambaleoSeisSiete`, con un parámetro que lo enciende solo en el chat de
+  sección, y por eso su centro es el de la parte visible del envoltorio, el mismo punto sobre el
+  que gira (RF-67-2). Con el teclado abierto queda centrado en lo que queda sobre el teclado, de
+  unos 407 pt de alto en un iPhone SE.
 - **Aspecto.** Es una píldora con fondo `MaterialTheme.cardBg`, borde de 2 px en
   `MaterialTheme.iconoNaranja`, radio de 16 px, relleno de 20 px a los lados y 12 px arriba y
   abajo, y una sombra suave. El texto va en `textPrimary`, de 28 px, con `FontWeight.w900` y en
@@ -368,14 +406,16 @@ Chat de Ulises
       sí -> messages += burbuja del alumno + burbuja de Ulises «SIX SEVEN!!!»
             -> disparosSeisSiete++ -> fin, sin backend
       no -> camino de hoy (ask, «escribiendo…», refresco de conversaciones)
-  _ChatAreaState.build -> Obx(disparosSeisSiete) -> TambaleoSeisSiete(columna de mensajes y barra)
+  ChatbotPage.build -> Obx(disparosSeisSiete) -> TambaleoSeisSiete
+      en un teléfono -> Scaffold entero con su AppBar
+      en pantalla ancha -> panel del chat con su tramo de barra, con la lista quieta
 
 Chat de sección
   getMessages(...).map(revisar), una vez por página, con el StreamBuilder como único oyente
     -> cada lista -> DetectorSeisSiete.revisar(lista)
       primera lista -> base, sin disparo
       id nuevo, no borrado, no carnet, esSeisSiete, app en primer plano -> contador++
-  ValueListenableBuilder(contador) -> TambaleoSeisSiete(mensajes + barra, con rótulo)
+  ValueListenableBuilder(contador) -> TambaleoSeisSiete(Scaffold entero con su AppBar, con rótulo)
 ```
 
 ## Textos nuevos
@@ -393,7 +433,9 @@ mensaje es un 67. El chat de sección envía y escucha igual que hoy («Contrato
 ## Cambios en otras specs
 
 - `specs/features/chatbot/chatbot.spec.md` suma una nota de ajuste y, en «Input de pregunta», la
-  excepción del 67, que remite a RF-67-5.
+  excepción del 67, que remite a RF-67-5. La nota dice además que en pantalla ancha, con
+  conversaciones, la barra superior se parte en dos tramos, uno por panel (RF-67-5, «Dónde se
+  envuelve»).
 - `specs/features/chat/chat.spec.md` suma una nota de ajuste y, en RF-CHAT-2, el stream creado una
   sola vez por página, que remite a RF-67-6.
 - `docs/specs/feature-index.md` suma la fila de esta spec.
@@ -421,14 +463,18 @@ mensaje es un 67. El chat de sección envía y escucha igual que hoy («Contrato
 | 1 | El truco se inspira en el de Google al buscar «67» o «six seven», que inclina la página de un lado a otro unos segundos, como el gesto de las manos del meme «6 7» | RF-67-2 |
 | 2 | Vive en el chat de Ulises y en los chats de las secciones de los cursos | RF-67-5 y RF-67-6 |
 | 3 | Si alguien pone «67», toda la interfaz del chat se mueve hacia los lados como el gesto de las manos, y Ulises escribe «SIX SEVEN!!!» | RF-67-2, RF-67-5 y RF-67-7 |
+| 4 | Al aprobar la spec elige en D4 «toda la pantalla». Se inclina todo el chat, también el AppBar con el título, como el truco de Google, y solo quedan quietos la barra de estado del teléfono y el teclado del sistema. En el chat de Ulises en pantalla ancha, si la lista de conversaciones comparte pantalla, se inclina el panel del chat con su propia barra superior y la lista queda quieta | RF-67-2, RF-67-5, RF-67-7 y D4 |
 
-### Propuestas por defecto que esperan su aprobación
+El dueño aprueba la spec el 2026-09-25, con las propuestas P1 a P4 y los puntos D1 a D15 en
+su valor por defecto, salvo D4, que cambia por la decisión 4.
+
+### Propuestas por defecto que el dueño aprueba
 
 El mismo día el dueño deja cuatro propuestas por defecto para que la spec las ponga a la vista.
-La spec las adopta tal cual, y ninguna cuenta como aprobada hasta que el dueño la apruebe. Con el
-valor por defecto de D10, P3 no se cumple en un caso, el de un 67 que llega al volver a la app o
-al reconectar, que inclina el chat aunque ya no sea en vivo (RF-67-6). D10 muestra la alternativa
-que sí lo cumple.
+La spec las adopta tal cual, y el dueño las aprueba el 2026-09-25. Con el valor por defecto de
+D10, que el dueño también aprueba, P3 no se cumple en un caso, el de un 67 que llega al volver a
+la app o al reconectar, que inclina el chat aunque ya no sea en vivo (RF-67-6). D10 muestra la
+alternativa que sí lo cumple.
 
 | # | Propuesta | Dónde queda |
 | --- | --- | --- |
@@ -440,14 +486,15 @@ que sí lo cumple.
 ### Puntos que fija esta spec por su cuenta
 
 Ninguno de estos puntos está en lo que decide o propone el dueño. La spec los fija con un valor
-por defecto, y el dueño los confirma o los cambia al aprobarla.
+por defecto, y el dueño los confirma el 2026-09-25 al aprobarla, salvo D4, que cambia por su
+decisión 4.
 
 | # | Punto | Valor por defecto | Alternativa | Dónde queda |
 | --- | --- | --- | --- | --- |
 | D1 | Variantes del disparador | La lista cerrada de P1. Varios espacios seguidos cuentan como uno, y «¡» cuenta como signo de exclamación | Sumar «seis siete», «6 - 7», «6–7», «sixseven» o un 67 con emoji | RF-67-1 |
 | D2 | Amplitud | ±3° | ±2°, más sutil, o ±5°, más marcado | RF-67-2 |
 | D3 | Ciclos, curva y sentido | 4 ciclos de seno en 2000 ms, de 500 ms cada uno, con el primero hacia la izquierda | 3 ciclos más lentos, o una envolvente que crece y se apaga | RF-67-2 |
-| D4 | Qué se inclina | La lista de mensajes y la barra de escritura juntas, alrededor de su centro, con el AppBar, el teclado y la lista de conversaciones quietos | Barra fija con solo la lista de mensajes inclinada, o toda la pantalla con el AppBar | RF-67-2 |
+| D4 | Qué se inclina | Toda la pantalla del chat, como el truco de Google, que elige el dueño (decisión 4). Se inclinan juntos el AppBar con su título, la lista de mensajes y la barra de escritura, alrededor del centro de lo que queda a la vista, y solo quedan quietos la barra de estado del teléfono y el teclado del sistema. En el chat de Ulises en pantalla ancha, con la lista de conversaciones al lado, se inclina el panel del chat con su propio tramo de barra superior y la lista queda quieta | La lista de mensajes y la barra de escritura juntas, con el AppBar quieto, que era el valor por defecto de la spec, o la barra de escritura fija con solo la lista de mensajes inclinada | RF-67-2 y RF-67-5 |
 | D5 | Varios 67 seguidos | Uno a la vez, sin reinicio, sin cola y sin enfriamiento. En el chat de Ulises, cada 67 recibe su burbuja. En un chat de sección, varias personas pueden encadenar 67 y sumar más de 5 s de movimiento casi sin pausa, por encima de lo que pide el criterio 2.2.2 de WCAG | Reiniciar el tambaleo con cada 67, o un enfriamiento de unos segundos en los chats de sección, que evita ese movimiento encadenado | RF-67-2 y RF-67-3 |
 | D6 | Qué cuenta como movimiento reducido | «Quitar animaciones» de Android y «Reducir movimiento» de iOS | Solo `disableAnimations`, como el resto de la app, que en iOS no ve el ajuste | RF-67-4 |
 | D7 | Momento de la burbuja de Ulises | El mismo instante que la del alumno | Una pausa corta con «escribiendo…» antes de la burbuja | RF-67-5 |
@@ -455,7 +502,7 @@ por defecto, y el dueño los confirma o los cambia al aprobarla.
 | D9 | Roles en los chats de sección | Todos, también el docente | Sin truco para el docente | RF-67-6 |
 | D10 | Segundo plano, vuelta a la app y reconexión | Un 67 que llega con la app en `paused`, `hidden` o `detached` no dispara, y los que llegan al volver a la app o al reconectar sí, sin ventana de frescura. En iOS, con el chat abierto al bloquear el teléfono, un 67 de hace diez minutos inclina el chat al volver, lo que se aparta de P3 | Una ventana de frescura de unos 10 s sobre `createdAt`, con la hora del teléfono corregida por `.info/serverTimeOffset`, que cumple P3 en ese caso a cambio de un método nuevo en `ChatRepositoryContract` y de perder un 67 en vivo que tarde más que la ventana | RF-67-6 |
 | D11 | Envío fallido | El tambaleo de quien envía corre con el eco local de Firebase, aunque el envío falle después | Esperar la confirmación del servidor, con el retraso de la red | RF-67-6 |
-| D12 | Rótulo | Píldora centrada sobre el área inclinada, mensajes y barra juntos, que no se inclina, en `cardBg` con borde naranja y texto de 28 px, durante 2000 ms | Rótulo arriba, bajo el AppBar, centrado solo sobre la lista de mensajes o con la cara de Ulises | RF-67-7 |
+| D12 | Rótulo | Píldora centrada sobre el área inclinada, que es toda la pantalla del chat con su AppBar, sin la parte que tapa el teclado, y que no se inclina, en `cardBg` con borde naranja y texto de 28 px, durante 2000 ms | Rótulo arriba, bajo el AppBar, centrado solo sobre la lista de mensajes o con la cara de Ulises | RF-67-7 |
 | D13 | Stream del chat de sección | `ChatPage` lo crea una vez y lo guarda. Cambia cómo se cumple RF-CHAT-2, sin cambiar lo que se ve | Dejarlo como hoy, con el detector a salvo pero con la lista que se recarga en cada reconstrucción de la página | RF-67-6 |
 | D14 | Pruebas | La carpeta `test/six_seven/` y un `ChatbotService` inyectable en `ChatbotController` | Otra carpeta, o un binding de GetX para el chatbot | RF-67-5 y «Pruebas» |
 | D15 | Foco al enviar con la tecla del teclado en el chat de Ulises | Como hoy, la tecla quita el foco y cierra el teclado, y un 67 enviado así tambalea mientras el teclado se cierra | Conservar el foco con un `onEditingComplete` que no lo suelte, lo que deja el teclado abierto con cualquier pregunta enviada con esa tecla y cambia el chat de Ulises más allá del truco | RF-67-2 |
@@ -495,7 +542,11 @@ como en `test/HU23_jeff/chat_repo_falso.dart`, porque el repo es público.
   después de terminar dispara otro.
 - Un hijo con estado no se vuelve a montar ni pierde su estado al empezar ni al terminar el
   tambaleo.
-- El área inclinada está dentro de un `ClipRect` y su hijo dentro de un `RepaintBoundary`.
+- El área inclinada está dentro de un `ClipRect`, su hijo dentro de un `RepaintBoundary` y el
+  fondo que pinta debajo es `pageBg`, en claro y en oscuro.
+- Con 260 pt de teclado (`viewInsets`) en 375 × 667, el giro es alrededor del centro de lo que
+  queda a la vista, con el origen del `Transform` en (0, −130), y el rótulo se centra en
+  (187,5; 203,5).
 - Con `disableAnimations` en el `MediaQuery` no hay giro en ningún momento, y con `reduceMotion`
   en las funciones de accesibilidad de prueba
   (`tester.platformDispatcher.accessibilityFeaturesTestValue`) tampoco.
@@ -522,9 +573,11 @@ Salvo que el caso diga otra cosa, usa la superficie de 800 × 600 de `flutter_te
 izquierda.
 
 - Enviar «67» con el botón muestra la burbuja del alumno «67» y la de Ulises «SIX SEVEN!!!», no
-  muestra «escribiendo…» ni avisos, e inclina el área del chat y no el AppBar ni la lista de
-  conversaciones. Después de la carga, el servicio falso no recibe ninguna llamada, ni `ask`, ni
-  `listSessions`, ni `getSession`, ni `createSession`, ni `deleteSession`.
+  muestra «escribiendo…» ni avisos, e inclina el panel del chat con su tramo de barra, con
+  «ULimaBot», el botón «Nueva conversación» y el campo, y no la lista de conversaciones ni la
+  flecha de volver de su tramo (D4). Después de la carga, el servicio falso no recibe ninguna
+  llamada, ni `ask`, ni `listSessions`, ni `getSession`, ni `createSession`, ni
+  `deleteSession`.
 - Enviar «¡Six-Seven!» con la tecla del teclado
   (`tester.testTextInput.receiveAction(TextInputAction.send)`) hace lo mismo, y el campo queda sin
   foco, como hoy con cualquier pregunta enviada con esa tecla (RF-67-2 y D15).
@@ -536,9 +589,10 @@ izquierda.
 - Volver a cargar la conversación quita las dos burbujas locales.
 - Con movimiento reducido aparecen las dos burbujas y no hay giro.
 - En un teléfono, con la superficie de prueba en 375 × 667 (`tester.view.physicalSize` y
-  `tester.view.devicePixelRatio`), porque la de 800 × 600 cuenta como ancha, enviar «67»,
-  esperar a que termine el tambaleo, volver a la lista con la flecha del AppBar y abrir de nuevo
-  la conversación vuelve a montar `_ChatArea` sin inclinar nada (RF-67-5, «Abrir el chat no
+  `tester.view.devicePixelRatio`), porque la de 800 × 600 cuenta como ancha, enviar «67»
+  inclina toda la pantalla, también el AppBar con «ULimaBot» y la flecha (D4). Esperar a que
+  termine el tambaleo, volver a la lista con la flecha del AppBar y abrir de nuevo la
+  conversación vuelve a montar `_ChatArea` sin inclinar nada (RF-67-5, «Abrir el chat no
   dispara»).
 
 ### `test/six_seven/chat_seccion_seis_siete_test.dart` (de widget, RF-67-6 y RF-67-7)
@@ -546,8 +600,8 @@ izquierda.
 Monta `ChatPage` con `ChatRepoFalso` y le empuja listas en vivo.
 
 - Un historial con «67» no inclina ni muestra el rótulo.
-- Un «67» ajeno que llega en vivo inclina el chat y muestra «SIX SEVEN!!!», y a los 2000 ms no
-  queda ninguno de los dos.
+- Un «67» ajeno que llega en vivo inclina toda la pantalla, también el AppBar con el nombre del
+  curso (D4), y muestra «SIX SEVEN!!!», y a los 2000 ms no queda ninguno de los dos.
 - Con `sesionDocente`, un «67» ajeno que llega en vivo también inclina el chat y muestra el
   rótulo (D9).
 - Si el autor borra su «67» a los 500 ms y el stream lo trae como lápida con el mismo id, el
@@ -587,10 +641,14 @@ devolviendo `Stream.value(messages)`, así que ninguna prueba existente cambia.
 - `flutter test --no-pub`, con la suite completa, porque el cambio toca `chat_page.dart` y el
   controller del chatbot.
 - Una revisión manual en un iPhone SE, en claro y en oscuro, del chat de Ulises y de un chat de
-  sección, con el teclado abierto y cerrado y con «Reducir movimiento» encendido y apagado. En el
+  sección, con el teclado abierto y cerrado y con «Reducir movimiento» encendido y apagado. El
+  AppBar se inclina con el chat, y la barra de estado y el teclado quedan quietos (D4). En el
   chat de Ulises, el 67 se envía con el botón y con la tecla del teclado, que cierra el teclado
   como hoy (RF-67-2). Con «Reducir movimiento» no debe haber giro y el rótulo no debe animarse,
   pero las burbujas de Ulises y el desplazamiento de las listas siguen animados como hoy
   (RF-67-4), y eso no cuenta como falla. En el chat de sección, con dos teléfonos en la misma
   sección, para ver el 67 en vivo en los dos. En un Android, la misma revisión con «Quitar
   animaciones».
+- La pantalla ancha del chat de Ulises, que el iPhone SE en vertical no muestra porque pide más
+  de 600 pt de ancho (`chatbot_page.dart:72`), se revisa en un simulador de iPad. Ahí el panel
+  del chat se inclina con su tramo de barra y la lista de conversaciones queda quieta (D4).
