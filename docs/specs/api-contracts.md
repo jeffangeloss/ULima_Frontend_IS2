@@ -161,7 +161,7 @@ Perfil completo del estudiante autenticado.
   }
   ```
 - **Campos que la app lee.** El backend manda además `carrera_id`, `is_active` y `display_order` (`findSpecialtiesByCareerId` del backend), y la app lee `id`, `carrera_id`, `name`, `description`, `is_active` y `display_order` (`setup_carrera_controller.dart` y `perfil.dart`).
-- **Solo lo oficial** *(propuesta del 2026-09-25, BR-AP-07 de la spec de Academic Profile del backend, pendiente de aprobación)*. Con `careerId` y sin él, la lista trae solo las especialidades con `is_active = true`, que en Ingeniería de Sistemas son los cuatro diplomas oficiales. `is_active` sigue en cada elemento, ahora siempre `true`, y `display_order` se numera después del filtro. La app conserva su filtro `is_active == true` como defensa (RF-TEST-14 de `specs/features/specialty-test/specialty-test.spec.md`).
+- **Solo lo oficial** *(aprobado el 2026-09-25 con la spec del test de especialidad, BR-AP-07 de la spec de Academic Profile del backend, pendiente de implementar)*. Con `careerId` y sin él, la lista trae solo las especialidades con `is_active = true`, que en Ingeniería de Sistemas son los cuatro diplomas oficiales. `is_active` sigue en cada elemento, ahora siempre `true`, y `display_order` se numera después del filtro. La app conserva su filtro `is_active == true` como defensa (RF-TEST-14 de `specs/features/specialty-test/specialty-test.spec.md`).
 
 ### PUT /academic-profile/me/specialties
 
@@ -186,7 +186,7 @@ Reemplaza las especialidades activas del estudiante autenticado. Escribe en `stu
   }
   ```
 - **Errors**: `400` `INVALID_BODY`, `404` `SPECIALTY_NOT_FOUND`, `409` `DUPLICATE_PRIMARY`
-- **Solo lo oficial y reemplazo atómico** *(propuesta del 2026-09-25, BR-AP-07 y BR-AP-08 del backend, pendiente de aprobación)*. `404 SPECIALTY_NOT_FOUND` también para una especialidad que existe pero tiene `is_active = false`, con el mismo mensaje que una de otra carrera. El desactivado, los `upsert` y la marca de `specialty_setup_completed` corren en una sola transacción. La forma de la ruta no cambia. La app nunca manda un id que no esté en el catálogo oficial (RF-TEST-14) y usa esta ruta para «Elegir como principal» y para los corazones del resultado del test (RF-TEST-9).
+- **Solo lo oficial y reemplazo atómico** *(aprobado el 2026-09-25 con la spec del test de especialidad, BR-AP-07 y BR-AP-08 del backend, pendiente de implementar)*. `404 SPECIALTY_NOT_FOUND` también para una especialidad que existe pero tiene `is_active = false`, con el mismo mensaje que una de otra carrera. El desactivado, los `upsert` y la marca de `specialty_setup_completed` corren en una sola transacción. La forma de la ruta no cambia. La app nunca manda un id que no esté en el catálogo oficial (RF-TEST-14) y usa esta ruta para «Elegir como principal» y para los corazones del resultado del test (RF-TEST-9).
 
 Notas:
 
@@ -602,9 +602,9 @@ Alumno (`requireRole(student|delegate|subdelegate)`); el alumno sale del token y
 
 En la app, `TimeBlocksService` es el único que llama a estas siete rutas. El mensaje de un error del servidor se muestra tal cual llega (RF-BLQ-2); un fallo sin mensaje —red caída o plazo vencido— se muestra como "No se pudo guardar tu bloque. Inténtalo de nuevo.", y en ese caso la app vuelve a pedir su ventana, porque la escritura pudo quedar guardada. Los ejemplos usan datos inventados.
 
-## Specialty Test (test de especialidad), PROPUESTO y pendiente de aprobación
+## Specialty Test (test de especialidad), aprobado el 2026-09-25 y pendiente de implementar
 
-Test que conduce Ulises y que recomienda uno de los cuatro diplomas oficiales. El backend sirve el contenido versionado, calcula el puntaje con la fórmula del contenido, decide los desempates, pide a Cohere el motivo con respaldo de plantillas y guarda solo el último resultado del alumno. Ver `specs/features/specialty-test/specialty-test.spec.md` (RF-TEST-1 a RF-TEST-14) y, en el backend, RS-BE-37 a RS-BE-47 de `ULima_Backend_IS2/specs/features/specialty-test/specialty-test.spec.md` (rama `feat/test-especialidad`). El resultado vive en `student_specialty_test_result` (migración `0014` del backend, cambio de BD pendiente de la aprobación del dueño).
+Test que conduce Ulises y que recomienda uno de los cuatro diplomas oficiales. El backend sirve el contenido versionado, calcula el puntaje con la fórmula del contenido, decide los desempates, pide a Cohere el motivo con respaldo de plantillas y guarda solo el último resultado del alumno. Ver `specs/features/specialty-test/specialty-test.spec.md` (RF-TEST-1 a RF-TEST-14) y, en el backend, RS-BE-37 a RS-BE-47 de `ULima_Backend_IS2/specs/features/specialty-test/specialty-test.spec.md` (rama `feat/test-especialidad`). El dueño aprueba las dos specs el 2026-09-25, con los íconos de Lucide por tarea de la versión `2026-09-25.4` del contenido. El resultado vive en `student_specialty_test_result`, la tabla de la migración `0014` del backend, un cambio de BD que el dueño aprueba con las specs. Aplicar la `0014` en producción pide además, en el momento del despliegue, el respaldo y el permiso explícito del dueño.
 
 Las tres rutas comparten estas reglas.
 
@@ -622,7 +622,7 @@ Contenido de la versión vigente, con lo necesario para conducir el test sin red
 - **Response** `200 OK` (recortado):
   ```json
   {
-    "version": "2026-09-25.3",
+    "version": "2026-09-25.4",
     "specialties": [
       {
         "key": "sw", "specialtyId": 1, "name": "Ingeniería de Software",
@@ -651,17 +651,17 @@ Contenido de la versión vigente, con lo necesario para conducir el test sin red
     ],
     "questions": [
       { "id": "q01", "n": 1, "type": "duel", "prompt": "¿Cuál harías con más ganas?",
-        "top": { "id": "q01.top", "specialty": "sw", "text": "…", "illustration": "…" },
-        "bottom": { "id": "q01.bottom", "specialty": "si", "text": "…", "illustration": "…" },
+        "top": { "id": "q01.top", "specialty": "sw", "text": "…", "illustration": "…", "icon": "shopping-cart" },
+        "bottom": { "id": "q01.bottom", "specialty": "si", "text": "…", "illustration": "…", "icon": "shelving-unit" },
         "reaction": "…" },
       { "id": "q04", "n": 4, "type": "scale", "prompt": "¿Cuánto te gustaría hacer esto?",
-        "task": { "id": "q04.task", "specialty": "ti", "text": "…", "illustration": "…" },
+        "task": { "id": "q04.task", "specialty": "ti", "text": "…", "illustration": "…", "icon": "drumstick" },
         "blockClose": "Primer tramo listo. Van 4 de 14." }
     ]
   }
   ```
-- **Qué no viaja**: el nombre del ícono en Flutter (`icon.flutter`), resúmenes y electivos de cada tarea, pesos, umbral, plantillas del motivo, líneas de Ulises del resultado salvo la de espera (`ulises.loading`), líneas del desempate, desempates, ejemplos, balance y fuentes. Son del cálculo y del motivo, que hace el servidor.
-- **En la app**: `SpecialtyTestService.fetchContent()` lo pide una vez por cada apertura de `/test-especialidad`, y en la primera apertura desde el asistente ese pedido es la precarga del paso de carrera. «Rehacer el test» sigue con la misma copia, que queda en memoria durante la sesión (RF-TEST-2). La app usa `specialty` de cada tarea solo para encender la tarjeta tocada; antes del toque las tarjetas son neutras. `illustration` no se muestra. `icon` se traduce a un ícono de `lucide_icons_flutter` y uno desconocido cae a un ícono neutro. Un contenido que no pasa la validación del modelo cuenta como error de carga.
+- **Qué no viaja**: el nombre del ícono en Flutter (`icon.flutter`) de cada especialidad y de cada tarea, resúmenes y electivos de cada tarea, pesos, umbral, plantillas del motivo, líneas de Ulises del resultado salvo la de espera (`ulises.loading`), líneas del desempate, desempates, ejemplos, balance y fuentes. Son del cálculo y del motivo, que hace el servidor.
+- **En la app**: `SpecialtyTestService.fetchContent()` lo pide una vez por cada apertura de `/test-especialidad`, y en la primera apertura desde el asistente ese pedido es la precarga del paso de carrera. «Rehacer el test» sigue con la misma copia, que queda en memoria durante la sesión (RF-TEST-2). La app usa `specialty` de cada tarea solo para encender la tarjeta tocada; antes del toque las tarjetas son neutras. `illustration` no se muestra. El `icon` de cada especialidad y de cada tarea es la cadena de `icon.lucide` del contenido, y la app lo traduce con un mapa cerrado de nombres a `LucideIcons` (`lucide_icons_flutter` 3.1.15), con `LucideIcons.sparkles` para un nombre fuera del mapa o ausente. El ícono de la tarea va en color neutro hasta que el alumno toca su tarjeta del duelo, y en la escala nunca toma el color de su especialidad (RF-TEST-5 y RF-TEST-6). Un contenido que no pasa la validación del modelo cuenta como error de carga.
 
 ### POST /specialty-test/me/evaluate
 
@@ -670,7 +670,7 @@ Evaluación sin estado. Recibe todas las respuestas dadas hasta ese momento y de
 - **Body** (hasta 4 KiB):
   ```json
   {
-    "version": "2026-09-25.3",
+    "version": "2026-09-25.4",
     "answers": {
       "q01": "bottom", "q02": "bottom", "q03": "both", "q04": "nada", "q05": "top",
       "q06": "top", "q07": "top", "q08": "bastante", "q09": "top", "q10": "top",
@@ -679,13 +679,13 @@ Evaluación sin estado. Recibe todas las respuestas dadas hasta ese momento y de
     "tiebreakAnswers": [ { "id": "tb-si-vj-1", "answer": "bottom" } ]
   }
   ```
-- **Response** `200 OK` cuando toca un desempate: `{ "status": "tiebreak", "tiebreak": { "id", "order", "prompt", "top", "bottom" }, "ulisesLine": "…" }`, con `top` y `bottom` en la misma forma que las tareas del contenido.
+- **Response** `200 OK` cuando toca un desempate: `{ "status": "tiebreak", "tiebreak": { "id", "order", "prompt", "top", "bottom" }, "ulisesLine": "…" }`, con `top` y `bottom` en la misma forma que las tareas del contenido, `icon` incluido.
 - **Response** `200 OK` con el resultado final:
   ```json
   {
     "status": "result",
     "result": {
-      "version": "2026-09-25.3",
+      "version": "2026-09-25.4",
       "completedAt": "2026-09-25T20:15:00.000Z",
       "tie": false,
       "ranking": [

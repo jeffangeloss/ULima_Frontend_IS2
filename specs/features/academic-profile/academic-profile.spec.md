@@ -9,10 +9,10 @@ targets:
 
 # Academic Profile
 
-> **Enmienda propuesta el 2026-09-25 por `specs/features/specialty-test/specialty-test.spec.md`,
-> pendiente de la aprobación explícita del dueño.** Cambia el asistente de configuración y el
-> Perfil (ver «Enmienda propuesta por el test de especialidad» al final). Hasta la aprobación
-> rige el texto sin enmendar.
+> **Enmienda del 2026-09-25 por `specs/features/specialty-test/specialty-test.spec.md`,
+> aprobada por el dueño ese día junto con esa spec y pendiente de implementar.** Cambia el
+> asistente de configuración y el Perfil (ver «Enmienda por el test de especialidad» al final).
+> Hasta que se implemente, el código sigue el texto sin enmendar.
 
 ## User Stories
 
@@ -146,10 +146,10 @@ The following files are no longer referenced by the academic profile feature:
 | `assets/data/` | 🗑️ Eliminado | El directorio `assets/data/` no existe en el proyecto. |
 | `lib/services/user_service.dart` | 🗑️ Legacy | Servicio que llama a `GET /academic-profile/users` — endpoint no implementado en backend. |
 
-## Enmienda propuesta por el test de especialidad
+## Enmienda por el test de especialidad
 
-Propuesta del 2026-09-25, pendiente de la aprobación del dueño. El detalle está en
-`specs/features/specialty-test/specialty-test.spec.md`.
+Del 2026-09-25, aprobada por el dueño ese día junto con la spec del test y pendiente de
+implementar. El detalle está en `specs/features/specialty-test/specialty-test.spec.md`.
 
 - **Asistente (RF-TEST-1).** Los pasos pasan a ser carrera, test de especialidad y selección
   manual. Sale el paso «Decisión» con sus tres opciones. El test vive en la ruta
