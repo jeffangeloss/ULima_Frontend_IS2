@@ -46,7 +46,10 @@ class ChatbotController extends GetxController {
       final data = await _service.getSession(sessionId);
       final List<dynamic> msgsRaw = data['messages'] ?? [];
       final List<ChatbotMessage> msgs = msgsRaw
-          .map((item) => ChatbotMessage.fromJson(Map<String, dynamic>.from(item as Map)))
+          .map(
+            (item) =>
+                ChatbotMessage.fromJson(Map<String, dynamic>.from(item as Map)),
+          )
           .toList();
       messages.assignAll(msgs);
     } catch (e) {
@@ -96,12 +99,14 @@ class ChatbotController extends GetxController {
     // Optimista: el mensaje del usuario aparece de INMEDIATO (antes se agregaba
     // recién al llegar la respuesta, así que desaparecía mientras el bot pensaba).
     final now = DateTime.now();
-    messages.add(ChatbotMessage(
-      id: now.millisecondsSinceEpoch.toString(),
-      role: 'user',
-      content: question,
-      createdAt: now,
-    ));
+    messages.add(
+      ChatbotMessage(
+        id: now.millisecondsSinceEpoch.toString(),
+        role: 'user',
+        content: question,
+        createdAt: now,
+      ),
+    );
     isTyping.value = true;
 
     try {
@@ -112,12 +117,14 @@ class ChatbotController extends GetxController {
         localGrades: localGrades,
       );
 
-      messages.add(ChatbotMessage(
-        id: (DateTime.now().millisecondsSinceEpoch + 1).toString(),
-        role: 'assistant',
-        content: answer,
-        createdAt: DateTime.now(),
-      ));
+      messages.add(
+        ChatbotMessage(
+          id: (DateTime.now().millisecondsSinceEpoch + 1).toString(),
+          role: 'assistant',
+          content: answer,
+          createdAt: DateTime.now(),
+        ),
+      );
     } catch (e) {
       debugPrint('Error sending question: $e');
       final msg = _extractErrorMessage(e);
@@ -157,13 +164,20 @@ class ChatbotController extends GetxController {
         return {
           'id': curso['id']?.toString() ?? '',
           'nombre': curso['nombre']?.toString() ?? '',
-          'notas': (curso['notas'] as List?)?.map((nota) {
-            return {
-              'titulo': nota['titulo']?.toString() ?? '',
-              'peso': (nota['peso'] is int) ? nota['peso'] : int.tryParse(nota['peso']?.toString() ?? '0') ?? 0,
-              'valor': (nota['valor'] is double) ? nota['valor'] : double.tryParse(nota['valor']?.toString() ?? '0') ?? 0.0,
-            };
-          }).toList() ?? [],
+          'notas':
+              (curso['notas'] as List?)?.map((nota) {
+                return {
+                  'titulo': nota['titulo']?.toString() ?? '',
+                  'peso': (nota['peso'] is int)
+                      ? nota['peso']
+                      : int.tryParse(nota['peso']?.toString() ?? '0') ?? 0,
+                  'valor': (nota['valor'] is double)
+                      ? nota['valor']
+                      : double.tryParse(nota['valor']?.toString() ?? '0') ??
+                            0.0,
+                };
+              }).toList() ??
+              [],
         };
       }).toList();
     } catch (e) {
@@ -174,7 +188,8 @@ class ChatbotController extends GetxController {
 
   String _extractErrorMessage(dynamic e) {
     if (e is Map && e.containsKey('error')) {
-      return e['error']?['message']?.toString() ?? 'No se pudo obtener respuesta. Intenta de nuevo.';
+      return e['error']?['message']?.toString() ??
+          'No se pudo obtener respuesta. Intenta de nuevo.';
     }
     return 'No se pudo obtener respuesta. Intenta de nuevo.';
   }
