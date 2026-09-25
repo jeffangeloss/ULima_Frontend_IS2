@@ -90,8 +90,9 @@ Diseno de dos paneles en desktop/tablet, o navegacion apilada en movil:
   3. Se llama a `POST /chatbot/sessions/:id/ask` con `{ question, localGrades }`.
   4. Al recibir respuesta, se reemplaza el indicador con el mensaje `assistant`.
   5. Si es error, se muestra snackbar y se mantiene el mensaje del usuario.
-- Si la pregunta es un 67 (RF-67-1 de `specs/features/six-seven/six-seven.spec.md`), no se da
-  ninguno de los cinco pasos anteriores y rige RF-67-5 de esa spec.
+- Si la pregunta es un 67 (RF-67-1 de `specs/features/six-seven/six-seven.spec.md`), se da solo
+  el paso 1, con la burbuja local del alumno, y no se dan los pasos 2 a 5. Rige RF-67-5 de esa
+  spec, que suma en el mismo instante la burbuja local de Ulises con «SIX SEVEN!!!».
 
 ### Logica de notas locales
 

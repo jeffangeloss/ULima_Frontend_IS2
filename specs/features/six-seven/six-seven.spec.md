@@ -64,6 +64,14 @@ Diagnóstico sobre `41ff0a6`.
   evento.
 - Los dos chats usan el `Scaffold` con el cuerpo que se achica cuando se abre el teclado, y su
   fondo es `MaterialTheme.pageBg` (`chatbot_page.dart:23` y `chat_page.dart:320`).
+- En el chat de Ulises, la tecla de enviar del teclado ya cierra el teclado hoy, con cualquier
+  pregunta. El campo usa `TextInputAction.send` con `onSubmitted` y sin `onEditingComplete`
+  (`chatbot_page.dart:452` y `:469`), y en Flutter 3.47.2 `EditableText._finalizeEditing` llama a
+  `focusNode.unfocus()` para `send` antes de llamar a `onSubmitted`
+  (`packages/flutter/lib/src/widgets/editable_text.dart:3752` y `:3941-3947` del SDK). El botón
+  de enviar no toca el foco. En el chat de sección, el campo es multilínea y usa la acción
+  `newline` por defecto, así que la tecla del teclado escribe un salto de línea y solo el botón
+  envía (`chat_page.dart:600-619`).
 - La app detecta el movimiento reducido solo con `MediaQuery.disableAnimations`, por ejemplo en
   `chatbot_page.dart:272` y `:597`. En el Flutter del proyecto (3.47.2) esa marca corresponde a
   «Quitar animaciones» de Android. El «Reducir movimiento» de iOS llega aparte, en
@@ -139,16 +147,24 @@ envuelve la interfaz del chat y la inclina de un lado a otro, como el gesto de l
   `RepaintBoundary`, para que cada cuadro del tambaleo solo vuelva a componer la capa girada y no
   repinte los mensajes.
 - **Teclado y foco.** El giro es solo de pintura y no cambia el layout, los `viewInsets`, el foco
-  ni el texto del campo. Si el teclado está abierto, sigue abierto y quieto, porque es del sistema
-  y no se dibuja dentro de la app. Si está cerrado, sigue cerrado. Ningún paso del truco llama a
-  `unfocus` ni pide el foco.
+  ni el texto del campo. Ningún paso del truco llama a `unfocus` ni pide el foco, así que el
+  teclado queda como lo deja el envío de hoy. Con el botón de enviar, en los dos chats, el teclado
+  abierto sigue abierto y quieto, porque es del sistema y no se dibuja dentro de la app, y el
+  cerrado sigue cerrado. Con la tecla de enviar del teclado, en el chat de Ulises, el teclado se
+  cierra como hoy con cualquier pregunta («Contexto»), y el truco no cambia eso. Un 67 enviado
+  con esa tecla tambalea mientras el teclado se cierra, y en un iPhone SE el área inclinada crece
+  durante el giro de unos 331 a unos 591 pt de alto. Conservar el foco en ese envío es el punto
+  D15. En el chat de sección no aplica, porque su tecla no envía.
 - **Scroll.** El tambaleo no cambia la posición del scroll, no reemplaza su controlador y no corta
   un arrastre ni un desplazamiento en curso. Durante el tambaleo, los toques y los arrastres
   llegan a lo que se ve inclinado, como en cualquier `Transform`.
 - **Al salir.** Si el usuario sale del chat en medio del tambaleo, la animación se descarta con el
   widget, sin errores ni animaciones pendientes.
-- **Duración.** Con 2000 ms queda por debajo de los 5 s del criterio 2.2.2 de WCAG, que pide una
-  forma de pausar las animaciones más largas.
+- **Duración.** Cada tambaleo dura 2000 ms, por debajo de los 5 s del criterio 2.2.2 de WCAG, que
+  pide una forma de pausar las animaciones más largas. En un chat de sección, varias personas
+  pueden encadenar 67, y como el siguiente dispara apenas termina el anterior (RF-67-3), el
+  movimiento puede sumar más de 5 s casi sin pausa. D5 deja a la vista el enfriamiento que evita
+  ese caso.
 
 Prueba por escribir `test/six_seven/tambaleo_seis_siete_test.dart`, y la curva en
 `test/six_seven/seis_siete_test.dart`.
@@ -175,10 +191,15 @@ Prueba por escribir `test/six_seven/tambaleo_seis_siete_test.dart`.
   movimiento» en iOS.
 - Las marcas se leen en el momento del disparo. Cambiar el ajuste en medio de un tambaleo no lo
   corta.
-- Con movimiento reducido, en el chat de Ulises solo aparecen las dos burbujas (RF-67-5), con la
-  entrada sin animación que la pantalla ya tiene (`chatbot_page.dart:597`). En el chat de sección,
-  el rótulo aparece de golpe, sin fundido ni escala, y desaparece de golpe a los 2000 ms
-  (RF-67-7).
+- Con movimiento reducido, en el chat de Ulises solo aparecen las dos burbujas (RF-67-5), sin
+  giro. En Android, con «Quitar animaciones», entran sin animación, como la pantalla ya hace con
+  cualquier burbuja (`chatbot_page.dart:597`). En iOS, con «Reducir movimiento», queda la entrada
+  de hoy, porque esas animaciones solo leen `disableAnimations` («Qué NO entra»). Cada burbuja
+  entra con el deslizamiento de 280 ms (`chatbot_page.dart:583` y `:598-611`) y la lista baja al
+  fondo con `animateTo` (`:272`). En el chat de sección, el rótulo aparece de golpe, sin fundido
+  ni escala, y desaparece de golpe a los 2000 ms (RF-67-7), y el desplazamiento al último mensaje
+  queda como hoy (`chat_page.dart:276-286`). Nada de esto cuenta como falla en la revisión manual
+  («Verificación»), que solo comprueba que no haya giro y que el rótulo no se anime.
 - Los 2000 ms no se acortan con «Quitar animaciones». Como Flutter acorta al 5 % los
   `AnimationController` con `AnimationBehavior.normal`, el truco mide su duración con
   `AnimationBehavior.preserve` o con un `Timer`, nunca con un controller normal.
@@ -191,12 +212,19 @@ Prueba por escribir `test/six_seven/tambaleo_seis_siete_test.dart`.
   antes que cualquier otro paso, con las mismas condiciones de hoy, que son una conversación
   activa y un texto no vacío (`chatbot_controller.dart:93-94`). El envío sigue pasando por
   `_submit`, que no deja enviar mientras Ulises escribe, así que el botón y la tecla de enviar del
-  teclado siguen el mismo camino.
+  teclado siguen el mismo camino. La tecla, además, cierra el teclado como hoy (RF-67-2).
 - **Qué pasa.** Si la pregunta es un 67, el controller agrega a `messages`, en este orden y en el
   mismo instante, la burbuja del alumno con el texto tal como lo envía, ya recortado por
   `_submit`, y la de Ulises con «SIX SEVEN!!!», con `role` igual a `assistant`. Las dos llevan un
   id local que empieza con `local-`, distinto de cualquier id del backend. Después sube su
-  contador de disparos, un `RxInt` que lee el `TambaleoSeisSiete` que envuelve `_ChatArea`.
+  contador de disparos, `disparosSeisSiete`, un `RxInt` que lee el `TambaleoSeisSiete` de la
+  columna de `_ChatArea`.
+- **Dónde se envuelve.** En un solo sitio, `_ChatAreaState.build`, que envuelve su columna de
+  mensajes y barra (`chatbot_page.dart:306-362`) con un `Obx` que solo lee `disparosSeisSiete`. La
+  columna se construye fuera del `Obx` y le llega ya hecha, así que cada subida del contador
+  reconstruye solo el envoltorio y no `_ChatArea`, su lista ni su campo (RF-67-2, «Árbol
+  estable»). `_buildBody` no cambia, ni en pantalla ancha (`chatbot_page.dart:101`) ni en
+  teléfono (`:110`).
 - **Qué no pasa.** No enciende «escribiendo…», no lee las notas locales, no llama a
   `POST /chatbot/sessions/:id/ask` ni a ningún otro endpoint, tampoco al refresco de la lista de
   conversaciones (`chatbot_controller.dart:135`), y no muestra avisos. Como el backend no recibe
@@ -206,6 +234,10 @@ Prueba por escribir `test/six_seven/tambaleo_seis_siete_test.dart`.
   conversación se vuelve a cargar del backend, al cambiar de conversación o al volver a abrir el
   chat, porque `loadMessages` reemplaza la lista (`chatbot_controller.dart:51`). Ulises tampoco
   las recuerda en sus respuestas siguientes, porque su contexto sale del historial del backend.
+  Un 67 enviado mientras carga una conversación también pierde sus burbujas cuando llega el
+  historial, porque la barra sigue visible sobre el esqueleto (`chatbot_page.dart:309-312` y
+  `:355-360`) y `loadMessages` reemplaza la lista al terminar. Una pregunta normal tiene hoy la
+  misma carrera, y esta spec no la cambia.
 - **Scroll.** Las dos burbujas nuevas llevan la lista al fondo con los workers de siempre
   (`chatbot_page.dart:254-255`), y el tambaleo corre al mismo tiempo sin cambiar ese
   desplazamiento.
@@ -233,6 +265,12 @@ Prueba por escribir `test/six_seven/chatbot_seis_siete_test.dart`.
   cada `build`, en lugar de pedir un stream nuevo en cada construcción (`chat_page.dart:380`).
   Así una reconstrucción de la página, por el truco o por cualquier otra causa, no vuelve a
   suscribirse, no muestra el indicador de carga y no reemplaza la lista ni su scroll.
+- **Un solo oyente.** El stream de `Query.onValue` de firebase_database 12.4.4 admite una sola
+  suscripción, porque `observe` es un `async*` en firebase_database_platform_interface 0.4.0+3
+  (`method_channel_query.dart:46-49`). Un `listen` propio más el `StreamBuilder` sobre la misma
+  instancia falla con «Stream has already been listened to». Por eso la instancia guardada ya
+  trae la revisión del detector, como `getMessages(sectionId).map(revisar)`, donde `revisar` pasa
+  la lista al detector y la devuelve sin cambios, y el `StreamBuilder` es su único oyente.
 - **Qué es nuevo.** Un detector, `DetectorSeisSiete` (`lib/pages/chat/chat_seis_siete.dart`),
   guarda los ids que la página ya tiene vistos y no depende de Flutter. La primera lista que
   llega después de abrir el chat es el historial, así que solo marca sus ids como vistos y nunca
@@ -240,25 +278,45 @@ Prueba por escribir `test/six_seven/chatbot_seis_siete_test.dart`.
   figura en ninguna lista anterior de esta página. La lista dispara si al menos uno de los nuevos
   no está borrado, no es un carnet y su cuerpo cumple `esSeisSiete`. Todos los ids nuevos quedan
   como vistos, disparen o no.
-- **Dónde se revisa.** Cada lista se revisa una sola vez, cuando llega del stream, y nunca dentro
-  de `build`. Si dispara, la página sube un contador propio, un `ValueNotifier<int>`, y un
-  `ValueListenableBuilder` pasa ese valor al envoltorio sin reconstruir el resto de la página.
+- **Dónde se revisa.** Cada lista se revisa una sola vez, cuando llega del stream, dentro de ese
+  `map`, y nunca dentro de `build`. Si dispara, la página sube un contador propio, un
+  `ValueNotifier<int>`, y un `ValueListenableBuilder` pasa ese valor al envoltorio sin reconstruir
+  el resto de la página.
 - **Quién lo ve.** Quien envía el 67 lo ve porque Firebase entrega el mensaje propio al stream
   apenas se escribe, y quien tiene el chat abierto, cuando el mensaje le llega en vivo. Quien abre
   el chat después solo ve el mensaje en el historial, sin tambaleo ni rótulo. Rige para todos los
   roles de la sección, también el docente.
 - **Lo que no dispara.** Un mensaje ya visto que vuelve en otro evento, como cuando se borra otro
-  mensaje y el stream repite la lista. Una lápida nueva, aunque su cuerpo sea un 67. Un carnet.
-  Los mensajes de la primera lista.
+  mensaje y el stream repite la lista. Un 67 ya visto que vuelve como lápida con el mismo id,
+  como cuando su autor lo borra. Una lápida nueva, aunque su cuerpo sea un 67. Un carnet. Los
+  mensajes de la primera lista.
+- **Borrado durante el tambaleo.** Si el autor borra su 67 durante los 2000 ms, el mensaje vuelve
+  como lápida con un id ya visto, así que no dispara otra vez, y el tambaleo y el rótulo siguen
+  hasta terminar. La spec no los corta.
 - **Segundo plano.** Si la app no está en primer plano cuando llega el 67, es decir si
   `WidgetsBinding.instance.lifecycleState` vale `paused`, `hidden` o `detached`, la página revisa
-  la lista igual, para que sus ids queden vistos, pero no sube el contador. Así el tambaleo no
-  espera a que la app vuelva para correr sobre un mensaje viejo. Con el estado nulo o `inactive`,
-  el disparo sigue normal.
-- **Reconexión.** Los mensajes que llegan después de un corte de red cuentan como nuevos, porque su
-  id no figura en ninguna lista anterior de la página, y pueden disparar un tambaleo al
-  reconectar. La spec no agrega una ventana de frescura por la hora del mensaje, porque la hora
-  del teléfono puede estar corrida respecto de la del servidor.
+  la lista igual, para que sus ids queden vistos, pero no sube el contador. Con el estado nulo o
+  `inactive`, el disparo sigue normal. Esta regla solo cubre los eventos que llegan con la app en
+  segundo plano, lo que pasa sobre todo en Android, donde la conexión puede seguir viva un tiempo.
+- **Al volver a la app.** En iOS el sistema suspende la app y su conexión poco después de salir,
+  así que los mensajes enviados mientras el teléfono está bloqueado no llegan en ese momento.
+  Llegan después, cuando la app vuelve y se reconecta, ya en `inactive` o `resumed`, y con ids que
+  la página no tiene vistos. Con el valor por defecto de D10, si el chat queda abierto al
+  bloquear el teléfono, un 67 enviado diez minutos antes inclina el chat y muestra el rótulo al
+  volver. Ese caso se aparta de P3, que pide el tambaleo cuando el 67 llega en vivo y no al abrir
+  el historial, y D10 lo deja a la vista para que el dueño elija.
+- **Reconexión.** Lo mismo pasa después de un corte de red. Los mensajes que llegan al reconectar
+  cuentan como nuevos, porque su id no figura en ninguna lista anterior de la página, y pueden
+  disparar un tambaleo aunque tengan minutos.
+- **Ventana de frescura, la alternativa de D10.** Consiste en exigir además que el 67 sea
+  reciente, por ejemplo de menos de 10 s. Su `createdAt` lo fija el servidor con
+  `ServerValue.timestamp` (`chat_repository.dart:139`), y la hora del teléfono se corrige con
+  `.info/serverTimeOffset` de Realtime Database, que da el desfase entre el reloj del teléfono y
+  el del servidor, así que una hora corrida en el teléfono no altera la comparación. El eco
+  local del mensaje propio resuelve `ServerValue.timestamp` con esa misma estimación, y quien
+  envía lo ve igual. Su costo es un método nuevo en `ChatRepositoryContract` para leer el
+  desfase, con `lib/services/chat_repository.dart` entre los `targets`, y el riesgo de perder un
+  67 en vivo que tarde más que la ventana en una red lenta.
 - **Envío fallido.** Firebase entrega el mensaje propio antes de que el servidor lo confirme, así
   que el tambaleo de quien envía puede correr aunque después el envío falle y aparezca «No se pudo
   enviar el mensaje». Queda así a propósito, porque esperar la confirmación retrasa el truco en
@@ -274,9 +332,11 @@ pasajero sobre el chat y no como mensaje.
 
 - **Qué es.** Un texto de la pantalla que no se guarda, no se envía, no entra en la lista de
   mensajes y que nadie más recibe.
-- **Dónde.** Va centrado sobre el área de los mensajes, encima del área inclinada y fuera de
-  ella, así que no se inclina y se lee quieto. Lo pinta el mismo `TambaleoSeisSiete`, con un
-  parámetro que lo enciende solo en el chat de sección.
+- **Dónde.** Va centrado sobre el área inclinada entera, la lista de mensajes y la barra de
+  escritura juntas, pintado por encima de ella y fuera del giro, así que no se inclina y se lee
+  quieto. Lo pinta el mismo `TambaleoSeisSiete`, con un parámetro que lo enciende solo en el chat
+  de sección, y por eso su centro es el del envoltorio. Con el teclado abierto queda centrado en
+  el área visible, de unos 331 pt de alto en un iPhone SE.
 - **Aspecto.** Es una píldora con fondo `MaterialTheme.cardBg`, borde de 2 px en
   `MaterialTheme.iconoNaranja`, radio de 16 px, relleno de 20 px a los lados y 12 px arriba y
   abajo, y una sombra suave. El texto va en `textPrimary`, de 28 px, con `FontWeight.w900` y en
@@ -292,7 +352,8 @@ pasajero sobre el chat y no como mensaje.
 - **Toques.** No bloquea nada, porque va dentro de un `IgnorePointer`. Los toques, el scroll y el
   campo de texto siguen funcionando debajo.
 - **Lectores de pantalla.** Es una región viva (`Semantics` con `liveRegion: true`) con la
-  etiqueta «SIX SEVEN!!!», para que TalkBack lo anuncie.
+  etiqueta «SIX SEVEN!!!», para que TalkBack y VoiceOver lo anuncien, porque la documentación de
+  `SemanticsProperties.liveRegion` indica que en Android y en iOS genera un anuncio cortés.
 - En el chat de Ulises no hay rótulo, porque ahí el texto es la burbuja de Ulises (RF-67-5).
 
 Pruebas por escribir `test/six_seven/tambaleo_seis_siete_test.dart` y
@@ -307,12 +368,13 @@ Chat de Ulises
       sí -> messages += burbuja del alumno + burbuja de Ulises «SIX SEVEN!!!»
             -> disparosSeisSiete++ -> fin, sin backend
       no -> camino de hoy (ask, «escribiendo…», refresco de conversaciones)
-  Obx(disparosSeisSiete) -> TambaleoSeisSiete(_ChatArea)
+  _ChatAreaState.build -> Obx(disparosSeisSiete) -> TambaleoSeisSiete(columna de mensajes y barra)
 
 Chat de sección
-  getMessages, una vez por página -> cada lista -> DetectorSeisSiete.revisar(lista)
-    primera lista -> base, sin disparo
-    id nuevo, no borrado, no carnet, esSeisSiete, app en primer plano -> contador++
+  getMessages(...).map(revisar), una vez por página, con el StreamBuilder como único oyente
+    -> cada lista -> DetectorSeisSiete.revisar(lista)
+      primera lista -> base, sin disparo
+      id nuevo, no borrado, no carnet, esSeisSiete, app en primer plano -> contador++
   ValueListenableBuilder(contador) -> TambaleoSeisSiete(mensajes + barra, con rótulo)
 ```
 
@@ -363,7 +425,10 @@ mensaje es un 67. El chat de sección envía y escucha igual que hoy («Contrato
 ### Propuestas por defecto que esperan su aprobación
 
 El mismo día el dueño deja cuatro propuestas por defecto para que la spec las ponga a la vista.
-La spec las adopta tal cual, y ninguna cuenta como aprobada hasta que el dueño la apruebe.
+La spec las adopta tal cual, y ninguna cuenta como aprobada hasta que el dueño la apruebe. Con el
+valor por defecto de D10, P3 no se cumple en un caso, el de un 67 que llega al volver a la app o
+al reconectar, que inclina el chat aunque ya no sea en vivo (RF-67-6). D10 muestra la alternativa
+que sí lo cumple.
 
 | # | Propuesta | Dónde queda |
 | --- | --- | --- |
@@ -383,16 +448,17 @@ por defecto, y el dueño los confirma o los cambia al aprobarla.
 | D2 | Amplitud | ±3° | ±2°, más sutil, o ±5°, más marcado | RF-67-2 |
 | D3 | Ciclos, curva y sentido | 4 ciclos de seno en 2000 ms, de 500 ms cada uno, con el primero hacia la izquierda | 3 ciclos más lentos, o una envolvente que crece y se apaga | RF-67-2 |
 | D4 | Qué se inclina | La lista de mensajes y la barra de escritura juntas, alrededor de su centro, con el AppBar, el teclado y la lista de conversaciones quietos | Barra fija con solo la lista de mensajes inclinada, o toda la pantalla con el AppBar | RF-67-2 |
-| D5 | Varios 67 seguidos | Uno a la vez, sin reinicio, sin cola y sin enfriamiento. En el chat de Ulises, cada 67 recibe su burbuja | Reiniciar el tambaleo con cada 67, o un enfriamiento de unos segundos en los chats de sección | RF-67-3 |
+| D5 | Varios 67 seguidos | Uno a la vez, sin reinicio, sin cola y sin enfriamiento. En el chat de Ulises, cada 67 recibe su burbuja. En un chat de sección, varias personas pueden encadenar 67 y sumar más de 5 s de movimiento casi sin pausa, por encima de lo que pide el criterio 2.2.2 de WCAG | Reiniciar el tambaleo con cada 67, o un enfriamiento de unos segundos en los chats de sección, que evita ese movimiento encadenado | RF-67-2 y RF-67-3 |
 | D6 | Qué cuenta como movimiento reducido | «Quitar animaciones» de Android y «Reducir movimiento» de iOS | Solo `disableAnimations`, como el resto de la app, que en iOS no ve el ajuste | RF-67-4 |
 | D7 | Momento de la burbuja de Ulises | El mismo instante que la del alumno | Una pausa corta con «escribiendo…» antes de la burbuja | RF-67-5 |
 | D8 | Vida de las burbujas locales | Desaparecen al recargar la conversación, y Ulises no las recuerda | Guardarlas en el historial, que pide un cambio del backend | RF-67-5 |
 | D9 | Roles en los chats de sección | Todos, también el docente | Sin truco para el docente | RF-67-6 |
-| D10 | Segundo plano y reconexión | Un 67 que llega con la app en segundo plano no dispara, y los que llegan al reconectar sí | Una ventana de frescura por la hora del mensaje | RF-67-6 |
+| D10 | Segundo plano, vuelta a la app y reconexión | Un 67 que llega con la app en `paused`, `hidden` o `detached` no dispara, y los que llegan al volver a la app o al reconectar sí, sin ventana de frescura. En iOS, con el chat abierto al bloquear el teléfono, un 67 de hace diez minutos inclina el chat al volver, lo que se aparta de P3 | Una ventana de frescura de unos 10 s sobre `createdAt`, con la hora del teléfono corregida por `.info/serverTimeOffset`, que cumple P3 en ese caso a cambio de un método nuevo en `ChatRepositoryContract` y de perder un 67 en vivo que tarde más que la ventana | RF-67-6 |
 | D11 | Envío fallido | El tambaleo de quien envía corre con el eco local de Firebase, aunque el envío falle después | Esperar la confirmación del servidor, con el retraso de la red | RF-67-6 |
-| D12 | Rótulo | Píldora centrada que no se inclina, en `cardBg` con borde naranja y texto de 28 px, durante 2000 ms | Rótulo arriba, bajo el AppBar, o con la cara de Ulises | RF-67-7 |
+| D12 | Rótulo | Píldora centrada sobre el área inclinada, mensajes y barra juntos, que no se inclina, en `cardBg` con borde naranja y texto de 28 px, durante 2000 ms | Rótulo arriba, bajo el AppBar, centrado solo sobre la lista de mensajes o con la cara de Ulises | RF-67-7 |
 | D13 | Stream del chat de sección | `ChatPage` lo crea una vez y lo guarda. Cambia cómo se cumple RF-CHAT-2, sin cambiar lo que se ve | Dejarlo como hoy, con el detector a salvo pero con la lista que se recarga en cada reconstrucción de la página | RF-67-6 |
 | D14 | Pruebas | La carpeta `test/six_seven/` y un `ChatbotService` inyectable en `ChatbotController` | Otra carpeta, o un binding de GetX para el chatbot | RF-67-5 y «Pruebas» |
+| D15 | Foco al enviar con la tecla del teclado en el chat de Ulises | Como hoy, la tecla quita el foco y cierra el teclado, y un 67 enviado así tambalea mientras el teclado se cierra | Conservar el foco con un `onEditingComplete` que no lo suelte, lo que deja el teclado abierto con cualquier pregunta enviada con esa tecla y cambia el chat de Ulises más allá del truco | RF-67-2 |
 
 ## Pruebas
 
@@ -412,6 +478,8 @@ como en `test/HU23_jeff/chat_repo_falso.dart`, porque el repo es público.
 - Una primera lista con dos 67 no dispara.
 - Una segunda lista con un 67 de id nuevo dispara, y la misma lista repetida ya no.
 - Una lápida nueva con cuerpo «67» no dispara, y un carnet nuevo tampoco.
+- Un 67 ya visto que vuelve como lápida con el mismo id, como cuando su autor lo borra, no
+  dispara.
 - Un mensaje nuevo con «67 soles» no dispara.
 - Una lista con dos 67 nuevos da un solo verdadero.
 - Una primera lista vacía también es la base, y un 67 que llega después dispara.
@@ -436,6 +504,12 @@ como en `test/HU23_jeff/chat_repo_falso.dart`, porque el repo es público.
 - Con movimiento reducido y el rótulo encendido, el rótulo aparece sin giro, sigue a los 1900 ms
   y desaparece a los 2000 ms, también con `disableAnimations` activo en las funciones de
   accesibilidad de prueba, que acorta los controllers normales.
+- Con movimiento reducido y el rótulo encendido, subir el contador a los 1000 ms no suma otro
+  rótulo ni alarga el que está, que desaparece a los 2000 ms, y subirlo después de los 2000 ms lo
+  muestra de nuevo (RF-67-3).
+- Encender `disableAnimations` en el `MediaQuery` a los 500 ms de un tambaleo no lo corta, que
+  sigue girando y termina a los 2000 ms, y el disparo siguiente ya no gira. Apagarlo a los 500 ms
+  de un disparo con movimiento reducido no agrega giro a ese disparo (RF-67-4).
 - Con el texto del sistema al doble, el rótulo cabe en 375 de ancho sin desborde.
 - El rótulo tiene la semántica de región viva con la etiqueta «SIX SEVEN!!!».
 - Quitar el widget del árbol a los 500 ms no deja errores ni animaciones pendientes.
@@ -443,11 +517,17 @@ como en `test/HU23_jeff/chat_repo_falso.dart`, porque el repo es público.
 ### `test/six_seven/chatbot_seis_siete_test.dart` (de widget, RF-67-5)
 
 Monta `ChatbotPage` con un servicio falso que devuelve una conversación y cuenta sus llamadas.
+Salvo que el caso diga otra cosa, usa la superficie de 800 × 600 de `flutter_test`, que
+`ChatbotPage` trata como ancha (`chatbot_page.dart:72`), con la lista de conversaciones a la
+izquierda.
 
-- Enviar «67» muestra la burbuja del alumno «67» y la de Ulises «SIX SEVEN!!!», no llama a
-  `ask`, no vuelve a llamar a `listSessions` después de la carga, no muestra «escribiendo…» ni
-  avisos, e inclina el área del chat y no el AppBar.
-- Enviar «¡Six-Seven!» con la tecla del teclado hace lo mismo.
+- Enviar «67» con el botón muestra la burbuja del alumno «67» y la de Ulises «SIX SEVEN!!!», no
+  muestra «escribiendo…» ni avisos, e inclina el área del chat y no el AppBar ni la lista de
+  conversaciones. Después de la carga, el servicio falso no recibe ninguna llamada, ni `ask`, ni
+  `listSessions`, ni `getSession`, ni `createSession`, ni `deleteSession`.
+- Enviar «¡Six-Seven!» con la tecla del teclado
+  (`tester.testTextInput.receiveAction(TextInputAction.send)`) hace lo mismo, y el campo queda sin
+  foco, como hoy con cualquier pregunta enviada con esa tecla (RF-67-2 y D15).
 - Enviar «tengo 67 de nota» llama a `ask` una vez y no inclina nada.
 - Una conversación cuyo historial trae «67» no inclina nada al abrirse.
 - Dos «67» seguidos dan dos pares de burbujas y un solo tambaleo.
@@ -455,6 +535,11 @@ Monta `ChatbotPage` con un servicio falso que devuelve una conversación y cuent
   el teclado visible durante y después del tambaleo.
 - Volver a cargar la conversación quita las dos burbujas locales.
 - Con movimiento reducido aparecen las dos burbujas y no hay giro.
+- En un teléfono, con la superficie de prueba en 375 × 667 (`tester.view.physicalSize` y
+  `tester.view.devicePixelRatio`), porque la de 800 × 600 cuenta como ancha, enviar «67»,
+  esperar a que termine el tambaleo, volver a la lista con la flecha del AppBar y abrir de nuevo
+  la conversación vuelve a montar `_ChatArea` sin inclinar nada (RF-67-5, «Abrir el chat no
+  dispara»).
 
 ### `test/six_seven/chat_seccion_seis_siete_test.dart` (de widget, RF-67-6 y RF-67-7)
 
@@ -463,6 +548,10 @@ Monta `ChatPage` con `ChatRepoFalso` y le empuja listas en vivo.
 - Un historial con «67» no inclina ni muestra el rótulo.
 - Un «67» ajeno que llega en vivo inclina el chat y muestra «SIX SEVEN!!!», y a los 2000 ms no
   queda ninguno de los dos.
+- Con `sesionDocente`, un «67» ajeno que llega en vivo también inclina el chat y muestra el
+  rótulo (D9).
+- Si el autor borra su «67» a los 500 ms y el stream lo trae como lápida con el mismo id, el
+  tambaleo y el rótulo siguen hasta los 2000 ms y no empieza otro.
 - Enviar «67» lo entrega al repositorio como mensaje normal, y cuando el stream lo trae como
   propio, el chat se inclina.
 - Una lápida nueva con cuerpo «67», un carnet nuevo y un «tengo 67 de nota» nuevo no disparan.
@@ -470,16 +559,25 @@ Monta `ChatPage` con `ChatRepoFalso` y le empuja listas en vivo.
   indicador de carga y no dispara.
 - Dos 67 nuevos en un mismo evento dan un tambaleo, y otro 67 durante ese tambaleo no lo
   reinicia.
-- Después de que termina el desplazamiento al último mensaje, la posición del scroll y su
-  `ScrollPosition` son los mismos antes y después del tambaleo.
+- Un «67» en vivo programa el desplazamiento al último mensaje (`chat_page.dart:417` y
+  `:276-286`). Desde que ese desplazamiento termina hasta los 2000 ms, la posición del scroll y su
+  `ScrollPosition` no cambian y `isScrollingNotifier` no vuelve a encenderse. El `ListView` que
+  devuelve el `StreamBuilder` es la misma instancia (`identical`) durante todo ese tramo, lo que
+  muestra que el `StreamBuilder` no se reconstruye durante el tambaleo, porque cada build suyo
+  vuelve a programar `_scrollToBottom`.
 - Con el campo enfocado, el foco y el teclado siguen igual después del tambaleo.
 - Con movimiento reducido aparece el rótulo sin giro.
 - Con la app en `paused`, un 67 en vivo no dispara, y al volver a `resumed` no aparece nada.
+- Con la app de vuelta en `resumed` después de `paused`, un 67 que llega recién entonces, como
+  los que iOS entrega al reconectar, dispara el tambaleo, como fija el valor por defecto de D10.
+  Si el dueño elige la ventana de frescura, este caso cambia a un 67 viejo que no dispara.
 
 ### Apoyo que cambia
 
 `test/HU23_jeff/chat_repo_falso.dart` suma dos cosas opcionales, un `StreamController` para
-empujar listas en vivo y un contador de llamadas a `getMessages`. Sin el `StreamController` sigue
+empujar listas en vivo y un contador de llamadas a `getMessages`. El `StreamController` no es
+broadcast, como el stream de Firebase (RF-67-6, «Un solo oyente»), para que una segunda
+suscripción a la misma instancia falle también en las pruebas. Sin el `StreamController` sigue
 devolviendo `Stream.value(messages)`, así que ninguna prueba existente cambia.
 
 ## Verificación
@@ -490,5 +588,9 @@ devolviendo `Stream.value(messages)`, así que ninguna prueba existente cambia.
   controller del chatbot.
 - Una revisión manual en un iPhone SE, en claro y en oscuro, del chat de Ulises y de un chat de
   sección, con el teclado abierto y cerrado y con «Reducir movimiento» encendido y apagado. En el
-  chat de sección, con dos teléfonos en la misma sección, para ver el 67 en vivo en los dos. En un
-  Android, la misma revisión con «Quitar animaciones».
+  chat de Ulises, el 67 se envía con el botón y con la tecla del teclado, que cierra el teclado
+  como hoy (RF-67-2). Con «Reducir movimiento» no debe haber giro y el rótulo no debe animarse,
+  pero las burbujas de Ulises y el desplazamiento de las listas siguen animados como hoy
+  (RF-67-4), y eso no cuenta como falla. En el chat de sección, con dos teléfonos en la misma
+  sección, para ver el 67 en vivo en los dos. En un Android, la misma revisión con «Quitar
+  animaciones».
