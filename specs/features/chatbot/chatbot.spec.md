@@ -13,6 +13,13 @@ targets:
 
 Pantalla de chat con IA (ULimaBot) accesible mediante un FAB flotante visible en toda la app para alumnos autenticados. Soporta multiples sesiones de conversacion, historial persistente en backend, y envio de notas locales para consultas de calificaciones.
 
+> Ajustada el 2026-09-25 por la spec del truco del 67 (`specs/features/six-seven/six-seven.spec.md`,
+> RF-67-5). Un mensaje que es un 67 no llega al backend. La pantalla agrega en local la burbuja del
+> alumno y la de Ulises con «SIX SEVEN!!!» e inclina el área del chat unos 2 s, sin gastar el
+> límite de preguntas ni guardar nada en el historial. `ChatbotController` acepta además un
+> `ChatbotService` inyectable para pruebas. Pendiente de la aprobación del dueño de la spec escrita
+> antes de implementar. El resto de esta spec no cambia.
+
 ## Requirements
 
 - HU-CHATBOT-01: El alumno puede hacer preguntas en lenguaje natural sobre sus notas, horario, examenes, malla curricular, anuncios, companeros, alertas academicas y conversaciones del chat de su seccion.
@@ -83,6 +90,8 @@ Diseno de dos paneles en desktop/tablet, o navegacion apilada en movil:
   3. Se llama a `POST /chatbot/sessions/:id/ask` con `{ question, localGrades }`.
   4. Al recibir respuesta, se reemplaza el indicador con el mensaje `assistant`.
   5. Si es error, se muestra snackbar y se mantiene el mensaje del usuario.
+- Si la pregunta es un 67 (RF-67-1 de `specs/features/six-seven/six-seven.spec.md`), no se da
+  ninguno de los cinco pasos anteriores y rige RF-67-5 de esa spec.
 
 ### Logica de notas locales
 
