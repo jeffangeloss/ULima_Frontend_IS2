@@ -53,6 +53,11 @@ class _ChatPageState extends State<ChatPage> {
   String? _loadError;
   bool _isLoading = true;
 
+  /// Stream de mensajes de la página. Se crea una sola vez, cuando la sesión
+  /// queda lista, y el `StreamBuilder` recibe siempre esta misma instancia,
+  /// así que una reconstrucción no vuelve a suscribirse (RF-CHAT-2).
+  Stream<List<ChatMessage>>? _mensajes;
+
   Brightness get _brillo => Theme.of(context).brightness;
 
   @override
@@ -92,7 +97,10 @@ class _ChatPageState extends State<ChatPage> {
           .signInWithCustomToken(widget.sectionId)
           .timeout(const Duration(seconds: 8));
       if (mounted) {
-        setState(() => _session = session);
+        setState(() {
+          _session = session;
+          _mensajes = _chatRepository.getMessages(widget.sectionId);
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -363,7 +371,7 @@ class _ChatPageState extends State<ChatPage> {
           ? _buildUnavailableState(brillo)
           : Column(
               children: [
-                Expanded(child: _buildMessages(_session!, brillo)),
+                Expanded(child: _buildMessages(_session!, _mensajes!, brillo)),
                 _BarraDeEscritura(
                   brillo: brillo,
                   controller: _textController,
@@ -375,9 +383,13 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  Widget _buildMessages(ChatSession session, Brightness brillo) {
+  Widget _buildMessages(
+    ChatSession session,
+    Stream<List<ChatMessage>> mensajes,
+    Brightness brillo,
+  ) {
     return StreamBuilder<List<ChatMessage>>(
-      stream: _chatRepository.getMessages(widget.sectionId),
+      stream: mensajes,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
