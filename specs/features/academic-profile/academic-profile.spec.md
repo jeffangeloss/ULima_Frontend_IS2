@@ -160,8 +160,8 @@ implementar. El detalle está en `specs/features/specialty-test/specialty-test.s
 - **Perfil (RF-TEST-10 y RF-TEST-14).** «Configuración académica» suma la tarjeta del último
   resultado del test, con «Rehacer el test». La tarjeta «Especialización» deja de pintar un chip
   vacío para un id que no está en el catálogo, muestra «No se pudieron cargar tus
-  especialidades.» con «Reintentar» si el catálogo falló, y su hoja nunca manda un id antiguo en
-  el `PUT`.
+  especialidades.» con «Reintentar» si el catálogo no carga, y su hoja nunca manda un id
+  antiguo en el `PUT`.
 - **Solo lo oficial (BR-AP-07 del backend).** `GET /academic-profile/specialties` trae solo las
   especialidades activas y `PUT /academic-profile/me/specialties` responde
   `404 SPECIALTY_NOT_FOUND` para una inactiva. `getEspecialidadName()` sigue devolviendo una
