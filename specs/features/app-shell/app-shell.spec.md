@@ -19,6 +19,9 @@ targets:
 > del chat ya implementa los dos cambios. El mismo día el dueño decide que con seis pestañas
 > la etiqueta activa del footer vaya en 13 px (BR-SHELL-F-02). BR-SHELL-F-00 y BR-SHELL-F-01
 > no cambian.
+> Ajustada el 2026-09-25 por la spec del splash animado (`specs/features/splash/splash.spec.md`),
+> que suma BR-SHELL-F-04, la estrella del logo junto a «ULIMA++». **Pendiente de la aprobación
+> del dueño**, junto con esa spec (su decisión 10). BR-SHELL-F-00 a BR-SHELL-F-03 no cambian.
 
 ## Scope
 
@@ -27,6 +30,8 @@ targets:
 - Agrega la pestaña Chats al footer del alumno (BR-SHELL-F-02) y quita del header el
   control de lista de Horario (BR-SHELL-F-03). No crea rutas ni modifica sesión, permisos,
   APIs ni persistencia.
+- BR-SHELL-F-04, pendiente de aprobación, pone la estrella del logo junto a «ULIMA++». La
+  ruta `/arranque` y la intro que aterriza en el header son de la spec del splash.
 
 ## UI Behavior
 
@@ -83,6 +88,25 @@ targets:
 - El header sigue sabiendo si la pestaña activa es Horario, solo para devolver la rotación
   del horario al volver de las alertas (`app_header.dart:128-131`).
   `[@test] ../../../test/components/header/app_header_test.dart`
+
+### BR-SHELL-F-04: Estrella del logo junto a «ULIMA++» (pendiente de aprobación)
+
+- A la izquierda del texto «ULIMA++», el header muestra la estrella del logo en blanco
+  (`onPrimary`), de 26 dp de punta a punta, a 10 dp del texto y centrada en su línea, en los temas
+  claro y oscuro, para alumnos y docentes. Hoy el header muestra solo el texto
+  (`app_header.dart:79-88`) y el `SvgPicture` de `logo.svg` está comentado (`:161-168`).
+- La estrella se pinta con la geometría de la intro (RF-SPL-2 de
+  `specs/features/splash/splash.spec.md`) y no con `assets/images/logo.svg`, para que la estrella
+  de la intro aterrice sobre la misma figura (RF-SPL-11).
+- Es decorativa. No es pulsable ni tiene semántica propia, y el enlace de BR-SHELL-F-01 sigue
+  siendo solo el texto, con su etiqueta.
+- El alto del header no cambia, porque lo fija la campana de 30 dp, o el espacio de 30 dp del
+  docente.
+- El estilo del texto «ULIMA++» vive en un solo lugar, porque la intro dibuja una réplica suya, y
+  el header informa a la intro dónde quedan su estrella y su texto una vez que se dibuja (RF-SPL-11).
+- Si el dueño elige la alternativa de la decisión 10 de la spec del splash, esta regla no entra y
+  el header sigue solo con el texto.
+  `[@test] ../../../test/components/header/app_header_test.dart` (pendiente del caso nuevo)
 
 ## Verification
 
