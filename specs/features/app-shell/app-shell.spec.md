@@ -20,8 +20,9 @@ targets:
 > la etiqueta activa del footer vaya en 13 px (BR-SHELL-F-02). BR-SHELL-F-00 y BR-SHELL-F-01
 > no cambian.
 > Ajustada el 2026-09-25 por la spec del splash animado (`specs/features/splash/splash.spec.md`),
-> que suma BR-SHELL-F-04, la estrella del logo junto a «ULIMA++». **Pendiente de la aprobación
-> del dueño**, junto con esa spec (su decisión 10). BR-SHELL-F-00 a BR-SHELL-F-03 no cambian.
+> que suma BR-SHELL-F-04, la estrella del logo junto a «ULIMA++» y los íconos claros de la barra
+> de estado sobre el header. **Pendiente de la aprobación del dueño**, junto con esa spec (su
+> decisión 11 para la estrella). BR-SHELL-F-00 a BR-SHELL-F-03 no cambian.
 
 ## Scope
 
@@ -30,8 +31,9 @@ targets:
 - Agrega la pestaña Chats al footer del alumno (BR-SHELL-F-02) y quita del header el
   control de lista de Horario (BR-SHELL-F-03). No crea rutas ni modifica sesión, permisos,
   APIs ni persistencia.
-- BR-SHELL-F-04, pendiente de aprobación, pone la estrella del logo junto a «ULIMA++». La
-  ruta `/arranque` y la intro que aterriza en el header son de la spec del splash.
+- BR-SHELL-F-04, pendiente de aprobación, pone la estrella del logo junto a «ULIMA++» y fija
+  los íconos claros de la barra de estado sobre el header. La ruta `/arranque` y la intro que
+  aterriza en el header son de la spec del splash.
 
 ## UI Behavior
 
@@ -104,7 +106,11 @@ targets:
   docente.
 - El estilo del texto «ULIMA++» vive en un solo lugar, porque la intro dibuja una réplica suya, y
   el header informa a la intro dónde quedan su estrella y su texto una vez que se dibuja (RF-SPL-11).
-- Si el dueño elige la alternativa de la decisión 10 de la spec del splash, esta regla no entra y
+- El header declara íconos claros en la barra de estado con un
+  `AnnotatedRegion<SystemUiOverlayStyle>`, en los temas claro y oscuro, porque la intro del splash
+  deja aplicado el último estilo de la barra y hoy ningún archivo de `lib/` fija uno (RF-SPL-4 de
+  la spec del splash). Esta parte no depende de la decisión 11.
+- Si el dueño elige la alternativa de la decisión 11 de la spec del splash, la estrella no entra y
   el header sigue solo con el texto.
   `[@test] ../../../test/components/header/app_header_test.dart` (pendiente del caso nuevo)
 
