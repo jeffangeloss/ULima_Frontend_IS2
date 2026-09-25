@@ -22,7 +22,7 @@ Pantalla de chat con IA (ULimaBot) accesible mediante un FAB flotante visible en
 > «Nueva conversación», y solo se inclina el panel del chat con su tramo (D4 de esa spec).
 > `ChatbotController` acepta además un `ChatbotService` inyectable para pruebas. Aprobada por el
 > dueño el 2026-09-25, junto con la spec del truco del 67, con la elección de «toda la pantalla» en
-> D4. El resto de esta spec no cambia.
+> D4, e implementada el 2026-09-25. El resto de esta spec no cambia.
 
 ## Requirements
 
@@ -97,6 +97,8 @@ Diseno de dos paneles en desktop/tablet, o navegacion apilada en movil:
 - Si la pregunta es un 67 (RF-67-1 de `specs/features/six-seven/six-seven.spec.md`), se da solo
   el paso 1, con la burbuja local del alumno, y no se dan los pasos 2 a 5. Rige RF-67-5 de esa
   spec, que suma en el mismo instante la burbuja local de Ulises con «SIX SEVEN!!!».
+
+`[@test] ../../../test/six_seven/chatbot_seis_siete_test.dart`
 
 ### Logica de notas locales
 

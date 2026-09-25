@@ -16,8 +16,9 @@ targets:
 
 > Estado: **diseñada el 2026-09-25 a partir de las decisiones del dueño de ese día y aprobada
 > por él ese mismo día**, con las propuestas P1 a P4 y los puntos D1 a D15 en su valor por
-> defecto, salvo D4, donde elige «toda la pantalla» (ver «Decisiones»). Pendiente de
-> implementación.
+> defecto, salvo D4, donde elige «toda la pantalla» (ver «Decisiones»). Implementada el
+> 2026-09-25, y falta la revisión manual que pide «Verificación» en un iPhone SE y en un
+> simulador de iPad.
 > Ajustada el 2026-09-25 en D4 con esa elección del dueño, que forma parte de su aprobación.
 > Se inclina todo el chat, también el AppBar con su título, como el truco de Google, y solo
 > quedan quietos la barra de estado del teléfono y el teclado del sistema. En el chat de
@@ -37,9 +38,8 @@ targets:
 > No hay cambios de backend, de contrato, de reglas de Firebase ni de base de datos, y no
 > entran dependencias nuevas.
 > Las referencias `archivo:línea` apuntan a `main` en `41ff0a6`.
-> Esta spec todavía no lleva enlaces `[@test]`, porque ninguna de sus pruebas existe. Cada
-> requisito nombra el archivo que lo prueba y la sección «Pruebas» lista sus casos. El
-> `[@test]` de cada requisito entra cuando su archivo exista.
+> Cada `[@test]` apunta a un archivo de `test/six_seven/` que existe y que tiene al menos un
+> caso del requisito que lo enlaza.
 
 ## User Stories
 
@@ -120,7 +120,7 @@ guion es solo el guion ASCII (`-`).
   «6,7», «6/7», «67%», «67?», «6 - 7», «6–7» (con raya corta), «6!7», «sixseven», «six 7»,
   «6 seven», «seis siete», «67 🙌», «"67"», «(67)», el texto vacío, «   » y «!!!».
 
-Prueba por escribir `test/six_seven/seis_siete_test.dart`.
+`[@test] ../../../test/six_seven/seis_siete_test.dart`
 
 ### RF-67-2. El tambaleo
 
@@ -189,8 +189,8 @@ envuelve la interfaz del chat y la inclina de un lado a otro, como el gesto de l
   movimiento puede sumar más de 5 s casi sin pausa. D5 deja a la vista el enfriamiento que evita
   ese caso.
 
-Prueba por escribir `test/six_seven/tambaleo_seis_siete_test.dart`, y la curva en
-`test/six_seven/seis_siete_test.dart`.
+`[@test] ../../../test/six_seven/tambaleo_seis_siete_test.dart`
+`[@test] ../../../test/six_seven/seis_siete_test.dart`
 
 ### RF-67-3. Varios 67 seguidos
 
@@ -203,7 +203,7 @@ Prueba por escribir `test/six_seven/tambaleo_seis_siete_test.dart`, y la curva e
 - Con movimiento reducido la ventana de «uno a la vez» dura lo mismo, 2000 ms, aunque no haya
   giro (RF-67-4).
 
-Prueba por escribir `test/six_seven/tambaleo_seis_siete_test.dart`.
+`[@test] ../../../test/six_seven/tambaleo_seis_siete_test.dart`
 
 ### RF-67-4. Movimiento reducido
 
@@ -227,7 +227,7 @@ Prueba por escribir `test/six_seven/tambaleo_seis_siete_test.dart`.
   `AnimationController` con `AnimationBehavior.normal`, el truco mide su duración con
   `AnimationBehavior.preserve` o con un `Timer`, nunca con un controller normal.
 
-Prueba por escribir `test/six_seven/tambaleo_seis_siete_test.dart`.
+`[@test] ../../../test/six_seven/tambaleo_seis_siete_test.dart`
 
 ### RF-67-5. En el chat de Ulises
 
@@ -290,7 +290,7 @@ Prueba por escribir `test/six_seven/tambaleo_seis_siete_test.dart`.
   con un servicio falso antes de montar la página, porque el `Get.put` de `ChatbotPage`
   (`chatbot_page.dart:18`) conserva la instancia ya registrada.
 
-Prueba por escribir `test/six_seven/chatbot_seis_siete_test.dart`.
+`[@test] ../../../test/six_seven/chatbot_seis_siete_test.dart`
 
 ### RF-67-6. En los chats de sección
 
@@ -359,8 +359,8 @@ Prueba por escribir `test/six_seven/chatbot_seis_siete_test.dart`.
   enviar el mensaje». Queda así a propósito, porque esperar la confirmación retrasa el truco en
   cada envío.
 
-Pruebas por escribir `test/six_seven/detector_seis_siete_test.dart` y
-`test/six_seven/chat_seccion_seis_siete_test.dart`.
+`[@test] ../../../test/six_seven/detector_seis_siete_test.dart`
+`[@test] ../../../test/six_seven/chat_seccion_seis_siete_test.dart`
 
 ### RF-67-7. El rótulo «SIX SEVEN!!!» en los chats de sección
 
@@ -394,8 +394,8 @@ pasajero sobre el chat y no como mensaje.
   `SemanticsProperties.liveRegion` indica que en Android y en iOS genera un anuncio cortés.
 - En el chat de Ulises no hay rótulo, porque ahí el texto es la burbuja de Ulises (RF-67-5).
 
-Pruebas por escribir `test/six_seven/tambaleo_seis_siete_test.dart` y
-`test/six_seven/chat_seccion_seis_siete_test.dart`.
+`[@test] ../../../test/six_seven/tambaleo_seis_siete_test.dart`
+`[@test] ../../../test/six_seven/chat_seccion_seis_siete_test.dart`
 
 ## Flujo de datos
 
@@ -509,8 +509,8 @@ decisión 4.
 
 ## Pruebas
 
-Todas por escribir. Los datos son inventados, y un alumno de prueba usa el código `20230001`,
-como en `test/HU23_jeff/chat_repo_falso.dart`, porque el repo es público.
+Todas existen en `test/six_seven/`. Los datos son inventados, y un alumno de prueba usa el
+código `20230001`, como en `test/HU23_jeff/chat_repo_falso.dart`, porque el repo es público.
 
 ### `test/six_seven/seis_siete_test.dart` (unitaria, RF-67-1 y RF-67-2)
 

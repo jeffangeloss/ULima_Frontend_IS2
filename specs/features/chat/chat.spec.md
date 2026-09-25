@@ -75,7 +75,7 @@ targets:
 > 2 s, también el AppBar con el nombre del curso, y muestra el rótulo pasajero «SIX SEVEN!!!»,
 > que cumple el contraste de RF-CHAT-8. El mensaje se envía y se guarda como cualquier otro, y
 > el contrato no cambia. Aprobada por el dueño el 2026-09-25, junto con la spec del truco del
-> 67, con la elección de «toda la pantalla» en su D4.
+> 67, con la elección de «toda la pantalla» en su D4, e implementada el 2026-09-25.
 
 ## User Stories
 
@@ -155,6 +155,7 @@ de Firebase actual es otro (`chat_repository.dart:81-84`).
 
 `[@test] ../../../test/HU23_jeff/chat_message_test.dart`
 `[@test] ../../../test/HU23_jeff/chat_page_test.dart`
+`[@test] ../../../test/six_seven/chat_seccion_seis_siete_test.dart`
 
 ### RF-CHAT-3 — Enviar texto y carnet (se conserva)
 
