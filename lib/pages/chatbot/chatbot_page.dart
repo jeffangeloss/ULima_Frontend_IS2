@@ -55,7 +55,7 @@ class ChatbotPage extends StatelessWidget {
               ),
             );
           }
-          return _pantallaDividida(context, controller, colors, brightness);
+          return _pantallaDividida(controller, colors, brightness);
         });
       },
     );
@@ -101,7 +101,6 @@ class ChatbotPage extends StatelessWidget {
   /// barra, así que el panel del chat se inclina con su barra y la lista queda
   /// quieta (RF-67-2 y D4).
   Widget _pantallaDividida(
-    BuildContext context,
     ChatbotController controller,
     ColorScheme colors,
     Brightness brightness,
@@ -125,10 +124,8 @@ class ChatbotPage extends StatelessWidget {
                   ),
                 ),
                 Expanded(
-                  child: MediaQuery.removePadding(
-                    context: context,
-                    removeTop: true,
-                    child: _buildSessionList(controller, colors, brightness),
+                  child: _bajoSuTramo(
+                    _buildSessionList(controller, colors, brightness),
                   ),
                 ),
               ],
@@ -155,13 +152,8 @@ class ChatbotPage extends StatelessWidget {
                     ],
                   ),
                   Expanded(
-                    child: MediaQuery.removePadding(
-                      context: context,
-                      removeTop: true,
-                      child: _ChatArea(
-                        controller: controller,
-                        brightness: brightness,
-                      ),
+                    child: _bajoSuTramo(
+                      _ChatArea(controller: controller, brightness: brightness),
                     ),
                   ),
                 ],
@@ -169,6 +161,21 @@ class ChatbotPage extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Quita a [child] el relleno superior, que ya ocupa el tramo de barra de
+  /// encima. El contexto del `Builder` queda dentro del `Scaffold`, así que
+  /// `removePadding` parte del `MediaQuery` que ya descuenta el teclado, y el
+  /// `LayoutBuilder` de `build` no depende del `MediaQuery` ni se reconstruye
+  /// mientras el teclado se mueve.
+  static Widget _bajoSuTramo(Widget child) {
+    return Builder(
+      builder: (context) => MediaQuery.removePadding(
+        context: context,
+        removeTop: true,
+        child: child,
       ),
     );
   }

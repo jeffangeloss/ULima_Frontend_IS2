@@ -251,6 +251,10 @@ envuelve la interfaz del chat y la inclina de un lado a otro, como el gesto de l
     `:93-103`). El tramo de la lista lleva la flecha de volver, y el del chat, a Ulises con
     «ULimaBot», «Asistente académico» y el botón «Nueva conversación». El envoltorio cubre solo
     el panel del chat con su tramo de barra, así que la lista y su tramo quedan quietos (D4).
+    Bajo cada tramo, el panel quita el relleno superior con el contexto de un `Builder` dentro
+    del `Scaffold`, así que la lista y el chat no vuelven a recibir el teclado que el `Scaffold`
+    ya descuenta, y el `LayoutBuilder` de `ChatbotPage` no se reconstruye mientras el teclado
+    se mueve.
   - En pantalla ancha, mientras cargan las conversaciones o si no hay ninguna, la pantalla queda
     como hoy, con un solo AppBar y sin envoltorio, porque no hay chat desde donde enviar.
 
@@ -594,6 +598,12 @@ izquierda.
   termine el tambaleo, volver a la lista con la flecha del AppBar y abrir de nuevo la
   conversación vuelve a montar `_ChatArea` sin inclinar nada (RF-67-5, «Abrir el chat no
   dispara»).
+- En pantalla ancha, con la superficie en 820 × 1180, la barra de estado en 24 pt y un teclado
+  de 300 pt (`tester.view.viewInsets`), la lista de conversaciones y el campo del chat ven
+  `viewInsets.bottom` y `padding.top` en 0, porque el `Scaffold` ya descuenta el teclado y el
+  tramo de barra ocupa la barra de estado (D4). Abrir el teclado en tres pasos deja la misma
+  instancia del `Scaffold`, lo que muestra que el `LayoutBuilder` de `ChatbotPage` no se
+  reconstruye.
 
 ### `test/six_seven/chat_seccion_seis_siete_test.dart` (de widget, RF-67-6 y RF-67-7)
 

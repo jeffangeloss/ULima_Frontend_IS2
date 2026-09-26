@@ -94,16 +94,24 @@ double _angulo(WidgetTester tester) {
   return math.atan2(m.entry(1, 0), m.entry(0, 0));
 }
 
+/// Superficie de un iPhone SE en puntos, que ChatbotPage trata como teléfono.
+const _telefono = Size(375, 667);
+
+/// Superficie de un iPad en vertical en puntos, que ChatbotPage trata como
+/// ancha.
+const _iPad = Size(820, 1180);
+
 /// Registra el controller con el servicio falso, monta ChatbotPage y espera
-/// la carga. Con [telefono] la superficie pasa a 375 × 667.
+/// la carga. Con [superficie] la vista pasa a esa medida en puntos, con dos
+/// píxeles por punto.
 Future<ChatbotServiceFalso> _abrirUlises(
   WidgetTester tester, {
   List<Map<String, dynamic>> historial = const [],
-  bool telefono = false,
+  Size? superficie,
 }) async {
-  if (telefono) {
-    tester.view.physicalSize = const Size(750, 1334);
+  if (superficie != null) {
     tester.view.devicePixelRatio = 2;
+    tester.view.physicalSize = superficie * 2;
     addTearDown(tester.view.reset);
   }
   final falso = ChatbotServiceFalso(historial: historial);
@@ -131,6 +139,13 @@ bool _seInclina(Finder finder) => find
     .ancestor(of: finder, matching: find.byKey(claveGiroSeisSiete))
     .evaluate()
     .isNotEmpty;
+
+/// Abre el teclado con [alto] puntos, o lo cierra con 0.
+void _teclado(WidgetTester tester, double alto) {
+  tester.view.viewInsets = FakeViewPadding(
+    bottom: alto * tester.view.devicePixelRatio,
+  );
+}
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
@@ -336,7 +351,7 @@ void main() {
     testWidgets('en un teléfono se inclina toda la pantalla, AppBar incluido, '
         'y volver a la lista y abrir de nuevo la conversación no inclina '
         'nada', (tester) async {
-      await _abrirUlises(tester, telefono: true);
+      await _abrirUlises(tester, superficie: _telefono);
 
       await _enviarConBoton(tester, '67');
       await tester.pump(const Duration(milliseconds: 125));
@@ -356,6 +371,44 @@ void main() {
       expect(find.byType(TextField), findsOneWidget);
       await tester.pump(const Duration(milliseconds: 125));
       expect(_angulo(tester), 0);
+    });
+  });
+
+  group('ChatbotPage en pantalla ancha con el teclado (D4)', () {
+    testWidgets('bajo su tramo de barra, la lista de conversaciones y el chat '
+        'no ven el teclado que el Scaffold ya descuenta ni la barra de '
+        'estado', (tester) async {
+      await _abrirUlises(tester, superficie: _iPad);
+      tester.view.padding = const FakeViewPadding(top: 48);
+
+      _teclado(tester, 300);
+      await tester.pump();
+
+      // Encima del Scaffold el teclado sí se ve, así que la prueba no pasa
+      // por falta de teclado.
+      final encima = tester.element(find.byType(Scaffold));
+      expect(MediaQuery.viewInsetsOf(encima).bottom, 300);
+      expect(MediaQuery.paddingOf(encima).top, 24);
+      for (final dentro in [find.text(_titulo), find.byType(TextField)]) {
+        final contexto = tester.element(dentro);
+        expect(MediaQuery.viewInsetsOf(contexto).bottom, 0);
+        expect(MediaQuery.paddingOf(contexto).top, 0);
+      }
+    });
+
+    testWidgets('abrir el teclado cuadro a cuadro no reconstruye lo que '
+        'ChatbotPage arma sobre el Scaffold', (tester) async {
+      await _abrirUlises(tester, superficie: _iPad);
+      final antes = tester.widget<Scaffold>(find.byType(Scaffold));
+
+      // Cada build del LayoutBuilder de ChatbotPage arma un Scaffold nuevo,
+      // así que la misma instancia muestra que ese build no vuelve a correr.
+      for (final alto in [100.0, 200.0, 300.0]) {
+        _teclado(tester, alto);
+        await tester.pump();
+      }
+
+      expect(tester.widget<Scaffold>(find.byType(Scaffold)), same(antes));
     });
   });
 }
