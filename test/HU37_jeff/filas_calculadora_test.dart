@@ -187,5 +187,55 @@ void main() {
       );
       expect(mismasNotasUlima(ulima, const []), isFalse);
     });
+
+    test('mismasNotasUlima ve una nota corregida con el mismo número de '
+        'filas', () {
+      // La ULima corrige la 5011 de 14.5 a 15.
+      final corregida = notasUlimaDeCurso(
+        _curso([
+          evaluacionJson(assessmentId: 5011, value: 15),
+          evaluacionJson(
+            assessmentId: 5013,
+            mark: 'np',
+            value: null,
+            weight: 12.5,
+          ),
+        ]),
+      );
+      // La 5013 pasa de NP a una nota.
+      final calificada = notasUlimaDeCurso(
+        _curso([
+          evaluacionJson(assessmentId: 5011, value: 14.5),
+          evaluacionJson(assessmentId: 5013, value: 11, weight: 12.5),
+        ]),
+      );
+
+      expect(corregida, hasLength(ulima.length));
+      expect(mismasNotasUlima(ulima, corregida), isFalse);
+      expect(calificada, hasLength(ulima.length));
+      expect(mismasNotasUlima(ulima, calificada), isFalse);
+    });
+
+    test('mismasNotasUlima ve el cambio de cada campo por separado', () {
+      final cambios = <String, Object?>{
+        'titulo': 'Examen escrito 2',
+        'peso': 20,
+        'valor': 15.0,
+        'np': true,
+        'evaluacionId': '5012',
+      };
+
+      for (final MapEntry(key: campo, value: otro) in cambios.entries) {
+        final despues = [
+          {...ulima.first, campo: otro},
+          ulima.last,
+        ];
+        expect(
+          mismasNotasUlima(ulima, despues),
+          isFalse,
+          reason: 'cambia $campo',
+        );
+      }
+    });
   });
 }
