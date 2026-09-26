@@ -13,6 +13,7 @@ import 'package:get/get.dart';
 import 'package:ulima_plus/components/logo/sello_del_logo.dart';
 import 'package:ulima_plus/configs/themes.dart';
 import 'package:ulima_plus/domain/bienvenida/bienvenida_turnos.dart';
+import 'package:ulima_plus/pages/bienvenida/conversacion.dart';
 import 'package:ulima_plus/pages/bienvenida/widgets/compositor.dart';
 import 'package:ulima_plus/services/session_navigation.dart';
 
@@ -26,6 +27,41 @@ void main() {
     Get.reset();
   });
   tearDown(Get.reset);
+
+  test('el ritmo es de 850 ms entre burbujas, 650 ms tras una respuesta, '
+      '500 ms antes del compositor y 900 ms antes del paso al horario '
+      '(RF-BIEN-5 y RF-BIEN-6)', () {
+    expect(Ritmo.entreBurbujas, const Duration(milliseconds: 850));
+    expect(Ritmo.trasLaRespuesta, const Duration(milliseconds: 650));
+    expect(Ritmo.antesDelCompositor, const Duration(milliseconds: 500));
+    expect(Ritmo.antesDelPaso, const Duration(milliseconds: 900));
+  });
+
+  test('N1 espera 650 ms tras «Soy nuevo» y su pregunta 850 ms, E1 con motivo '
+      '850 ms tras el saludo, y E2 y E3 650 ms tras la respuesta', () async {
+    Duration pausaDe(Bienvenida b, String texto) => b.controlador.entradas
+        .whereType<BurbujaDeUlises>()
+        .lastWhere((e) => e.texto == texto)
+        .pausa;
+    const ms650 = Duration(milliseconds: 650);
+    const ms850 = Duration(milliseconds: 850);
+    final nuevo = Bienvenida();
+    await nuevo.visitar();
+    nuevo.controlador.responderAlSaludo(yaUsa: false);
+    expect(pausaDe(nuevo, TextosDeLaBienvenida.n1a), ms650);
+    expect(pausaDe(nuevo, TextosDeLaBienvenida.n1b), ms850);
+    Get.reset();
+    final b = Bienvenida();
+    await b.visitar(motivo: MotivoDeLlegada.expirada);
+    expect(pausaDe(b, TextosDeLaBienvenida.saludo), Duration.zero);
+    expect(pausaDe(b, TextosDeLaBienvenida.e1), ms850);
+    b.login.codeController.text = '20230001';
+    b.controlador.enviarCodigo();
+    expect(pausaDe(b, TextosDeLaBienvenida.e2), ms650);
+    b.login.passwordController.text = 'secreta-de-prueba';
+    await b.controlador.entrar();
+    expect(pausaDe(b, TextosDeLaBienvenida.e3), ms650);
+  });
 
   testWidgets('la franja con el sello va arriba, la conversación en medio y '
       'el compositor abajo', (tester) async {

@@ -21,6 +21,7 @@ import 'package:ulima_plus/domain/bienvenida/bienvenida_turnos.dart';
 import 'package:ulima_plus/models/registro_models.dart';
 import 'package:ulima_plus/pages/bienvenida/bienvenida_page.dart';
 import 'package:ulima_plus/pages/bienvenida/widgets/compositor.dart';
+import 'package:ulima_plus/pages/registro/registro_controller.dart';
 import 'package:ulima_plus/pages/splash/salidas.dart' show naranjaDelSplash;
 import 'package:ulima_plus/services/api_client.dart';
 import 'package:ulima_plus/services/session_navigation.dart';
@@ -143,6 +144,69 @@ void main() {
       expect(b.login.codeController.text, '');
       expect(b.controlador.turno.value, TurnoDeLaBienvenida.recibimiento);
     });
+
+    test('cada visita cierra el tramo del registro y borra sus cinco campos '
+        '(RF-BIEN-9)', () async {
+      final creados = <RegistroController>[];
+      final b = Bienvenida(
+        crearRegistro: () {
+          final r = RegistroController(
+            service: RegistroFalso(),
+            adoptarSesion: ({required token, required user}) async {},
+            iniciarSesion: ({required code, required password}) async => null,
+          );
+          creados.add(r);
+          return r;
+        },
+      );
+      await b.visitar();
+      b.controlador.responderAlSaludo(yaUsa: false);
+      final r = creados.single
+        ..codigoCtrl.text = '20230001'
+        ..passwordCtrl.text = 'Contrasena1'
+        ..confirmacionCtrl.text = 'Contrasena1'
+        ..portalPasswordCtrl.text = 'clave-de-prueba'
+        ..passcodeCtrl.text = '123456';
+      await b.visitar();
+      expect(r.cerrado, isTrue);
+      for (final campo in [
+        r.codigoCtrl,
+        r.passwordCtrl,
+        r.confirmacionCtrl,
+        r.portalPasswordCtrl,
+        r.passcodeCtrl,
+      ]) {
+        expect(campo.text, '');
+      }
+    });
+
+    test(
+      'el token de una visita vieja que llega tarde no toca la nueva',
+      () async {
+        final tarde = Completer<String?>();
+        var pedidos = 0;
+        final b = Bienvenida(
+          auth: AuthDeLaBienvenida(
+            usuario: alumnaDePrueba(setupComplete: false),
+          ),
+          tokenGuardado: () =>
+              ++pedidos == 1 ? tarde.future : Future<String?>.value(),
+        );
+        final vieja = b.controlador.nuevaVisita();
+        final empiezaVieja = b.controlador.empezarVisita(vieja);
+        final nueva = b.controlador.nuevaVisita();
+        await b.controlador.empezarVisita(nueva);
+        b.controlador.responderAlSaludo(yaUsa: false);
+        // El token de la vieja llega con la sesión de un alumno sin
+        // especialidad, que la llevaría a la llegada con sesión.
+        tarde.complete('jwt-de-prueba');
+        await empiezaVieja;
+        expect(b.controlador.visitaEmpezada.value, nueva);
+        expect(b.controlador.conSesion, isFalse);
+        expect(b.controlador.turno.value, TurnoDeLaBienvenida.n1Codigo);
+        expect(b.controlador.registro, isNotNull);
+      },
+    );
 
     test('una visita vieja no toca la nueva', () async {
       final b = Bienvenida();

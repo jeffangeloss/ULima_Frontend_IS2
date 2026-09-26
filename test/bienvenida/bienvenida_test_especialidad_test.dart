@@ -9,6 +9,8 @@
 // compactas y los turnos del test en la conversación.
 // Archivo probado lib/pages/specialty_test/specialty_test_controller.dart.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -46,15 +48,32 @@ void main() {
 
   group('el controlador con origen bienvenida (enmienda a RF-TEST-1, '
       'RF-TEST-2 y RF-TEST-9, B-34)', () {
-    test('no adopta un test en pausa ni deja uno al cerrarse', () async {
+    test('no adopta el test en pausa del Perfil, no lo descarta ni lo '
+        'reemplaza al cerrarse', () async {
       final (:auth, :service) = prepararTest(ApiFalsaDelTest());
+      final pausa = PausedSpecialtyTest(
+        content: SpecialtyTestContent.tryParse(contenidoJson())!,
+        answers: const <String, String>{'q01': 'bottom', 'q02': 'none'},
+        tiebreaks: const <TiebreakRecord>[],
+      );
+      service.pause(pausa);
       final c = await _enLaBienvenida(UiFalsa());
       expect(c.enBienvenida, isTrue);
       expect(c.terminaEnElHome, isTrue);
+      expect(c.respuestas, isEmpty, reason: 'no adopta la pausa');
       c.empezar();
+      expect(c.paso.value, 0);
       c.responder('top', avanceSolo: false);
       c.onDelete();
-      expect(service.paused, isNull);
+      expect(service.paused, same(pausa), reason: 'no la reemplaza');
+      // Saltar borra sus respuestas sin descartar la pausa.
+      final otro = await _enLaBienvenida(UiFalsa());
+      otro
+        ..empezar()
+        ..responder('top', avanceSolo: false)
+        ..saltar();
+      expect(service.paused, same(pausa), reason: 'no la descarta');
+      otro.onDelete();
       expect(auth.guardados, isEmpty);
     });
 
@@ -82,6 +101,47 @@ void main() {
       expect(ui.alHome, 1);
       expect(ui.cierres, isEmpty);
     });
+
+    test('«Decidir después» guarda y termina en el paso al horario', () async {
+      final (:auth, service: _) = prepararTest(ApiFalsaDelTest());
+      final ui = UiFalsa();
+      final c = await _enLaBienvenida(ui);
+      c.empezar();
+      responderPasos(c, respuestasEnOrden);
+      await pumpEventQueue();
+      await c.decidirDespues();
+      expect(auth.guardados, hasLength(1));
+      expect(ui.alHome, 1);
+      expect(ui.cierres, isEmpty);
+    });
+
+    for (final guarda in <bool>[true, false]) {
+      test('un PUT que ${guarda ? 'guarda' : 'falla'} después del cierre se '
+          'descarta, sin el paso al horario ni avisos (B-34 y enmienda a '
+          'RF-TEST-2)', () async {
+        final (:auth, service: _) = prepararTest(ApiFalsaDelTest());
+        final respuesta = Completer<void>();
+        auth.respuestasDeGuardado.add(respuesta);
+        final ui = UiFalsa();
+        final c = await _enLaBienvenida(ui);
+        c.empezar();
+        responderPasos(c, respuestasEnOrden);
+        await pumpEventQueue();
+        final guardado = c.elegirPrincipal(
+          c.resultado.value!.ranking.first.specialtyId,
+        );
+        c.onDelete();
+        if (guarda) {
+          respuesta.complete();
+        } else {
+          respuesta.completeError(Exception('sin red'));
+        }
+        await guardado;
+        await pumpEventQueue();
+        expect(ui.alHome, 0);
+        expect(ui.avisos, isEmpty);
+      });
+    }
 
     test('el atrás en el resultado no hace nada', () async {
       prepararTest(ApiFalsaDelTest());
@@ -185,6 +245,11 @@ void main() {
       expect(alto, lessThan(104));
       final baldosa = tester.getSize(find.byType(TaskIconTile).first);
       expect(baldosa, const Size(40, 40));
+      final icono = find.descendant(
+        of: find.byType(TaskIconTile).first,
+        matching: find.byType(Icon),
+      );
+      expect(tester.getSize(icono), const Size(22, 22));
     });
 
     testWidgets('en el compositor, la escala trae solo sus cuatro opciones, '
