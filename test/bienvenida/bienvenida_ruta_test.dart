@@ -132,8 +132,11 @@ void main() {
       final aviso = tester.widget<GetSnackBar>(find.byType(GetSnackBar));
       expect(aviso.snackPosition, SnackPosition.BOTTOM);
       expect(find.text('Sesión expirada'), findsOneWidget);
-      await tester.pump(const Duration(seconds: 5));
+      // El aviso nació dentro de runAsync, así que su temporizador de 3 s es
+      // real y dispararía en otra prueba. Cerrarlo aquí lo cancela.
+      Get.closeAllSnackbars();
       await tester.pumpAndSettle();
+      expect(find.byType(GetSnackBar), findsNothing);
     });
   });
 
