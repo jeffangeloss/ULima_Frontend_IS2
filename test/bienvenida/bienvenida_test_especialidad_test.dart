@@ -405,6 +405,28 @@ void main() {
       expect(c.turno.value, TurnoDeLaBienvenida.t0Invitacion);
     });
 
+    test('tras volver a T0, «Empezar el test» abre la pregunta 1 sin '
+        'respuestas, porque en la conversación no hay «Seguir el test» '
+        '(enmienda a RF-TEST-3)', () async {
+      final b = await enT0();
+      final c = b.controlador..empezarElTest();
+      c
+        ..responderAlTest('top', conLector: true)
+        ..siguiente()
+        ..responderAlTest('both', conLector: true)
+        ..siguiente()
+        ..preguntaAnterior()
+        ..preguntaAnterior()
+        ..preguntaAnterior();
+      expect(c.turno.value, TurnoDeLaBienvenida.t0Invitacion);
+      c.empezarElTest();
+      expect(c.turno.value, TurnoDeLaBienvenida.pregunta);
+      expect(c.test!.paso.value, 0);
+      expect(c.test!.respuestas, isEmpty);
+      expect(c.test!.respuestaActual, isNull);
+      expect(b.deUlises.last, '¿Cuál harías con más ganas?');
+    });
+
     test('la espera dice la línea de carga, y el resultado entra con el '
         'confeti y sus tres botones', () async {
       final b = await enT0();

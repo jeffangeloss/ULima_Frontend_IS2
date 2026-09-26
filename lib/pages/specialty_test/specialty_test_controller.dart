@@ -232,10 +232,12 @@ class SpecialtyTestController extends GetxController {
   }
 
   /// «Empezar el test», o «Seguir el test» con avance en memoria, que vuelve
-  /// al primer paso sin responder con la copia de ese test.
+  /// al primer paso sin responder con la copia de ese test. En la
+  /// conversación no hay «Seguir el test», así que «Empezar el test» abre
+  /// siempre la pregunta 1 sin respuestas (enmienda a RF-TEST-3).
   void empezar() {
     if (carga.value != EstadoDeCarga.lista) return;
-    if (!hayAvance) {
+    if (!hayAvance || enBienvenida) {
       _abrirPreguntaUno(_vigente!);
       return;
     }
