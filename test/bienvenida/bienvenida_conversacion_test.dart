@@ -210,6 +210,37 @@ void main() {
     );
   });
 
+  for (final (escala, teclado) in <(double, double)>[
+    (1.0, 300),
+    (1.0, 340),
+    (1.3, 300),
+  ]) {
+    testWidgets('con el teclado de $teclado dp y el texto a $escala, el '
+        'compositor de N2 mide hasta el 60 % del alto sobre el teclado y nada '
+        'desborda (RF-BIEN-5)', (tester) async {
+      final b = Bienvenida();
+      await montarLaBienvenida(
+        tester,
+        b,
+        argumentos: _expirada,
+        escala: escala,
+      );
+      await avanzar(tester, 1500);
+      b.controlador.soyNuevo();
+      await avanzar(tester, 3000);
+      await tester.enterText(find.byType(TextField).first, '20230001');
+      await tester.pump();
+      await tester.tap(find.byType(BotonDeEnvio));
+      await avanzar(tester, 2500);
+      expect(find.text(TextosDeLaBienvenida.rotuloRepetir), findsOneWidget);
+      tester.view.viewInsets = FakeViewPadding(bottom: teclado * 2);
+      await tester.pump();
+      final alto = tester.getSize(find.byType(MarcoDelCompositor)).height;
+      expect(alto, lessThanOrEqualTo((667 - teclado) * 0.6 + 0.5));
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets('las burbujas de Ulises van en cardBg y las respuestas en '
       'bienvenidaPropia', (tester) async {
     final b = Bienvenida();

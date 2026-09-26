@@ -334,51 +334,55 @@ class _BienvenidaPageState extends State<BienvenidaPage>
         .whereType<BurbujaDeUlises>()
         .map((e) => e.id)
         .firstOrNull;
-    return Column(
-      children: [
-        FranjaConSello(latido: _latido, rombos: _rombos),
-        Expanded(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 600),
-              child: ListView.builder(
-                controller: _desplazamiento,
-                keyboardDismissBehavior:
-                    ScrollViewKeyboardDismissBehavior.onDrag,
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
-                itemCount: visibles.clamp(0, entradas.length),
-                itemBuilder: (context, i) {
-                  final entrada = entradas[i];
-                  final anterior = i > 0 ? entradas[i - 1] : null;
-                  return EntradaView(
-                    key: ValueKey<int>(entrada.id),
-                    entrada: entrada,
-                    anterior: anterior,
-                    primerGrupo: _enElPrimerGrupo(
-                      entradas,
-                      i,
-                      primerIdDeUlises,
-                    ),
-                    conMovimiento: !_sinMovimiento,
-                    resultado: (context) => ResultadoEnLaConversacion(c: _c),
-                  );
-                },
+    // El compositor mide hasta el 60 % del alto sobre el teclado (RF-BIEN-5).
+    return LayoutBuilder(
+      builder: (context, limites) => Column(
+        children: [
+          FranjaConSello(latido: _latido, rombos: _rombos),
+          Expanded(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 600),
+                child: ListView.builder(
+                  controller: _desplazamiento,
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+                  itemCount: visibles.clamp(0, entradas.length),
+                  itemBuilder: (context, i) {
+                    final entrada = entradas[i];
+                    final anterior = i > 0 ? entradas[i - 1] : null;
+                    return EntradaView(
+                      key: ValueKey<int>(entrada.id),
+                      entrada: entrada,
+                      anterior: anterior,
+                      primerGrupo: _enElPrimerGrupo(
+                        entradas,
+                        i,
+                        primerIdDeUlises,
+                      ),
+                      conMovimiento: !_sinMovimiento,
+                      resultado: (context) => ResultadoEnLaConversacion(c: _c),
+                    );
+                  },
+                ),
               ),
             ),
           ),
-        ),
-        if (atendida && turno != null && _revelador.compositorVisible)
-          Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 600),
-              child: _CompositorAnimado(
-                key: ValueKey<TurnoDeLaBienvenida>(turno),
-                conMovimiento: !_sinMovimiento,
-                child: compositorDelTurno(context, _c, turno),
+          if (atendida && turno != null && _revelador.compositorVisible)
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 600),
+                child: _CompositorAnimado(
+                  key: ValueKey<TurnoDeLaBienvenida>(turno),
+                  conMovimiento: !_sinMovimiento,
+                  altoDisponible: limites.maxHeight,
+                  child: compositorDelTurno(context, _c, turno),
+                ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -403,10 +407,12 @@ class _CompositorAnimado extends StatelessWidget {
   const _CompositorAnimado({
     super.key,
     required this.conMovimiento,
+    required this.altoDisponible,
     required this.child,
   });
 
   final bool conMovimiento;
+  final double altoDisponible;
   final Widget? child;
 
   @override
@@ -417,7 +423,10 @@ class _CompositorAnimado extends StatelessWidget {
       tween: Tween<double>(begin: 0, end: 1),
       duration: Duration(milliseconds: conMovimiento ? 300 : 200),
       curve: Curves.easeOutCubic,
-      child: MarcoDelCompositor(child: contenido),
+      child: MarcoDelCompositor(
+        altoDisponible: altoDisponible,
+        child: contenido,
+      ),
       builder: (context, t, hijo) => Opacity(
         opacity: t,
         child: conMovimiento

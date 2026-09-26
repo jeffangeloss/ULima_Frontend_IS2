@@ -18,22 +18,30 @@ import 'compositor_del_test.dart';
 typedef _Textos = TextosDeLaBienvenida;
 
 class MarcoDelCompositor extends StatelessWidget {
-  const MarcoDelCompositor({super.key, required this.child});
+  const MarcoDelCompositor({
+    super.key,
+    required this.child,
+    required this.altoDisponible,
+  });
 
   final Widget child;
+
+  /// El alto de la página sobre el teclado. El Scaffold ya descuenta el
+  /// teclado de su cuerpo, así que su MediaQuery no lo trae y la página lo
+  /// mide con su LayoutBuilder.
+  final double altoDisponible;
 
   @override
   Widget build(BuildContext context) {
     final b = Theme.brightnessOf(context);
     final mq = MediaQuery.of(context);
-    final disponible = mq.size.height - mq.viewInsets.bottom;
     return DecoratedBox(
       decoration: BoxDecoration(
         color: MaterialTheme.cardBg(b),
         border: Border(top: BorderSide(color: MaterialTheme.testLine(b))),
       ),
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: disponible * 0.6),
+        constraints: BoxConstraints(maxHeight: altoDisponible * 0.6),
         child: SingleChildScrollView(
           padding: EdgeInsets.fromLTRB(
             12,
@@ -466,30 +474,40 @@ class BotonDeGoogle extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           onTap: alTocar,
           child: Ink(
-            height: 48,
             decoration: BoxDecoration(
               color: MaterialTheme.bienvenidaGoogleFondo(b),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: MaterialTheme.bienvenidaGoogleBorde(b)),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                SvgPicture.asset(
-                  'assets/images/google_logo.svg',
-                  width: 20,
-                  height: 20,
+            // 48 dp de alto, que crecen con el texto grande en lugar de
+            // desbordar (RF-BIEN-16).
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 46),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SvgPicture.asset(
+                      'assets/images/google_logo.svg',
+                      width: 20,
+                      height: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Flexible(
+                      child: Text(
+                        _Textos.continuarConGoogle,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: MaterialTheme.bienvenidaGoogleTinta(b),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 10),
-                Text(
-                  _Textos.continuarConGoogle,
-                  style: TextStyle(
-                    color: MaterialTheme.bienvenidaGoogleTinta(b),
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),
