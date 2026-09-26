@@ -702,14 +702,14 @@ class DueloDelTest extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             tarjeta(tareas.first, 'top'),
-            const SizedBox(height: 12),
+            SizedBox(height: compacto ? 8 : 12),
             tarjeta(tareas.last, 'bottom'),
           ],
         ),
         ExcludeSemantics(
           child: Container(
-            width: 30,
-            height: 30,
+            width: compacto ? 26 : 30,
+            height: compacto ? 26 : 30,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: MaterialTheme.pageBg(b),
@@ -720,7 +720,7 @@ class DueloDelTest extends StatelessWidget {
               'o',
               style: TextStyle(
                 color: MaterialTheme.testMuted(b),
-                fontSize: 13,
+                fontSize: compacto ? 12 : 13,
                 fontWeight: FontWeight.w800,
                 fontStyle: FontStyle.italic,
               ),
@@ -761,6 +761,12 @@ class TarjetaDeTarea extends StatelessWidget {
     final encendida = estado == EstadoDeTarjeta.encendida;
     final apagada = estado == EstadoDeTarjeta.apagada;
     final tarjeta = MaterialTheme.cardBg(b);
+    // La compacta es la `.cb-card` de la maqueta, con el borde de 1,5 dp
+    // siempre. Su relleno de 8 × 10 dp se cuenta desde el borde exterior, así
+    // que mide los 56 dp de B-13 con la baldosa de 40 dp.
+    final borde = compacto || encendida ? 1.5 : 1.0;
+    final radio = compacto ? 16.0 : 20.0;
+    final insignia = compacto ? 24.0 : 28.0;
     return Semantics(
       button: true,
       selected: encendida,
@@ -776,18 +782,18 @@ class TarjetaDeTarea extends StatelessWidget {
             constraints: BoxConstraints(minHeight: compacto ? 56 : 104),
             decoration: BoxDecoration(
               color: encendida ? tinte(color, tarjeta, 0.12) : tarjeta,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(radio),
               border: Border.all(
                 color: encendida ? color : MaterialTheme.testLine(b),
                 // El borde más grueso de la encendida acompaña al color
                 // (RF-TEST-13).
-                width: encendida ? 1.5 : 1,
+                width: borde,
               ),
               boxShadow: encendida
                   ? [
                       BoxShadow(
                         color: color.withValues(alpha: 0.2),
-                        spreadRadius: 4,
+                        spreadRadius: compacto ? 3 : 4,
                       ),
                     ]
                   : null,
@@ -796,9 +802,14 @@ class TarjetaDeTarea extends StatelessWidget {
               type: MaterialType.transparency,
               child: InkWell(
                 onTap: onTap,
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(radio),
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(10, 10, 12, 10),
+                  padding: compacto
+                      ? EdgeInsets.symmetric(
+                          horizontal: 10 - borde,
+                          vertical: 8 - borde,
+                        )
+                      : const EdgeInsets.fromLTRB(10, 10, 12, 10),
                   child: Row(
                     children: [
                       TaskIconTile(
@@ -808,8 +819,9 @@ class TarjetaDeTarea extends StatelessWidget {
                         width: compacto ? 40 : 80,
                         height: compacto ? 40 : 80,
                         iconSize: compacto ? 22 : 40,
+                        borderRadius: BorderRadius.circular(compacto ? 11 : 16),
                       ),
-                      const SizedBox(width: 12),
+                      SizedBox(width: compacto ? 10 : 12),
                       Expanded(
                         child: Text(
                           tarea.text,
@@ -817,11 +829,11 @@ class TarjetaDeTarea extends StatelessWidget {
                             color: apagada
                                 ? MaterialTheme.testInk2(b)
                                 : MaterialTheme.textPrimary(b),
-                            fontSize: 14,
+                            fontSize: compacto ? 12.5 : 14,
                             fontWeight: apagada
                                 ? FontWeight.w600
                                 : FontWeight.w700,
-                            height: 1.32,
+                            height: compacto ? 1.3 : 1.32,
                           ),
                         ),
                       ),
@@ -833,8 +845,8 @@ class TarjetaDeTarea extends StatelessWidget {
           ),
           if (encendida)
             Positioned(
-              top: -9,
-              right: -7,
+              top: compacto ? -8 : -9,
+              right: compacto ? -6 : -7,
               child: ExcludeSemantics(
                 // El salto de la insignia, que no ocurre con menos
                 // movimiento.
@@ -848,8 +860,8 @@ class TarjetaDeTarea extends StatelessWidget {
                   builder: (context, escala, hijo) =>
                       Transform.scale(scale: escala, child: hijo),
                   child: Container(
-                    width: 28,
-                    height: 28,
+                    width: insignia,
+                    height: insignia,
                     decoration: BoxDecoration(
                       color: color,
                       shape: BoxShape.circle,
@@ -860,7 +872,7 @@ class TarjetaDeTarea extends StatelessWidget {
                     ),
                     child: Icon(
                       LucideIcons.check,
-                      size: 13,
+                      size: compacto ? 12 : 13,
                       color: MaterialTheme.pageBg(b),
                     ),
                   ),

@@ -14,6 +14,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:ulima_plus/configs/themes.dart';
 import 'package:ulima_plus/domain/bienvenida/bienvenida_turnos.dart';
 import 'package:ulima_plus/models/specialty_test_models.dart';
@@ -218,19 +219,22 @@ void main() {
   });
 
   group('las piezas compactas (B-13)', () {
-    testWidgets('en el compositor, las tarjetas miden 56 dp como mínimo con la '
-        'baldosa de 40 dp y el ícono de 22 dp', (tester) async {
+    testWidgets('en el compositor, las tarjetas son las compactas de la '
+        'maqueta, de 56 dp con la baldosa de 40 dp y radio 11, el ícono de '
+        '22 dp, el borde de 1,5, el radio de 16, el texto de 12,5 a 10 dp de '
+        'la baldosa, 8 dp entre ellas, la moneda de 26 y la insignia de 24 '
+        '(B-13 y RF-BIEN-10)', (tester) async {
       final contenido = SpecialtyTestContent.tryParse(contenidoJson())!;
       final duelo = contenido.questions.firstWhere((q) => q.isDuel);
       const tema = MaterialTheme(TextTheme());
-      await tester.pumpWidget(
+      Future<void> montar(String? respuesta) => tester.pumpWidget(
         MaterialApp(
           theme: tema.light(),
           home: Scaffold(
             body: DueloDelTest(
               tareas: [duelo.top!, duelo.bottom!],
               contenido: contenido,
-              respuesta: null,
+              respuesta: respuesta,
               ayuda: null,
               onTap: (_) {},
               compacto: true,
@@ -238,18 +242,53 @@ void main() {
           ),
         ),
       );
+      await montar(null);
       final tarjetas = find.byType(TarjetaDeTarea);
       expect(tarjetas, findsNWidgets(2));
-      final alto = tester.getSize(tarjetas.first).height;
-      expect(alto, greaterThanOrEqualTo(56));
-      expect(alto, lessThan(104));
-      final baldosa = tester.getSize(find.byType(TaskIconTile).first);
-      expect(baldosa, const Size(40, 40));
-      final icono = find.descendant(
-        of: find.byType(TaskIconTile).first,
-        matching: find.byType(Icon),
+      expect(tester.getSize(tarjetas.first).height, 56);
+      expect(tester.getSize(tarjetas.last).height, 56);
+      expect(
+        tester.getTopLeft(tarjetas.last).dy -
+            tester.getBottomLeft(tarjetas.first).dy,
+        8,
       );
+      final caja = tester.widget<AnimatedContainer>(
+        find
+            .descendant(
+              of: tarjetas.first,
+              matching: find.byType(AnimatedContainer),
+            )
+            .first,
+      );
+      final decoracion = caja.decoration! as BoxDecoration;
+      expect((decoracion.border! as Border).top.width, 1.5);
+      expect(decoracion.borderRadius, BorderRadius.circular(16));
+      final baldosa = find.byType(TaskIconTile).first;
+      expect(tester.getSize(baldosa), const Size(40, 40));
+      expect(
+        tester.widget<TaskIconTile>(baldosa).borderRadius,
+        BorderRadius.circular(11),
+      );
+      final icono = find.descendant(of: baldosa, matching: find.byType(Icon));
       expect(tester.getSize(icono), const Size(22, 22));
+      final texto = find.text(duelo.top!.text);
+      expect(tester.widget<Text>(texto).style!.fontSize, 12.5);
+      expect(tester.getTopLeft(texto).dx - tester.getTopRight(baldosa).dx, 10);
+      final moneda = find.ancestor(
+        of: find.text('o'),
+        matching: find.byType(Container),
+      );
+      expect(tester.getSize(moneda.first), const Size(26, 26));
+      // La encendida lleva la insignia del visto.
+      await montar('top');
+      await tester.pumpAndSettle();
+      final visto = find.byIcon(LucideIcons.check);
+      expect(tester.widget<Icon>(visto).size, 12);
+      final insignia = find.ancestor(
+        of: visto,
+        matching: find.byType(Container),
+      );
+      expect(tester.getSize(insignia.first), const Size(24, 24));
     });
 
     testWidgets('en el compositor, la escala trae solo sus cuatro opciones, '
