@@ -9,6 +9,7 @@
 // Archivos probados lib/services/session_navigation.dart y
 // lib/services/api_client.dart.
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -17,6 +18,7 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:ulima_plus/domain/bienvenida/bienvenida_turnos.dart';
+import 'package:ulima_plus/models/registro_models.dart';
 import 'package:ulima_plus/pages/bienvenida/bienvenida_page.dart';
 import 'package:ulima_plus/pages/bienvenida/widgets/compositor.dart';
 import 'package:ulima_plus/pages/splash/salidas.dart' show naranjaDelSplash;
@@ -168,6 +170,118 @@ void main() {
         expect(b.controlador.turno.value, TurnoDeLaBienvenida.e1Codigo);
         Get.reset();
       }
+    });
+
+    /// Empieza otra visita con el motivo, llega a E2 y deja su login en
+    /// vuelo, así que su compositor espera.
+    Future<({Future<void> entrada})> otraVisitaQueEspera(
+      Bienvenida b,
+      Completer<void> espera,
+    ) async {
+      await b.visitar(motivo: MotivoDeLlegada.restablecida);
+      b.login.codeController.text = '20230001';
+      b.controlador.enviarCodigo();
+      b.login.passwordController.text = 'secreta-de-prueba';
+      b.auth.esperas.add(espera);
+      final entrada = b.controlador.entrar();
+      expect(b.controlador.esperando.value, isTrue);
+      return (entrada: entrada);
+    }
+
+    test('«Iniciar sesión» desde incierto que responde en otra visita no '
+        'apaga la espera de esa visita', () async {
+      final vieja = Completer<void>();
+      final nueva = Completer<void>();
+      final b = Bienvenida(
+        registro: RegistroFalso(
+          fallo: const RegistroFailure('x', code: 'TIEMPO_AGOTADO'),
+        ),
+      );
+      await b.visitar();
+      final c = b.controlador..responderAlSaludo(yaUsa: false);
+      c.registro!.codigoCtrl.text = '20230001';
+      c.enviarCodigoDeAlumno();
+      c.registro!
+        ..passwordCtrl.text = 'Contrasena1'
+        ..confirmacionCtrl.text = 'Contrasena1';
+      c
+        ..enviarContrasenas()
+        ..aceptarConsentimiento();
+      c.registro!.portalPasswordCtrl.text = 'clave-de-prueba';
+      c.enviarPortal();
+      c.registro!.passcodeCtrl.text = '123456';
+      await c.crearCuenta();
+      expect(c.turno.value, TurnoDeLaBienvenida.incierto);
+      b.auth.esperas.add(vieja);
+      final intento = c.iniciarSesionDesdeIncierto();
+      // Mientras espera, el atrás no vuelve a N5 (BR-AUTH-F-08).
+      c.atras();
+      expect(c.turno.value, TurnoDeLaBienvenida.incierto);
+      final (:entrada) = await otraVisitaQueEspera(b, nueva);
+      vieja.complete();
+      await intento;
+      expect(c.esperando.value, isTrue);
+      expect(c.turno.value, TurnoDeLaBienvenida.e2Contrasena);
+      nueva.complete();
+      await entrada;
+      expect(c.turno.value, TurnoDeLaBienvenida.pasoAlHorario);
+    });
+
+    test('un guardado de la selección manual que responde en otra visita no '
+        'la lleva al horario ni apaga su espera', () async {
+      final vieja = Completer<void>();
+      final nueva = Completer<void>();
+      final b = Bienvenida(
+        auth: AuthDeLaBienvenida(usuario: alumnaDePrueba(setupComplete: false)),
+        token: 'jwt-de-prueba',
+      );
+      await b.visitar();
+      final c = b.controlador..ulisesAterrizoConSesion();
+      await pumpEventQueue();
+      c
+        ..saltarElTest()
+        ..marcarPrincipal(1);
+      b.auth.esperas.add(vieja);
+      final guardado = c.terminarLaSeleccion();
+      // Mientras guarda, el atrás no vuelve a T0.
+      c.atras();
+      expect(c.turno.value, TurnoDeLaBienvenida.seleccionManual);
+      final (:entrada) = await otraVisitaQueEspera(b, nueva);
+      vieja.complete();
+      await guardado;
+      expect(c.esperando.value, isTrue);
+      expect(c.turno.value, TurnoDeLaBienvenida.e2Contrasena);
+      expect(b.deUlises, isNot(contains(TextosDeLaBienvenida.listoAlHorario)));
+      nueva.complete();
+      await entrada;
+    });
+
+    test('una recarga del catálogo que responde en otra visita no dice nada '
+        'en ella', () async {
+      final vieja = Completer<void>();
+      final nueva = Completer<void>();
+      final b = Bienvenida(
+        auth: AuthDeLaBienvenida(usuario: alumnaDePrueba(setupComplete: false)),
+        token: 'jwt-de-prueba',
+      );
+      b.auth
+        ..catalogoFalla = true
+        ..recargaFalla = true;
+      await b.visitar();
+      final c = b.controlador..ulisesAterrizoConSesion();
+      await pumpEventQueue();
+      c.saltarElTest();
+      expect(c.catalogoFallido.value, isTrue);
+      b.auth.esperas.add(vieja);
+      final recarga = c.reintentarElCatalogo();
+      final (:entrada) = await otraVisitaQueEspera(b, nueva);
+      final antes = b.deUlises.length;
+      vieja.complete();
+      await recarga;
+      expect(b.deUlises.length, antes);
+      expect(c.esperando.value, isTrue);
+      nueva.complete();
+      await entrada;
     });
 
     test(

@@ -70,6 +70,16 @@ class AuthDeLaBienvenida extends AuthService {
   /// Lo que devuelve Google, con 'cancelar' para el selector cerrado.
   String? google;
   int logouts = 0;
+  int logins = 0;
+
+  /// Cada login, con código o con Google, cada guardado y cada recarga del
+  /// catálogo esperan al primero de estos antes de responder, como una red
+  /// lenta.
+  final List<Completer<void>> esperas = <Completer<void>>[];
+
+  Future<void> _esperar() async {
+    if (esperas.isNotEmpty) await esperas.removeAt(0).future;
+  }
 
   @override
   UserModel? get currentUser => usuario;
@@ -79,6 +89,8 @@ class AuthDeLaBienvenida extends AuthService {
     required String code,
     required String password,
   }) async {
+    logins++;
+    await _esperar();
     if (redCaida) throw const RedCaida();
     if (errorDeLogin != null) return errorDeLogin;
     usuario = alEntrar ?? alumnaDePrueba();
@@ -87,6 +99,8 @@ class AuthDeLaBienvenida extends AuthService {
 
   @override
   Future<String?> loginWithGoogle() async {
+    logins++;
+    await _esperar();
     if (google == 'cancelar') return null;
     if (google != null) return google;
     usuario = alEntrar ?? alumnaDePrueba();
@@ -111,6 +125,7 @@ class AuthDeLaBienvenida extends AuthService {
     required List<int> especialidadesInteres,
     Duration? timeout,
   }) async {
+    await _esperar();
     if (falloAlGuardar != null) throw falloAlGuardar!;
     guardados.add(
       SeleccionDeEspecialidades(
@@ -146,8 +161,13 @@ class AuthDeLaBienvenida extends AuthService {
   @override
   bool get catalogsFailed => catalogoFalla;
 
+  /// La recarga del catálogo vuelve a fallar.
+  bool recargaFalla = false;
+
   @override
   Future<bool> reloadCatalogs() async {
+    await _esperar();
+    if (recargaFalla) return false;
     catalogoFalla = false;
     return true;
   }
@@ -211,6 +231,8 @@ class Bienvenida {
     RegistroFalso? registro,
     this.adoptarFalla = false,
     ApiFalsaDelTest? apiDelTest,
+    Future<String?> Function()? tokenGuardado,
+    RegistroController Function()? crearRegistro,
   }) : auth = auth ?? AuthDeLaBienvenida(),
        servicioDeRegistro =
            registro ?? RegistroFalso(resultado: resultadoDelRegistro()) {
@@ -223,21 +245,23 @@ class Bienvenida {
     controlador = BienvenidaController(
       auth: this.auth,
       login: login,
-      tokenGuardado: () async => token,
+      tokenGuardado: tokenGuardado ?? () async => token,
       abrirRuta: rutas.add,
       terminarAutocompletado: () => autocompletados.add((
         codigo: login.codeController.text,
         contrasena: login.passwordController.text,
       )),
-      crearRegistro: () => RegistroController(
-        service: servicioDeRegistro,
-        adoptarSesion: ({required token, required user}) async {
-          if (adoptarFalla) throw StateError('sin catálogos');
-          this.auth.usuario = user;
-        },
-        iniciarSesion: ({required code, required password}) =>
-            this.auth.login(code: code, password: password),
-      ),
+      crearRegistro:
+          crearRegistro ??
+          () => RegistroController(
+            service: servicioDeRegistro,
+            adoptarSesion: ({required token, required user}) async {
+              if (adoptarFalla) throw StateError('sin catálogos');
+              this.auth.usuario = user;
+            },
+            iniciarSesion: ({required code, required password}) =>
+                this.auth.login(code: code, password: password),
+          ),
       avisar: (titulo, texto) => avisos.add(titulo),
     )..onStart();
   }

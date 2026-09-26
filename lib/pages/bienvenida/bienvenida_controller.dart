@@ -328,7 +328,7 @@ class BienvenidaController extends GetxController {
   }
 
   void enviarCodigo() {
-    if (turno.value != TurnoB.e1Codigo) return;
+    if (turno.value != TurnoB.e1Codigo || esperando.value) return;
     final codigo = _login.codeController.text.trim();
     if (codigo.isEmpty) return;
     _responder(codigo);
@@ -339,8 +339,12 @@ class BienvenidaController extends GetxController {
   Future<void> entrar() async {
     if (turno.value != TurnoB.e2Contrasena || esperando.value) return;
     if (_login.passwordController.text.isEmpty) return;
+    // Una visita nueva no recibe el desenlace de la anterior, y su espera
+    // no la apaga el login viejo (RF-BIEN-1 y BR-AUTH-F-08).
+    final visita = _visita;
     esperando.value = true;
     final d = await _login.entrar();
+    if (visita != _visita) return;
     esperando.value = false;
     switch (d.tipo) {
       case TipoDeDesenlace.sesionPuesta:
@@ -365,8 +369,10 @@ class BienvenidaController extends GetxController {
 
   Future<void> entrarConGoogle() async {
     if (turno.value != TurnoB.e1Codigo || esperando.value) return;
+    final visita = _visita;
     esperando.value = true;
     final d = await _login.entrarConGoogle();
+    if (visita != _visita) return;
     esperando.value = false;
     _trasGoogle(d);
   }
@@ -402,19 +408,25 @@ class BienvenidaController extends GetxController {
   }
 
   /// «Soy nuevo» en E1 o en E2. Lo escrito no pasa de una rama a la otra.
+  /// Mientras se espera un login, el compositor no responde (BR-AUTH-F-08).
   void soyNuevo() {
     final t = turno.value;
     if (t != TurnoB.e1Codigo && t != TurnoB.e2Contrasena) return;
+    if (esperando.value) return;
     _responder(TextosB.soyNuevo);
     _login.vaciarCampos();
     _abrirN1();
   }
 
-  /// Abre /forgot-password encima, con el sello en su cabecera (B-9).
-  void abrirOlvido() => _abrirRuta('/forgot-password');
+  /// Abre /forgot-password encima, con el sello en su cabecera (B-9). Es
+  /// un enlace de E2.
+  void abrirOlvido() {
+    if (turno.value != TurnoB.e2Contrasena || esperando.value) return;
+    _abrirRuta('/forgot-password');
+  }
 
   void volverAE1() {
-    if (turno.value != TurnoB.e2Contrasena) return;
+    if (turno.value != TurnoB.e2Contrasena || esperando.value) return;
     _abrir(TurnoB.e1Codigo);
   }
 
@@ -575,8 +587,10 @@ class BienvenidaController extends GetxController {
   Future<void> iniciarSesionDesdeIncierto() async {
     final r = registro;
     if (r == null || turno.value != TurnoB.incierto || esperando.value) return;
+    final visita = _visita;
     esperando.value = true;
     final entro = await r.intentarIniciarSesion();
+    if (visita != _visita) return;
     esperando.value = false;
     if (!identical(registro, r)) return;
     if (!entro) {
@@ -1068,6 +1082,7 @@ class BienvenidaController extends GetxController {
       intereses: interesesManuales,
       oficiales: _auth.officialSpecialtyIds,
     );
+    final visita = _visita;
     esperando.value = true;
     try {
       await _auth.completeSetup(
@@ -1076,12 +1091,14 @@ class BienvenidaController extends GetxController {
         especialidadesInteres: seleccion.intereses,
       );
     } catch (_) {
+      if (visita != _visita) return;
       esperando.value = false;
       // La spec no fija este texto (decisión 8 del plan).
       _decirError(TextosDelTest.noSeGuardo);
       unawaited(_trasUnFalloConSesion());
       return;
     }
+    if (visita != _visita) return;
     esperando.value = false;
     _botonQueGuarda = seleccion.principal == null && seleccion.intereses.isEmpty
         ? TextosB.saltarPorAhora
@@ -1090,9 +1107,11 @@ class BienvenidaController extends GetxController {
   }
 
   Future<void> reintentarElCatalogo() async {
-    if (turno.value != TurnoB.seleccionManual) return;
+    if (turno.value != TurnoB.seleccionManual || esperando.value) return;
+    final visita = _visita;
     esperando.value = true;
     final cargo = await _auth.reloadCatalogs();
+    if (visita != _visita) return;
     esperando.value = false;
     catalogoFallido.value = !cargo || especialidadesOficiales.isEmpty;
     if (catalogoFallido.value) _decirError(TextosB.noCargaronEspecialidades);
@@ -1123,6 +1142,8 @@ class BienvenidaController extends GetxController {
   bool get atrasSaleDeLaApp => _accionDelAtras == AccionDelAtras.salirDeLaApp;
 
   void atras() {
+    // Mientras se espera una respuesta, el atrás tampoco hace nada.
+    if (esperando.value) return;
     switch (_accionDelAtras) {
       case AccionDelAtras.volverAE1:
         volverAE1();

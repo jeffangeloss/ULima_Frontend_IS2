@@ -7,6 +7,8 @@
 // salir. Las Tareas 23 y 27 suman los turnos E1, E2 y E3.
 // Archivo probado lib/pages/login/login_controller.dart.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -301,6 +303,123 @@ void main() {
       expect(b.controlador.turno.value, TurnoDeLaBienvenida.e2Contrasena);
       expect(b.login.passwordController.text, 'secreta-de-prueba');
       expect(b.controlador.esperando.value, isFalse);
+    });
+
+    test('una visita nueva mientras «Entrar» espera no recibe su desenlace ni '
+        'pierde su propia espera (RF-BIEN-1 y BR-AUTH-F-08)', () async {
+      final vieja = Completer<void>();
+      final nueva = Completer<void>();
+      final auth = AuthDeLaBienvenida()..esperas.addAll([vieja, nueva]);
+      final b = await enE2(auth: auth);
+      final c = b.controlador;
+      final entradaVieja = c.entrar();
+      expect(c.esperando.value, isTrue);
+      // El restablecimiento llega a /login con otra visita mientras el login
+      // de la anterior sigue en vuelo.
+      await b.visitar(motivo: MotivoDeLlegada.restablecida);
+      b.login.codeController.text = '20230001';
+      c.enviarCodigo();
+      b.login.passwordController.text = 'secreta-de-prueba';
+      final entradaNueva = c.entrar();
+      expect(c.esperando.value, isTrue);
+      vieja.complete();
+      await entradaVieja;
+      expect(
+        c.esperando.value,
+        isTrue,
+        reason: 'el login viejo no apaga la espera de la visita nueva',
+      );
+      expect(b.delAlumno, ['20230001']);
+      expect(c.turno.value, TurnoDeLaBienvenida.e2Contrasena);
+      expect(b.autocompletados, isEmpty);
+      nueva.complete();
+      await entradaNueva;
+      expect(b.delAlumno, ['20230001', TextosDeLaBienvenida.contrasenaLista]);
+      expect(c.turno.value, TurnoDeLaBienvenida.pasoAlHorario);
+    });
+
+    test(
+      'una visita nueva mientras Google espera no recibe su desenlace',
+      () async {
+        final espera = Completer<void>();
+        final auth = AuthDeLaBienvenida()..esperas.add(espera);
+        final b = Bienvenida(auth: auth);
+        await b.visitar();
+        b.controlador.responderAlSaludo(yaUsa: true);
+        final google = b.controlador.entrarConGoogle();
+        await b.visitar(motivo: MotivoDeLlegada.expirada);
+        espera.complete();
+        await google;
+        expect(b.delAlumno, isEmpty);
+        expect(b.deUlises, [
+          TextosDeLaBienvenida.saludo,
+          TextosDeLaBienvenida.e1,
+        ]);
+        expect(b.controlador.turno.value, TurnoDeLaBienvenida.e1Codigo);
+        expect(b.controlador.esperando.value, isFalse);
+      },
+    );
+
+    test('mientras «Entrar» espera, el compositor no responde, ni un segundo '
+        'toque, el atrás, «¿Olvidaste tu contraseña?» ni «Soy nuevo» '
+        '(BR-AUTH-F-08)', () async {
+      final espera = Completer<void>();
+      final auth = AuthDeLaBienvenida()..esperas.add(espera);
+      final b = await enE2(auth: auth);
+      final c = b.controlador;
+      final entrada = c.entrar();
+      final antes = c.entradas.length;
+      await c.entrar();
+      c
+        ..atras()
+        ..volverAE1()
+        ..abrirOlvido()
+        ..soyNuevo();
+      expect(auth.logins, 1, reason: 'sin segundo login');
+      expect(c.entradas.length, antes);
+      expect(c.turno.value, TurnoDeLaBienvenida.e2Contrasena);
+      expect(b.rutas, isEmpty);
+      expect(c.registro, isNull);
+      expect(b.login.codeController.text, '  20230001 ');
+      espera.complete();
+      await entrada;
+      expect(c.turno.value, TurnoDeLaBienvenida.pasoAlHorario);
+    });
+
+    test(
+      'mientras Google espera, E1 no manda el código ni pasa a «Soy nuevo»',
+      () async {
+        final espera = Completer<void>();
+        final auth = AuthDeLaBienvenida(google: 'cancelar')
+          ..esperas.add(espera);
+        final b = Bienvenida(auth: auth);
+        await b.visitar();
+        final c = b.controlador..responderAlSaludo(yaUsa: true);
+        final google = c.entrarConGoogle();
+        await c.entrarConGoogle();
+        b.login.codeController.text = '20230001';
+        c
+          ..enviarCodigo()
+          ..soyNuevo()
+          ..atras();
+        expect(auth.logins, 1);
+        expect(c.turno.value, TurnoDeLaBienvenida.e1Codigo);
+        expect(b.delAlumno, [TextosDeLaBienvenida.siEntrar]);
+        espera.complete();
+        await google;
+        expect(c.esperando.value, isFalse);
+        c.enviarCodigo();
+        expect(c.turno.value, TurnoDeLaBienvenida.e2Contrasena);
+      },
+    );
+
+    test('«¿Olvidaste tu contraseña?» solo abre desde E2', () async {
+      final b = Bienvenida();
+      await b.visitar();
+      b.controlador
+        ..responderAlSaludo(yaUsa: true)
+        ..abrirOlvido();
+      expect(b.rutas, isEmpty);
     });
 
     test(
