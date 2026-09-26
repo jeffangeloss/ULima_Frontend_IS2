@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:ulima_plus/components/recarga_ulima/hoja_recarga_ulima.dart';
+import 'package:ulima_plus/components/skeleton.dart';
 import 'package:ulima_plus/configs/themes.dart';
 import 'package:ulima_plus/pages/mis_notas/mis_notas_controller.dart';
 import 'package:ulima_plus/pages/mis_notas/mis_notas_page.dart';
@@ -164,11 +165,21 @@ void main() {
         api: ApiRecargaFalsa()..responder(_vistaGet, pendiente),
       );
 
+      expect(find.byType(SkeletonCardList), findsOneWidget);
+      expect(
+        tester.widget<SkeletonCardList>(find.byType(SkeletonCardList)).count,
+        4,
+      );
+      expect(
+        find.text('Aún no tienes cursos con notas oficiales.'),
+        findsNothing,
+      );
       expect(find.text('Actualizar desde la ULima'), findsNothing);
       expect(find.text('Notas oficiales'), findsOneWidget);
 
       pendiente.complete(vistaJson());
       await tester.pump();
+      expect(find.byType(SkeletonCardList), findsNothing);
       expect(find.text('Actualizar desde la ULima'), findsOneWidget);
     });
 
@@ -266,6 +277,8 @@ void main() {
       expect(find.text('14.5'), findsOneWidget);
       expect(find.text('EX01 · Exposición'), findsOneWidget);
       expect(find.text('Semana 10'), findsOneWidget);
+      // La fila sin semana no lleva la línea «Semana».
+      expect(find.textContaining('Semana'), findsNWidgets(2));
       expect(find.text('NP'), findsOneWidget);
       // Sin pareja va sin sigla, sin semana, y se muestra igual (B7).
       expect(find.text('Trabajo final'), findsOneWidget);
@@ -318,19 +331,31 @@ void main() {
       expect(colorDe('10.40'), const Color(0xFFDC2626));
     });
 
-    testWidgets('la franja lleva un Semantics de botón con su etiqueta, con y '
-        'sin lectura', (tester) async {
-      final semantica = tester.ensureSemantics();
-      await _abrir(tester);
+    for (final (lectura, etiqueta) in <(Object?, String)>[
+      (
+        '2025-09-22T15:42:10.000Z',
+        'Actualizar desde la ULima. Última lectura $lecturaDePrueba',
+      ),
+      (null, 'Actualizar desde la ULima. Aún no se actualizan desde la ULima'),
+    ]) {
+      testWidgets('la franja lleva un Semantics de botón con su etiqueta, '
+          '${lectura == null ? 'sin' : 'con'} lectura', (tester) async {
+        final semantica = tester.ensureSemantics();
+        await _abrir(
+          tester,
+          api: ApiRecargaFalsa()
+            ..responder(_vistaGet, vistaJson(lastReadAt: lectura)),
+        );
 
-      expect(
-        find.bySemanticsLabel(
-          'Actualizar desde la ULima. Última lectura $lecturaDePrueba',
-        ),
-        findsWidgets,
-      );
-      semantica.dispose();
-    });
+        final franja = find.bySemanticsLabel(etiqueta);
+        expect(franja, findsWidgets);
+        expect(
+          tester.getSemantics(franja.first),
+          isSemantics(isButton: true, hasTapAction: true, label: etiqueta),
+        );
+        semantica.dispose();
+      });
+    }
 
     testWidgets('la franja abre la hoja de recarga', (tester) async {
       await _abrir(tester);
