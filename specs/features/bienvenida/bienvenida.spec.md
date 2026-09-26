@@ -1463,7 +1463,7 @@ token y cambiaba RS-BE-38 del backend y `docs/specs/api-contracts.md`.
 - **Maquetas de `docs/images/UI`.** `InicioSesion.png` queda superada por la bienvenida. `AGENTS.md`
   pide respetar esas maquetas salvo un cambio aprobado, así que la aprobación de esta spec es ese
   cambio. La imagen no se toca.
-- **Índice.** `docs/specs/feature-index.md` suma la fila 23 de esta spec, anota las enmiendas en
+- **Índice.** `docs/specs/feature-index.md` suma la fila 24 de esta spec, anota las enmiendas en
   las filas de Auth, Registro y Splash y anota el sello en la fila de Password Reset. El
   2026-09-26 esas filas registran la aprobación.
 

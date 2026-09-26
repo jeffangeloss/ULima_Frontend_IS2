@@ -15,6 +15,7 @@ import '../../services/alert_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/malla_service.dart';
 import '../../services/post_login_route.dart';
+import '../../services/recarga_ulima_service.dart';
 import '../../services/specialty_test_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/time_blocks_service.dart';
@@ -50,6 +51,9 @@ void registrarLosServicios() {
   // Estado único del récord (RF-REC-5), compartido por la tarjeta del Perfil
   // y /mi-record. No carga nada al arrancar.
   Get.put<AcademicRecordService>(AcademicRecordService(), permanent: true);
+  // Estado único de la recarga desde la ULima (RF-RCG-1), compartido por la
+  // calculadora, /mis-notas y la ficha del curso. No carga nada al arrancar.
+  Get.put<RecargaUlimaService>(RecargaUlimaService(), permanent: true);
   // Estado único de los bloques de horario propios (RF-BLQ-7). Tampoco carga
   // nada al arrancar.
   Get.put<TimeBlocksService>(TimeBlocksService(), permanent: true);

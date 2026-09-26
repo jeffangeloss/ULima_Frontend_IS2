@@ -26,6 +26,7 @@ import 'package:ulima_plus/pages/splash/carga_del_arranque.dart';
 import 'package:ulima_plus/pages/splash/estado_de_la_capa.dart';
 import 'package:ulima_plus/pages/splash/variantes/variantes.dart';
 import 'package:ulima_plus/services/auth_service.dart';
+import 'package:ulima_plus/services/recarga_ulima_service.dart';
 import 'package:ulima_plus/services/session_navigation.dart';
 import 'package:ulima_plus/services/specialty_test_service.dart';
 import 'package:ulima_plus/services/splash_variante_service.dart';
@@ -460,6 +461,9 @@ void main() {
       // El servicio del test de especialidad llega con fcbf2e7 y sigue
       // registrado, ahora desde la carga.
       expect(Get.isRegistered<SpecialtyTestService>(), isTrue);
+      // La recarga desde la ULima llega con el merge de main y también se
+      // registra desde la carga.
+      expect(Get.isRegistered<RecargaUlimaService>(), isTrue);
     });
 
     test('la carga ya no pide las alertas, que pide el home al montarse '
