@@ -982,15 +982,24 @@ class EscalaDelTest extends StatelessWidget {
     required this.pregunta,
     required this.opciones,
     required this.respuesta,
-    required this.foco,
+    this.foco,
     required this.onTap,
+    this.compacto = false,
   });
 
   final TestQuestion pregunta;
   final List<TestOption> opciones;
   final String? respuesta;
-  final FocusNode foco;
+
+  /// El foco del lector en el enunciado, que no va en el compositor.
+  final FocusNode? foco;
   final ValueChanged<String> onTap;
+
+  /// En el compositor de la conversación, la escala trae solo sus cuatro
+  /// opciones, sin el ícono decorativo, porque la tarea y el prompt van en la
+  /// burbuja de Ulises y el rótulo en el compositor (RF-BIEN-10 y enmienda a
+  /// RF-TEST-6).
+  final bool compacto;
 
   @override
   Widget build(BuildContext context) {
@@ -1007,6 +1016,22 @@ class EscalaDelTest extends StatelessWidget {
           onTap: () => onTap(opciones[i].id),
         ),
     ];
+    final grupo = Semantics(
+      container: true,
+      explicitChildNodes: true,
+      label: pregunta.prompt,
+      child: dosPorDos
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                FilaDeOpciones(opciones: botones.sublist(0, 2)),
+                const SizedBox(height: 6),
+                FilaDeOpciones(opciones: botones.sublist(2)),
+              ],
+            )
+          : FilaDeOpciones(opciones: botones),
+    );
+    if (compacto) return grupo;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1072,21 +1097,7 @@ class EscalaDelTest extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        Semantics(
-          container: true,
-          explicitChildNodes: true,
-          label: pregunta.prompt,
-          child: dosPorDos
-              ? Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    FilaDeOpciones(opciones: botones.sublist(0, 2)),
-                    const SizedBox(height: 6),
-                    FilaDeOpciones(opciones: botones.sublist(2)),
-                  ],
-                )
-              : FilaDeOpciones(opciones: botones),
-        ),
+        grupo,
       ],
     );
   }

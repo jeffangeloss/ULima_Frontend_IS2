@@ -80,29 +80,14 @@ class CompositorDelTest extends StatelessWidget {
   }
 }
 
-class _Pregunta extends StatefulWidget {
+class _Pregunta extends StatelessWidget {
   const _Pregunta({required this.c, required this.t});
 
   final BienvenidaController c;
   final SpecialtyTestController t;
 
   @override
-  State<_Pregunta> createState() => _PreguntaState();
-}
-
-class _PreguntaState extends State<_Pregunta> {
-  final FocusNode _foco = FocusNode(debugLabel: 'escala');
-
-  @override
-  void dispose() {
-    _foco.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final c = widget.c;
-    final t = widget.t;
     final b = Theme.brightnessOf(context);
     final lector = MediaQuery.accessibleNavigationOf(context);
     void responder(String valor) => c.responderAlTest(valor, conLector: lector);
@@ -120,12 +105,13 @@ class _PreguntaState extends State<_Pregunta> {
           : _Textos.rotuloDeLaEscala(paso + 1, total);
       final Widget respuestas;
       if (pregunta != null && !pregunta.isDuel) {
+        // Solo las opciones, con la tarea en la burbuja de Ulises.
         respuestas = EscalaDelTest(
           pregunta: pregunta,
           opciones: contenido.scaleOptions,
           respuesta: respuesta,
-          foco: _foco,
           onTap: responder,
+          compacto: true,
         );
       } else {
         final tareas = pregunta != null

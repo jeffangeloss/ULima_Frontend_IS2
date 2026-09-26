@@ -187,6 +187,38 @@ void main() {
       expect(baldosa, const Size(40, 40));
     });
 
+    testWidgets('en el compositor, la escala trae solo sus cuatro opciones, '
+        'sin la baldosa, el rótulo de la tarjeta, la tarea ni el prompt, y '
+        'su grupo se lee con el prompt (RF-BIEN-10 y enmienda a RF-TEST-6)', (
+      tester,
+    ) async {
+      final semantica = tester.ensureSemantics();
+      final contenido = SpecialtyTestContent.tryParse(contenidoJson())!;
+      final escala = contenido.questions.firstWhere((q) => !q.isDuel);
+      const tema = MaterialTheme(TextTheme());
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: tema.light(),
+          home: Scaffold(
+            body: EscalaDelTest(
+              pregunta: escala,
+              opciones: contenido.scaleOptions,
+              respuesta: null,
+              onTap: (_) {},
+              compacto: true,
+            ),
+          ),
+        ),
+      );
+      expect(find.byType(OpcionDeEscala), findsNWidgets(4));
+      expect(find.byType(TaskIconTile), findsNothing);
+      expect(find.text('ESCALA DE GUSTO'), findsNothing);
+      expect(find.text(escala.task!.text), findsNothing);
+      expect(find.text(escala.prompt), findsNothing);
+      expect(find.bySemanticsLabel(escala.prompt), findsOneWidget);
+      semantica.dispose();
+    });
+
     test('los emojis de la escala son públicos y siguen el orden de las '
         'opciones (RF-TEST-6)', () {
       expect(emojisDeLaEscala, ['😴', '🙂', '😃', '🤩']);
@@ -450,6 +482,40 @@ void main() {
       );
       await avanzar(tester, 3000);
       expect(find.text(TextosDeLaBienvenida.preguntaAnterior), findsOneWidget);
+    });
+
+    testWidgets('en una escala, la tarea va una sola vez, en la burbuja de '
+        'Ulises, y el compositor no trae su ícono (RF-BIEN-10)', (
+      tester,
+    ) async {
+      final b = await enT0(tester);
+      await tester.tap(find.text(TextosDeLaBienvenida.empezarElTest));
+      await avanzar(tester, 3500);
+      // Las dos primeras son duelos, y la tercera, una escala.
+      for (var i = 0; i < 2; i++) {
+        await tester.tap(find.byType(TarjetaDeTarea).first);
+        await avanzar(tester, 5000);
+      }
+      final pregunta = b.controlador.test!.preguntaActual!;
+      expect(pregunta.isDuel, isFalse);
+      expect(find.text('ESCALA DE GUSTO · 3 DE 5'), findsOneWidget);
+      final compositor = find.byType(MarcoDelCompositor);
+      expect(
+        find.descendant(of: compositor, matching: find.byType(OpcionDeEscala)),
+        findsNWidgets(4),
+      );
+      expect(
+        find.descendant(of: compositor, matching: find.byType(TaskIconTile)),
+        findsNothing,
+      );
+      expect(find.text(pregunta.task!.text), findsOneWidget);
+      expect(
+        find.descendant(
+          of: compositor,
+          matching: find.text(pregunta.task!.text),
+        ),
+        findsNothing,
+      );
     });
 
     testWidgets('la selección manual lista las oficiales con «Principal» y '
