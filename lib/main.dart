@@ -45,6 +45,7 @@ import 'pages/password_reset/forgot_password_controller.dart';
 import 'pages/password_reset/reset_password_controller.dart';
 import 'pages/password_reset/forgot_password_page.dart';
 import 'pages/password_reset/reset_password_page.dart';
+import 'pages/setup_carrera/setup_carrera_binding.dart';
 import 'pages/setup_carrera/setup_carrera_page.dart';
 import 'pages/specialty_test/specialty_test_binding.dart';
 import 'pages/specialty_test/specialty_test_page.dart';
@@ -163,7 +164,13 @@ class MyApp extends StatelessWidget {
           page: () => const RegistroPage(),
           binding: RegistroBinding(),
         ),
-        GetPage(name: '/setup-carrera', page: () => const SetupCarreraPage()),
+        // Asistente del alumno nuevo (RF-TEST-1). Binding por ruta, en lugar
+        // del Get.put que tenía dentro de build.
+        GetPage(
+          name: '/setup-carrera',
+          page: () => const SetupCarreraPage(),
+          binding: SetupCarreraBinding(),
+        ),
         // Test de especialidad (RF-TEST-1), con el argumento
         // {'origen': 'asistente'} o {'origen': 'perfil'}. Binding por ruta,
         // como el resto, así que el controlador muere al cerrar la ruta y
