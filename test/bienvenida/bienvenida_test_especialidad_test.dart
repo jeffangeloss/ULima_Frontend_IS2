@@ -17,6 +17,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -649,6 +650,63 @@ void main() {
         ),
         findsNothing,
       );
+    });
+
+    testWidgets('con reducir movimiento el resultado no trae confeti pero sí '
+        'la vibración de RF-TEST-8, como el test en su pantalla (RF-TEST-13 '
+        'y RF-BIEN-15)', (tester) async {
+      final vibraciones = <Object?>[];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (llamada) async {
+          if (llamada.method == 'HapticFeedback.vibrate') {
+            vibraciones.add(llamada.arguments);
+          }
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+      final b = Bienvenida(
+        auth: AuthDeLaBienvenida(
+          alEntrar: alumnaDePrueba(setupComplete: false),
+        ),
+        token: 'jwt-de-prueba',
+      );
+      await montarLaBienvenida(
+        tester,
+        b,
+        argumentos: const {argumentoDeMotivo: MotivoDeLlegada.expirada},
+        sinMovimiento: true,
+      );
+      await avanzar(tester, 1500);
+      b.login.codeController.text = '20230001';
+      b.controlador.enviarCodigo();
+      b.login.passwordController.text = 'secreta-de-prueba';
+      await b.controlador.entrar();
+      await avanzar(tester, 3000);
+      final c = b.controlador..empezarElTest();
+      for (final v in respuestasEnOrden) {
+        c
+          ..responderAlTest(v, conLector: true)
+          ..siguiente();
+      }
+      await tester.pump();
+      await tester.pump();
+      expect(c.confeti.value, 1);
+      expect(vibraciones, ['HapticFeedbackType.heavyImpact']);
+      expect(
+        find.byType(CustomPaint).evaluate().where((e) {
+          final w = e.widget as CustomPaint;
+          return w.painter is PintorDelConfeti;
+        }),
+        isEmpty,
+      );
+      await avanzar(tester, 16000);
     });
 
     testWidgets('tras «Rehacer el test», el resultado anterior sigue en la '

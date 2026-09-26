@@ -80,8 +80,11 @@ class _BienvenidaPageState extends State<BienvenidaPage>
       ever<TurnoDeLaBienvenida?>(_c.turno, (_) => _sincronizar()),
       ever<int>(_c.visitaEmpezada, (_) => _sincronizar()),
       ever<int>(_c.confeti, (_) {
-        if (!mounted || _sinMovimiento) return;
+        if (!mounted) return;
+        // La vibración va siempre, como en el test en su pantalla, y el
+        // confeti no va con reducir movimiento (RF-TEST-8 y RF-TEST-13).
         unawaited(HapticFeedback.heavyImpact());
+        if (_sinMovimiento) return;
         unawaited(_confeti.forward(from: 0));
       }),
     ]);
@@ -169,6 +172,9 @@ class _BienvenidaPageState extends State<BienvenidaPage>
 
   void _alCambiarElEnvio(bool enviando) {
     if (!mounted || _sinMovimiento) return;
+    // Un Ticker detenido vuelve a contar desde cero al empezar otra vez, así
+    // que el pulso de un reenvío empieza en el rombo de arriba (RF-BIEN-4).
+    if (!_pulso.isActive) _ahoraDelPulso = Duration.zero;
     _inicioDelPulso = _ahoraDelPulso;
     _desdeAlApagar = enviando ? null : _rombos.value;
     if (!_pulso.isActive) unawaited(_pulso.start());

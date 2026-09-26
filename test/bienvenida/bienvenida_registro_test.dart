@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:ulima_plus/components/portal_consent/portal_consent_view.dart';
+import 'package:ulima_plus/components/logo/sello_del_logo.dart';
 import 'package:ulima_plus/configs/themes.dart';
 import 'package:ulima_plus/domain/bienvenida/bienvenida_turnos.dart';
 import 'package:ulima_plus/models/registro_models.dart';
@@ -461,6 +462,53 @@ void main() {
       );
       expect(error.top, greaterThanOrEqualTo(campo.bottom));
       expect(error.bottom, lessThanOrEqualTo(enlace.top));
+    });
+
+    testWidgets('el pulso de un reenvío empieza otra vez en el rombo de '
+        'arriba (RF-BIEN-4)', (tester) async {
+      final primero = Completer<RegistroResult>();
+      final registro = RegistroFalso(pendiente: primero);
+      final b = Bienvenida(registro: registro);
+      await montarLaBienvenida(
+        tester,
+        b,
+        argumentos: const {argumentoDeMotivo: MotivoDeLlegada.expirada},
+      );
+      await avanzar(tester, 1500);
+      final c = b.controlador..soyNuevo();
+      c.registro!.codigoCtrl.text = '20230001';
+      c.enviarCodigoDeAlumno();
+      c.registro!
+        ..passwordCtrl.text = 'Contrasena1'
+        ..confirmacionCtrl.text = 'Contrasena1';
+      c
+        ..enviarContrasenas()
+        ..aceptarConsentimiento();
+      c.registro!.portalPasswordCtrl.text = 'clave-de-prueba';
+      c.enviarPortal();
+      c.registro!.passcodeCtrl.text = '123456';
+      final sello = tester.widget<SelloDelLogo>(find.byType(SelloDelLogo));
+      unawaited(c.crearCuenta());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(sello.rombos!.value![0], closeTo(1, 0.05), reason: 'el primero');
+      await avanzar(tester, 1300);
+      primero.completeError(
+        const RegistroFailure(
+          'No hay conexión. Revisa tu internet e inténtalo de nuevo.',
+          code: 'SIN_CONEXION',
+        ),
+      );
+      await avanzar(tester, 1500);
+      expect(sello.rombos!.value, isNull);
+      registro.pendiente = Completer<RegistroResult>();
+      c.registro!.passcodeCtrl.text = '123456';
+      unawaited(c.crearCuenta());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(sello.rombos!.value![0], closeTo(1, 0.05), reason: 'el reenvío');
+      registro.pendiente!.complete(resultadoDelRegistro());
+      await avanzar(tester, 4000);
     });
 
     testWidgets('N5 trae las seis casillas y solo envía con «Crear mi '
