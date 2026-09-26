@@ -6,12 +6,14 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../components/networking/networking_profile_entry_card.dart';
 import '../../configs/themes.dart';
 import '../academic_record/record_profile_card.dart';
+import '../specialty_test/specialty_test_profile_card.dart';
 import '../../models/malla_models.dart';
 import '../../services/api_client.dart';
 import '../../services/auth_service.dart';
 import '../../services/malla_service.dart';
 import '../../services/password_reset_service.dart';
 import '../../services/session_navigation.dart';
+import '../../services/specialty_test_service.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -37,7 +39,7 @@ class ProfilePage extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                           NetworkingProfileEntryCard(
+                          NetworkingProfileEntryCard(
                             onTap: () => Get.toNamed('/networking'),
                           ),
                           const SizedBox(height: 16),
@@ -329,6 +331,10 @@ class _ConfigAcademicaSection extends StatelessWidget {
           ),
         ),
         const _EspecialidadCard(),
+        // RF-TEST-10, con la guarda de `logout()`, para que las pruebas que
+        // montan el Perfil sin este service sigan pasando sin HTTP real.
+        if (Get.isRegistered<SpecialtyTestService>())
+          const SpecialtyTestProfileCard(),
       ],
     );
   }
