@@ -97,12 +97,17 @@ class CruzDeSalida {
   const CruzDeSalida({
     required this.centro,
     required this.largo,
-    required this.giro,
+    required this.sesgo,
   });
 
   final Offset centro;
   final double largo;
-  final double giro;
+
+  /// La inclinación que iguala la cursiva de «ULIMA++», en radianes. Es un
+  /// sesgo horizontal, como el skewX de las maquetas, y no un giro, así que
+  /// con −12° la punta de arriba de la barra vertical cae hacia la derecha y
+  /// la barra horizontal sigue horizontal.
+  final double sesgo;
 }
 
 class EscenaDeSalida {
@@ -271,11 +276,13 @@ EscenaDeSalida salidaHaciaHome({
               ei,
             ),
             largo: mezcla(largoInicial, d.tamanoDeCruz, ei),
-            giro: -12 * grado * ei,
+            sesgo: -12 * grado * ei,
           ),
         );
       case VarianteSplash.incremento:
-        // Pegados hasta los 150 ms y sueltos hacia los glifos en 450 ms.
+        // Pegados hasta los 150 ms y sueltos hacia los glifos en 450 ms. La
+        // fila de B no nombra inclinación, pero su glifo es la misma cursiva
+        // que en A, así que se sesgan igual para el fundido cruzado.
         final alSoltar = curva.transform(math.min(msEnSalida, 150) / duracion);
         final v = Curves.easeInOutCubic.transform(tramo(msEnSalida, 150, 600));
         cruces.add(
@@ -286,7 +293,7 @@ EscenaDeSalida salidaHaciaHome({
             largo: msEnSalida <= 150
                 ? largoPegado(e)
                 : mezcla(largoPegado(alSoltar), d.tamanoDeCruz, v),
-            giro: -12 * grado * v,
+            sesgo: -12 * grado * v,
           ),
         );
       case VarianteSplash.codigo:
@@ -301,7 +308,7 @@ EscenaDeSalida salidaHaciaHome({
             largo: t <= 0.45
                 ? largoPegado(e)
                 : mezcla(largoPegado(alSoltar), d.tamanoDeCruz, v),
-            giro: -10 * grado * v,
+            sesgo: -10 * grado * v,
           ),
         );
     }
@@ -451,7 +458,9 @@ void pintarSalida(
     for (final c in s.cruces) {
       canvas.save();
       canvas.translate(c.centro.dx, c.centro.dy);
-      canvas.rotate(c.giro);
+      // En Flutter, como en skewX, x' = x + tan(sesgo) · y, y con y hacia
+      // abajo un sesgo negativo lleva la parte de arriba a la derecha.
+      canvas.skew(math.tan(c.sesgo), 0);
       canvas.scale(c.largo / LogoGeometria.largoDeCruz);
       canvas.drawRect(h, pintura);
       canvas.drawRect(v, pintura);

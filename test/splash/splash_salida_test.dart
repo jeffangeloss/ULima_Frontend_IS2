@@ -8,8 +8,12 @@
 // Archivos probados lib/pages/splash/salidas.dart y, desde la Tarea 13,
 // lib/pages/splash/capa_de_arranque.dart.
 
+import 'dart:math' as math;
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ulima_plus/components/logo/escena_del_logo.dart';
 import 'package:ulima_plus/configs/themes.dart';
 import 'package:ulima_plus/pages/splash/puntos_de_aterrizaje.dart';
 import 'package:ulima_plus/pages/splash/salidas.dart';
@@ -149,7 +153,7 @@ void main() {
         final avance0 = (s.cruces[0].centro - d.cruces[0]).distance;
         final avance1 = (s.cruces[1].centro - d.cruces[1]).distance;
         expect(avance1, greaterThan(avance0 - 1));
-        expect(_salida(v, 530).cruces[0].giro, closeTo(-12 * grado, 1e-6));
+        expect(_salida(v, 530).cruces[0].sesgo, closeTo(-12 * grado, 1e-6));
         expect(_salida(v, 0.5 * 530).paginaDy, closeTo(10, 1e-6));
       },
     );
@@ -175,6 +179,9 @@ void main() {
       final factor = pegados.estrella.radio / inicial.estrella.radio;
       expect(rel0.dx, closeTo(relInicial.dx * factor, 1e-6));
       expect(rel1.dx, greaterThan(rel0.dx));
+      // Se sesgan como la cursiva desde que se sueltan, hasta −12°.
+      expect(_salida(v, 150).cruces[0].sesgo, closeTo(0, 1e-12));
+      expect(_salida(v, 620).cruces[1].sesgo, closeTo(-12 * grado, 1e-6));
       expect(_salida(v, 0.62 * 620).opacidadDeUlima, closeTo(0, 1e-9));
       expect(_salida(v, 0.95 * 620).opacidadDeUlima, closeTo(1, 1e-9));
       expect(_salida(v, 0).paginaDy, 32);
@@ -195,12 +202,70 @@ void main() {
       final relInicial = inicial.cruces[0].centro - inicial.estrella.centro;
       final factor = antes.estrella.radio / inicial.estrella.radio;
       expect(rel.dx, closeTo(relInicial.dx * factor, 1e-6));
-      expect(_salida(v, 420).cruces[1].giro, closeTo(-10 * grado, 1e-6));
+      expect(_salida(v, 420).cruces[1].sesgo, closeTo(-10 * grado, 1e-6));
       expect(_salida(v, 0.35 * 420).paginaOpacidad, closeTo(0, 1e-9));
       // El anillo de Código sigue en el centro de la pantalla.
       final restos = _salida(v, 40).restos;
       expect(restos.centro, _centro);
       expect(restos.anillos, isNotEmpty);
+    });
+
+    test('cada «+» dibujado se sesga hacia la derecha como la cursiva de '
+        '«ULIMA++», sin girar su barra horizontal', () async {
+      // Un «+» de 80 dp con −12° en el centro de un lienzo de 120 dp, sin
+      // panel, estrella ni texto que lo tapen.
+      const lado = 120;
+      const lejos = EscenaDelLogo(centro: Offset(-500, -500), radio: 1);
+      const escena = EscenaDeSalida(
+        panel: Rect.zero,
+        colorDelPanel: Color(0x00000000),
+        combado: 0,
+        radioInferior: 0,
+        opacidadDelConjunto: 1,
+        estrella: lejos,
+        restos: lejos,
+        cruces: <CruzDeSalida>[
+          CruzDeSalida(centro: Offset(60, 60), largo: 80, sesgo: -12 * grado),
+        ],
+        opacidadDeLasCruces: 1,
+        opacidadDeLosMas: 0,
+        reveladoDeUlima: 0,
+        opacidadDeUlima: 0,
+        letrasDeUlima: 5,
+        paginaDy: 0,
+        paginaOpacidad: 1,
+      );
+      final grabadora = ui.PictureRecorder();
+      pintarSalida(
+        Canvas(grabadora),
+        escena,
+        DestinoDeLaSalida.desdeMedida(_medida(), _pantalla),
+      );
+      final imagen = await grabadora.endRecording().toImage(lado, lado);
+      final bytes = (await imagen.toByteData(
+        format: ui.ImageByteFormat.rawRgba,
+      ))!;
+      bool pintado(int x, int y) =>
+          bytes.getUint8(4 * (y * lado + x) + 3) > 127;
+      double media(Iterable<int> valores) =>
+          valores.reduce((a, b) => a + b) / valores.length;
+      double centroDeFila(int y) => media([
+        for (var x = 0; x < lado; x++)
+          if (pintado(x, y)) x,
+      ]);
+      double centroDeColumna(int x) => media([
+        for (var y = 0; y < lado; y++)
+          if (pintado(x, y)) y,
+      ]);
+      // La barra vertical, lejos de la horizontal, tiene la punta de arriba
+      // a la derecha de la de abajo, 70 dp × tan 12° en 70 filas.
+      expect(
+        centroDeFila(25) - centroDeFila(95),
+        closeTo(70 * math.tan(12 * grado), 1),
+      );
+      // La barra horizontal sigue horizontal a los dos lados de la vertical.
+      expect(centroDeColumna(28), closeTo(60, 0.75));
+      expect(centroDeColumna(92), closeTo(60, 0.75));
     });
   });
 }
