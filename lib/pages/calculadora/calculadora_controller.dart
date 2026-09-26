@@ -69,7 +69,11 @@ class CalculadoraController extends GetxController {
   /// Rehace las filas de la ULima de cada curso desde la vista del alumno
   /// actual y, con [recalcular], pide el promedio de los cursos que cambian.
   /// Un fallo de la carga sin vista previa deja la calculadora como hoy, y con
-  /// vista previa del mismo alumno las filas siguen.
+  /// vista previa del mismo alumno las filas siguen. Sin vista quita las filas
+  /// y no pide el promedio, porque la vista queda en `null` solo con
+  /// `RecargaUlimaService.clear()`. En el cierre de sesión ese `clear()` llega
+  /// con el JWT ya revocado, y un `POST /grades/me/calculate` con ese token
+  /// recibe un 401 que `ApiClient` trata como sesión expirada.
   void aplicarVistaUlima({bool recalcular = true}) {
     final vista = Get.isRegistered<RecargaUlimaService>()
         ? RecargaUlimaService.to.vista
@@ -94,7 +98,7 @@ class CalculadoraController extends GetxController {
     }
     if (cambiados.isEmpty) return;
     cursos.refresh();
-    if (!recalcular) return;
+    if (!recalcular || vista == null) return;
     for (final i in cambiados) {
       _calcularPromedio(i);
     }

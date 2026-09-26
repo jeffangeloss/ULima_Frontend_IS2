@@ -437,5 +437,24 @@ void main() {
       expect(find.text('Examen escrito'), findsOneWidget);
       expect(find.byIcon(Icons.delete_outline), findsOneWidget);
     });
+
+    testWidgets('clear() quita las filas de la ULima sin pedir '
+        'POST /grades/me/calculate, que en el cierre de sesión sale con el '
+        'JWT ya revocado', (tester) async {
+      final (_, api) = await _montar(
+        tester,
+        vista: _vistaCon([evaluacionJson(assessmentId: 5011, value: 15)]),
+        simuladas: [_simulada('5011', 'Examen escrito', 15, 13)],
+      );
+      expect(find.text('ULima'), findsOneWidget);
+      final promedios = api.cuerposDe('/grades/me/calculate').length;
+
+      RecargaUlimaService.to.clear();
+      await tester.pump();
+
+      expect(api.cuerposDe('/grades/me/calculate'), hasLength(promedios));
+      expect(find.text('ULima'), findsNothing);
+      expect(find.text('Examen escrito'), findsOneWidget);
+    });
   });
 }
