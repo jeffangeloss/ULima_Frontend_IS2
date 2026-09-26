@@ -21,8 +21,10 @@ import '../../components/logo/escena_del_logo.dart';
 import '../../components/logo/pintor_del_logo.dart';
 import '../../services/session_navigation.dart';
 import '../../services/splash_variante_service.dart';
+import '../bienvenida/widgets/vuelo_de_ulises.dart' show PoseDeUlises;
 import '../home/home_page.dart' show abrirEnHorario;
 import 'estado_de_la_capa.dart';
+import 'paso_al_horario.dart';
 import 'puntos_de_aterrizaje.dart';
 import 'salidas.dart';
 import 'variantes/variantes.dart';
@@ -109,6 +111,15 @@ class CapaDeArranque extends StatefulWidget {
   @visibleForTesting
   static void reiniciar() => _estado = null;
 
+  /// La bienvenida entrega el paso al horario antes de navegar a /home
+  /// (RF-BIEN-11 y B-33). Devuelve false si la capa no está montada o ya
+  /// cubre la pantalla, y entonces la bienvenida navega igual.
+  static bool empezarElPasoAlHorario(DatosDelPaso datos) =>
+      _estado?._empezarElPaso(datos) ?? false;
+
+  @visibleForTesting
+  static EscenaDelPaso? get pasoActual => _estado?._escenaDelPaso.value;
+
   @override
   State<CapaDeArranque> createState() => _CapaDeArranqueState();
 }
@@ -153,6 +164,12 @@ class _CapaDeArranqueState extends State<CapaDeArranque>
   DestinoDeLaSalida? _destinoDeLaSalida;
   double _duracionDelFundido = 300;
 
+  DatosDelPaso? _paso;
+  final ValueNotifier<EscenaDelPaso?> _escenaDelPaso =
+      ValueNotifier<EscenaDelPaso?>(null);
+  Rect? _burbuja;
+  bool _conVuelo = false;
+
   bool get _haciaHome => _destino == '/home';
 
   double get _msDeFase => (_ahora - _inicioDeFase).inMicroseconds / 1000;
@@ -162,7 +179,9 @@ class _CapaDeArranqueState extends State<CapaDeArranque>
       ? 0
       : (_ahora - _inicioDeLaIntro!).inMicroseconds / 1000;
 
-  String get _etiqueta => etiquetaDeLaIntro;
+  /// Durante el paso, el lector solo ve «ULIMA++», sin «cargando»
+  /// (RF-BIEN-16).
+  String get _etiqueta => _paso != null ? 'ULIMA++' : etiquetaDeLaIntro;
 
   @override
   void initState() {
@@ -260,9 +279,10 @@ class _CapaDeArranqueState extends State<CapaDeArranque>
       case FaseDeLaCapa.relevo:
         // Si la bienvenida no avisa en 500 ms, la capa se retira igual.
         if (_msDeFase > 500) _retirar();
+      case FaseDeLaCapa.pasoAlHorario:
+        _avanzarElPaso();
       case FaseDeLaCapa.inactiva:
       case FaseDeLaCapa.eligiendo:
-      case FaseDeLaCapa.pasoAlHorario:
         break;
     }
   }
@@ -384,6 +404,95 @@ class _CapaDeArranqueState extends State<CapaDeArranque>
     if (ms >= _duracionDelFundido) _retirar();
   }
 
+  bool _empezarElPaso(DatosDelPaso datos) {
+    if (!mounted || _fase.value != FaseDeLaCapa.inactiva) return false;
+    _paso = datos;
+    _vista = MediaQuery.sizeOf(context);
+    _sinMovimiento = MediaQuery.disableAnimationsOf(context);
+    PuntosDeAterrizaje.cabecera.value = null;
+    PuntosDeAterrizaje.burbuja.value = null;
+    _destinoDeLaSalida = null;
+    _burbuja = null;
+    _conVuelo = false;
+    _cuadrosEsperando = 0;
+    _opacidad.value = 1;
+    // /home se mide quieta y aparece desde el 22 % (RF-BIEN-11). Con reducir
+    // movimiento se monta entera debajo (RF-BIEN-15).
+    _corrimientoDeLaPagina.value = Offset.zero;
+    _opacidadDeLaPagina.value = _sinMovimiento ? 1 : 0;
+    _escenaDelPaso.value = pasoAlHorario(
+      ms: 0,
+      datos: datos,
+      destino: null,
+      burbuja: null,
+      pantalla: _vista,
+    );
+    EstadoDeLaCapa.cubre.value = true;
+    _fase.value = FaseDeLaCapa.pasoAlHorario;
+    _ahora = Duration.zero;
+    _inicioDeFase = Duration.zero;
+    _reloj.start();
+    return true;
+  }
+
+  void _avanzarElPaso() {
+    final datos = _paso!;
+    if (Get.currentRoute != '/home') {
+      // La ruta de debajo cambió, por ejemplo por un 401, o la bienvenida no
+      // pudo navegar.
+      _cuadrosEsperando++;
+      if (_destinoDeLaSalida != null || _cuadrosEsperando > 3) {
+        _fundirElPaso(300);
+      }
+      return;
+    }
+    if (_sinMovimiento) {
+      _fundirElPaso(220);
+      return;
+    }
+    var destino = _destinoDeLaSalida;
+    if (destino == null) {
+      // Espera el primer cuadro de /home y la medida de su cabecera, a lo
+      // sumo tres cuadros, como la salida de la intro.
+      final medida = PuntosDeAterrizaje.cabecera.value;
+      if (medida == null) {
+        _cuadrosEsperando++;
+        if (_cuadrosEsperando > 3) _fundirElPaso(300);
+        return;
+      }
+      destino = DestinoDeLaSalida.desdeMedida(medida, _vista);
+      _destinoDeLaSalida = destino;
+      _burbuja = PuntosDeAterrizaje.burbuja.value;
+      // La burbuja espera oculta a Ulises solo en este paso (B-16).
+      _conVuelo = _burbuja != null && datos.avatar != null;
+      if (_conVuelo) PuntosDeAterrizaje.ulisesEnVuelo.value = true;
+      _inicioDeFase = _ahora;
+    }
+    final ms = _msDeFase;
+    final e = pasoAlHorario(
+      ms: ms,
+      datos: datos,
+      destino: destino,
+      burbuja: _conVuelo ? _burbuja : null,
+      pantalla: _vista,
+    );
+    _escenaDelPaso.value = e;
+    _corrimientoDeLaPagina.value = Offset(0, e.paginaDy);
+    _opacidadDeLaPagina.value = e.paginaOpacidad;
+    if (e.ulisesPosado && PuntosDeAterrizaje.ulisesEnVuelo.value) {
+      // En el cuadro en que Ulises se posa aparece la burbuja real.
+      PuntosDeAterrizaje.ulisesEnVuelo.value = false;
+    }
+    if (ms >= duracionDelPaso(conVuelo: _conVuelo)) _retirar();
+  }
+
+  /// Un fundido cruzado sobre /home, ya montada debajo, así que la estrella
+  /// de su cabecera se ve durante todo el fundido (RF-BIEN-11).
+  void _fundirElPaso(double duracion) {
+    PuntosDeAterrizaje.ulisesEnVuelo.value = false;
+    _empezarElFundido(duracion);
+  }
+
   void _alPintarLaBienvenida() {
     if (_fase.value == FaseDeLaCapa.relevo) _retirar();
   }
@@ -396,6 +505,12 @@ class _CapaDeArranqueState extends State<CapaDeArranque>
     _opacidad.value = 1;
     _corrimientoDeLaPagina.value = Offset.zero;
     _opacidadDeLaPagina.value = 1;
+    // La imagen de la conversación y el texto medido del sello se descartan
+    // al retirarse (RF-BIEN-11).
+    _paso?.desechar();
+    _paso = null;
+    _escenaDelPaso.value = null;
+    PuntosDeAterrizaje.ulisesEnVuelo.value = false;
     _fase.value = FaseDeLaCapa.inactiva;
     EstadoDeLaCapa.cubre.value = false;
   }
@@ -416,6 +531,7 @@ class _CapaDeArranqueState extends State<CapaDeArranque>
       _corrimientoDeLaPagina,
       _opacidadDeLaPagina,
       _opacidad,
+      _escenaDelPaso,
     ]) {
       notificador.dispose();
     }
@@ -449,9 +565,15 @@ class _CapaDeArranqueState extends State<CapaDeArranque>
                   label: _etiqueta,
                   excludeSemantics: true,
                   child: AbsorbPointer(
-                    child: CustomPaint(
-                      size: Size.infinite,
-                      painter: _PintorDeLaCapa(this),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        CustomPaint(
+                          size: Size.infinite,
+                          painter: _PintorDeLaCapa(this),
+                        ),
+                        _UlisesDelPaso(escena: _escenaDelPaso),
+                      ],
                     ),
                   ),
                 ),
@@ -502,6 +624,7 @@ class _PintorDeLaCapa extends CustomPainter {
           capa._escena,
           capa._opacidad,
           capa._salida,
+          capa._escenaDelPaso,
         ]),
       );
 
@@ -517,9 +640,13 @@ class _PintorDeLaCapa extends CustomPainter {
         Paint()..color = Color.fromRGBO(0, 0, 0, opacidad),
       );
     }
+    final paso = capa._escenaDelPaso.value;
+    final datos = capa._paso;
     final salida = capa._salida.value;
     final destino = capa._destinoDeLaSalida;
-    if (salida != null && destino != null) {
+    if (paso != null && datos != null) {
+      pintarElPaso(canvas, paso, datos, destino);
+    } else if (salida != null && destino != null) {
       // La salida, o su fundido si la ruta cambió en medio.
       pintarSalida(canvas, salida, destino);
     } else {
@@ -532,4 +659,49 @@ class _PintorDeLaCapa extends CustomPainter {
 
   @override
   bool shouldRepaint(_PintorDeLaCapa oldDelegate) => oldDelegate.capa != capa;
+}
+
+/// Ulises en el paso al horario, en una capa aislada, como en el
+/// recibimiento (RF-BIEN-18).
+class _UlisesDelPaso extends StatelessWidget {
+  const _UlisesDelPaso({required this.escena});
+
+  final ValueNotifier<EscenaDelPaso?> escena;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<EscenaDelPaso?>(
+    valueListenable: escena,
+    builder: (context, e, _) {
+      final PoseDeUlises? pose = e?.ulises;
+      if (pose == null || pose.opacidad <= 0) return const SizedBox.shrink();
+      return Stack(
+        children: [
+          Positioned(
+            left: pose.centro.dx - pose.lado / 2,
+            top: pose.centro.dy - pose.lado / 2,
+            child: RepaintBoundary(
+              child: Opacity(
+                opacity: pose.opacidad.clamp(0.0, 1.0),
+                child: Transform.rotate(
+                  angle: pose.giro,
+                  child: Transform.scale(
+                    scaleX: pose.escalaX,
+                    scaleY: pose.escalaY,
+                    child: ClipOval(
+                      child: Image.asset(
+                        'assets/images/ulises_chatbot.png',
+                        width: pose.lado,
+                        height: pose.lado,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    },
+  );
 }

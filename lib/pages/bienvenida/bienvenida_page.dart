@@ -7,9 +7,11 @@
 
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show RenderRepaintBoundary;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -19,8 +21,10 @@ import '../../components/logo/sello_del_logo.dart';
 import '../../configs/themes.dart';
 import '../../domain/bienvenida/bienvenida_turnos.dart';
 import '../../services/session_navigation.dart';
+import '../home/home_page.dart' show abrirEnHorario;
 import '../specialty_test/widgets/result_view.dart' show PintorDelConfeti;
 import '../splash/capa_de_arranque.dart';
+import '../splash/paso_al_horario.dart' show DatosDelPaso;
 import 'bienvenida_controller.dart';
 import 'conversacion.dart';
 import 'widgets/burbujas.dart';
@@ -72,6 +76,10 @@ class _BienvenidaPageState extends State<BienvenidaPage>
   /// que los de la conversación esperan a que se posen.
   bool _selloVisible = true;
   bool _avatarVisible = true;
+
+  final GlobalKey _claveDeLaConversacion = GlobalKey();
+  final GlobalKey _claveDelUltimoAvatar = GlobalKey();
+  bool _pasoEmpezado = false;
 
   bool get _sinMovimiento => MediaQuery.disableAnimationsOf(context);
   bool get _conLector => MediaQuery.accessibleNavigationOf(context);
@@ -173,6 +181,70 @@ class _BienvenidaPageState extends State<BienvenidaPage>
         );
       }
     });
+    // El paso empieza cuando el revelador abre su turno, 900 ms después de
+    // E3, en el cuadro siguiente, así que la imagen sale ya pintada.
+    if (_revelador.compositorVisible &&
+        _c.turno.value == TurnoDeLaBienvenida.pasoAlHorario) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _empezarElPaso());
+    }
+  }
+
+  /// Entrega a la capa la franja, el sello, a Ulises en su último avatar y
+  /// una imagen de la conversación, navega a /home en Horario sin transición
+  /// y reinicia la conversación (RF-BIEN-11).
+  void _empezarElPaso() {
+    if (_pasoEmpezado || !mounted) return;
+    _pasoEmpezado = true;
+    final datos = _datosDelPaso();
+    final entregado =
+        datos != null && CapaDeArranque.empezarElPasoAlHorario(datos);
+    // Si la capa no lo toma, la imagen y el texto medido se descartan aquí.
+    if (!entregado) datos?.desechar();
+    offAllSinTransicion('/home', arguments: abrirEnHorario);
+    _c.pasoHecho();
+  }
+
+  DatosDelPaso? _datosDelPaso() {
+    final sello = PiezasDelSello.medir(context, _claveDelSello);
+    final caja =
+        _claveDeLaConversacion.currentContext?.findRenderObject()
+            as RenderRepaintBoundary?;
+    if (sello == null) return null;
+    if (caja == null || !caja.hasSize) {
+      sello.desechar();
+      return null;
+    }
+    final b = Theme.brightnessOf(context);
+    final avatar =
+        _claveDelUltimoAvatar.currentContext?.findRenderObject() as RenderBox?;
+    return DatosDelPaso(
+      franja: Rect.fromLTWH(
+        0,
+        0,
+        MediaQuery.sizeOf(context).width,
+        CabeceraConSello.alto(context),
+      ),
+      colorDeLaFranja: MaterialTheme.bienvenidaFranja(b),
+      sello: sello,
+      conversacion: _imagen(caja),
+      lugarDeLaConversacion: caja.localToGlobal(Offset.zero) & caja.size,
+      avatar: avatar == null || !avatar.hasSize
+          ? null
+          : avatar.localToGlobal(Offset.zero) & avatar.size,
+      colorDeFondo: MaterialTheme.pageBg(b),
+    );
+  }
+
+  /// Si la plataforma no puede capturar la imagen, la capa pinta solo el
+  /// fondo de la conversación, que se desvanece igual.
+  ui.Image? _imagen(RenderRepaintBoundary caja) {
+    try {
+      return caja.toImageSync(
+        pixelRatio: MediaQuery.devicePixelRatioOf(context),
+      );
+    } on Object {
+      return null;
+    }
   }
 
   void _latir() {
@@ -395,6 +467,16 @@ class _BienvenidaPageState extends State<BienvenidaPage>
         .whereType<BurbujaDeUlises>()
         .map((e) => e.id)
         .firstOrNull;
+    final cuantas = visibles.clamp(0, entradas.length);
+    // El primer avatar del último grupo de Ulises, de donde sale a volar en
+    // el paso al horario (RF-BIEN-11).
+    var ultimoAvatar = -1;
+    for (var i = 0; i < cuantas; i++) {
+      if (entradas[i] is BurbujaDeUlises &&
+          (i == 0 || entradas[i - 1] is! BurbujaDeUlises)) {
+        ultimoAvatar = i;
+      }
+    }
     // El compositor mide hasta el 60 % del alto sobre el teclado (RF-BIEN-5).
     return LayoutBuilder(
       builder: (context, limites) => Column(
@@ -406,50 +488,61 @@ class _BienvenidaPageState extends State<BienvenidaPage>
             selloVisible: _selloVisible,
           ),
           Expanded(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 600),
-                child: ListView.builder(
-                  controller: _desplazamiento,
-                  keyboardDismissBehavior:
-                      ScrollViewKeyboardDismissBehavior.onDrag,
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
-                  itemCount: visibles.clamp(0, entradas.length),
-                  itemBuilder: (context, i) {
-                    final entrada = entradas[i];
-                    final anterior = i > 0 ? entradas[i - 1] : null;
-                    final primerGrupo = _enElPrimerGrupo(
-                      entradas,
-                      i,
-                      primerIdDeUlises,
-                    );
-                    return EntradaView(
-                      key: ValueKey<int>(entrada.id),
-                      entrada: entrada,
-                      anterior: anterior,
-                      primerGrupo: primerGrupo,
-                      ocultarAvatar: primerGrupo && !_avatarVisible,
-                      conMovimiento: !_sinMovimiento,
-                      resultado: (context, r) =>
-                          ResultadoEnLaConversacion(c: _c, entrada: r),
-                    );
-                  },
-                ),
+            child: RepaintBoundary(
+              key: _claveDeLaConversacion,
+              child: Column(
+                children: [
+                  Expanded(
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 600),
+                        child: ListView.builder(
+                          controller: _desplazamiento,
+                          keyboardDismissBehavior:
+                              ScrollViewKeyboardDismissBehavior.onDrag,
+                          padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+                          itemCount: cuantas,
+                          itemBuilder: (context, i) {
+                            final entrada = entradas[i];
+                            final primerGrupo = _enElPrimerGrupo(
+                              entradas,
+                              i,
+                              primerIdDeUlises,
+                            );
+                            return EntradaView(
+                              key: ValueKey<int>(entrada.id),
+                              entrada: entrada,
+                              anterior: i > 0 ? entradas[i - 1] : null,
+                              primerGrupo: primerGrupo,
+                              ocultarAvatar: primerGrupo && !_avatarVisible,
+                              claveDelAvatar: i == ultimoAvatar
+                                  ? _claveDelUltimoAvatar
+                                  : null,
+                              conMovimiento: !_sinMovimiento,
+                              resultado: (context, r) =>
+                                  ResultadoEnLaConversacion(c: _c, entrada: r),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (atendida && turno != null && _revelador.compositorVisible)
+                    Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 600),
+                        child: _CompositorAnimado(
+                          key: ValueKey<TurnoDeLaBienvenida>(turno),
+                          conMovimiento: !_sinMovimiento,
+                          altoDisponible: limites.maxHeight,
+                          child: compositorDelTurno(context, _c, turno),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
-          if (atendida && turno != null && _revelador.compositorVisible)
-            Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 600),
-                child: _CompositorAnimado(
-                  key: ValueKey<TurnoDeLaBienvenida>(turno),
-                  conMovimiento: !_sinMovimiento,
-                  altoDisponible: limites.maxHeight,
-                  child: compositorDelTurno(context, _c, turno),
-                ),
-              ),
-            ),
         ],
       ),
     );

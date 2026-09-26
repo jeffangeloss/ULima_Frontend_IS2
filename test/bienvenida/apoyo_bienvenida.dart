@@ -20,6 +20,7 @@ import 'package:ulima_plus/pages/bienvenida/widgets/compositor.dart';
 import 'package:ulima_plus/pages/login/login_controller.dart';
 import 'package:ulima_plus/pages/registro/registro_controller.dart';
 import 'package:ulima_plus/pages/specialty_test/specialty_test_logic.dart';
+import 'package:ulima_plus/pages/splash/capa_de_arranque.dart';
 import 'package:ulima_plus/services/auth_service.dart';
 import 'package:ulima_plus/services/registro_service.dart';
 import 'package:ulima_plus/services/session_navigation.dart';
@@ -322,6 +323,8 @@ Future<void> montarLaBienvenida(
   double escala = 1,
   bool conLector = false,
   bool sinMovimiento = false,
+  bool conCapa = false,
+  Widget Function()? home,
 }) async {
   tester.view.physicalSize = pantalla * 2;
   tester.view.devicePixelRatio = 2;
@@ -346,12 +349,13 @@ Future<void> montarLaBienvenida(
         data: MediaQuery.of(
           context,
         ).copyWith(textScaler: TextScaler.linear(escala)),
-        child: child!,
+        // Con la capa del arranque, como el builder de MyApp (RF-SPL-4).
+        child: conCapa ? CapaDeArranque(child: child!) : child!,
       ),
       getPages: [
         GetPage(name: '/login', page: () => const BienvenidaPage()),
         GetPage(name: '/forgot-password', page: () => const Text('olvido')),
-        GetPage(name: '/home', page: () => const Text('home')),
+        GetPage(name: '/home', page: home ?? () => const Text('home')),
       ],
     ),
   );

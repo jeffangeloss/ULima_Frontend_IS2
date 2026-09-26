@@ -25,6 +25,7 @@ class EntradaView extends StatelessWidget {
     required this.resultado,
     this.conMovimiento = true,
     this.ocultarAvatar = false,
+    this.claveDelAvatar,
   });
 
   final EntradaDeLaConversacion entrada;
@@ -41,6 +42,10 @@ class EntradaView extends StatelessWidget {
   /// del primer grupo y su nombre esperan a que se pose (RF-BIEN-2).
   final bool ocultarAvatar;
 
+  /// El primer avatar del último grupo de Ulises, de donde sale a volar en
+  /// el paso al horario (RF-BIEN-11).
+  final GlobalKey? claveDelAvatar;
+
   @override
   Widget build(BuildContext context) {
     final hijo = switch (entrada) {
@@ -49,6 +54,7 @@ class EntradaView extends StatelessWidget {
         primeraDelGrupo: anterior is! BurbujaDeUlises,
         primerGrupo: primerGrupo,
         ocultarAvatar: ocultarAvatar,
+        claveDelAvatar: claveDelAvatar,
       ),
       final RespuestaDelAlumno r => _Respuesta(entrada: r),
       final ResultadoDelTest r => Padding(
@@ -94,12 +100,14 @@ class _BurbujaDeUlises extends StatelessWidget {
     required this.primeraDelGrupo,
     required this.primerGrupo,
     this.ocultarAvatar = false,
+    this.claveDelAvatar,
   });
 
   final BurbujaDeUlises entrada;
   final bool primeraDelGrupo;
   final bool primerGrupo;
   final bool ocultarAvatar;
+  final GlobalKey? claveDelAvatar;
 
   @override
   Widget build(BuildContext context) {
@@ -115,6 +123,7 @@ class _BurbujaDeUlises extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(
+                key: claveDelAvatar,
                 width: avatar,
                 child: primeraDelGrupo
                     // Al posarse Ulises, su avatar queda en su lugar.
