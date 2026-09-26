@@ -8,16 +8,21 @@
 
 import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
+import 'package:ulima_plus/configs/themes.dart';
 import 'package:ulima_plus/models/specialty_test_models.dart';
 import 'package:ulima_plus/pages/specialty_test/specialty_test_controller.dart';
+import 'package:ulima_plus/pages/specialty_test/widgets/ulises_bubble.dart';
+import 'package:ulima_plus/pages/specialty_test/widgets/welcome_view.dart';
 import 'package:ulima_plus/services/specialty_test_service.dart';
 
 import 'datos_de_prueba.dart';
 import 'dobles_de_red.dart';
 import 'dobles_del_controlador.dart';
+import 'montaje_de_pantallas.dart';
 
 /// Un test en pausa con la copia de una versión anterior y dos respuestas.
 PausedSpecialtyTest _pausado() => PausedSpecialtyTest(
@@ -37,6 +42,7 @@ void main() {
   tearDown(Get.reset);
 
   _controlador();
+  _pantalla();
 }
 
 void _controlador() {
@@ -183,6 +189,146 @@ void _controlador() {
       await montarControlador();
       Get.delete<SpecialtyTestController>();
       expect(t.service.paused, isNull);
+    });
+  });
+}
+
+void _pantalla() {
+  group('WIDGET · La bienvenida (RF-TEST-3)', () {
+    testWidgets('caso 12: las líneas de bienvenida van en orden, sin el '
+        'nombre del alumno, y solo la primera sin avatar', (tester) async {
+      prepararTest(ApiFalsaDelTest());
+      ponerControlador();
+      await montarPantalla(tester, const WelcomeView());
+      expect(find.text('Test de especialidad'), findsOneWidget);
+      expect(find.text('Ulises'), findsOneWidget);
+      final burbujas = tester
+          .widgetList<UlisesBubble>(find.byType(UlisesBubble))
+          .toList();
+      expect(burbujas.map((b) => b.text), kBienvenida);
+      expect(burbujas.map((b) => b.showAvatar), [false, true, true, true]);
+      expect(find.textContaining('Alumna'), findsNothing);
+      expect(find.text('Vamos'), findsNothing);
+    });
+
+    testWidgets('caso 13: en el asistente van las dos pastillas, «Empezar el '
+        'test» y «Saltar y elegir por mi cuenta»', (tester) async {
+      prepararTest(ApiFalsaDelTest());
+      final ui = UiFalsa();
+      ponerControlador(ui: ui);
+      await montarPantalla(tester, const WelcomeView());
+      expect(find.text('3 a 4 min'), findsOneWidget);
+      expect(find.text('Rehazlo en Perfil'), findsOneWidget);
+      expect(find.text('Empezar el test'), findsOneWidget);
+      expect(find.text('Ahora no'), findsNothing);
+      await tester.tap(find.text('Saltar y elegir por mi cuenta'));
+      expect(ui.cierres, [SalidaDelTest.seleccionManual]);
+    });
+
+    testWidgets('caso 14: en el Perfil no va «Rehazlo en Perfil» y el '
+        'secundario es «Ahora no»', (tester) async {
+      prepararTest(ApiFalsaDelTest());
+      final ui = UiFalsa();
+      ponerControlador(origen: OrigenDelTest.perfil, ui: ui);
+      await montarPantalla(tester, const WelcomeView());
+      expect(find.text('Rehazlo en Perfil'), findsNothing);
+      expect(find.text('Saltar y elegir por mi cuenta'), findsNothing);
+      await tester.tap(find.text('Ahora no'));
+      expect(ui.cierres, [null]);
+    });
+
+    testWidgets('caso 15: con un test en pausa, «Seguir el test» y «Empezar '
+        'de nuevo»', (tester) async {
+      final t = prepararTest(ApiFalsaDelTest());
+      t.service.pause(_pausado());
+      final c = ponerControlador();
+      await montarPantalla(tester, const WelcomeView());
+      expect(find.text('Seguir el test'), findsOneWidget);
+      expect(find.text('Empezar el test'), findsNothing);
+      await tester.tap(find.text('Seguir el test'));
+      expect(c.fase.value, FaseDelTest.pregunta);
+      expect(c.paso.value, 2);
+    });
+
+    testWidgets('caso 16: mientras carga hay esqueleto, el principal está '
+        'desactivado y el secundario responde', (tester) async {
+      prepararTest(
+        ApiFalsaDelTest(contenido: [Completer<Map<String, dynamic>>()]),
+      );
+      final ui = UiFalsa();
+      final c = ponerControlador(ui: ui);
+      await montarPantalla(tester, const WelcomeView());
+      expect(find.byKey(WelcomeView.skeletonKey), findsOneWidget);
+      expect(find.byType(UlisesBubble), findsNothing);
+      // El héroe se ve completo.
+      expect(find.byType(UlisesAvatar), findsOneWidget);
+      await tester.tap(find.text('Empezar el test'));
+      expect(c.fase.value, FaseDelTest.bienvenida);
+      await tester.tap(find.text('Saltar y elegir por mi cuenta'));
+      expect(ui.cierres, [SalidaDelTest.seleccionManual]);
+      // El plazo de 15 s del contenido sigue vivo y se vence antes de salir.
+      await tester.pump(const Duration(seconds: 15));
+    });
+
+    testWidgets('caso 17: con error, el mensaje y «Reintentar», que vuelve a '
+        'pedir', (tester) async {
+      final api = ApiFalsaDelTest(
+        contenido: [http.ClientException('sin red'), contenidoJson()],
+      );
+      prepararTest(api);
+      final c = ponerControlador();
+      await montarPantalla(tester, const WelcomeView());
+      expect(find.text('No pudimos cargar el test.'), findsOneWidget);
+      await tester.tap(find.text('Empezar el test'));
+      expect(c.fase.value, FaseDelTest.bienvenida);
+      await tester.tap(find.text('Reintentar'));
+      await tester.pump();
+      expect(api.getsDeContenido, 2);
+      expect(find.byType(UlisesBubble), findsNWidgets(4));
+    });
+
+    testWidgets('caso 18: con las cuatro líneas de 2026-09-25.4 a 375 × 667 '
+        'nada desborda y los botones siguen a la vista', (tester) async {
+      prepararTest(ApiFalsaDelTest());
+      ponerControlador();
+      await montarPantalla(tester, const WelcomeView());
+      expect(tester.takeException(), isNull);
+      expect(dentroDeLaPantalla(tester, find.text('Empezar el test')), isTrue);
+      expect(
+        dentroDeLaPantalla(tester, find.text('Saltar y elegir por mi cuenta')),
+        isTrue,
+      );
+      // El cuerpo desplaza y los botones quedan fijos abajo.
+      final antes = tester.getRect(find.text('Empezar el test'));
+      await tester.drag(
+        find.byType(SingleChildScrollView),
+        const Offset(0, -300),
+      );
+      await tester.pump();
+      expect(tester.getRect(find.text('Empezar el test')), antes);
+    });
+
+    testWidgets('caso 19: en oscuro el héroe sigue naranja y el cuerpo toma '
+        'los tokens', (tester) async {
+      prepararTest(ApiFalsaDelTest());
+      ponerControlador();
+      await montarPantalla(
+        tester,
+        const WelcomeView(),
+        brillo: Brightness.dark,
+      );
+      expect(
+        colorDeTexto(tester, 'Test de especialidad'),
+        const Color(0xFF1A0E05),
+      );
+      expect(
+        colorDeTexto(tester, kBienvenida.first),
+        MaterialTheme.textPrimary(Brightness.dark),
+      );
+      expect(
+        colorDeTexto(tester, 'Ulises'),
+        MaterialTheme.testMuted(Brightness.dark),
+      );
     });
   });
 }
