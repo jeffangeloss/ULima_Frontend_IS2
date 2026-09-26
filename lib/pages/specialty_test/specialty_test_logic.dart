@@ -149,3 +149,277 @@ const Map<String, IconData> kIconosDelTest = <String, IconData>{
 
 /// El ícono de [nombre], o [kIconoNeutro] si no está en el mapa o es null.
 IconData iconoDelTest(String? nombre) => kIconosDelTest[nombre] ?? kIconoNeutro;
+
+// ── La conversación con Ulises (RF-TEST-4) ────────────────────────────────────
+//
+// Un «paso» del recorrido es un índice. De 0 a T − 1 son las preguntas del
+// contenido y desde T van los desempates, en orden.
+
+/// El sello «Cierra el bloque k de B» que cae junto a un `blockClose`.
+class SelloDeBloque {
+  const SelloDeBloque(this.k, this.total);
+
+  /// Orden de la pregunta entre las que traen `blockClose`.
+  final int k;
+
+  /// Cuántas preguntas del contenido traen `blockClose`.
+  final int total;
+
+  String get texto => 'Cierra el bloque $k de $total';
+
+  @override
+  bool operator ==(Object other) =>
+      other is SelloDeBloque && other.k == k && other.total == total;
+
+  @override
+  int get hashCode => Object.hash(k, total);
+}
+
+/// El último turno de Ulises, con sus burbujas en orden y el sello si una de
+/// ellas es un `blockClose`. La app no escribe ninguna línea propia.
+class TurnoDeUlises {
+  const TurnoDeUlises(this.lineas, {this.sello});
+
+  final List<String> lineas;
+  final SelloDeBloque? sello;
+}
+
+String? _rotar(List<String> lista, int n) =>
+    lista.isEmpty ? null : lista[n % lista.length];
+
+/// La reacción a la respuesta [respuesta] de la pregunta de índice [indice].
+/// Un duelo usa su `reaction` o, sin ella, la lista de `pick`, `both` o
+/// `none`; una escala, su `blockClose` o la lista de `scale`. De la lista va
+/// la línea de índice N − 1 módulo su largo, donde N − 1 = [indice] + 1 es el
+/// número de la pregunta respondida.
+String? reaccionA(
+  SpecialtyTestContent contenido,
+  int indice,
+  String respuesta,
+) {
+  final pregunta = contenido.questions[indice];
+  final reacciones = contenido.ulises.reactions;
+  final numero = indice + 1;
+  if (pregunta.isDuel) {
+    if (pregunta.reaction != null) return pregunta.reaction;
+    final lista = switch (respuesta) {
+      'both' => reacciones.both,
+      'none' => reacciones.none,
+      _ => reacciones.pick,
+    };
+    return _rotar(lista, numero);
+  }
+  return pregunta.blockClose ?? _rotar(reacciones.scale, numero);
+}
+
+/// El sello de la pregunta de índice [indice], o null si no trae
+/// `blockClose`. El contrato no manda el campo `block`, y esta cuenta da el
+/// mismo número.
+SelloDeBloque? selloDe(SpecialtyTestContent contenido, int indice) {
+  if (contenido.questions[indice].blockClose == null) return null;
+  final conCierre = <int>[
+    for (var i = 0; i < contenido.questions.length; i++)
+      if (contenido.questions[i].blockClose != null) i,
+  ];
+  return SelloDeBloque(conCierre.indexOf(indice) + 1, conCierre.length);
+}
+
+/// El turno de Ulises antes de la pregunta de índice [indice].
+TurnoDeUlises turnoAntesDePregunta(
+  SpecialtyTestContent contenido,
+  int indice,
+  Map<String, String> respuestas,
+) {
+  final lineas = <String>[];
+  SelloDeBloque? sello;
+  if (indice == 0) {
+    final ayuda = contenido.ulises.duelHelp;
+    if (ayuda != null) lineas.add(ayuda);
+  } else {
+    final previa = contenido.questions[indice - 1];
+    final reaccion = reaccionA(
+      contenido,
+      indice - 1,
+      respuestas[previa.id] ?? '',
+    );
+    if (reaccion != null) lineas.add(reaccion);
+    if (!previa.isDuel && previa.blockClose != null) {
+      sello = selloDe(contenido, indice - 1);
+    }
+  }
+  final primeraEscala = contenido.questions.indexWhere((q) => !q.isDuel);
+  final ayudaEscala = contenido.ulises.scaleHelp;
+  if (indice == primeraEscala && ayudaEscala != null) lineas.add(ayudaEscala);
+  return TurnoDeUlises(lineas, sello: sello);
+}
+
+/// El turno antes de un desempate, con la línea que manda el servidor.
+TurnoDeUlises turnoAntesDeDesempate(TiebreakRecord desempate) =>
+    TurnoDeUlises([?desempate.ulisesLine]);
+
+/// El turno de la espera, con el `blockClose` de la última pregunta y su
+/// sello, si lo trae y la espera sigue a esa pregunta, y la línea de espera.
+TurnoDeUlises turnoDeEspera(
+  SpecialtyTestContent contenido, {
+  required bool trasDesempate,
+}) {
+  final lineas = <String>[];
+  SelloDeBloque? sello;
+  if (!trasDesempate) {
+    final ultima = contenido.questions.length - 1;
+    final cierre = contenido.questions[ultima].blockClose;
+    if (cierre != null) {
+      lineas.add(cierre);
+      sello = selloDe(contenido, ultima);
+    }
+  }
+  final espera = contenido.ulises.loading;
+  if (espera != null) lineas.add(espera);
+  return TurnoDeUlises(lineas, sello: sello);
+}
+
+/// «Pregunta N de T», «Desempate 1» o «Desempate 2».
+String subtituloDelPaso(SpecialtyTestContent contenido, int paso) {
+  final total = contenido.totalQuestions;
+  return paso < total
+      ? 'Pregunta ${paso + 1} de $total'
+      : 'Desempate ${paso - total + 1}';
+}
+
+/// El texto de una respuesta en el historial, que es la tarea elegida, «Me
+/// gustan las dos», «Ninguna me llama» o, en una escala,
+/// «`<etiqueta> · <tarea>`».
+String textoDeRespuesta(
+  SpecialtyTestContent contenido, {
+  required List<TestTask> tareas,
+  required String respuesta,
+}) {
+  if (tareas.length == 1) {
+    final etiqueta = contenido.optionLabel(respuesta) ?? respuesta;
+    return '$etiqueta · ${tareas.single.text}';
+  }
+  return switch (respuesta) {
+    'top' => tareas.first.text,
+    'bottom' => tareas.last.text,
+    _ => contenido.optionLabel(respuesta) ?? respuesta,
+  };
+}
+
+/// Una fila del historial, con el número de la pregunta, o «Desempate k», y
+/// la respuesta.
+class EntradaDelHistorial {
+  const EntradaDelHistorial(this.etiqueta, this.respuesta);
+
+  final String etiqueta;
+  final String respuesta;
+}
+
+/// Lo respondido antes del paso [paso], en orden y sin colores.
+List<EntradaDelHistorial> historial(
+  SpecialtyTestContent contenido,
+  Map<String, String> respuestas,
+  List<TiebreakRecord> desempates,
+  int paso,
+) {
+  final total = contenido.totalQuestions;
+  final filas = <EntradaDelHistorial>[];
+  for (var i = 0; i < paso && i < total; i++) {
+    final pregunta = contenido.questions[i];
+    final respuesta = respuestas[pregunta.id];
+    if (respuesta == null) continue;
+    filas.add(
+      EntradaDelHistorial(
+        '${i + 1}',
+        textoDeRespuesta(
+          contenido,
+          tareas: pregunta.tasks,
+          respuesta: respuesta,
+        ),
+      ),
+    );
+  }
+  for (var j = 0; j < paso - total && j < desempates.length; j++) {
+    final d = desempates[j];
+    final respuesta = d.answer;
+    if (respuesta == null) continue;
+    filas.add(
+      EntradaDelHistorial(
+        'Desempate ${j + 1}',
+        textoDeRespuesta(
+          contenido,
+          tareas: [d.tiebreak.top, d.tiebreak.bottom],
+          respuesta: respuesta,
+        ),
+      ),
+    );
+  }
+  return filas;
+}
+
+/// «N respuestas anteriores» o «1 respuesta anterior».
+String textoDeLaPastilla(int n) =>
+    n == 1 ? '1 respuesta anterior' : '$n respuestas anteriores';
+
+/// La etiqueta de la pastilla para el lector de pantalla. Con una sola
+/// respuesta va en singular, como la pastilla.
+String etiquetaDeLaPastilla(int n, {required bool desplegada}) {
+  if (desplegada) return 'Ocultar tus respuestas anteriores';
+  return n == 1
+      ? 'Ver tu respuesta anterior'
+      : 'Ver tus $n respuestas anteriores';
+}
+
+/// Los desempates que quedan tras responder el paso [paso] con [respuesta].
+/// Responder una pregunta los borra todos, porque el servidor decide cuáles
+/// tocan. Responder el desempate i conserva los anteriores, le pone la
+/// respuesta y borra los siguientes.
+List<TiebreakRecord> desempatesTrasResponder({
+  required int totalPreguntas,
+  required List<TiebreakRecord> desempates,
+  required int paso,
+  required String respuesta,
+}) {
+  if (paso < totalPreguntas) return const <TiebreakRecord>[];
+  final i = paso - totalPreguntas;
+  return [...desempates.take(i), desempates[i].withAnswer(respuesta)];
+}
+
+/// El primer paso sin responder, o null si todo está respondido y toca
+/// evaluar. Sirve para seguir un test en pausa (RF-TEST-3).
+int? primerPasoSinResponder(
+  SpecialtyTestContent contenido,
+  Map<String, String> respuestas,
+  List<TiebreakRecord> desempates,
+) {
+  final pregunta = contenido.questions.indexWhere(
+    (q) => !respuestas.containsKey(q.id),
+  );
+  if (pregunta >= 0) return pregunta;
+  final desempate = desempates.indexWhere((d) => d.answer == null);
+  if (desempate >= 0) return contenido.totalQuestions + desempate;
+  return null;
+}
+
+/// Cuántas preguntas del contenido tienen respuesta, la N de «Tienes un test
+/// a medias, N de T.» (RF-TEST-10).
+int preguntasRespondidas(
+  SpecialtyTestContent contenido,
+  Map<String, String> respuestas,
+) => contenido.questions.where((q) => respuestas.containsKey(q.id)).length;
+
+/// El cuerpo exacto de `POST /specialty-test/me/evaluate` (RS-BE-39), con la
+/// versión con la que el alumno responde, las respuestas por id de pregunta y
+/// los desempates respondidos en orden. Nunca lleva datos del alumno.
+Map<String, dynamic> cuerpoDeEvaluacion({
+  required String version,
+  required Map<String, String> respuestas,
+  required List<TiebreakRecord> desempates,
+}) => <String, dynamic>{
+  'version': version,
+  'answers': Map<String, String>.of(respuestas),
+  'tiebreakAnswers': <Map<String, dynamic>>[
+    for (final d in desempates)
+      if (d.answer != null)
+        TiebreakAnswer(id: d.tiebreak.id, answer: d.answer!).toJson(),
+  ],
+};
