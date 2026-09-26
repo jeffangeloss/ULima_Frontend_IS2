@@ -26,7 +26,9 @@ targets:
 > esa lista con su resolución. La aprobación incluye el cambio de base de datos del backend, la tabla
 > `student_specialty_test_result` de la migración `0014`. Aplicar la `0014` en producción pide
 > además, en el momento del despliegue, el respaldo y el permiso explícito del dueño, como con
-> la `0012` y la `0013`. Pendiente de implementar.
+> la `0012` y la `0013`. Implementada en la rama `feat/test-especialidad-fe` según
+> `docs/superpowers/plans/2026-09-25-specialty-test-app.md`. Falta el merge, que espera al
+> backend desplegado con sus tres rutas y la `0014`, y la revisión manual en un iPhone SE.
 > La contraparte de backend es
 > `ULima_Backend_IS2/specs/features/specialty-test/specialty-test.spec.md` (RS-BE-37 a RS-BE-47,
 > rama `feat/test-especialidad`), aprobada el mismo día con las mismas decisiones 8 y 9. Las dos
@@ -36,8 +38,8 @@ targets:
 > Enmienda la spec de frontend `specs/features/academic-profile/academic-profile.spec.md` en el
 > asistente y en el Perfil (ver «Cambios en otras specs»), enmienda que el dueño aprueba con
 > esta spec.
-> Todos los `[@test]` apuntan a pruebas que se crean con la implementación y hoy no existen, así
-> que cada uno lleva la marca *(pendiente)*, como en la spec del backend (decisión abierta 21).
+> Todos los `[@test]` apuntan a pruebas que ya existen en `test/HU36_jeff/`, así que ninguno
+> lleva la marca *(pendiente)* (decisión abierta 21).
 > Los ejemplos usan datos inventados.
 
 ## El problema
@@ -158,7 +160,7 @@ primero» por el propio test. `SetupStep` queda con `carrera` y `seleccion`.
   la app en un cambio aparte. Su saludo «Hola, <nombre>» no cambia.
 - **Orientación.** Vertical, como toda ruta fuera de Horario (BR-SHELL-F-00 de app-shell).
 
-`[@test] ../../../test/HU36_jeff/setup_carrera_flujo_test.dart` *(pendiente)*
+`[@test] ../../../test/HU36_jeff/setup_carrera_flujo_test.dart`
 
 ### RF-TEST-2 · Capa de datos del test
 
@@ -229,8 +231,8 @@ primero» por el propio test. `SetupStep` queda con `carrera` y `seleccion`.
   último resultado como viejo, y la tarjeta del Perfil lo vuelve a pedir al montarse, porque
   solo `GET /specialty-test/me/result` trae `isCurrentVersion` (RS-BE-45).
 
-`[@test] ../../../test/HU36_jeff/specialty_test_service_test.dart` *(pendiente)*
-`[@test] ../../../test/HU36_jeff/specialty_test_models_test.dart` *(pendiente)*
+`[@test] ../../../test/HU36_jeff/specialty_test_service_test.dart`
+`[@test] ../../../test/HU36_jeff/specialty_test_models_test.dart`
 
 ### RF-TEST-3 · La bienvenida
 
@@ -270,7 +272,7 @@ Es la pantalla 1 de la maqueta.
   fijos abajo. Con las cuatro líneas de `welcome` de la versión `2026-09-25.4`, a 375 × 667,
   nada desborda y los botones siguen a la vista.
 
-`[@test] ../../../test/HU36_jeff/specialty_test_bienvenida_test.dart` *(pendiente)*
+`[@test] ../../../test/HU36_jeff/specialty_test_bienvenida_test.dart`
 
 ### RF-TEST-4 · La conversación con Ulises
 
@@ -325,8 +327,8 @@ Rige para el duelo, la escala, el desempate y la espera.
 - **Transiciones.** La reacción y la pregunta siguiente entran juntas en 180 ms, sin puntos de
   «escribiendo», y el par anterior se encoge dentro de la pastilla del historial.
 
-`[@test] ../../../test/HU36_jeff/specialty_test_conversacion_test.dart` *(pendiente)*
-`[@test] ../../../test/HU36_jeff/specialty_test_logic_test.dart` *(pendiente)*
+`[@test] ../../../test/HU36_jeff/specialty_test_conversacion_test.dart`
+`[@test] ../../../test/HU36_jeff/specialty_test_logic_test.dart`
 
 ### RF-TEST-5 · El duelo
 
@@ -374,8 +376,8 @@ Es la pantalla 2 de la maqueta.
 - **Desempate.** Usa esta misma pantalla, con el rótulo «Desempate» y las dos tareas que manda
   el servidor.
 
-`[@test] ../../../test/HU36_jeff/specialty_test_preguntas_test.dart` *(pendiente)*
-`[@test] ../../../test/HU36_jeff/specialty_test_logic_test.dart` *(pendiente)*
+`[@test] ../../../test/HU36_jeff/specialty_test_preguntas_test.dart`
+`[@test] ../../../test/HU36_jeff/specialty_test_logic_test.dart`
 
 ### RF-TEST-6 · La escala de gusto
 
@@ -396,7 +398,7 @@ Es la pantalla 3 de la maqueta.
 - **Fin de bloque.** Si la escala trae `blockClose`, al avanzar cae el sello de bloque con
   `HapticFeedback.lightImpact`, junto a la burbuja de Ulises (RF-TEST-4).
 
-`[@test] ../../../test/HU36_jeff/specialty_test_preguntas_test.dart` *(pendiente)*
+`[@test] ../../../test/HU36_jeff/specialty_test_preguntas_test.dart`
 
 ### RF-TEST-7 · Evaluación, espera y desempates
 
@@ -421,7 +423,7 @@ Es la pantalla 3 de la maqueta.
 - **La app no calcula.** La app no calcula afinidades, no decide si toca un desempate ni ordena
   el ranking. Muestra lo que llega (decisión 2).
 
-`[@test] ../../../test/HU36_jeff/specialty_test_evaluacion_test.dart` *(pendiente)*
+`[@test] ../../../test/HU36_jeff/specialty_test_evaluacion_test.dart`
 
 ### RF-TEST-8 · El resultado
 
@@ -494,7 +496,7 @@ Son las pantallas 4 y 5 de la maqueta. De arriba abajo, van estas piezas.
   bienvenida, con el test desde cero, aunque el servidor ya tiene guardado el resultado
   (decisión abierta 12).
 
-`[@test] ../../../test/HU36_jeff/specialty_test_resultado_test.dart` *(pendiente)*
+`[@test] ../../../test/HU36_jeff/specialty_test_resultado_test.dart`
 
 ### RF-TEST-9 · Elegir como principal, corazones y Decidir después
 
@@ -536,7 +538,7 @@ especialidades activas, y la principal nunca viaja también como interés (RF-TE
   por la bienvenida. Los corazones ya guardados se quedan. El resultado guardado cambia solo
   cuando el test nuevo termina (RS-BE-44).
 
-`[@test] ../../../test/HU36_jeff/specialty_test_eleccion_test.dart` *(pendiente)*
+`[@test] ../../../test/HU36_jeff/specialty_test_eleccion_test.dart`
 
 ### RF-TEST-10 · El último resultado en el Perfil y «Rehacer el test»
 
@@ -570,7 +572,7 @@ existe para que las pruebas que montan el Perfil sin ese service, como
   con `origen: perfil`, que empieza en la bienvenida (RF-TEST-3). Al volver de un test
   terminado, la tarjeta pide el último resultado otra vez.
 
-`[@test] ../../../test/HU36_jeff/specialty_test_perfil_test.dart` *(pendiente)*
+`[@test] ../../../test/HU36_jeff/specialty_test_perfil_test.dart`
 
 ### RF-TEST-11 · Errores y sin conexión
 
@@ -601,7 +603,7 @@ aviso de éxito del Perfil («Especialidades actualizadas») no cambia.
 | Cualquiera | `401` | `ApiClient` cierra la sesión y lleva al login, como en toda la app (`api_client.dart:143-161`) |
 | Cualquiera | `403` | No ocurre, porque la app nunca abre el test para un docente |
 
-`[@test] ../../../test/HU36_jeff/specialty_test_errores_test.dart` *(pendiente)*
+`[@test] ../../../test/HU36_jeff/specialty_test_errores_test.dart`
 
 ### RF-TEST-12 · Modo oscuro y contraste
 
@@ -690,7 +692,7 @@ aviso de éxito del Perfil («Especialidades actualizadas») no cambia.
   un contraste mínimo, porque lo que dicen está también en texto. El medidor dorado sobre la
   pista de la tarjeta, por ejemplo, baja a 1,87:1 con `ti`, y la afinidad se lee en la pastilla.
 
-`[@test] ../../../test/HU36_jeff/specialty_test_contraste_test.dart` *(pendiente)*
+`[@test] ../../../test/HU36_jeff/specialty_test_contraste_test.dart`
 
 ### RF-TEST-13 · Accesibilidad
 
@@ -737,7 +739,7 @@ aviso de éxito del Perfil («Especialidades actualizadas») no cambia.
   `checked`, y el corazón marcado va relleno, con `toggled`.
 - **Vibración.** Sigue a la maqueta y nunca reemplaza una señal visual ni de texto.
 
-`[@test] ../../../test/HU36_jeff/specialty_test_accesibilidad_test.dart` *(pendiente)*
+`[@test] ../../../test/HU36_jeff/specialty_test_accesibilidad_test.dart`
 
 ### RF-TEST-14 · Solo lo oficial en la app y el id antiguo (decisión 6)
 
@@ -782,8 +784,8 @@ que el caso es de defensa.
   (`setup_carrera_controller.dart:26-28` y `perfil.dart:895-897`) como defensa, aunque con
   BR-AP-07 ya no excluye nada.
 
-`[@test] ../../../test/HU36_jeff/perfil_especialidad_antigua_test.dart` *(pendiente)*
-`[@test] ../../../test/HU36_jeff/specialty_test_logic_test.dart` *(pendiente)*
+`[@test] ../../../test/HU36_jeff/perfil_especialidad_antigua_test.dart`
+`[@test] ../../../test/HU36_jeff/specialty_test_logic_test.dart`
 
 ## Textos nuevos
 
@@ -857,6 +859,7 @@ estoy seguro», «Quiero explorar primero» y sus subtítulos.
 | `lib/pages/specialty_test/widgets/result_view.dart` | El resultado (RF-TEST-8 y RF-TEST-9) |
 | `lib/pages/specialty_test/widgets/electives_sheet.dart` | La hoja de electivos |
 | `lib/pages/specialty_test/widgets/ulises_bubble.dart` | La burbuja y el avatar de Ulises |
+| `lib/pages/specialty_test/widgets/test_buttons.dart` | El botón principal, el secundario y el mensaje de error que comparten el test, la tarjeta del Perfil, el Perfil y el asistente |
 | `lib/pages/specialty_test/widgets/task_icon.dart` | La baldosa con el ícono de la tarea, en `testTaskIconInk` o en el color de su especialidad (RF-TEST-5 y RF-TEST-6) |
 | `lib/pages/specialty_test/specialty_test_profile_card.dart` | La tarjeta del Perfil (RF-TEST-10) |
 | `lib/pages/setup_carrera/setup_carrera_binding.dart` | El binding por ruta del asistente |
@@ -872,7 +875,7 @@ estoy seguro», «Quiero explorar primero» y sus subtítulos.
 | `lib/pages/setup_carrera/setup_carrera_controller.dart` | Sin el paso «Decisión», con la precarga, la vuelta de la ruta del test y la selección oficial |
 | `lib/pages/setup_carrera/setup_carrera_page.dart` | Sin el paso «Decisión», sin `Get.put` en `build`, con tokens en lugar de hex, los estados de catálogo, el atrás de la selección manual y el botón nuevo |
 | `lib/pages/perfil/perfil.dart` | La tarjeta del test en «Configuración académica», montada solo con `SpecialtyTestService` registrado, y el caso del id antiguo en «Especialización» y en su hoja |
-| `lib/services/auth_service.dart` | `isOfficialSpecialty`, `catalogsFailed`, `reloadCatalogs`, el parámetro opcional `timeout` de `completeSetup` y `clear()` del test en `logout()` |
+| `lib/services/auth_service.dart` | `isOfficialSpecialty` sobre `officialSpecialtyIds`, `catalogsFailed`, `reloadCatalogs`, el parámetro opcional `timeout` de `completeSetup`, `clear()` del test en `logout()` y el parámetro opcional `apiClient` del constructor, que solo usan las pruebas |
 | `lib/configs/themes.dart` | Los tokens de RF-TEST-12 |
 
 ### No cambian
@@ -911,8 +914,10 @@ datos del alumno en el cuerpo.
 
 ## Pruebas por requisito
 
-Todas se crean con la implementación, en `test/HU36_jeff/`, y hoy no existen. Las pruebas de
-widget usan un `ApiClient` falso y datos inventados, con el alumno de prueba 20230001.
+Todas están en `test/HU36_jeff/`, con los datos y los dobles que comparten
+(`datos_de_prueba.dart`, `dobles_de_red.dart`, `dobles_del_controlador.dart` y
+`montaje_de_pantallas.dart`). Las pruebas de widget usan un `ApiClient` falso y datos
+inventados, con el alumno de prueba 20230001, y las que miden espacio cargan Roboto del SDK.
 
 | Requisito | Pruebas | Qué fijan |
 | --- | --- | --- |

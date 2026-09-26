@@ -10,9 +10,9 @@ targets:
 # Academic Profile
 
 > **Enmienda del 2026-09-25 por `specs/features/specialty-test/specialty-test.spec.md`,
-> aprobada por el dueño ese día junto con esa spec y pendiente de implementar.** Cambia el
-> asistente de configuración y el Perfil (ver «Enmienda por el test de especialidad» al final).
-> Hasta que se implemente, el código sigue el texto sin enmendar.
+> aprobada por el dueño ese día junto con esa spec e implementada en la rama
+> `feat/test-especialidad-fe`.** Cambia el asistente de configuración y el Perfil (ver «Enmienda
+> por el test de especialidad» al final). El código de esa rama sigue el texto enmendado.
 
 ## User Stories
 
@@ -148,8 +148,8 @@ The following files are no longer referenced by the academic profile feature:
 
 ## Enmienda por el test de especialidad
 
-Del 2026-09-25, aprobada por el dueño ese día junto con la spec del test y pendiente de
-implementar. El detalle está en `specs/features/specialty-test/specialty-test.spec.md`.
+Del 2026-09-25, aprobada por el dueño ese día junto con la spec del test e implementada en la
+rama `feat/test-especialidad-fe`. El detalle está en `specs/features/specialty-test/specialty-test.spec.md`.
 
 - **Asistente (RF-TEST-1).** Los pasos pasan a ser carrera, test de especialidad y selección
   manual. Sale el paso «Decisión» con sus tres opciones. El test vive en la ruta

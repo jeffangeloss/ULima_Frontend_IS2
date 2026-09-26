@@ -602,7 +602,7 @@ Alumno (`requireRole(student|delegate|subdelegate)`); el alumno sale del token y
 
 En la app, `TimeBlocksService` es el único que llama a estas siete rutas. El mensaje de un error del servidor se muestra tal cual llega (RF-BLQ-2); un fallo sin mensaje —red caída o plazo vencido— se muestra como "No se pudo guardar tu bloque. Inténtalo de nuevo.", y en ese caso la app vuelve a pedir su ventana, porque la escritura pudo quedar guardada. Los ejemplos usan datos inventados.
 
-## Specialty Test (test de especialidad), aprobado el 2026-09-25 y pendiente de implementar
+## Specialty Test (test de especialidad), aprobado el 2026-09-25 e implementado en la app en la rama `feat/test-especialidad-fe`
 
 Test que conduce Ulises y que recomienda uno de los cuatro diplomas oficiales. El backend sirve el contenido versionado, calcula el puntaje con la fórmula del contenido, decide los desempates, pide a Cohere el motivo con respaldo de plantillas y guarda solo el último resultado del alumno. Ver `specs/features/specialty-test/specialty-test.spec.md` (RF-TEST-1 a RF-TEST-14) y, en el backend, RS-BE-37 a RS-BE-47 de `ULima_Backend_IS2/specs/features/specialty-test/specialty-test.spec.md` (rama `feat/test-especialidad`). El dueño aprueba las dos specs el 2026-09-25, con los íconos de Lucide por tarea de la versión `2026-09-25.4` del contenido. El resultado vive en `student_specialty_test_result`, la tabla de la migración `0014` del backend, un cambio de BD que el dueño aprueba con las specs. Aplicar la `0014` en producción pide además, en el momento del despliegue, el respaldo y el permiso explícito del dueño.
 
