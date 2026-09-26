@@ -6,9 +6,14 @@
 // Archivo probado lib/components/logo/logo_geometria.dart.
 
 import 'dart:math' as math;
+import 'dart:ui';
 
+import 'package:flutter/rendering.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ulima_plus/components/logo/escena_del_logo.dart';
 import 'package:ulima_plus/components/logo/logo_geometria.dart';
+import 'package:ulima_plus/components/logo/pintor_del_logo.dart';
 
 /// Distancia con signo de [p] a la recta de [a] a [b]. Es positiva a la
 /// derecha del sentido de avance.
@@ -123,4 +128,129 @@ void main() {
       expect(identical(LogoGeometria.silueta, LogoGeometria.silueta), isTrue);
     });
   });
+
+  group('la escena y el pintor', () {
+    const centro = Offset(100, 100);
+
+    test('la escena en reposo trae los ocho rombos quietos y los dos «+» en '
+        'su lugar', () {
+      final e = EscenaDelLogo.reposo(centro: centro, radio: 90);
+      expect(e.rombos, hasLength(8));
+      expect(
+        e.rombos.every((r) => r.desplazamiento == 0 && r.opacidad == 1),
+        isTrue,
+      );
+      expect(
+        e.cruces.map((c) => c.centro).toList(),
+        LogoGeometria.centrosDeCruz,
+      );
+      final sinCruces = EscenaDelLogo.reposo(
+        centro: centro,
+        radio: 90,
+        conCruces: false,
+      );
+      expect(sinCruces.cruces, isEmpty);
+    });
+
+    test('la pose da el centro, el radio y los «+» en dp de la vista', () {
+      final pose = EscenaDelLogo.reposo(centro: centro, radio: 90).pose;
+      final u = 90 / 354.8;
+      expect(pose.centro, centro);
+      expect(pose.radio, 90);
+      expect(pose.giro, 0);
+      expect(pose.cruces[0].centro.dx, closeTo(100 + 308.7 * u, 1e-9));
+      expect(pose.cruces[0].centro.dy, closeTo(100 - 133.8 * u, 1e-9));
+      expect(pose.cruces[1].escala, 1);
+    });
+
+    test('la pose de una escena corrida y de una estrella movida sigue a la '
+        'estrella', () {
+      final e = EscenaDelLogo.reposo(centro: centro, radio: 90).copyWith(
+        corrimiento: const Offset(-36, 0),
+        desplazamientoDeEstrella: const Offset(0, -10),
+        escalaDeEstrella: 0.5,
+      );
+      final u = 90 / 354.8;
+      expect(e.pose.centro.dx, closeTo(100 - 36 * u, 1e-9));
+      expect(e.pose.centro.dy, closeTo(100 - 10 * u, 1e-9));
+      expect(e.pose.radio, closeTo(45, 1e-9));
+    });
+
+    test('una escena desde una pose vuelve a dar la misma pose', () {
+      final original = EscenaDelLogo.reposo(
+        centro: centro,
+        radio: 90,
+      ).copyWith(corrimiento: const Offset(-36, 0), giro: 0.2).pose;
+      final vuelta = EscenaDelLogo.desdePose(original).pose;
+      expect(vuelta.centro.dx, closeTo(original.centro.dx, 1e-9));
+      expect(vuelta.centro.dy, closeTo(original.centro.dy, 1e-9));
+      expect(vuelta.radio, closeTo(original.radio, 1e-9));
+      expect(vuelta.giro, closeTo(original.giro, 1e-9));
+      for (var i = 0; i < 2; i++) {
+        expect(
+          vuelta.cruces[i].centro.dx,
+          closeTo(original.cruces[i].centro.dx, 1e-9),
+        );
+        expect(
+          vuelta.cruces[i].centro.dy,
+          closeTo(original.cruces[i].centro.dy, 1e-9),
+        );
+      }
+    });
+
+    testWidgets('el pintor dibuja la estrella en blanco y nada fuera de ella', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(200, 200);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final clave = GlobalKey();
+      final escena = ValueNotifier(
+        EscenaDelLogo.reposo(centro: centro, radio: 90, conCruces: false),
+      );
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: RepaintBoundary(
+            key: clave,
+            child: SizedBox(
+              width: 200,
+              height: 200,
+              child: CustomPaint(painter: PintorDelLogo(escena)),
+            ),
+          ),
+        ),
+      );
+      final alfa = await _alfas(tester, clave);
+      expect(alfa(100, 100), 255, reason: 'el centro de la estrella');
+      expect(alfa(100, 30), 255, reason: 'dentro del rombo de arriba');
+      expect(alfa(100, 5), 0, reason: 'más allá de la punta, a 95 dp');
+      expect(alfa(0, 0), 0, reason: 'la esquina');
+    });
+
+    test('el pintor no se repinta con la misma escena', () {
+      final escena = ValueNotifier(
+        EscenaDelLogo.reposo(centro: centro, radio: 90),
+      );
+      expect(
+        PintorDelLogo(escena).shouldRepaint(PintorDelLogo(escena)),
+        isFalse,
+      );
+    });
+  });
+}
+
+/// El alfa de cada píxel de lo que pintó el `RepaintBoundary` de [clave].
+Future<int Function(int x, int y)> _alfas(
+  WidgetTester tester,
+  GlobalKey clave,
+) async {
+  final frontera =
+      clave.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+  final imagen = (await tester.runAsync(() => frontera.toImage()))!;
+  final datos = (await tester.runAsync(
+    () => imagen.toByteData(format: ImageByteFormat.rawRgba),
+  ))!;
+  final ancho = imagen.width;
+  return (x, y) => datos.getUint8((y * ancho + x) * 4 + 3);
 }
