@@ -10,6 +10,27 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../../services/auth_service.dart';
 import '../../services/post_login_route.dart';
 
+enum TipoDeDesenlace { sesionPuesta, error, sinConexion, cancelado }
+
+/// Lo que devuelve un intento de entrar. La bienvenida decide el turno
+/// siguiente con él, y el controlador ya no navega (RF-BIEN-6).
+class DesenlaceDelLogin {
+  const DesenlaceDelLogin.sesionPuesta()
+    : tipo = TipoDeDesenlace.sesionPuesta,
+      mensaje = null;
+  const DesenlaceDelLogin.error(String this.mensaje)
+    : tipo = TipoDeDesenlace.error;
+  const DesenlaceDelLogin.sinConexion()
+    : tipo = TipoDeDesenlace.sinConexion,
+      mensaje = null;
+  const DesenlaceDelLogin.cancelado()
+    : tipo = TipoDeDesenlace.cancelado,
+      mensaje = null;
+
+  final TipoDeDesenlace tipo;
+  final String? mensaje;
+}
+
 class LoginController extends GetxController {
   final codeController = TextEditingController();
   final passwordController = TextEditingController();
@@ -27,80 +48,123 @@ class LoginController extends GetxController {
     // En web el login con Google se hace con el botón oficial (renderButton):
     // la cuenta llega por este stream, no por un Future.
     if (kIsWeb) {
-      _googleSub =
-          _auth.googleSignIn.onCurrentUserChanged.listen(_onGoogleUserChanged);
+      _googleSub = _auth.googleSignIn.onCurrentUserChanged.listen(
+        _onGoogleUserChanged,
+      );
     }
   }
+
+  /// El desenlace del login con Google en web, que llega por
+  /// `onCurrentUserChanged` sin nadie que lo espere (RF-BIEN-6).
+  final desenlaceDeGoogleEnWeb = Rxn<DesenlaceDelLogin>();
 
   Future<void> _onGoogleUserChanged(GoogleSignInAccount? account) async {
     if (account == null || submitting.value) return;
     errorMessage.value = null;
     submitting.value = true;
-    final error = await _auth.finishGoogleLogin(account);
-    submitting.value = false;
-    if (error != null) {
-      errorMessage.value = error;
-      return;
+    try {
+      final error = await _auth.finishGoogleLogin(account);
+      final desenlace = error == null
+          ? const DesenlaceDelLogin.sesionPuesta()
+          : DesenlaceDelLogin.error(error);
+      if (error != null) errorMessage.value = error;
+      desenlaceDeGoogleEnWeb.value = desenlace;
+      // Solo la tarjeta de hoy navega. La Tarea 29 quita estas dos líneas.
+      final user = _auth.currentUser;
+      if (error == null && user != null) Get.offAllNamed(postLoginRoute(user));
+    } catch (_) {
+      desenlaceDeGoogleEnWeb.value = const DesenlaceDelLogin.sinConexion();
+    } finally {
+      submitting.value = false;
     }
-    final user = _auth.currentUser!;
-    Get.offAllNamed(postLoginRoute(user));
   }
 
   /// Limpia el formulario. Se llama al (re)entrar a /login porque el
-  /// LoginController es permanente (ver LoginBinding): así una sesión nueva
-  /// —o el mismo dispositivo con otro usuario— no ve el código/contraseña
-  /// tecleados antes. No se disponen los TextEditingController (siguen vivos).
+  /// LoginController es permanente (ver LoginBinding).
   void resetFields() {
+    vaciarCampos();
+    submitting.value = false;
+  }
+
+  /// Vacía el código y la contraseña. La bienvenida lo llama al salir hacia
+  /// el horario, al reiniciarse y tras un 401, así que la contraseña ya no
+  /// queda en el campo durante toda la sesión (RF-BIEN-5).
+  void vaciarCampos() {
     codeController.clear();
     passwordController.clear();
     errorMessage.value = null;
-    submitting.value = false;
     passwordVisible.value = false;
   }
 
-  Future<void> submit() async {
+  /// Entra con código o usuario y contraseña, sin navegar.
+  Future<DesenlaceDelLogin> entrar() async {
     final code = codeController.text.trim();
     final password = passwordController.text;
-
     if (code.isEmpty || password.isEmpty) {
-      errorMessage.value = 'Ingresa tu código y contraseña.';
-      return;
+      // Es solo defensa, porque la bienvenida no deja enviar un campo vacío.
+      const mensaje = 'Ingresa tu código y contraseña.';
+      errorMessage.value = mensaje;
+      return const DesenlaceDelLogin.error(mensaje);
     }
-
     errorMessage.value = null;
     submitting.value = true;
-
-    final error = await _auth.login(code: code, password: password);
-
-    submitting.value = false;
-
-    if (error != null) {
-      errorMessage.value = error;
-      return;
+    try {
+      final error = await _auth.login(code: code, password: password);
+      if (error != null) {
+        errorMessage.value = error;
+        return DesenlaceDelLogin.error(error);
+      }
+      return const DesenlaceDelLogin.sesionPuesta();
+    } catch (_) {
+      // `AuthService.login` solo atrapa ApiException, y un fallo de red sale
+      // crudo. Antes dejaba el botón girando.
+      return const DesenlaceDelLogin.sinConexion();
+    } finally {
+      submitting.value = false;
     }
-
-    final user = _auth.currentUser!;
-    Get.offAllNamed(postLoginRoute(user));
   }
 
-  Future<void> loginWithGoogle() async {
+  /// Entra con Google en Android e iOS, sin navegar.
+  Future<DesenlaceDelLogin> entrarConGoogle() async {
     errorMessage.value = null;
     submitting.value = true;
-
-    final error = await _auth.loginWithGoogle();
-
-    submitting.value = false;
-
-    if (error != null) {
-      errorMessage.value = error;
-      return;
+    try {
+      final error = await _auth.loginWithGoogle();
+      if (error != null) {
+        errorMessage.value = error;
+        return DesenlaceDelLogin.error(error);
+      }
+      // `loginWithGoogle` devuelve null también cuando la persona cancela.
+      return _auth.currentUser == null
+          ? const DesenlaceDelLogin.cancelado()
+          : const DesenlaceDelLogin.sesionPuesta();
+    } catch (_) {
+      return const DesenlaceDelLogin.sinConexion();
+    } finally {
+      submitting.value = false;
     }
+  }
 
-    // `loginWithGoogle` devuelve null tanto en éxito como cuando el usuario
-    // cancela el selector. En cancelación no hay sesión ni navegación.
+  /// La tarjeta de hoy, hasta la Tarea 29.
+  Future<void> submit() async {
+    final d = await entrar();
+    if (d.tipo == TipoDeDesenlace.sinConexion) {
+      errorMessage.value =
+          'No hay conexión. Revisa tu internet e inténtalo de nuevo.';
+    }
     final user = _auth.currentUser;
-    if (user == null) return;
-    Get.offAllNamed(postLoginRoute(user));
+    if (d.tipo == TipoDeDesenlace.sesionPuesta && user != null) {
+      Get.offAllNamed(postLoginRoute(user));
+    }
+  }
+
+  /// La tarjeta de hoy, hasta la Tarea 29.
+  Future<void> loginWithGoogle() async {
+    final d = await entrarConGoogle();
+    final user = _auth.currentUser;
+    if (d.tipo == TipoDeDesenlace.sesionPuesta && user != null) {
+      Get.offAllNamed(postLoginRoute(user));
+    }
   }
 
   @override

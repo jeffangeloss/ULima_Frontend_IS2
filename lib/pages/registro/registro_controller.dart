@@ -1,3 +1,4 @@
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
@@ -97,8 +98,10 @@ class RegistroController extends GetxController {
   final AdoptarSesionFn _adoptar;
   final IniciarSesionFn _login;
 
-  // Los cinco campos viven SOLO acá. Ninguno entra en un Rx observable, se
-  // guarda o se imprime. Moverse entre pasos nunca los borra: lo único que se
+  // Los cinco campos viven solo acá. Las dos contraseñas, la repetición y el
+  // código del authenticator nunca entran en un Rx, en el historial, en un
+  // registro ni en el disco. El código de alumno es la excepción, porque su
+  // burbuja lo muestra en la conversación (RF-BIEN-9). Moverse entre pasos nunca los borra: lo único que se
   // borra es el passcode, y solo cuando un envío falló (BR-REG-F-05).
   final codigoCtrl = TextEditingController();
   final passwordCtrl = TextEditingController();
@@ -145,19 +148,48 @@ class RegistroController extends GetxController {
 
   bool get enviando => paso.value == RegistroPaso.enviando;
 
+  bool _cerrado = false;
+
+  /// Si el tramo del registro ya se cerró.
+  bool get cerrado => _cerrado;
+
+  /// Cierra el registro sin GetX, como lo hace la bienvenida (B-20). Borra
+  /// los cinco campos enseguida y los desecha después del cuadro en que el
+  /// campo del compositor ya no está en el árbol, para no reabrir el error de
+  /// un TextEditingController usado después de su dispose.
+  void cerrar() {
+    if (_cerrado) return;
+    _cerrado = true;
+    final campos = _campos;
+    for (final c in campos) {
+      c.clear();
+    }
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      for (final c in campos) {
+        c.dispose();
+      }
+    });
+    SchedulerBinding.instance.scheduleFrame();
+  }
+
+  List<TextEditingController> get _campos => <TextEditingController>[
+    codigoCtrl,
+    passwordCtrl,
+    confirmacionCtrl,
+    portalPasswordCtrl,
+    passcodeCtrl,
+  ];
+
   @override
   void onClose() {
-    // `clear()` antes de `dispose()`: el texto no queda en el buffer del campo
-    // cuando la pantalla se destruye.
-    for (final c in [
-      codigoCtrl,
-      passwordCtrl,
-      confirmacionCtrl,
-      portalPasswordCtrl,
-      passcodeCtrl,
-    ]) {
-      c.clear();
-      c.dispose();
+    // Por la ruta /registro de hoy, que la Tarea 29 quita. `clear()` antes
+    // de `dispose()`, así el texto no queda en el buffer del campo.
+    if (!_cerrado) {
+      _cerrado = true;
+      for (final c in _campos) {
+        c.clear();
+        c.dispose();
+      }
     }
     super.onClose();
   }
@@ -241,6 +273,9 @@ class RegistroController extends GetxController {
       return;
     }
 
+    // Una respuesta tardía no toca campos ya borrados.
+    if (_cerrado) return;
+
     // Apenas se usaron, se borran.
     portalPasswordCtrl.clear();
     passcodeCtrl.clear();
@@ -257,12 +292,15 @@ class RegistroController extends GetxController {
       ));
       return;
     }
+    if (_cerrado) return;
 
     resultado.value = r;
     paso.value = RegistroPaso.listo;
   }
 
   void _manejarFallo(RegistroFailure e) {
+    // Con el tramo ya cerrado, un fallo tardío no toca los campos borrados.
+    if (_cerrado) return;
     passcodeCtrl.clear();
     errorMessage.value = e.message;
     // Se fija ANTES que `paso`: la pantalla se repinta observando `paso`, así
@@ -320,7 +358,7 @@ class RegistroController extends GetxController {
     errorMessage.value =
         'Seguimos sin poder confirmarlo. Puedes volver a intentar el registro: '
         'si te dice que ya existe una cuenta con ese código, es que sí se creó '
-        'y puedes recuperar la contraseña desde el login.';
+        'y puedes recuperar la contraseña con “Ya tengo cuenta”.';
     return false;
   }
 
