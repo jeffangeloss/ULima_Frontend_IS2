@@ -514,18 +514,25 @@ void _ultimoResultado() {
 
 void _dueno() {
   group('UNITARIA · Guarda por dueño (RF-TEST-2)', () {
-    test('caso 19: lo que llega después de un clear() se descarta', () async {
-      _loguear();
+    test('caso 19: lo que llega después de un clear() se descarta, aunque el '
+        'alumno siguiente ya sea el dueño', () async {
+      final auth = _loguear();
       final contenido = Completer<Map<String, dynamic>>();
       final resultado = Completer<Map<String, dynamic>>();
+      final contenidoDeB = Completer<Map<String, dynamic>>();
       final api = ApiFalsaDelTest(
-        contenido: [contenido, contenidoJson()],
+        contenido: [contenido, contenidoDeB],
         resultados: [resultado],
       );
       final s = _servicio(api);
       final pedido = s.fetchContent();
       final ultimo = s.loadLastResult();
       s.clear();
+      // La alumna siguiente entra y su pedido la hace dueña antes de que
+      // lleguen las respuestas del anterior. Con un dueño puesto, los getters
+      // ya no ocultan nada, y solo el chequeo de generación las descarta.
+      auth.userRx.value = alumno(code: 'alumna.b.test');
+      final pedidoDeB = s.fetchContent();
       contenido.complete(contenidoJson());
       resultado.complete(ultimoResultadoJson());
       await pedido;
@@ -533,6 +540,9 @@ void _dueno() {
       expect(s.content, isNull);
       expect(s.lastResult, isNull);
       expect(s.lastResultStatus, LastResultStatus.loading);
+      contenidoDeB.complete(contenidoJson(version: '2026-09-25.5'));
+      expect((await pedidoDeB).version, '2026-09-25.5');
+      expect(s.content!.version, '2026-09-25.5');
     });
 
     test('caso 20: otro alumno no ve el estado del anterior', () async {
