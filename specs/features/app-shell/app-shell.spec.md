@@ -22,7 +22,12 @@ targets:
 > Ajustada el 2026-09-25 por la spec del splash animado (`specs/features/splash/splash.spec.md`),
 > que suma BR-SHELL-F-04, la estrella del logo junto a «ULIMA++» y los íconos claros de la barra
 > de estado sobre el header. **Pendiente de la aprobación del dueño**, junto con esa spec (su
-> decisión 11 para la estrella). BR-SHELL-F-00 a BR-SHELL-F-03 no cambian.
+> decisión 11 para la estrella). Ese ajuste no cambia BR-SHELL-F-00 a BR-SHELL-F-03.
+> Enmendada el mismo 2026-09-25 por la misma spec, porque el dueño pide que quien tiene sesión vea
+> su horario después del splash (RF-SPL-20). BR-SHELL-F-02 suma la pestaña inicial Horario con
+> un argumento de ruta y BR-SHELL-F-00 suma la orientación de Horario mientras la intro cubre la
+> pantalla. **Las dos enmiendas quedan pendientes de la aprobación del dueño**, junto con esa spec
+> (sus decisiones 24, 25, 26 y 31).
 
 ## Scope
 
@@ -34,6 +39,9 @@ targets:
 - BR-SHELL-F-04, pendiente de aprobación, pone la estrella del logo junto a «ULIMA++» y fija
   los íconos claros de la barra de estado sobre el header. La ruta `/arranque` y la intro que
   aterriza en el header son de la spec del splash.
+- La enmienda de BR-SHELL-F-00 y BR-SHELL-F-02, pendiente de aprobación, abre el shell en
+  Horario cuando la ruta lo pide. La intro que pasa ese argumento es de la spec del splash, y la
+  bienvenida con Ulises que también lo pasa es de su spec nueva.
 
 ## UI Behavior
 
@@ -51,6 +59,9 @@ targets:
   vuelve a restringir la orientación a vertical.
 - Al salir o destruir el shell autenticado, la orientación global vuelve a
   vertical.
+- Enmienda pendiente de aprobación (RF-SPL-20 de la spec del splash). Si el shell se monta en
+  Horario mientras la capa de la intro cubre la pantalla, sigue en vertical y pide las
+  orientaciones de Horario cuando la capa se retira (decisión 26 de esa spec).
 
 ### BR-SHELL-F-01: Enlace promocional desde el nombre de la aplicación
 
@@ -72,7 +83,14 @@ targets:
 - La pestaña Chats lleva un ícono de conversación de Lucide y abre la bandeja de chats de
   curso (RF-CHAT-5 y RF-CHAT-6 de `specs/features/chat/chat.spec.md`). Es vertical, como
   toda pestaña salvo Horario (BR-SHELL-F-00).
-- La aplicación sigue abriendo en la primera pestaña, Malla para el alumno.
+- La aplicación sigue abriendo en la primera pestaña, Malla para el alumno, cuando la ruta
+  `/home` llega sin argumento.
+- Enmienda pendiente de aprobación (RF-SPL-20 de la spec del splash). Con el argumento de ruta
+  `{'pestana': 'horario'}`, el shell abre en la pestaña Horario, que busca por su etiqueta, así que
+  sirve para el alumno, el delegado, el subdelegado, el profesor titular y el jefe de práctica
+  (decisiones 24 y 31 de esa spec). Lo pasan la intro del splash y, según su spec, la bienvenida
+  con Ulises. Las demás llegadas a `/home` no lo pasan (decisión 25 de esa spec).
+  `[@test] ../../../test/splash/home_pestana_inicial_test.dart` (pendiente)
 - El footer del docente no cambia.
 - Con cinco pestañas o menos, la etiqueta activa del footer va en 14 px y las demás en 12 px.
   Con seis, el footer del delegado, la activa va en 13 px y las demás en 12, para que las
@@ -120,3 +138,5 @@ targets:
 - Ejecutar `flutter analyze --no-pub`.
 - Ejecutar `flutter test --no-pub test/components/header/app_header_test.dart`.
 - Ejecutar `flutter test --no-pub test/HU23_jeff/chats_pestana_test.dart`.
+- Con la enmienda de BR-SHELL-F-02, ejecutar también
+  `flutter test --no-pub test/splash/home_pestana_inicial_test.dart`.
