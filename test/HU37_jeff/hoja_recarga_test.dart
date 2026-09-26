@@ -282,8 +282,10 @@ void main() {
         isNull,
       );
 
+      // Un solo pump no termina de quitar la ruta, y la hoja se seguiría
+      // encontrando aunque atrás la cerrara.
       await tester.binding.handlePopRoute();
-      await tester.pump(const Duration(milliseconds: 300));
+      await _asentar(tester);
       expect(find.byType(HojaRecargaUlima), findsOneWidget);
 
       // Al terminar, la hoja se cierra sola.
