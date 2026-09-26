@@ -4,6 +4,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -425,15 +426,18 @@ class _TarjetaGanadora extends StatelessWidget {
         ],
       ),
     );
-    if (avance >= 1) return tarjeta;
-    // El giro de entrada, 600 ms, una sola vez.
+    // El giro de entrada, 600 ms, una sola vez. Al terminar, la tarjeta
+    // sigue dentro del mismo Opacity y del mismo Transform, porque quitarlos
+    // cambiaría el árbol y el motivo perdería lo que midió.
     return Opacity(
       opacity: avance.clamp(0.0, 1.0),
       child: Transform(
         alignment: Alignment.center,
-        transform: Matrix4.identity()
-          ..setEntry(3, 2, 0.0014)
-          ..rotateY(-70 * math.pi / 180 * (1 - avance)),
+        transform: avance >= 1
+            ? Matrix4.identity()
+            : (Matrix4.identity()
+                ..setEntry(3, 2, 0.0014)
+                ..rotateY(-70 * math.pi / 180 * (1 - avance))),
         child: tarjeta,
       ),
     );
@@ -475,7 +479,7 @@ class _Medidor extends StatelessWidget {
 
 /// El motivo, cortado en cuatro líneas con «Leer más», y la insignia «IA»
 /// si lo redactó Cohere.
-class _Motivo extends StatelessWidget {
+class _Motivo extends StatefulWidget {
   const _Motivo({
     required this.texto,
     required this.porIa,
@@ -490,23 +494,46 @@ class _Motivo extends StatelessWidget {
   final bool abierto;
   final VoidCallback onTap;
 
+  @override
+  State<_Motivo> createState() => _MotivoState();
+}
+
+class _MotivoState extends State<_Motivo> {
   static const TextStyle _estilo = TextStyle(fontSize: 12.5, height: 1.38);
+
+  final GlobalKey _parrafo = GlobalKey(debugLabel: 'motivo');
+
+  /// Si el motivo cerrado pasa de cuatro líneas. Se lee del párrafo que se
+  /// pinta, con la familia y el espaciado del tema y con la insignia, porque
+  /// una medida aparte no los lleva y se equivoca justo en los largos de los
+  /// motivos del contenido.
+  bool _corta = false;
+
+  void _leerElParrafo() {
+    if (!mounted || widget.abierto) return;
+    final parrafo = _parrafo.currentContext?.findRenderObject();
+    if (parrafo is! RenderParagraph || !parrafo.hasSize) return;
+    final corta = parrafo.didExceedMaxLines;
+    if (corta != _corta) setState(() => _corta = corta);
+  }
 
   @override
   Widget build(BuildContext context) {
     final b = Theme.of(context).brightness;
-    final estilo = _estilo.copyWith(color: colores.tinta);
+    final estilo = _estilo.copyWith(color: widget.colores.tinta);
+    final texto = widget.texto;
+    final porIa = widget.porIa;
+    final abierto = widget.abierto;
+    final colores = widget.colores;
+    // Depende de la escala de texto, así que un cambio vuelve a leer el
+    // párrafo.
+    MediaQuery.textScalerOf(context);
     return LayoutBuilder(
       builder: (context, box) {
-        // Mide si el motivo pasa de cuatro líneas, sin la insignia.
-        final medida = TextPainter(
-          text: TextSpan(text: texto, style: estilo),
-          maxLines: 4,
-          textDirection: TextDirection.ltr,
-          textScaler: MediaQuery.textScalerOf(context),
-        )..layout(maxWidth: math.max(0, box.maxWidth - (porIa ? 44 : 0)));
-        final corta = medida.didExceedMaxLines;
-        medida.dispose();
+        // Tras cada layout con otro ancho o con otro motivo, lee si el
+        // párrafo pintado se cortó.
+        WidgetsBinding.instance.addPostFrameCallback((_) => _leerElParrafo());
+        final corta = _corta;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -514,6 +541,7 @@ class _Motivo extends StatelessWidget {
               label: porIa ? 'Motivo redactado con IA. $texto' : texto,
               excludeSemantics: true,
               child: Text.rich(
+                key: _parrafo,
                 TextSpan(
                   children: [
                     if (porIa)
@@ -562,7 +590,7 @@ class _Motivo extends StatelessWidget {
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
-                  onPressed: onTap,
+                  onPressed: widget.onTap,
                   style: TextButton.styleFrom(
                     foregroundColor: colores.tinta,
                     minimumSize: const Size(48, 48),

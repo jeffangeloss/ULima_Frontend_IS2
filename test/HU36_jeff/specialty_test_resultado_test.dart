@@ -7,6 +7,7 @@
 // Datos inventados (datos_de_prueba.dart). El alumno de prueba es 20230001.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -56,6 +57,66 @@ Future<SpecialtyTestController> _enElResultado(
 }
 
 double _arriba(WidgetTester tester, Finder f) => tester.getTopLeft(f).dy;
+
+/// Motivos inventados con los largos que importan. El de 104 caracteres
+/// es tan largo como el de la maqueta, los de 184 y 191 son como los de IA
+/// que caben enteros en Android, el de 213 es como el de las plantillas que
+/// allí se corta, y los del contenido miden de 190 a 541. El tercer campo
+/// dice si el motivo se corta seguro, o null si depende de la letra.
+const List<(int, String, bool?)> _motivosDePrueba = [
+  (
+    104,
+    'Te llamaron las tareas de probar ideas rápido y de pensar en quien '
+        'juega, como se hace en sus electivos.',
+    false,
+  ),
+  (
+    157,
+    'En los duelos de prueba sumó la mayor parte de los puntos, y las tareas '
+        'que elegiste piden pensar en quien juega y probar ideas rápido cada '
+        'semana del ciclo.',
+    null,
+  ),
+  (
+    184,
+    'Elegiste una y otra vez las tareas de probar ideas rápido y ajustar '
+        'reglas, y en la escala le diste un «Bastante» a la tarea de prueba, '
+        'así que esta especialidad va primero en la fila.',
+    null,
+  ),
+  (
+    191,
+    'Tus respuestas se inclinan por las tareas de diseñar reglas y probar '
+        'prototipos con otras personas, y la escala de prueba confirmó ese '
+        'interés con un «Me encantaría» claro y sin ninguna duda.',
+    null,
+  ),
+  (
+    213,
+    'En los duelos de prueba, esta especialidad sumó 4 de 5 puntos, con '
+        'tareas como ajustar las reglas de un nivel o probar una idea con '
+        'jugadores, y en la escala le diste un «Bastante» a la tarea de prueba '
+        'del bloque.',
+    null,
+  ),
+  (
+    541,
+    'Desarrollo de Videojuegos sumó 5,5 de 7 puntos en los duelos de prueba, '
+        'con tareas como ajustar las reglas de un nivel, probar una idea con '
+        'jugadores y medir cuánto tardan en entender un menú. En la escala le '
+        'diste un «Me encantaría» a la tarea de prueba del bloque dos, y eso '
+        'la dejó adelante de Sistemas de Información, que quedó cerca porque '
+        'también elegiste tareas de ordenar datos. Sus electivos de prueba '
+        'trabajan eso durante el ciclo, con proyectos en equipo y entregas '
+        'cortas que se prueban con personas antes de cerrar cada versión.',
+    true,
+  ),
+];
+
+/// El párrafo pintado del motivo [motivo], con la insignia o sin ella.
+Finder _parrafoDelMotivo(String motivo) => find.byWidgetPredicate(
+  (w) => w is RichText && w.text.toPlainText().endsWith(motivo),
+);
 
 void main() {
   // Get.put de un GetxService agenda onReady con
@@ -145,6 +206,36 @@ void _resultado() {
       await tester.pump();
       expect(motivo().maxLines, 4);
     });
+
+    for (final (largo, motivo, seCorta) in _motivosDePrueba) {
+      testWidgets('caso 4b: con Roboto, un motivo de $largo caracteres lleva '
+          '«Leer más» solo si su párrafo pasa de cuatro líneas', (
+        tester,
+      ) async {
+        for (final fuente in ['templates', 'ai']) {
+          Get.reset();
+          await _enElResultado(
+            tester,
+            evaluacion: resultadoJson(motivo: motivo, reasonSource: fuente),
+          );
+          final parrafo = _parrafoDelMotivo(motivo);
+          // La medida vale solo si el párrafo es el que se ve en Android.
+          expect(
+            tester.widget<RichText>(parrafo).text.style!.fontFamily,
+            'Roboto',
+          );
+          final corta = tester
+              .renderObject<RenderParagraph>(parrafo)
+              .didExceedMaxLines;
+          expect(
+            find.text('Leer más').evaluate().isNotEmpty,
+            corta,
+            reason: 'con reasonSource "$fuente"',
+          );
+          if (seCorta != null) expect(corta, seCorta);
+        }
+      });
+    }
 
     testWidgets('caso 5: con empate, «Empate», los dos nombres, una pastilla '
         'y las filas desde el puesto 3', (tester) async {
