@@ -8,9 +8,74 @@
 // turnos y el oráculo de cuentas.
 // Archivo probado lib/pages/registro/registro_controller.dart.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ulima_plus/models/portal_sync_models.dart';
+import 'package:ulima_plus/models/registro_models.dart';
+import 'package:ulima_plus/models/user_model.dart';
 import 'package:ulima_plus/pages/registro/registro_controller.dart';
+import 'package:ulima_plus/services/registro_service.dart';
+
+/// Un servicio del registro cuya respuesta llega cuando la prueba lo pide.
+class _ServicioEnVuelo extends RegistroService {
+  final Completer<RegistroResult> respuesta = Completer<RegistroResult>();
+
+  @override
+  Future<RegistroResult> registrar({
+    required String code,
+    required String portalPassword,
+    required String passcode,
+    required String password,
+    required bool consent,
+  }) => respuesta.future;
+}
+
+RegistroResult _resultado() => RegistroResult(
+  token: 'jwt-de-prueba',
+  user: UserModel(
+    code: '20230001',
+    firstName: 'Alumna',
+    lastName: 'De Prueba',
+    email: 'test@aloe.ulima.edu.pe',
+    role: 'student',
+    currentCycle: '2026-2',
+    setupComplete: false,
+  ),
+  summary: const PortalSyncSummary(
+    coursesCreated: 0,
+    sectionsCreated: 0,
+    sectionsUpdated: 0,
+    sessionsUpserted: 0,
+    enrollmentsUpserted: 0,
+    enrollmentsWithdrawn: 0,
+    progressUpserted: 0,
+    syllabiUpserted: 0,
+  ),
+  warnings: const [],
+);
+
+/// Un registro listo para enviar, con datos inventados.
+RegistroController _listoParaEnviar(
+  RegistroService servicio, {
+  Future<String?> Function({required String code, required String password})?
+  iniciarSesion,
+  void Function()? alAdoptar,
+}) =>
+    RegistroController(
+        service: servicio,
+        adoptarSesion: ({required token, required user}) async =>
+            alAdoptar?.call(),
+        iniciarSesion:
+            iniciarSesion ?? ({required code, required password}) async => null,
+      )
+      ..codigoCtrl.text = '20230001'
+      ..passwordCtrl.text = 'Contrasena1'
+      ..confirmacionCtrl.text = 'Contrasena1'
+      ..portalPasswordCtrl.text = 'portal-de-prueba'
+      ..passcodeCtrl.text = '123456'
+      ..consentimientoAceptado.value = true;
 
 void main() {
   group('el cierre propio del registro (RF-BIEN-9 y B-20)', () {
@@ -49,6 +114,8 @@ void main() {
       expect(c.cerrado, isTrue);
       for (final campo in campos) {
         expect(campo.text, '', reason: 'se borra enseguida');
+        // Y sigue vivo hasta el cuadro siguiente (B-20).
+        expect(() => campo.addListener(() {}), returnsNormally);
       }
       await tester.pump();
       await tester.pump();
@@ -58,6 +125,47 @@ void main() {
       }
       // Cerrar dos veces no hace nada.
       c.cerrar();
+    });
+
+    for (final exito in [true, false]) {
+      testWidgets('una respuesta del envío que llega después de cerrar no toca '
+          'los campos desechados (${exito ? 'un 201' : 'un fallo'})', (
+        tester,
+      ) async {
+        final servicio = _ServicioEnVuelo();
+        var adopciones = 0;
+        final c = _listoParaEnviar(servicio, alAdoptar: () => adopciones++);
+        final envio = c.enviar();
+        expect(c.paso.value, RegistroPaso.enviando);
+        c.cerrar();
+        await tester.pump();
+        if (exito) {
+          servicio.respuesta.complete(_resultado());
+        } else {
+          servicio.respuesta.completeError(
+            const RegistroFailure('Sin conexión.', code: 'SIN_CONEXION'),
+          );
+        }
+        await envio;
+        expect(tester.takeException(), isNull);
+        expect(c.paso.value, RegistroPaso.enviando, reason: 'se descarta');
+        expect(adopciones, 0, reason: 'sin sesión desde un tramo cerrado');
+      });
+    }
+
+    testWidgets('«Iniciar sesión» desde incierto que responde después de '
+        'cerrar devuelve false sin escribir nada', (tester) async {
+      final respuesta = Completer<String?>();
+      final c = _listoParaEnviar(
+        _ServicioEnVuelo(),
+        iniciarSesion: ({required code, required password}) => respuesta.future,
+      )..paso.value = RegistroPaso.incierto;
+      final intento = c.intentarIniciarSesion();
+      c.cerrar();
+      await tester.pump();
+      respuesta.complete(null);
+      expect(await intento, isFalse);
+      expect(c.errorMessage.value, isNull);
     });
 
     test('el texto de «Iniciar sesión» desde incierto nombra «Ya tengo '

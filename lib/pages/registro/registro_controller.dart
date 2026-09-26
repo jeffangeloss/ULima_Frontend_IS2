@@ -101,8 +101,9 @@ class RegistroController extends GetxController {
   // Los cinco campos viven solo acá. Las dos contraseñas, la repetición y el
   // código del authenticator nunca entran en un Rx, en el historial, en un
   // registro ni en el disco. El código de alumno es la excepción, porque su
-  // burbuja lo muestra en la conversación (RF-BIEN-9). Moverse entre pasos nunca los borra: lo único que se
-  // borra es el passcode, y solo cuando un envío falló (BR-REG-F-05).
+  // burbuja lo muestra en la conversación (RF-BIEN-9). Moverse entre pasos
+  // nunca los borra. Solo se borra el passcode, y solo cuando un envío falló
+  // (BR-REG-F-05).
   final codigoCtrl = TextEditingController();
   final passwordCtrl = TextEditingController();
   final confirmacionCtrl = TextEditingController();
@@ -273,7 +274,8 @@ class RegistroController extends GetxController {
       return;
     }
 
-    // Una respuesta tardía no toca campos ya borrados.
+    // Una respuesta tardía no toca campos ya borrados ni adopta la sesión de
+    // un tramo cerrado.
     if (_cerrado) return;
 
     // Apenas se usaron, se borran.
@@ -341,6 +343,8 @@ class RegistroController extends GetxController {
         password: passwordCtrl.text,
       );
     } catch (_) {
+      // Con el tramo ya cerrado, el intento se descarta sin escribir nada.
+      if (_cerrado) return false;
       // `AuthService.login` solo atrapa `ApiException`: un socket caído o un
       // `ClientException` salen crudos. Y a `incierto` se llega casi siempre
       // POR una red mala —el plazo venció—, así que la red sigue mal cuando se
@@ -354,6 +358,9 @@ class RegistroController extends GetxController {
     } finally {
       iniciandoSesion.value = false;
     }
+    // «Ya tengo cuenta» pudo cerrar el tramo mientras el login seguía en
+    // vuelo, y entonces el intento se descarta (RF-BIEN-9).
+    if (_cerrado) return false;
     if (error == null) return true;
     errorMessage.value =
         'Seguimos sin poder confirmarlo. Puedes volver a intentar el registro: '
