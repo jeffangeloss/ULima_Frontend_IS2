@@ -40,9 +40,9 @@ targets:
 > (RF-SPL-20), porque el dueño quiere que quien tiene sesión vea su horario después del splash.
 > Sin sesión, la intro ya no termina en la tarjeta del login. El logo se queda entero en el centro
 > y la bienvenida con Ulises toma el relevo sin salto (RF-SPL-21). Esa bienvenida es la versión
-> combinada de «Ulises te recibe» que el dueño elige ese día, y la describe una spec nueva,
-> `specs/features/bienvenida/bienvenida.spec.md`, que todavía no está escrita. Su maqueta queda en
-> `docs/images/UI/bienvenida/` (RF-SPL-19).
+> combinada de «Ulises te recibe» que el dueño elige ese día, y la describe su propia spec,
+> `specs/features/bienvenida/bienvenida.spec.md`, también pendiente de aprobación. Su maqueta
+> queda en `docs/images/UI/bienvenida/` (RF-SPL-19).
 > El pedido del dueño del 2026-09-25 es reparar el splash de Android, que corta el logo, y
 > volverlo animado e innovador con el logo y los «++». Se le muestran tres conceptos animados y
 > responde que le gustan todos y que quiere «que se puedan randomizar siempre que la app se
@@ -678,8 +678,8 @@ La salida es común a las tres variantes y dura 420 ms, con easeInOutCubic (deci
   - `README.md` dice que, donde una maqueta y esta spec difieren, manda la spec, y lista las
     diferencias.
 - `docs/images/UI/bienvenida/` guarda, desde la enmienda del 2026-09-25, la maqueta que elige el
-  dueño para el arranque sin sesión. Es de la spec nueva de la bienvenida, y esta spec la toma como
-  referencia de RF-SPL-20 y RF-SPL-21 mientras esa spec no exista (decisión 23).
+  dueño para el arranque sin sesión. Es de la spec de la bienvenida, y esta spec la toma como
+  referencia de RF-SPL-20 y RF-SPL-21 (decisión 23).
   - `ulises-te-recibe-combinada.html` es la versión combinada de «Ulises te recibe». Con sesión
     muestra la salida de cada intro hacia `/home` abierto en Horario, y sin sesión, el traspaso,
     el vuelo de Ulises y la conversación hasta el horario. Tiene los recorridos «Con sesión»,
@@ -746,8 +746,8 @@ luego de ver el splash dinámico, pueda ver su horario».
 El dueño elige el 2026-09-25 la versión combinada de «Ulises te recibe» para el arranque sin
 sesión. Tras la intro al azar, la estrella grande con sus «++» se queda en el centro, entera y sin
 nada encima, y la bienvenida con Ulises toma el relevo sin salto. Esta spec cubre solo el relevo.
-Todo lo que sigue es de `specs/features/bienvenida/bienvenida.spec.md`, la spec nueva que todavía
-no está escrita. Esa bienvenida no es la del test de especialidad (RF-TEST-3).
+Todo lo que sigue es de `specs/features/bienvenida/bienvenida.spec.md`, pendiente de aprobación
+como esta. Esa bienvenida no es la del test de especialidad (RF-TEST-3).
 
 - **La ruta.** La bienvenida reemplaza a la tarjeta del login como pantalla sin sesión y, por
   defecto, ocupa la ruta `/login`, que conserva su nombre, porque `offAllToLogin`, el 401 del
@@ -828,10 +828,11 @@ hoy al abrir la pestaña (RF-SPL-20).
   argumento y abre en la primera pestaña, salvo que el dueño elija la alternativa de la
   decisión 25.
 - **Schedule.** No cambia. La pestaña Horario solo pasa a ser la primera que se ve.
-- **Bienvenida, spec nueva.** Recibe la pose del logo y pinta un primer cuadro idéntico al último
-  de la intro, avisa cuando lo pinta, declara su estilo de barra de estado y arranca también sin
-  pose (RF-SPL-21). Ocupa la ruta que fije la decisión 32 y pasa el argumento de Horario al
-  llegar a `/home` (RF-SPL-20).
+- **Bienvenida.** La bienvenida de `specs/features/bienvenida/bienvenida.spec.md` recibe la pose
+  del logo y pinta un primer cuadro idéntico al último de la intro, avisa cuando lo pinta, declara
+  su estilo de barra de estado y arranca también sin pose (RF-SPL-21, RF-BIEN-2, RF-BIEN-3 y
+  RF-BIEN-17). Ocupa la ruta que fije la decisión 32 y pasa el argumento de Horario al llegar a
+  `/home` (RF-SPL-20 y RF-BIEN-11).
 - **README.** La sección «El arranque» describe hoy doce pasos antes de `runApp`
   (`README.md:128-143`). La implementación la reescribe con el arranque nuevo.
 

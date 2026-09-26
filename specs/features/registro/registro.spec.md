@@ -15,6 +15,11 @@ targets:
 # Registro
 
 > Estado: **implementada el 2026-09-08.** Consume `POST /auth/register`, que hoy vive en una rama del backend sin desplegar, así que la pantalla está probada entera contra dobles pero **todavía no contra el portal real**. Es la cara visible de `specs/features/registro/registro.spec.md` del backend (RS-BE-17 y RS-BE-18).
+>
+> Enmienda del 2026-09-25, **pendiente de aprobación**. La bienvenida con Ulises
+> (`specs/features/bienvenida/bienvenida.spec.md`) lleva el registro a la conversación de
+> «Soy nuevo», sin la ruta `/registro`, y conserva sus reglas. El detalle está en «Enmienda de la
+> bienvenida con Ulises», al final. Mientras el dueño no la apruebe, rige el texto de arriba.
 
 ## Contexto
 
@@ -257,3 +262,67 @@ Los pasos 9 y 10 —documentar el endpoint en `docs/specs/api-contracts.md`, tan
 El límite de 5 intentos por código por hora **no** cierra esto: averiguar si un código concreto tiene cuenta cuesta una sola petición, y el tope es por código, así que barrer muchos códigos distintos sigue siendo barato. Es una propiedad del endpoint, no de la pantalla; RS-FE-3 se limita por eso a lo que el cliente sí controla. Corregirlo —igualar tiempos y respuesta, o mover la comprobación después del login del portal— es trabajo de la spec del backend y queda anotado en su PR.
 
 **El contador por código se consume aunque el rechazo venga del limitador de concurrencia.** Los dos middlewares corren en orden y el de código incrementa antes de que el de concurrencia pueda rechazar, así que un salón entero registrándose a la vez gasta cupo recibiendo «hay demasiados registros en curso, intenta en unos segundos» — un mensaje que invita a reintentar justo lo que agota el cupo. También es del backend.
+
+## Enmienda de la bienvenida con Ulises (2026-09-25, pendiente de aprobación)
+
+Nace con `specs/features/bienvenida/bienvenida.spec.md` (RF-BIEN-7, RF-BIEN-8 y RF-BIEN-9) y
+queda pendiente de aprobación con ella. El registro deja de ser una pantalla y pasa a ser la rama
+«Soy nuevo» de la conversación con Ulises, con las mismas reglas. Cambian los puntos de esta
+lista, y el resto de la spec sigue igual. Las referencias `archivo:línea` apuntan a `4e2a0b2`.
+
+- **Targets.** Suman `lib/pages/bienvenida/**`. Salen `registro_page.dart` y
+  `registro_binding.dart`, y `lib/pages/registro/**` sigue por `registro_controller.dart`.
+  `lib/pages/login/login_page.dart` sale del código con la tarjeta del login.
+- **RS-FE-1.** Desde la bienvenida, «Soy nuevo» abre el registro dentro de la conversación, y la
+  cuenta queda lista para usarse sin salir de la app. La ruta `/registro` sale (decisión 23 de la
+  bienvenida).
+- **RS-FE-2.** Las dos contraseñas se piden en turnos distintos del compositor, N2 y N4, con el
+  consentimiento en medio, y el compositor de una se cierra antes de que aparezca el de la otra.
+  La de ULima++ se rotula como propia de la app. Nunca se ven las dos a la vez.
+- **RS-FE-3.** «Ya tengo cuenta» está en todos los turnos antes del envío y «Soy nuevo» en todos
+  los de «Sí, entrar», fijos. Ningún texto de Ulises ofrece crear una cuenta según por qué falló un
+  login.
+- **RS-FE-4.** Ningún fallo del registro cierra sesiones, saca de la conversación ni muestra un
+  mensaje que no describa lo que pasó. El mensaje es una burbuja de Ulises con los textos de hoy.
+- **RS-FE-5.** Sin cambios. `incierto` es un turno de la conversación con sus dos salidas.
+- **RS-FE-6.** Las credenciales viven en los `TextEditingController` de `RegistroController`, que
+  la bienvenida crea al empezar la rama y cierra ella misma, sin `Get.put`, al tocar «Ya tengo
+  cuenta», al pasar al test, al reiniciarse y cuando GetX retira `/login`. Cerrarlo borra los cinco
+  campos con `clear` antes de `dispose`. Las contraseñas, su repetición y el código del
+  authenticator nunca entran en el historial de la conversación, que solo guarda sus rótulos. El
+  código de alumno sí aparece en su burbuja, como en la maqueta, así que entra en el historial en
+  memoria y muere con él. El comentario de `registro_controller.dart:100-102`, que hoy lo deja
+  fuera de todo `Rx`, se ajusta a eso.
+- **BR-REG-F-01.** El orden queda en cinco turnos, el código (N1), la contraseña de ULima++ con su
+  repetición (N2), el consentimiento (N3), la contraseña de miUlima (N4) y el código del
+  authenticator (N5), que va justo antes del botón «Crear mi cuenta». El envío es siempre ese
+  botón, y no el sexto dígito (decisión 5 de la bienvenida).
+- **Consentimiento.** Es una tarjeta de Ulises con los textos literales de `PortalConsentView`,
+  tomados de sus constantes, y las respuestas rápidas «Acepto» y «Volver». Aceptado una vez, dura
+  lo que dura la rama.
+- **BR-REG-F-03.** Cada turno valida lo suyo en local con los validadores de hoy, antes de cerrar
+  el compositor y sin red.
+- **BR-REG-F-05.** Cada turno desde N2 trae «Volver», que reabre el turno anterior con lo escrito.
+  Los errores que hoy vuelven a `datos` vuelven a N1, y los que vuelven a `verificar`, a N5, con el
+  código del authenticator borrado y lo demás intacto.
+- **BR-REG-F-07.** Los `warnings` del 201 van en una burbuja de Ulises con «Algunas cosas que
+  notamos» y cada `message` tal cual.
+- **BR-REG-F-09.** El `PopScope` pasa a la bienvenida y veta el atrás del sistema mientras se
+  envía, con el aviso de hoy.
+- **BR-REG-F-11.** Si «Iniciar sesión» entra desde `incierto`, la conversación sigue con el test o
+  con el paso al horario, según la configuración, en lugar de `Get.offAllNamed(postLoginRoute)`.
+- **UI Behavior.** Los seis estados siguen en `RegistroController` y se dibujan como turnos
+  (RF-BIEN-7 y RF-BIEN-8). `enviando` es la píldora «Creando tu cuenta…», el pulso del sello y
+  las burbujas «Estoy creando tu cuenta y trayendo tu ciclo. Tarda cerca de un minuto.» y «No
+  cierres la app mientras tanto.». `listo` es la píldora «Cuenta creada» y la burbuja «¡Craa! Tu
+  cuenta ya está lista.» con el conteo de cursos, sin el nombre (decisión 4 de la bienvenida) y
+  sin el botón «Entrar», porque la conversación sigue con el test. Salen los títulos, las bajadas
+  y las filas del resumen de la pantalla.
+- **Data Flow.** Después del 201 y de `adoptarSesion`, el registro no navega a
+  `postLoginRoute(user)`. La bienvenida sigue con el test de especialidad (RF-BIEN-10), y el
+  alumno llega a `/home` en Horario al terminarlo (RF-BIEN-11).
+- **Verification.** Los casos de `test/HU33_jeff/registro_page_test.dart` pasan a
+  `test/bienvenida/bienvenida_registro_test.dart` (pendiente), y los casos 10 a 12 de
+  `test/HU34_jeff/registro_consent_test.dart` pasan a montar la conversación.
+  `registro_controller_test.dart`, `registro_service_test.dart` y `api_client_401_test.dart`
+  siguen.
