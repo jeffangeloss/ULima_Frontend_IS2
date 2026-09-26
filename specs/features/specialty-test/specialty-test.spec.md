@@ -27,8 +27,12 @@ targets:
 > `student_specialty_test_result` de la migración `0014`. Aplicar la `0014` en producción pide
 > además, en el momento del despliegue, el respaldo y el permiso explícito del dueño, como con
 > la `0012` y la `0013`. Implementada en la rama `feat/test-especialidad-fe` según
-> `docs/superpowers/plans/2026-09-25-specialty-test-app.md`. Falta el merge, que espera al
-> backend desplegado con sus tres rutas y la `0014`, y la revisión manual en un iPhone SE.
+> `docs/superpowers/plans/2026-09-25-specialty-test-app.md`. El merge espera cuatro pasos a cargo
+> del dueño, en el orden que ese plan fija en «Lo que queda fuera del plan». Primero va el
+> backend desplegado con sus tres rutas y la `0014`, y después, como pide «Verificación», el
+> recorrido contra ese backend con una cuenta de prueba y la revisión manual en un iPhone SE. Por
+> último, el dueño lee «Ver tu respuesta anterior» y «1 electivo», los dos textos que el plan suma
+> a «Textos nuevos».
 > La contraparte de backend es
 > `ULima_Backend_IS2/specs/features/specialty-test/specialty-test.spec.md` (RS-BE-37 a RS-BE-47,
 > rama `feat/test-especialidad`), aprobada el mismo día con las mismas decisiones 8 y 9. Las dos
