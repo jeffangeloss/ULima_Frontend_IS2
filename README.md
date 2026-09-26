@@ -146,7 +146,7 @@ la red, y la intro decide adónde ir cuando terminan su entrada y la carga.
 En web no hay intro. `main()` conserva el orden de antes, con la carga y las alertas antes de
 `runApp`, y el único cambio es que el alumno sin especialidad arranca en `/login`.
 
-`MyApp` es un `StatelessWidget` que recibe `initialRoute` y la `intro` por constructor y monta el `GetMaterialApp` (`lib/main.dart:87-214`):
+`MyApp` es un `StatelessWidget` que recibe `initialRoute` y la `intro` por constructor y monta el `GetMaterialApp` (`lib/main.dart:251-280`), con las rutas de `paginasDeLaApp` (`:97-249`):
 
 ```dart
 final materialTheme = MaterialTheme(Theme.of(context).textTheme);
@@ -166,12 +166,12 @@ return GetMaterialApp(
 
 | Propiedad | Valor | Detalle |
 |:---|:---|:---|
-| `title` | `'ULIMA++'` | `lib/main.dart:95` |
+| `title` | `'ULIMA++'` | `lib/main.dart:263` |
 | `theme` / `darkTheme` | `MaterialTheme.light()` / `.dark()` | Dos `ColorScheme` escritos a mano, **no** generados con `ColorScheme.fromSeed` ([`lib/configs/themes.dart`](lib/configs/themes.dart)`:157-252`). |
 | `themeMode` | `ThemeMode.system` | El modo lo decide el sistema operativo; no hay toggle en la app. |
-| `scrollBehavior` | `AppScrollBehavior` | `getScrollPhysics => const ClampingScrollPhysics()` (`lib/main.dart:220-226`). Mata el rebote de iOS en **toda** la app. |
+| `scrollBehavior` | `AppScrollBehavior` | `getScrollPhysics => const ClampingScrollPhysics()` (`lib/main.dart:286-292`). Mata el rebote de iOS en **toda** la app. |
 | `initialRoute` | calculado en `main()` | Ver diagrama abajo. |
-| `getPages` | 15 rutas nombradas | `lib/main.dart:105-211`. |
+| `getPages` | 15 rutas nombradas | `paginasDeLaApp`, `lib/main.dart:97-249`. |
 
 **Orientaciones.** `main.dart` fija `portraitUp`, y cinco archivos amplían la rotación o la restauran. `_scheduleOrientations` y `_mallaMapOrientations` son la misma lista `[portraitUp, landscapeLeft, landscapeRight]`. Solo dos pantallas la aplican por sí mismas, el shell mientras la pestaña activa es "Horario" ([`lib/pages/home/home_page.dart`](lib/pages/home/home_page.dart)`:24-31` y `:56-60`) y la malla clásica en modo mapa (`malla_page.dart:32-51`). Las dos vuelven a vertical en su `dispose()`, y el shell también al cambiar de pestaña. La campana del header fuerza vertical antes de abrir las alertas y, al volver, devuelve la rotación del horario si la pestaña activa es Horario (`app_header.dart:100-109`). El horario hace lo mismo al abrir la ficha del curso, «Mis bloques», el formulario de un bloque nuevo y, para el docente, la lista de alumnos impedidos y en riesgo (`horario.dart:678-687`, `:1132-1138`, `:1163-1169` y `:1604-1617`). La hoja de acciones de un bloque repite el patrón al abrir su edición (`time_block_actions_sheet.dart:217-221`).
 
@@ -3297,7 +3297,7 @@ sistema de breakpoints:
 
 No existe una capa responsive general: el resto de pantallas confía en `ListView` + `Expanded` y
 en el scroll global `ClampingScrollPhysics` que `AppScrollBehavior` impone a toda la app
-(`lib/main.dart:220-226`), que elimina el rebote de iOS por decisión explícita.
+(`lib/main.dart:286-292`), que elimina el rebote de iOS por decisión explícita.
 
 ---
 
