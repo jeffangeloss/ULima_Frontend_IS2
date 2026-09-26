@@ -704,11 +704,14 @@ class BienvenidaController extends GetxController {
 
   void _alCambiarLaCarga() {
     final t = test;
-    if (t == null || _idDeLaCarga == null) return;
+    if (t == null) return;
     switch (t.carga.value) {
       case EstadoDeCarga.cargando:
         break;
       case EstadoDeCarga.lista:
+        // Solo la carga de T0 trae su invitación. La de «Empezar de nuevo»
+        // abre la pregunta 1 sola.
+        if (_idDeLaCarga == null) return;
         if (t.fase.value != FaseDelTest.bienvenida) return;
         _reemplazarLaCarga(
           TextosB.invitacionAlTest(t.contenido.value!.totalQuestions),
@@ -717,6 +720,8 @@ class BienvenidaController extends GetxController {
         _pasoMostrado = t.paso.value;
         _abrir(TurnoB.t0Invitacion);
       case EstadoDeCarga.error:
+        // También cuando falla la carga de «Empezar de nuevo», que no tiene
+        // burbuja de carga, así que el turno no queda sin salida.
         _reemplazarLaCarga(TextosB.noCargoElTest, tipo: TipoDeBurbuja.error);
         _abrir(TurnoB.t0Invitacion);
         unawaited(_trasUnFalloConSesion());
@@ -1129,7 +1134,10 @@ class BienvenidaController extends GetxController {
     if (visita != _visita) return;
     esperando.value = false;
     catalogoFallido.value = !cargo || especialidadesOficiales.isEmpty;
-    if (catalogoFallido.value) _decirError(TextosB.noCargaronEspecialidades);
+    if (catalogoFallido.value) {
+      _decirError(TextosB.noCargaronEspecialidades);
+      unawaited(_trasUnFalloConSesion());
+    }
   }
 
   // ── El 401 dentro de la conversación (RF-BIEN-12 y B-22) ─────────────────

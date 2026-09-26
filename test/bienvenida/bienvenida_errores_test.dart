@@ -267,6 +267,98 @@ void main() {
       },
     );
 
+    test(
+      'un 401 al cargar T0 limpia la sesión local y vuelve a E1 (B-22)',
+      () async {
+        final b = Bienvenida(
+          auth: AuthDeLaBienvenida(
+            usuario: alumnaDePrueba(setupComplete: false),
+          ),
+          token: 'jwt-de-prueba',
+          apiDelTest: ApiFalsaDelTest(
+            contenido: <Object>[
+              const SpecialtyTestFailure(SpecialtyTestFailureKind.server),
+            ],
+          ),
+        );
+        await b.visitar();
+        // El interceptor del 401 borró el token mientras llegaba el contenido.
+        b.token = null;
+        b.controlador.ulisesAterrizoConSesion();
+        await pumpEventQueue();
+        expect(b.auth.logouts, 1);
+        expect(b.controlador.turno.value, TurnoDeLaBienvenida.e1Codigo);
+        expect(b.deUlises.first, TextosDeLaBienvenida.sesionCaducada);
+      },
+    );
+
+    test('un 401 al reintentar el catálogo de la selección manual limpia la '
+        'sesión local y vuelve a E1 (B-22)', () async {
+      final b = await _conSesion(ApiFalsaDelTest());
+      b.auth
+        ..catalogoFalla = true
+        ..recargaFalla = true;
+      final c = b.controlador..saltarElTest();
+      expect(c.catalogoFallido.value, isTrue);
+      b.token = null;
+      await c.reintentarElCatalogo();
+      await pumpEventQueue();
+      expect(b.auth.logouts, 1);
+      expect(c.turno.value, TurnoDeLaBienvenida.e1Codigo);
+    });
+
+    test('«Empezar de nuevo» con el contenido que ya no llega dice «No '
+        'pudimos cargar el test.» y ofrece reintentar (RF-TEST-11 y '
+        'RF-BIEN-10)', () async {
+      final api = ApiFalsaDelTest(
+        contenido: <Object>[
+          contenidoJson(),
+          const SpecialtyTestFailure(SpecialtyTestFailureKind.offline),
+          contenidoJson(),
+        ],
+        evaluaciones: <Object>[
+          const SpecialtyTestFailure(
+            SpecialtyTestFailureKind.versionOutdated,
+            message: 'El test cambió.',
+          ),
+          resultadoJson(),
+        ],
+      );
+      final b = await _conSesion(api);
+      final c = b.controlador..empezarElTest();
+      for (final v in respuestasEnOrden) {
+        c
+          ..responderAlTest(v, conLector: true)
+          ..siguiente();
+      }
+      await pumpEventQueue();
+      expect(c.pideReinicio.value, isTrue);
+      c.empezarDeNuevo();
+      await pumpEventQueue();
+      expect(b.deUlises.last, TextosDeLaBienvenida.noCargoElTest);
+      expect(c.turno.value, TurnoDeLaBienvenida.t0Invitacion);
+      c.reintentarElContenido();
+      await pumpEventQueue();
+      expect(b.deUlises.last, TextosDeLaBienvenida.invitacionAlTest(5));
+    });
+
+    test('un 404 no deja la burbuja de carga en la conversación', () async {
+      final b = await _conSesion(
+        ApiFalsaDelTest(
+          contenido: <Object>[
+            const SpecialtyTestFailure(SpecialtyTestFailureKind.notAvailable),
+          ],
+        ),
+      );
+      expect(
+        b.controlador.entradas.whereType<BurbujaDeUlises>().where(
+          (e) => e.tipo == TipoDeBurbuja.cargando,
+        ),
+        isEmpty,
+      );
+      expect(b.controlador.turno.value, TurnoDeLaBienvenida.seleccionManual);
+    });
+
     test('un 401 en un turno con sesión limpia la sesión local, borra el '
         'historial y vuelve a E1 (B-22)', () async {
       final api = ApiFalsaDelTest(
