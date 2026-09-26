@@ -155,8 +155,14 @@ class ApiClient {
       // aunque varias peticiones en vuelo caduquen a la vez, no navega antes
       // de que GetMaterialApp exista (arranque) y devuelve false si /login ya
       // es la ruta actual (el snackbar solo se muestra si de verdad navegó).
-      if (!path.contains('/auth/logout') && offAllToLogin()) {
-        Get.snackbar('Sesión expirada', 'Tu sesión caducó o iniciaste sesión en otro dispositivo.');
+      if (!path.contains('/auth/logout') &&
+          offAllToLogin(motivo: MotivoDeLlegada.expirada)) {
+        // Abajo, para no tapar el sello de la bienvenida (B-29).
+        Get.snackbar(
+          'Sesión expirada',
+          'Tu sesión caducó o iniciaste sesión en otro dispositivo.',
+          snackPosition: SnackPosition.BOTTOM,
+        );
       }
     }
 

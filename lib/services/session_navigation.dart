@@ -38,6 +38,13 @@ const String rutaDelArranque = '/arranque';
 /// bienvenida (RF-SPL-21 y decisión S-33).
 const String argumentoDePose = 'pose';
 
+/// Por qué se llega a la bienvenida (B-21). El cierre de sesión y «Volver a
+/// iniciar sesión» del Perfil no pasan ninguno.
+enum MotivoDeLlegada { expirada, restablecida }
+
+/// La clave del argumento con el motivo de la llegada.
+const String argumentoDeMotivo = 'motivo';
+
 /// Navega a [ruta] sin transición, con el `page` y el `binding` de la
 /// `GetPage` que registró `main.dart`, así que el binding no se duplica
 /// (decisión S-19). La usan la intro del splash y el paso al horario de la
@@ -70,13 +77,20 @@ bool offAllSinTransicion(String ruta, {Object? arguments}) {
 /// argumento (RF-SPL-4 y RF-SPL-21). Los demás llamadores no cambian, y
 /// `onPressed: offAllToLogin` sigue compilando porque los parámetros son
 /// nombrados y opcionales.
-bool offAllToLogin({PoseDelLogo? pose, bool desdeLaIntro = false}) {
+bool offAllToLogin({
+  MotivoDeLlegada? motivo,
+  PoseDelLogo? pose,
+  bool desdeLaIntro = false,
+}) {
   if (Get.context == null) return false;
   if (Get.currentRoute == rutaDelArranque && !desdeLaIntro) return false;
   final alreadyOnLogin =
       Get.currentRoute == '/login' || Get.currentRoute == '/LoginPage';
   if (alreadyOnLogin) return false;
-  final argumentos = <String, Object>{argumentoDePose: ?pose};
+  final argumentos = <String, Object>{
+    argumentoDePose: ?pose,
+    argumentoDeMotivo: ?motivo,
+  };
   if (desdeLaIntro) {
     return offAllSinTransicion(
       '/login',
