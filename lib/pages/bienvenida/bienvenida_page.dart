@@ -362,7 +362,8 @@ class _BienvenidaPageState extends State<BienvenidaPage>
                         primerIdDeUlises,
                       ),
                       conMovimiento: !_sinMovimiento,
-                      resultado: (context) => ResultadoEnLaConversacion(c: _c),
+                      resultado: (context, r) =>
+                          ResultadoEnLaConversacion(c: _c, entrada: r),
                     );
                   },
                 ),

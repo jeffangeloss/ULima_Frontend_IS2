@@ -813,6 +813,14 @@ class BienvenidaController extends GetxController {
   void rehacerElTest() {
     final t = test;
     if (t == null || t.resultado.value == null) return;
+    // El resultado queda en la conversación, de solo lectura, con los
+    // corazones que tenía (RF-BIEN-5).
+    final i = entradas.lastIndexWhere(
+      (e) => e is ResultadoDelTest && e.corazones == null,
+    );
+    if (i >= 0) {
+      entradas[i] = (entradas[i] as ResultadoDelTest).congelado(t.corazones);
+    }
     _responder(TextosB.rehacerElTest);
     _volviendo = true;
     t.rehacer();
@@ -967,7 +975,14 @@ class BienvenidaController extends GetxController {
     if (r == null) return;
     confeti.value++;
     _decir(<String>[?r.headline, ?r.tiebreakOutcome]);
-    entradas.add(ResultadoDelTest(id: _id(), pausa: Ritmo.entreBurbujas));
+    entradas.add(
+      ResultadoDelTest(
+        id: _id(),
+        resultado: r,
+        contenido: t.contenido.value!,
+        pausa: Ritmo.entreBurbujas,
+      ),
+    );
     _abrir(TurnoB.resultado);
   }
 

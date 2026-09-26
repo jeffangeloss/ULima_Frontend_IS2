@@ -4,6 +4,7 @@
 // página las revela con ese ritmo, o todas juntas con lector de pantalla
 // (decisión 6 del plan). Nada de esto se guarda en disco.
 
+import '../../models/specialty_test_models.dart';
 import '../specialty_test/specialty_test_logic.dart' show SelloDeBloque;
 
 enum TipoDeBurbuja { texto, error, consentimiento, avisos, cargando, esperando }
@@ -68,7 +69,30 @@ class RespuestaDelAlumno extends EntradaDeLaConversacion {
 }
 
 /// El resultado del test, con sus tarjetas a lo ancho de la columna
-/// (RF-BIEN-10).
+/// (RF-BIEN-10). Guarda lo que muestra, así que queda en la conversación
+/// aunque el alumno rehaga el test (RF-BIEN-5).
 class ResultadoDelTest extends EntradaDeLaConversacion {
-  const ResultadoDelTest({required super.id, super.pausa = Duration.zero});
+  const ResultadoDelTest({
+    required super.id,
+    required this.resultado,
+    required this.contenido,
+    this.corazones,
+    super.pausa = Duration.zero,
+  });
+
+  final SpecialtyTestResult resultado;
+  final SpecialtyTestContent contenido;
+
+  /// Los corazones con que quedó al rehacer el test, que ya no se tocan, o
+  /// null mientras es el resultado vigente.
+  final Set<int>? corazones;
+
+  /// El mismo resultado, de solo lectura, con [corazones].
+  ResultadoDelTest congelado(Set<int> corazones) => ResultadoDelTest(
+    id: id,
+    resultado: resultado,
+    contenido: contenido,
+    corazones: Set<int>.unmodifiable(corazones),
+    pausa: pausa,
+  );
 }

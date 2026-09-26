@@ -14,6 +14,7 @@ import '../../specialty_test/specialty_test_controller.dart';
 import '../../specialty_test/widgets/question_view.dart';
 import '../../specialty_test/widgets/result_view.dart';
 import '../bienvenida_controller.dart';
+import '../conversacion.dart' show ResultadoDelTest;
 import 'compositor.dart';
 
 typedef _Textos = TextosDeLaBienvenida;
@@ -237,11 +238,17 @@ TestSpecialty? _porId(SpecialtyTestContent contenido, int id) {
 
 /// El resultado en la conversación, que desplaza (B-15). Son la tarjeta de
 /// la número uno y la de los electivos y «También te puede interesar», con
-/// sus corazones.
+/// sus corazones. Se dibuja desde su entrada, así que queda aunque el alumno
+/// rehaga el test, y solo el vigente deja tocar los corazones (RF-BIEN-5).
 class ResultadoEnLaConversacion extends StatefulWidget {
-  const ResultadoEnLaConversacion({super.key, required this.c});
+  const ResultadoEnLaConversacion({
+    super.key,
+    required this.c,
+    required this.entrada,
+  });
 
   final BienvenidaController c;
+  final ResultadoDelTest entrada;
 
   @override
   State<ResultadoEnLaConversacion> createState() =>
@@ -254,11 +261,10 @@ class _ResultadoEnLaConversacionState extends State<ResultadoEnLaConversacion> {
   @override
   Widget build(BuildContext context) {
     final t = widget.c.test;
-    final r = t?.resultado.value;
-    final contenido = t?.contenido.value;
-    if (t == null || r == null || contenido == null) {
-      return const SizedBox.shrink();
-    }
+    final r = widget.entrada.resultado;
+    final contenido = widget.entrada.contenido;
+    final fijos = widget.entrada.corazones;
+    final vigente = fijos == null && identical(t?.resultado.value, r);
     final sinMovimiento = MediaQuery.disableAnimationsOf(context);
     final ganadoras = <TestSpecialty>[
       for (final w in r.winners) ?_porId(contenido, w.specialtyId),
@@ -280,8 +286,27 @@ class _ResultadoEnLaConversacionState extends State<ResultadoEnLaConversacion> {
           FilaDeElectivos(ganadoras: ganadoras, empate: r.tie),
           const SizedBox(height: 10),
           const EncabezadoDeLasDemas(),
-          Obx(
-            () => Column(
+          if (vigente)
+            Obx(
+              () => Column(
+                children: [
+                  for (var i = 1; i < r.ranking.length; i++)
+                    FilaDelRanking(
+                      puesto: i + 1,
+                      entrada: r.ranking[i],
+                      especialidad: _porId(contenido, r.ranking[i].specialtyId),
+                      primera: false,
+                      marcada: t!.corazones.contains(r.ranking[i].specialtyId),
+                      esPrincipal:
+                          t.principalActual == r.ranking[i].specialtyId,
+                      onCorazon: () =>
+                          widget.c.alternarCorazon(r.ranking[i].specialtyId),
+                    ),
+                ],
+              ),
+            )
+          else
+            Column(
               children: [
                 for (var i = 1; i < r.ranking.length; i++)
                   FilaDelRanking(
@@ -289,14 +314,12 @@ class _ResultadoEnLaConversacionState extends State<ResultadoEnLaConversacion> {
                     entrada: r.ranking[i],
                     especialidad: _porId(contenido, r.ranking[i].specialtyId),
                     primera: false,
-                    marcada: t.corazones.contains(r.ranking[i].specialtyId),
-                    esPrincipal: t.principalActual == r.ranking[i].specialtyId,
-                    onCorazon: () =>
-                        widget.c.alternarCorazon(r.ranking[i].specialtyId),
+                    marcada: fijos?.contains(r.ranking[i].specialtyId) ?? false,
+                    esPrincipal: t?.principalActual == r.ranking[i].specialtyId,
+                    onCorazon: null,
                   ),
               ],
             ),
-          ),
         ],
       ),
     );

@@ -26,8 +26,10 @@ import 'package:ulima_plus/models/specialty_test_models.dart';
 import 'package:ulima_plus/models/user_model.dart';
 import 'package:ulima_plus/pages/bienvenida/conversacion.dart';
 import 'package:ulima_plus/pages/bienvenida/widgets/compositor.dart';
+import 'package:ulima_plus/pages/bienvenida/widgets/compositor_del_test.dart';
 import 'package:ulima_plus/pages/specialty_test/specialty_test_controller.dart';
 import 'package:ulima_plus/pages/specialty_test/widgets/question_view.dart';
+import 'package:ulima_plus/pages/specialty_test/widgets/result_view.dart';
 import 'package:ulima_plus/pages/specialty_test/widgets/task_icon.dart';
 import 'package:ulima_plus/services/session_navigation.dart';
 import 'package:ulima_plus/services/specialty_test_service.dart';
@@ -646,6 +648,48 @@ void main() {
           matching: find.text(pregunta.task!.text),
         ),
         findsNothing,
+      );
+    });
+
+    testWidgets('tras «Rehacer el test», el resultado anterior sigue en la '
+        'conversación, de solo lectura, con los corazones que tenía '
+        '(RF-BIEN-5 y RF-BIEN-10)', (tester) async {
+      final b = await enT0(tester);
+      final c = b.controlador..empezarElTest();
+      for (final v in respuestasEnOrden) {
+        c
+          ..responderAlTest(v, conLector: true)
+          ..siguiente();
+      }
+      // Las 28 entradas del test entran con su ritmo.
+      await avanzar(tester, 16000);
+      final resultados = find.byType(
+        ResultadoEnLaConversacion,
+        skipOffstage: false,
+      );
+      expect(resultados, findsOneWidget);
+      final segunda = c.test!.resultado.value!.ranking[1].specialtyId;
+      c.alternarCorazon(segunda);
+      await avanzar(tester, 500);
+      c.rehacerElTest();
+      await avanzar(tester, 3000);
+      expect(resultados, findsOneWidget, reason: 'la entrada sigue');
+      expect(
+        find.byType(TarjetaGanadora, skipOffstage: false),
+        findsOneWidget,
+        reason: 'con su tarjeta, aunque el test ya no tenga resultado',
+      );
+      final filas = tester
+          .widgetList<FilaDelRanking>(
+            find.byType(FilaDelRanking, skipOffstage: false),
+          )
+          .toList();
+      expect(filas, isNotEmpty);
+      expect(filas.every((f) => f.onCorazon == null), isTrue);
+      expect(
+        filas.firstWhere((f) => f.entrada.specialtyId == segunda).marcada,
+        isTrue,
+        reason: 'el corazón que tenía',
       );
     });
 

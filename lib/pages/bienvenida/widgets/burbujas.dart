@@ -32,7 +32,8 @@ class EntradaView extends StatelessWidget {
   /// Si es el primer grupo de Ulises, que lleva el avatar de 40 dp y el
   /// nombre.
   final bool primerGrupo;
-  final WidgetBuilder resultado;
+  final Widget Function(BuildContext context, ResultadoDelTest entrada)
+  resultado;
   final bool conMovimiento;
 
   @override
@@ -44,9 +45,9 @@ class EntradaView extends StatelessWidget {
         primerGrupo: primerGrupo,
       ),
       final RespuestaDelAlumno r => _Respuesta(entrada: r),
-      ResultadoDelTest() => Padding(
+      final ResultadoDelTest r => Padding(
         padding: const EdgeInsets.only(top: 8),
-        child: resultado(context),
+        child: resultado(context, r),
       ),
     };
     return _Entra(conMovimiento: conMovimiento, child: hijo);
