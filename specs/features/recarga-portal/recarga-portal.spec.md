@@ -155,12 +155,16 @@ estado.
 - **Plazo vencido o fallo de red** (D23). El backend puede terminar y escribir después de que la
   app deja de esperar. Por eso `recargar()` guarda, al enviar, la `lastReadAt` que tiene la vista
   y, tras el plazo o un fallo de red sin respuesta, llama a `cargar()` antes de volver. Si la
-  vista nueva trae una `lastReadAt` posterior a la guardada, o una donde antes había `null`,
-  la recarga sí se guardó y `recargar()` vuelve como un `200` sin estados por curso, así que no
-  se pinta ninguna línea de lectura parcial. Si no, vuelve con el aviso del plazo o de la red.
-  Mientras ese aviso siga presente, cualquier `cargar()` posterior que traiga una `lastReadAt`
-  posterior a la guardada lo borra y corre la recarga del horario de RF-RCG-3. Las dos horas son
-  del servidor, así que el reloj del teléfono no interviene.
+  vista nueva trae una `lastReadAt` posterior a la guardada, o una donde la vista del envío tenía
+  `null`, la recarga sí se guardó y `recargar()` vuelve como un `200` sin estados por curso, así
+  que no se pinta ninguna línea de lectura parcial. Si no, vuelve con el aviso del plazo o de la
+  red. Mientras ese aviso siga presente, cualquier `cargar()` posterior que traiga una
+  `lastReadAt` posterior a la guardada lo borra y corre la recarga del horario de RF-RCG-3. Las
+  dos horas son del servidor, así que el reloj del teléfono no interviene. Sin vista cargada al
+  enviar, como cuando la ficha del curso abre la hoja antes de que otra pantalla pida la vista,
+  `recargar()` llama a `cargar()` antes del `POST`. Si tampoco así llega la vista, ninguna lectura
+  cuenta como avance, ni la que sigue al plazo ni la de un `cargar()` posterior, porque la hora de
+  una recarga anterior no se distingue de la de esta.
 - **Contraseña y código.** Llegan como parámetros y se descartan al volver la llamada. Nunca
   entran en un `Rx`, en `shared_preferences`, en `flutter_secure_storage` ni en un `debugPrint`, y
   el cuerpo de la petición nunca se imprime. Es la misma regla de «Cambio de diseño» de
@@ -898,7 +902,7 @@ máximo de 65 000 del presupuesto del backend (decisión 6 del dueño).
 | D20 | Carpeta de pruebas | `test/HU37_jeff/`, la misma historia del backend | Otra carpeta | «Pruebas previstas» |
 | D21 | Dónde vive el código | `RecargaUlimaService` como `GetxService` permanente, piezas en `lib/components/recarga_ulima/` y funciones puras en `lib/domain/recarga_ulima/` | Sumar la recarga a `PortalSyncService`, que no es un servicio compartido | RF-RCG-1 |
 | D22 | Formato de la hora | `hoy`, `ayer` o `el 22 de septiembre`, y `a las HH:mm` | `hace N minutos`, que cambia sin que la pantalla se redibuje | RF-RCG-9 |
-| D23 | Recarga que el backend guarda después del plazo o de un fallo de red | `recargar()` vuelve a pedir `GET /grades/me/ulima` antes de volver y, si la `lastReadAt` avanzó respecto de la de antes del envío, la trata como un `200` sin estados por curso. Mientras siga el aviso del plazo o de la red, cualquier carga posterior que muestre esa hora más nueva lo borra | Volver a pedir la vista y dejar siempre el aviso | RF-RCG-1, RF-RCG-3 y RF-RCG-4 |
+| D23 | Recarga que el backend guarda después del plazo o de un fallo de red | `recargar()` vuelve a pedir `GET /grades/me/ulima` antes de volver y, si la `lastReadAt` avanzó respecto de la de antes del envío, la trata como un `200` sin estados por curso. Mientras siga el aviso del plazo o de la red, cualquier carga posterior que muestre esa hora más nueva lo borra. Sin vista cargada, `recargar()` la pide antes del envío, y si no llega, ninguna lectura cuenta como avance | Volver a pedir la vista y dejar siempre el aviso | RF-RCG-1, RF-RCG-3 y RF-RCG-4 |
 | D24 | Contraste de `Nota: …/20` en las filas de la ULima | Se hereda de `NotaTile`, en `primary` sobre `tertiaryContainer` (2,44:1 en claro), igual que las simuladas aprobadas | `textoNaranja` en las dos clases de filas (5,19:1 en claro), que cambia la calculadora aprobada | RF-RCG-7 y RF-RCG-10 |
 
 ## Pruebas previstas
@@ -928,7 +932,9 @@ Todas van en `test/HU37_jeff/` (D20), con datos inventados y el alumno `20230001
   aviso. Casos de D23. Tras el plazo y tras un fallo de red, `recargar()` pide
   `GET /grades/me/ulima`. Si la `lastReadAt` avanzó, vuelve como éxito sin estados y sin aviso, y
   si no avanzó, vuelve con su aviso. Con el aviso del plazo presente, un `cargar()` posterior con
-  la hora más nueva lo borra y llama a `reload()`, y uno con la misma hora lo deja.
+  la hora más nueva lo borra y llama a `reload()`, y uno con la misma hora lo deja. Sin vista
+  cargada, `recargar()` la pide antes del `POST` y compara con ella, y si tampoco así llega, ni la
+  lectura que sigue al plazo ni un `cargar()` posterior cuentan como avance.
 - `ultima_lectura_test.dart` (unitaria, RF-RCG-9). Hoy, ayer, otro día, otro año, las 23:59 y las
   00:00 de Lima con el teléfono en otra zona, y un `leidoEn` posterior a `ahora`. Los doce meses
   salen en minúscula.

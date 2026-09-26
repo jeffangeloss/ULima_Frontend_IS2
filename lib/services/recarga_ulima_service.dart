@@ -64,9 +64,9 @@ class RecargaUlimaService extends GetxService {
   /// descarta.
   int _generacion = 0;
 
-  /// La `lastReadAt` que tiene la vista al enviar la recarga que termina en
-  /// el aviso del plazo o de la red (D23).
-  DateTime? _lecturaAlEnviar;
+  /// La vista que hay al enviar la recarga que termina en el aviso del plazo
+  /// o de la red, o `null` si no había ninguna (D23).
+  VistaUlima? _vistaAlEnviar;
 
   /// La recarga del horario que corre tras una recarga guardada (RF-RCG-3).
   /// Es la única llamada a `HorarioController.reload()` de la recarga, y la
@@ -131,14 +131,14 @@ class RecargaUlimaService extends GetxService {
     _errorCarga.value = false;
     _enviando.value = false;
     _estados.value = null;
-    _lecturaAlEnviar = null;
+    _vistaAlEnviar = null;
     recargaHorario = null;
   }
 
   /// Borra el aviso rojo, como pide «Cargar mis datos» (RF-RCG-4).
   void borrarAviso() {
     _ultimoAviso.value = null;
-    _lecturaAlEnviar = null;
+    _vistaAlEnviar = null;
   }
 
   /// Toma como dueño al alumno actual, o devuelve `false` si no hay uno que
@@ -152,8 +152,16 @@ class RecargaUlimaService extends GetxService {
     return true;
   }
 
-  static bool _avanzo(DateTime? antes, DateTime? despues) =>
-      despues != null && (antes == null || despues.isAfter(antes));
+  /// Si [despues] trae una `lastReadAt` posterior a la de [antes], o una
+  /// donde [antes] tenía `null` (D23). Sin [antes], porque no había vista
+  /// al enviar, nada cuenta como avance, ya que la hora de una recarga
+  /// anterior no se distingue de la de esta.
+  static bool _avanzo(VistaUlima? antes, VistaUlima? despues) {
+    if (antes == null) return false;
+    final base = antes.lastReadAt;
+    final nueva = despues?.lastReadAt;
+    return nueva != null && (base == null || nueva.isAfter(base));
+  }
 
   /// Pide `GET /grades/me/ulima`. Nunca lanza. Un fallo no borra la vista
   /// que ya hay y deja [errorCarga] en verdadero hasta la siguiente carga
@@ -172,9 +180,9 @@ class RecargaUlimaService extends GetxService {
       final aviso = _ultimoAviso.value;
       if (aviso != null &&
           aviso.esperaLectura &&
-          _avanzo(_lecturaAlEnviar, nueva.lastReadAt)) {
+          _avanzo(_vistaAlEnviar, nueva)) {
         _ultimoAviso.value = null;
-        _lecturaAlEnviar = null;
+        _vistaAlEnviar = null;
         _recargarHorario();
       }
     } catch (e) {
@@ -199,7 +207,8 @@ class RecargaUlimaService extends GetxService {
   /// Devuelve `true` si la recarga queda guardada, con un `200` o con la
   /// lectura posterior de D23. Con un error deja el aviso de RF-RCG-4 en
   /// [ultimoAviso] y devuelve `false`. Una segunda llamada mientras hay otra
-  /// en vuelo no hace nada y devuelve `false`.
+  /// en vuelo no hace nada y devuelve `false`. Sin vista cargada, llama antes
+  /// a [cargar] para tener la base de D23.
   Future<bool> recargar({
     required String password,
     required String passcode,
@@ -207,12 +216,19 @@ class RecargaUlimaService extends GetxService {
     if (_enviando.value) return false;
     if (!_tomarDueno()) return false;
     final generacion = _generacion;
-    final lecturaAntes = _vista.value?.lastReadAt;
     _enviando.value = true;
     _ultimoAviso.value = null;
-    _lecturaAlEnviar = null;
+    _vistaAlEnviar = null;
     _estados.value = null;
+    VistaUlima? vistaAntes;
     try {
+      // D23. Sin vista no hay con qué comparar la lectura que sigue a un
+      // plazo vencido, así que se pide antes del envío.
+      if (_vista.value == null) {
+        await cargar();
+        if (generacion != _generacion) return false;
+      }
+      vistaAntes = _vista.value;
       final json = await _api
           .postJson(
             '/portal-sync/refresh',
@@ -238,10 +254,10 @@ class RecargaUlimaService extends GetxService {
       }
       return false;
     } on TimeoutException {
-      return _trasPlazoORed(avisoPlazo, lecturaAntes, generacion);
+      return _trasPlazoORed(avisoPlazo, vistaAntes, generacion);
     } catch (_) {
       // ApiClient propaga los fallos de red sin envolverlos.
-      return _trasPlazoORed(avisoSinRed, lecturaAntes, generacion);
+      return _trasPlazoORed(avisoSinRed, vistaAntes, generacion);
     } finally {
       if (generacion == _generacion) _enviando.value = false;
     }
@@ -251,19 +267,19 @@ class RecargaUlimaService extends GetxService {
   /// esperar, así que se vuelve a pedir la vista antes de decidir (D23).
   Future<bool> _trasPlazoORed(
     AvisoRecarga aviso,
-    DateTime? lecturaAntes,
+    VistaUlima? vistaAntes,
     int generacion,
   ) async {
     if (generacion != _generacion) return false;
     await cargar();
     if (generacion != _generacion) return false;
-    if (_avanzo(lecturaAntes, _vista.value?.lastReadAt)) {
+    if (_avanzo(vistaAntes, _vista.value)) {
       // Como un 200, pero sin estados por curso.
       _recargarHorario();
       return true;
     }
     _ultimoAviso.value = aviso;
-    _lecturaAlEnviar = lecturaAntes;
+    _vistaAlEnviar = vistaAntes;
     return false;
   }
 }

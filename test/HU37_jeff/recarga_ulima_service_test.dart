@@ -321,9 +321,11 @@ void main() {
         final horario =
             Get.put<HorarioController>(_HorarioEspia()) as _HorarioEspia;
         final api = ApiRecargaFalsa()
+          ..responder(_vistaGet, vistaJson())
           ..responder(
             _refresh,
             resultadoJson(
+              view: _vistaNueva(),
               courses: [
                 {'sectionId': 81, 'attendance': 'updated', 'grades': 'read'},
                 {'sectionId': 82, 'attendance': 'missing', 'grades': 'failed'},
@@ -331,9 +333,11 @@ void main() {
             ),
           );
         final s = _servicio(api);
+        await s.cargar();
 
         expect(await _recargar(s), isTrue);
 
+        expect(s.vista!.lastReadAt, DateTime.utc(2025, 9, 22, 15, 50));
         expect(s.vista!.cursos.single.sectionId, 81);
         expect(s.sinLecturaDeNotas(81), isFalse);
         expect(s.sinLecturaDeAsistencia(81), isFalse);
@@ -345,7 +349,8 @@ void main() {
         expect(s.recargaHorario, isNotNull);
         await s.recargaHorario;
         expect(horario.recargas, 1);
-        expect(api.veces(_vistaGet), 0);
+        // Solo la carga de antes. Un 200 no vuelve a pedir la vista.
+        expect(api.veces(_vistaGet), 1);
         expect(s.ultimoAviso, isNull);
         expect(s.enviando, isFalse);
       },
@@ -574,8 +579,11 @@ void main() {
     test('una segunda llamada durante enviando no sale', () async {
       loguear(alumna());
       final pendiente = Completer<Map<String, dynamic>>();
-      final api = ApiRecargaFalsa()..responder(_refresh, pendiente);
+      final api = ApiRecargaFalsa()
+        ..responder(_vistaGet, vistaJson())
+        ..responder(_refresh, pendiente);
       final s = _servicio(api);
+      await s.cargar();
 
       final primera = _recargar(s);
       expect(await _recargar(s), isFalse);
@@ -583,6 +591,23 @@ void main() {
 
       pendiente.complete(resultadoJson());
       expect(await primera, isTrue);
+    });
+
+    test('un clear() mientras recargar() pide la vista previa corta la '
+        'recarga antes del envío', () async {
+      loguear(alumna());
+      final previa = Completer<Map<String, dynamic>>();
+      final api = ApiRecargaFalsa()..responder(_vistaGet, previa);
+      final s = _servicio(api);
+
+      final recarga = _recargar(s);
+      expect(s.enviando, isTrue);
+      s.clear();
+      previa.complete(vistaJson());
+
+      expect(await recarga, isFalse);
+      expect(api.veces(_refresh), 0);
+      expect(s.enviando, isFalse);
     });
 
     // Tras clear() no hay dueño y los getters no filtran nada, así que el
@@ -765,6 +790,61 @@ void main() {
         expect(horario.recargas, 1);
       },
     );
+
+    test('sin vista cargada, recargar() la pide antes del envío y, tras el '
+        'plazo, una lectura igual a esa no cuenta como guardada', () async {
+      loguear(alumna());
+      final horario =
+          Get.put<HorarioController>(_HorarioEspia()) as _HorarioEspia;
+      final api = ApiRecargaFalsa()
+        // La lectura de una recarga de días antes, que no avanza.
+        ..responder(_vistaGet, vistaJson())
+        ..responder(_refresh, Completer<Map<String, dynamic>>());
+      final s = _servicio(api, plazo: const Duration(milliseconds: 20));
+
+      // Sin cargar() previo, como desde la ficha del curso.
+      expect(await _recargar(s), isFalse);
+
+      expect(api.llamadas, <String>[_vistaGet, _refresh, _vistaGet]);
+      expect(s.ultimoAviso, avisoPlazo);
+      expect(horario.recargas, 0);
+    });
+
+    test('sin vista cargada, una lectura posterior a la que se pide antes del '
+        'envío sí cuenta como guardada', () async {
+      loguear(alumna());
+      final api = ApiRecargaFalsa()
+        ..responder(_vistaGet, vistaJson())
+        ..responder(_vistaGet, _vistaNueva())
+        ..responder(_refresh, const SocketException('sin red'));
+      final s = _servicio(api);
+
+      expect(await _recargar(s), isTrue);
+
+      expect(api.llamadas, <String>[_vistaGet, _refresh, _vistaGet]);
+      expect(s.ultimoAviso, isNull);
+    });
+
+    test('si tampoco llega la vista antes del envío, ninguna lectura cuenta '
+        'como avance, ni tras el plazo ni en un cargar() posterior', () async {
+      loguear(alumna());
+      final horario =
+          Get.put<HorarioController>(_HorarioEspia()) as _HorarioEspia;
+      final api = ApiRecargaFalsa()
+        ..responder(_vistaGet, errorApi(500, 'HTTP_ERROR'))
+        ..responder(_vistaGet, vistaJson())
+        ..responder(_vistaGet, _vistaNueva())
+        ..responder(_refresh, Completer<Map<String, dynamic>>());
+      final s = _servicio(api, plazo: const Duration(milliseconds: 20));
+
+      expect(await _recargar(s), isFalse);
+      expect(s.ultimoAviso, avisoPlazo);
+
+      await s.cargar();
+      expect(s.ultimoAviso, avisoPlazo);
+      expect(horario.recargas, 0);
+      expect(s.vista!.lastReadAt, DateTime.utc(2025, 9, 22, 15, 50));
+    });
 
     test('un aviso que no es del plazo ni de la red no lo borra una lectura '
         'nueva', () async {
