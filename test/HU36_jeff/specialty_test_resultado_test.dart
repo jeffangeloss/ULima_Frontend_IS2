@@ -360,8 +360,10 @@ void _ruta() {
       await tester.pump(const Duration(seconds: 2));
       expect(find.byType(ResultView), findsOneWidget);
       await tester.binding.handlePopRoute();
-      await tester.pump(const Duration(seconds: 1));
+      await asentar(tester);
       expect(find.byType(ResultView), findsOneWidget);
+      expect(find.text('Pantalla de inicio'), findsNothing);
+      expect(Get.isRegistered<SpecialtyTestController>(), isTrue);
       expect(c.fase.value, FaseDelTest.resultado);
       expect(t.auth.guardados, isEmpty);
     });
