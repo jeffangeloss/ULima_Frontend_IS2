@@ -17,6 +17,9 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:ulima_plus/domain/bienvenida/bienvenida_turnos.dart';
+import 'package:ulima_plus/pages/bienvenida/bienvenida_page.dart';
+import 'package:ulima_plus/pages/bienvenida/widgets/compositor.dart';
+import 'package:ulima_plus/pages/splash/salidas.dart' show naranjaDelSplash;
 import 'package:ulima_plus/services/api_client.dart';
 import 'package:ulima_plus/services/session_navigation.dart';
 import 'package:ulima_plus/services/storage_service.dart';
@@ -179,5 +182,102 @@ void main() {
         expect(b.login.codeController.text, '');
       },
     );
+  });
+
+  group('la página y sus visitas (RF-BIEN-1)', () {
+    setUp(() {
+      Get.testMode = true;
+      Get.reset();
+    });
+    tearDown(Get.reset);
+
+    testWidgets('tras un cierre de sesión que deja la franja con el sello, el '
+        'primer cuadro sale solo de los argumentos y no muestra nada de la '
+        'visita anterior', (tester) async {
+      final b = Bienvenida();
+      await montarLaBienvenida(
+        tester,
+        b,
+        argumentos: const {argumentoDeMotivo: MotivoDeLlegada.expirada},
+      );
+      await avanzar(tester, 1500);
+      expect(find.text(TextosDeLaBienvenida.e1), findsOneWidget);
+      // Va al home y cierra sesión, que llega a /login sin argumentos.
+      Get.offAllNamed<void>('/home');
+      await avanzar(tester, 600);
+      expect(offAllToLogin(), isTrue);
+      await tester.pump();
+      expect(
+        tester.takeException(),
+        isNull,
+        reason: 'sin setState en el build',
+      );
+      // En su primer cuadro la ruta nueva se construye fuera de la vista, como
+      // toda ruta con transición, así que se busca también ahí.
+      final nueva = find.byType(BienvenidaPage, skipOffstage: false).last;
+      // El primer cuadro es el naranja del splash con el logo en reposo, y
+      // la conversación de la visita anterior no se pinta.
+      expect(
+        find.descendant(
+          of: nueva,
+          matching: find.byWidgetPredicate(
+            (w) => w is ColoredBox && w.color == naranjaDelSplash,
+            skipOffstage: false,
+          ),
+          skipOffstage: false,
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: nueva,
+          matching: find.text(TextosDeLaBienvenida.e1, skipOffstage: false),
+          skipOffstage: false,
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: nueva, matching: find.byType(MarcoDelCompositor)),
+        findsNothing,
+      );
+      // Después del primer cuadro, la visita nueva empieza de cero.
+      await tester.pump();
+      expect(b.controlador.turno.value, TurnoDeLaBienvenida.recibimiento);
+      await avanzar(tester, 4000);
+    });
+
+    testWidgets('en el restablecimiento conviven dos /login, sin setState '
+        'durante el build, y el dispose de la página vieja no toca la visita '
+        'nueva', (tester) async {
+      final b = Bienvenida();
+      await montarLaBienvenida(
+        tester,
+        b,
+        argumentos: const {argumentoDeMotivo: MotivoDeLlegada.expirada},
+      );
+      await avanzar(tester, 1500);
+      // «¿Olvidaste tu contraseña?» abre /forgot-password encima, y el
+      // restablecimiento navega a /login con la vieja todavía en la pila.
+      Get.toNamed<void>('/forgot-password');
+      await avanzar(tester, 600);
+      expect(offAllToLogin(motivo: MotivoDeLlegada.restablecida), isTrue);
+      await tester.pump();
+      expect(
+        tester.takeException(),
+        isNull,
+        reason: 'sin setState en el build',
+      );
+      // La visita nueva empieza en E1 por el motivo, y abre un tramo que el
+      // dispose de la vieja cerraría si no estuviera guardado por la visita.
+      await tester.pump();
+      expect(b.controlador.turno.value, TurnoDeLaBienvenida.e1Codigo);
+      b.controlador.soyNuevo();
+      expect(b.controlador.registro, isNotNull);
+      await avanzar(tester, 1500);
+      expect(find.byType(BienvenidaPage, skipOffstage: false), findsOneWidget);
+      expect(b.controlador.registro, isNotNull, reason: 'la vieja no la toca');
+      expect(b.controlador.turno.value, TurnoDeLaBienvenida.n1Codigo);
+      expect(tester.takeException(), isNull);
+    });
   });
 }

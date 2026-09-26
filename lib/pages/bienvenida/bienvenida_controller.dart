@@ -104,6 +104,9 @@ class BienvenidaController extends GetxController {
   AuthService get _auth => _authInyectado ?? AuthService.to;
   LoginController get _login => _loginInyectado ?? Get.find<LoginController>();
 
+  /// El login, que usan los compositores de E1 y E2.
+  LoginController get login => _login;
+
   /// El historial vive solo aquí, en memoria (RF-BIEN-5).
   final entradas = <EntradaDeLaConversacion>[].obs;
 
@@ -114,6 +117,10 @@ class BienvenidaController extends GetxController {
   final ultimoTurno = Rxn<TurnoDeLaBienvenida>();
   final esperando = false.obs;
   final errorLocal = RxnString();
+
+  /// La visita que el controlador ya atiende. La página no lee el estado
+  /// mientras su visita no es esta (RF-BIEN-1).
+  final visitaEmpezada = 0.obs;
 
   /// Sube con cada respuesta del alumno, y el sello late (RF-BIEN-4).
   final latidos = 0.obs;
@@ -223,18 +230,22 @@ class BienvenidaController extends GetxController {
       if (postLoginRoute(usuario) == '/home') {
         _decir(<String>[TextosB.e3], primera: Duration.zero);
         _abrir(TurnoB.pasoAlHorario);
+        visitaEmpezada.value = visita;
         return;
       }
       _abrir(TurnoB.llegadaConSesion);
+      visitaEmpezada.value = visita;
       return;
     }
     if (motivo != null) {
       // Directo a «Sí, entrar», con el sello ya en su lugar (RF-BIEN-3).
       _decir(<String>[TextosB.saludo], primera: Duration.zero);
       _abrirE1(primera: Ritmo.entreBurbujas);
+      visitaEmpezada.value = visita;
       return;
     }
     _abrir(TurnoB.recibimiento);
+    visitaEmpezada.value = visita;
   }
 
   /// El dispose de la página. Una visita vieja no toca la nueva.

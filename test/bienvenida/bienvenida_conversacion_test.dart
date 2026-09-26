@@ -1,0 +1,167 @@
+// test/bienvenida/bienvenida_conversacion_test.dart
+//
+// WIDGET · Bienvenida con Ulises (specs/features/bienvenida/bienvenida.spec.md).
+// RF-BIEN-5. La franja con el sello, la conversación y el compositor fijo
+// abajo, los grupos de Ulises, las respuestas a la derecha, el ritmo de 850 y
+// 500 ms, el compositor de E1 y E2 y el teclado. Llega con un motivo, así que
+// empieza directo en E1, sin el recibimiento de la Tarea 28.
+// Archivo probado lib/pages/bienvenida/bienvenida_page.dart.
+
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:get/get.dart';
+import 'package:ulima_plus/components/logo/sello_del_logo.dart';
+import 'package:ulima_plus/configs/themes.dart';
+import 'package:ulima_plus/domain/bienvenida/bienvenida_turnos.dart';
+import 'package:ulima_plus/pages/bienvenida/widgets/compositor.dart';
+import 'package:ulima_plus/services/session_navigation.dart';
+
+import 'apoyo_bienvenida.dart';
+
+const _expirada = <String, Object>{argumentoDeMotivo: MotivoDeLlegada.expirada};
+
+void main() {
+  setUp(() {
+    Get.testMode = true;
+    Get.reset();
+  });
+  tearDown(Get.reset);
+
+  testWidgets('la franja con el sello va arriba, la conversación en medio y '
+      'el compositor abajo', (tester) async {
+    final b = Bienvenida();
+    await montarLaBienvenida(tester, b, argumentos: _expirada);
+    // E1 entra a los 850 ms y el compositor 500 ms después, en 300 ms.
+    await avanzar(tester, 1800);
+    final sello = tester.getRect(find.byType(SelloDelLogo));
+    final compositor = tester.getRect(find.byType(MarcoDelCompositor));
+    expect(sello.top, lessThan(100));
+    expect(compositor.bottom, closeTo(667, 0.5));
+    expect(find.text(TextosDeLaBienvenida.saludo), findsOneWidget);
+    expect(find.text(TextosDeLaBienvenida.e1), findsOneWidget);
+  });
+
+  testWidgets('cada burbuja entra 850 ms después de la anterior y el '
+      'compositor 500 ms después de la última', (tester) async {
+    final b = Bienvenida();
+    await montarLaBienvenida(tester, b, argumentos: _expirada);
+    // El saludo entra enseguida, E1 850 ms después.
+    expect(find.text(TextosDeLaBienvenida.saludo), findsOneWidget);
+    expect(find.text(TextosDeLaBienvenida.e1), findsNothing);
+    await tester.pump(const Duration(milliseconds: 840));
+    expect(find.text(TextosDeLaBienvenida.e1), findsNothing);
+    await tester.pump(const Duration(milliseconds: 20));
+    expect(find.text(TextosDeLaBienvenida.e1), findsOneWidget);
+    expect(find.byType(MarcoDelCompositor), findsNothing);
+    await tester.pump(const Duration(milliseconds: 510));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byType(MarcoDelCompositor), findsOneWidget);
+  });
+
+  testWidgets('el primer grupo lleva el nombre «Ulises» y los siguientes no, '
+      'y las respuestas van a la derecha con «Tú»', (tester) async {
+    final semantica = tester.ensureSemantics();
+    final b = Bienvenida();
+    await montarLaBienvenida(tester, b, argumentos: _expirada);
+    await avanzar(tester, 1500);
+    expect(find.text('Ulises'), findsOneWidget);
+    await tester.enterText(find.byType(TextField).first, '20230001');
+    // El botón se activa en el cuadro siguiente al texto.
+    await tester.pump();
+    await tester.tap(find.byType(BotonDeEnvio));
+    await avanzar(tester, 1600);
+    final respuesta = tester.getRect(find.text('20230001').last);
+    expect(respuesta.right, greaterThan(375 - 40));
+    expect(find.bySemanticsLabel('Tú, 20230001'), findsOneWidget);
+    expect(find.text('Ulises'), findsOneWidget, reason: 'solo el primer grupo');
+    expect(find.text(TextosDeLaBienvenida.e2), findsOneWidget);
+    semantica.dispose();
+  });
+
+  testWidgets('el botón de envío queda inactivo con el campo vacío', (
+    tester,
+  ) async {
+    final b = Bienvenida();
+    await montarLaBienvenida(tester, b, argumentos: _expirada);
+    await avanzar(tester, 1500);
+    final boton = tester.widget<BotonDeEnvio>(find.byType(BotonDeEnvio));
+    expect(boton.alTocar, isNull);
+    await tester.enterText(find.byType(TextField).first, 'docente.test');
+    await tester.pump();
+    expect(
+      tester.widget<BotonDeEnvio>(find.byType(BotonDeEnvio)).alTocar,
+      isNotNull,
+    );
+  });
+
+  testWidgets('E2 trae el ojo, «Entrar», «¿Olvidaste tu contraseña?» y «Soy '
+      'nuevo»', (tester) async {
+    final semantica = tester.ensureSemantics();
+    final b = Bienvenida();
+    await montarLaBienvenida(tester, b, argumentos: _expirada);
+    await avanzar(tester, 1500);
+    await tester.enterText(find.byType(TextField).first, '20230001');
+    // El botón se activa en el cuadro siguiente al texto.
+    await tester.pump();
+    await tester.tap(find.byType(BotonDeEnvio));
+    await avanzar(tester, 2000);
+    expect(
+      find.bySemanticsLabel(TextosDeLaBienvenida.mostrarContrasena),
+      findsOneWidget,
+    );
+    expect(find.text(TextosDeLaBienvenida.entrar), findsOneWidget);
+    expect(find.text(TextosDeLaBienvenida.olvidaste), findsOneWidget);
+    expect(find.text(TextosDeLaBienvenida.soyNuevo), findsOneWidget);
+    await tester.tap(find.text(TextosDeLaBienvenida.olvidaste));
+    expect(b.rutas, ['/forgot-password']);
+    semantica.dispose();
+  });
+
+  testWidgets('E1 trae «o», «Continuar con Google» y «Soy nuevo»', (
+    tester,
+  ) async {
+    final b = Bienvenida();
+    await montarLaBienvenida(tester, b, argumentos: _expirada);
+    await avanzar(tester, 1500);
+    expect(find.text(TextosDeLaBienvenida.separadorO), findsOneWidget);
+    expect(find.byType(BotonDeGoogle), findsOneWidget);
+    expect(
+      tester.getSize(find.byType(BotonDeGoogle)).height,
+      greaterThanOrEqualTo(48),
+    );
+    expect(find.text(TextosDeLaBienvenida.soyNuevo), findsOneWidget);
+  });
+
+  testWidgets('con el teclado abierto la franja queda arriba y el compositor '
+      'sobre el teclado', (tester) async {
+    final b = Bienvenida();
+    await montarLaBienvenida(tester, b, argumentos: _expirada);
+    await avanzar(tester, 1800);
+    tester.view.viewInsets = const FakeViewPadding(bottom: 600);
+    await tester.pump();
+    final sello = tester.getRect(find.byType(SelloDelLogo));
+    final compositor = tester.getRect(find.byType(MarcoDelCompositor));
+    expect(sello.top, lessThan(100));
+    expect(compositor.bottom, closeTo(667 - 300, 0.5));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('las burbujas de Ulises van en cardBg y las respuestas en '
+      'bienvenidaPropia', (tester) async {
+    final b = Bienvenida();
+    await montarLaBienvenida(tester, b, argumentos: _expirada);
+    await avanzar(tester, 1500);
+    final caja = tester.widget<DecoratedBox>(
+      find
+          .ancestor(
+            of: find.text(TextosDeLaBienvenida.saludo),
+            matching: find.byType(DecoratedBox),
+          )
+          .first,
+    );
+    expect(
+      (caja.decoration as BoxDecoration).color,
+      MaterialTheme.cardBg(Brightness.light),
+    );
+  });
+}

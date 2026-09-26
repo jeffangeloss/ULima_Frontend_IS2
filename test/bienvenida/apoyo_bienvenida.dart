@@ -5,11 +5,15 @@
 
 import 'dart:async';
 
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
+import 'package:ulima_plus/configs/themes.dart';
 import 'package:ulima_plus/models/portal_sync_models.dart';
 import 'package:ulima_plus/models/registro_models.dart';
 import 'package:ulima_plus/models/user_model.dart';
 import 'package:ulima_plus/pages/bienvenida/bienvenida_controller.dart';
+import 'package:ulima_plus/pages/bienvenida/bienvenida_page.dart';
 import 'package:ulima_plus/pages/bienvenida/conversacion.dart';
 import 'package:ulima_plus/pages/login/login_controller.dart';
 import 'package:ulima_plus/pages/registro/registro_controller.dart';
@@ -270,5 +274,66 @@ class Bienvenida {
   Future<void> visitar({MotivoDeLlegada? motivo}) async {
     final v = controlador.nuevaVisita();
     await controlador.empezarVisita(v, motivo: motivo);
+  }
+}
+
+/// Monta /login con la bienvenida real y los controladores de [b], y llega
+/// con [argumentos], como la intro o offAllToLogin.
+Future<void> montarLaBienvenida(
+  WidgetTester tester,
+  Bienvenida b, {
+  Map<String, Object>? argumentos,
+  Brightness brillo = Brightness.light,
+  Size pantalla = const Size(375, 667),
+  double escala = 1,
+  bool conLector = false,
+  bool sinMovimiento = false,
+}) async {
+  tester.view.physicalSize = pantalla * 2;
+  tester.view.devicePixelRatio = 2;
+  tester.view.display.size = pantalla * 2;
+  tester.view.display.devicePixelRatio = 2;
+  addTearDown(tester.view.reset);
+  addTearDown(tester.view.display.reset);
+  tester.platformDispatcher.accessibilityFeaturesTestValue =
+      FakeAccessibilityFeatures(
+        accessibleNavigation: conLector,
+        disableAnimations: sinMovimiento,
+      );
+  addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+  Get.put<LoginController>(b.login, permanent: true);
+  Get.put<BienvenidaController>(b.controlador, permanent: true);
+  const tema = MaterialTheme(TextTheme());
+  await tester.pumpWidget(
+    GetMaterialApp(
+      theme: brillo == Brightness.light ? tema.light() : tema.dark(),
+      home: const SizedBox.shrink(),
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(
+          context,
+        ).copyWith(textScaler: TextScaler.linear(escala)),
+        child: child!,
+      ),
+      getPages: [
+        GetPage(name: '/login', page: () => const BienvenidaPage()),
+        GetPage(name: '/forgot-password', page: () => const Text('olvido')),
+        GetPage(name: '/home', page: () => const Text('home')),
+      ],
+    ),
+  );
+  Get.offAll<void>(
+    () => const BienvenidaPage(),
+    routeName: '/login',
+    arguments: argumentos,
+    transition: Transition.noTransition,
+  );
+  await tester.pump();
+  await tester.pump();
+}
+
+/// Avanza [ms] en cuadros de 16 ms.
+Future<void> avanzar(WidgetTester tester, int ms) async {
+  for (var t = 0; t < ms; t += 16) {
+    await tester.pump(const Duration(milliseconds: 16));
   }
 }

@@ -7,13 +7,16 @@
 // salir. Las Tareas 23 y 27 suman los turnos E1, E2 y E3.
 // Archivo probado lib/pages/login/login_controller.dart.
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:ulima_plus/domain/bienvenida/bienvenida_turnos.dart';
 import 'package:ulima_plus/models/user_model.dart';
 import 'package:ulima_plus/pages/bienvenida/conversacion.dart';
+import 'package:ulima_plus/pages/bienvenida/widgets/compositor.dart';
 import 'package:ulima_plus/pages/login/login_controller.dart';
 import 'package:ulima_plus/services/auth_service.dart';
+import 'package:ulima_plus/services/session_navigation.dart';
 
 import 'apoyo_bienvenida.dart';
 
@@ -390,5 +393,87 @@ void main() {
         expect(b.controlador.atrasSaleDeLaApp, isTrue);
       },
     );
+  });
+
+  group('el autocompletado (RF-BIEN-6)', () {
+    setUp(() {
+      Get.testMode = true;
+      Get.reset();
+    });
+    tearDown(Get.reset);
+
+    testWidgets('E1 y E2 van en un mismo AutofillGroup, en E2 el campo del '
+        'código sigue montado, invisible y fuera del foco, y la sesión puesta '
+        'cierra el contexto con los dos campos escritos', (tester) async {
+      final b = Bienvenida();
+      await montarLaBienvenida(
+        tester,
+        b,
+        argumentos: const {argumentoDeMotivo: MotivoDeLlegada.expirada},
+      );
+      await avanzar(tester, 1500);
+      final grupo = find.byType(AutofillGroup);
+      expect(grupo, findsOneWidget);
+      final grupoDeE1 = tester.element(grupo);
+      Finder campoDe(TextEditingController c, {bool soloVisibles = true}) =>
+          find.descendant(
+            of: grupo,
+            matching: find.byWidgetPredicate(
+              (w) => w is TextField && w.controller == c,
+              skipOffstage: soloVisibles,
+            ),
+            skipOffstage: soloVisibles,
+          );
+      expect(campoDe(b.login.codeController), findsOneWidget);
+      expect(
+        tester.widget<TextField>(campoDe(b.login.codeController)).autofillHints,
+        [AutofillHints.username],
+      );
+
+      await tester.enterText(campoDe(b.login.codeController), '20230001');
+      await tester.pump();
+      await tester.tap(find.byType(BotonDeEnvio));
+      await avanzar(tester, 2000);
+      expect(tester.element(grupo), same(grupoDeE1), reason: 'el mismo grupo');
+      expect(campoDe(b.login.passwordController), findsOneWidget);
+      expect(
+        tester
+            .widget<TextField>(campoDe(b.login.passwordController))
+            .autofillHints,
+        [AutofillHints.password],
+      );
+      // El campo del código no se ve, pero sigue montado en el grupo.
+      expect(campoDe(b.login.codeController), findsNothing);
+      final oculto = campoDe(b.login.codeController, soloVisibles: false);
+      expect(oculto, findsOneWidget);
+      expect(tester.widget<TextField>(oculto).autofillHints, [
+        AutofillHints.username,
+      ]);
+      final offstage = tester.widget<Offstage>(
+        find.ancestor(of: oculto, matching: find.byType(Offstage)).first,
+      );
+      expect(
+        offstage.offstage,
+        isTrue,
+        reason: 'fuera de la vista y de la semántica',
+      );
+      expect(
+        find.ancestor(of: oculto, matching: find.byType(ExcludeFocus)),
+        findsWidgets,
+        reason: 'fuera del foco',
+      );
+
+      await tester.enterText(
+        campoDe(b.login.passwordController),
+        'secreta-de-prueba',
+      );
+      await tester.pump();
+      await tester.tap(find.text(TextosDeLaBienvenida.entrar));
+      await tester.pump();
+      expect(b.autocompletados, [
+        (codigo: '20230001', contrasena: 'secreta-de-prueba'),
+      ]);
+      await avanzar(tester, 3000);
+    });
   });
 }
