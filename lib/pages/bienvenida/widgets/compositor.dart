@@ -11,7 +11,9 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../configs/themes.dart';
 import '../../../domain/bienvenida/bienvenida_turnos.dart';
+import '../../password_reset/password_reset_ui.dart';
 import '../bienvenida_controller.dart';
+import 'compositor_del_test.dart';
 
 typedef _Textos = TextosDeLaBienvenida;
 
@@ -509,15 +511,6 @@ class _CampoConEnvio extends StatelessWidget {
 }
 
 /// El compositor de cada turno. Null en los turnos sin compositor.
-Widget? compositorDelTurno(
-  BuildContext context,
-  BienvenidaController c,
-  TurnoDeLaBienvenida turno,
-) => switch (turno) {
-  TurnoDeLaBienvenida.e1Codigo => _E1(c: c),
-  TurnoDeLaBienvenida.e2Contrasena => _E2(c: c),
-  _ => null,
-};
 
 /// El campo con el texto que el botón de envío escucha.
 class _AlEscribir extends StatelessWidget {
@@ -644,4 +637,278 @@ class _E2 extends StatelessWidget {
       ),
     );
   }
+}
+
+Widget? compositorDelTurno(
+  BuildContext context,
+  BienvenidaController c,
+  TurnoDeLaBienvenida turno,
+) => switch (turno) {
+  TurnoDeLaBienvenida.e1Codigo => _E1(c: c),
+  TurnoDeLaBienvenida.e2Contrasena => _E2(c: c),
+  TurnoDeLaBienvenida.n1Codigo => _N1(c: c),
+  TurnoDeLaBienvenida.n2Contrasena => _N2(c: c),
+  TurnoDeLaBienvenida.n3Consentimiento => _N3(c: c),
+  TurnoDeLaBienvenida.n4Portal => _N4(c: c),
+  TurnoDeLaBienvenida.n5Authenticator => _N5(c: c),
+  TurnoDeLaBienvenida.incierto => _Incierto(c: c),
+  TurnoDeLaBienvenida.t0Invitacion ||
+  TurnoDeLaBienvenida.pregunta ||
+  TurnoDeLaBienvenida.desempate ||
+  TurnoDeLaBienvenida.espera ||
+  TurnoDeLaBienvenida.resultado => CompositorDelTest(c: c, turno: turno),
+  TurnoDeLaBienvenida.seleccionManual => SeleccionManual(c: c),
+  TurnoDeLaBienvenida.recibimiento ||
+  TurnoDeLaBienvenida.llegadaConSesion ||
+  TurnoDeLaBienvenida.e3Despedida ||
+  TurnoDeLaBienvenida.envio ||
+  TurnoDeLaBienvenida.pasoAlHorario => null,
+};
+
+/// Los enlaces que el registro deja fijos antes del envío (RF-BIEN-9).
+class _EnlacesDelRegistro extends StatelessWidget {
+  const _EnlacesDelRegistro({required this.c, this.conVolver = true});
+
+  final BienvenidaController c;
+  final bool conVolver;
+
+  @override
+  Widget build(BuildContext context) => Wrap(
+    alignment: WrapAlignment.center,
+    spacing: 8,
+    children: [
+      if (conVolver) EnlaceSecundario(texto: _Textos.volver, alTocar: c.volver),
+      EnlaceSecundario(texto: _Textos.yaTengoCuenta, alTocar: c.yaTengoCuenta),
+    ],
+  );
+}
+
+class _ConError extends StatelessWidget {
+  const _ConError({required this.c, required this.children});
+
+  final BienvenidaController c;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => Obx(
+    () => Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ...children,
+        if (c.errorLocal.value != null) ErrorLocal(c.errorLocal.value!),
+      ],
+    ),
+  );
+}
+
+class _N1 extends StatelessWidget {
+  const _N1({required this.c});
+
+  final BienvenidaController c;
+
+  @override
+  Widget build(BuildContext context) {
+    final r = c.registro!;
+    return _ConError(
+      c: c,
+      children: [
+        const RotuloDelCampo(_Textos.rotuloCodigoDeAlumno),
+        _AlEscribir(
+          controlador: r.codigoCtrl,
+          builder: (context, vacio) => _CampoConEnvio(
+            campo: CampoDelCompositor(
+              controlador: r.codigoCtrl,
+              pista: _Textos.pistaCodigoDeAlumno,
+              teclado: TextInputType.number,
+              alEnviar: (_) => c.enviarCodigoDeAlumno(),
+            ),
+            alEnviar: vacio ? null : c.enviarCodigoDeAlumno,
+          ),
+        ),
+        _EnlacesDelRegistro(c: c, conVolver: false),
+      ],
+    );
+  }
+}
+
+class _N2 extends StatelessWidget {
+  const _N2({required this.c});
+
+  final BienvenidaController c;
+
+  @override
+  Widget build(BuildContext context) {
+    final r = c.registro!;
+    return Obx(
+      () => _ConError(
+        c: c,
+        children: [
+          const RotuloDelCampo(_Textos.rotuloContrasena),
+          CampoDelCompositor(
+            controlador: r.passwordCtrl,
+            pista: _Textos.pistaNueva,
+            oculto: !r.passwordVisible.value,
+            accion: TextInputAction.next,
+            pistasDeAutocompletado: const [AutofillHints.newPassword],
+            sufijo: OjoDeLaContrasena(
+              visible: r.passwordVisible.value,
+              alTocar: r.passwordVisible.toggle,
+            ),
+          ),
+          const SizedBox(height: 10),
+          const RotuloDelCampo(_Textos.rotuloRepetir),
+          _AlEscribir(
+            controlador: r.confirmacionCtrl,
+            builder: (context, vacio) => _CampoConEnvio(
+              campo: CampoDelCompositor(
+                controlador: r.confirmacionCtrl,
+                pista: _Textos.pistaRepetir,
+                oculto: !r.passwordVisible.value,
+                autofocus: false,
+                alEnviar: (_) => c.enviarContrasenas(),
+              ),
+              alEnviar: vacio ? null : c.enviarContrasenas,
+            ),
+          ),
+          _EnlacesDelRegistro(c: c),
+        ],
+      ),
+    );
+  }
+}
+
+class _N3 extends StatelessWidget {
+  const _N3({required this.c});
+
+  final BienvenidaController c;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      RespuestasRapidas(
+        respuestas: [
+          RespuestaRapida(texto: _Textos.volver, alTocar: c.volver),
+          RespuestaRapida(
+            texto: _Textos.acepto,
+            alTocar: c.aceptarConsentimiento,
+            principal: true,
+          ),
+        ],
+      ),
+      _EnlacesDelRegistro(c: c, conVolver: false),
+    ],
+  );
+}
+
+class _N4 extends StatelessWidget {
+  const _N4({required this.c});
+
+  final BienvenidaController c;
+
+  @override
+  Widget build(BuildContext context) {
+    final r = c.registro!;
+    return Obx(() {
+      // Se lee aquí, en el alcance del Obx, y no dentro del builder del
+      // campo, que se construye aparte.
+      final visible = r.portalPasswordVisible.value;
+      return _ConError(
+        c: c,
+        children: [
+          const RotuloDelCampo(_Textos.rotuloPortal),
+          _AlEscribir(
+            controlador: r.portalPasswordCtrl,
+            builder: (context, vacio) => _CampoConEnvio(
+              campo: CampoDelCompositor(
+                controlador: r.portalPasswordCtrl,
+                pista: _Textos.pistaPortal,
+                oculto: !visible,
+                alEnviar: (_) => c.enviarPortal(),
+                sufijo: OjoDeLaContrasena(
+                  visible: visible,
+                  alTocar: r.portalPasswordVisible.toggle,
+                ),
+              ),
+              alEnviar: vacio ? null : c.enviarPortal,
+            ),
+          ),
+          _EnlacesDelRegistro(c: c),
+        ],
+      );
+    });
+  }
+}
+
+class _N5 extends StatelessWidget {
+  const _N5({required this.c});
+
+  final BienvenidaController c;
+
+  @override
+  Widget build(BuildContext context) {
+    final r = c.registro!;
+    final b = Theme.brightnessOf(context);
+    return _ConError(
+      c: c,
+      children: [
+        const RotuloDelCampo(_Textos.rotuloAuthenticator),
+        // El campo de seis casillas de hoy (RF-BIEN-7).
+        PasswordResetOtpField(
+          controller: r.passcodeCtrl,
+          palette: PasswordResetPalette.from(context),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          _Textos.notaAuthenticator,
+          style: TextStyle(color: MaterialTheme.testMuted(b), fontSize: 12),
+        ),
+        const SizedBox(height: 10),
+        _AlEscribir(
+          controlador: r.passcodeCtrl,
+          builder: (context, vacio) => BotonPrincipal(
+            texto: _Textos.crearMiCuenta,
+            alTocar: vacio ? null : c.crearCuenta,
+          ),
+        ),
+        _EnlacesDelRegistro(c: c),
+      ],
+    );
+  }
+}
+
+class _Incierto extends StatelessWidget {
+  const _Incierto({required this.c});
+
+  final BienvenidaController c;
+
+  @override
+  Widget build(BuildContext context) => Obx(
+    () => Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        RespuestasRapidas(
+          respuestas: [
+            RespuestaRapida(
+              texto: _Textos.volverAIntentar,
+              alTocar: c.esperando.value ? null : c.volverAIntentarElRegistro,
+            ),
+            RespuestaRapida(
+              texto: _Textos.iniciarSesion,
+              principal: true,
+              esperando: c.esperando.value,
+              alTocar: c.iniciarSesionDesdeIncierto,
+            ),
+          ],
+        ),
+        EnlaceSecundario(
+          texto: _Textos.yaTengoCuenta,
+          alTocar: c.yaTengoCuenta,
+        ),
+      ],
+    ),
+  );
 }

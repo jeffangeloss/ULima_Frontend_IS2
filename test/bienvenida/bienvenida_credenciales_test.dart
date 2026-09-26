@@ -13,12 +13,15 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
+import 'package:ulima_plus/domain/bienvenida/bienvenida_turnos.dart';
 import 'package:ulima_plus/models/portal_sync_models.dart';
 import 'package:ulima_plus/models/registro_models.dart';
 import 'package:ulima_plus/models/user_model.dart';
 import 'package:ulima_plus/pages/bienvenida/conversacion.dart';
+import 'package:ulima_plus/pages/bienvenida/widgets/compositor.dart';
 import 'package:ulima_plus/pages/registro/registro_controller.dart';
 import 'package:ulima_plus/services/registro_service.dart';
+import 'package:ulima_plus/services/session_navigation.dart';
 
 import 'apoyo_bienvenida.dart';
 
@@ -242,5 +245,36 @@ void main() {
         expect(registro.cerrado, isTrue);
       },
     );
+  });
+
+  group('en pantalla (RF-BIEN-9)', () {
+    testWidgets('«Soy nuevo» está en E1 y en E2, y «Ya tengo cuenta» en N1', (
+      tester,
+    ) async {
+      final b = Bienvenida(
+        auth: AuthDeLaBienvenida(
+          errorDeLogin: 'Código o contraseña incorrectos.',
+        ),
+      );
+      await montarLaBienvenida(
+        tester,
+        b,
+        argumentos: const {argumentoDeMotivo: MotivoDeLlegada.expirada},
+      );
+      await avanzar(tester, 1500);
+      expect(find.text(TextosDeLaBienvenida.soyNuevo), findsOneWidget);
+      await tester.enterText(find.byType(TextField).first, '20230001');
+      await tester.pump();
+      await tester.tap(find.byType(BotonDeEnvio));
+      await avanzar(tester, 2000);
+      expect(find.text(TextosDeLaBienvenida.soyNuevo), findsOneWidget);
+      // Un login rechazado no ofrece crear una cuenta.
+      await tester.enterText(find.byType(TextField).first, 'mala');
+      await tester.pump();
+      await tester.tap(find.text(TextosDeLaBienvenida.entrar));
+      await avanzar(tester, 2000);
+      expect(find.textContaining('crear'), findsNothing);
+      expect(find.text(TextosDeLaBienvenida.soyNuevo), findsOneWidget);
+    });
   });
 }

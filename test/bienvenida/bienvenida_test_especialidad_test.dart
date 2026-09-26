@@ -17,9 +17,11 @@ import 'package:ulima_plus/domain/bienvenida/bienvenida_turnos.dart';
 import 'package:ulima_plus/models/specialty_test_models.dart';
 import 'package:ulima_plus/models/user_model.dart';
 import 'package:ulima_plus/pages/bienvenida/conversacion.dart';
+import 'package:ulima_plus/pages/bienvenida/widgets/compositor.dart';
 import 'package:ulima_plus/pages/specialty_test/specialty_test_controller.dart';
 import 'package:ulima_plus/pages/specialty_test/widgets/question_view.dart';
 import 'package:ulima_plus/pages/specialty_test/widgets/task_icon.dart';
+import 'package:ulima_plus/services/session_navigation.dart';
 import 'package:ulima_plus/services/specialty_test_service.dart';
 
 import '../HU36_jeff/datos_de_prueba.dart';
@@ -389,5 +391,79 @@ void main() {
         expect(c.catalogoFallido.value, isFalse);
       },
     );
+  });
+
+  group('el compositor del test (RF-BIEN-10 y B-13)', () {
+    /// Entra con la configuración a medias desde E1, así que la
+    /// conversación sigue con el test (RF-BIEN-6 y B-10).
+    Future<Bienvenida> enT0(WidgetTester tester) async {
+      final b = Bienvenida(
+        auth: AuthDeLaBienvenida(
+          alEntrar: alumnaDePrueba(setupComplete: false),
+        ),
+        token: 'jwt-de-prueba',
+      );
+      await montarLaBienvenida(
+        tester,
+        b,
+        argumentos: const {argumentoDeMotivo: MotivoDeLlegada.expirada},
+      );
+      await avanzar(tester, 1500);
+      await tester.enterText(find.byType(TextField).first, '20230001');
+      await tester.pump();
+      await tester.tap(find.byType(BotonDeEnvio));
+      await avanzar(tester, 2000);
+      await tester.enterText(find.byType(TextField).first, 'secreta-de-prueba');
+      await tester.pump();
+      await tester.tap(find.text(TextosDeLaBienvenida.entrar));
+      await avanzar(tester, 3500);
+      return b;
+    }
+
+    testWidgets('T0 ofrece «Saltar y elegir por mi cuenta» y «Empezar el '
+        'test»', (tester) async {
+      await enT0(tester);
+      expect(find.text(TextosDeLaBienvenida.saltar), findsOneWidget);
+      expect(find.text(TextosDeLaBienvenida.empezarElTest), findsOneWidget);
+    });
+
+    testWidgets('el duelo va en el compositor con el rótulo, las tarjetas '
+        'compactas y las dos opciones de abajo', (tester) async {
+      final b = await enT0(tester);
+      await tester.tap(find.text(TextosDeLaBienvenida.empezarElTest));
+      await avanzar(tester, 3500);
+      // El rótulo va en mayúsculas (RF-BIEN-10).
+      expect(find.text('ESTO O AQUELLO · 1 DE 5'), findsOneWidget);
+      final duelo = tester.widget<DueloDelTest>(find.byType(DueloDelTest));
+      expect(duelo.compacto, isTrue);
+      expect(find.text('Me gustan las dos'), findsOneWidget);
+      expect(find.text('Ninguna me llama'), findsOneWidget);
+      final tarea = b.controlador.test!.preguntaActual!.top!.text;
+      await tester.tap(find.byType(TarjetaDeTarea).first);
+      await tester.pump(const Duration(milliseconds: 360));
+      await avanzar(tester, 300);
+      expect(find.text(tarea), findsWidgets, reason: 'la respuesta del alumno');
+      expect(
+        find.text(TextosDeLaBienvenida.preguntaAnterior),
+        findsNothing,
+        reason: 'la pregunta 2 todavía no entra',
+      );
+      await avanzar(tester, 3000);
+      expect(find.text(TextosDeLaBienvenida.preguntaAnterior), findsOneWidget);
+    });
+
+    testWidgets('la selección manual lista las oficiales con «Principal» y '
+        '«Me interesa»', (tester) async {
+      await enT0(tester);
+      await tester.tap(find.text(TextosDeLaBienvenida.saltar));
+      await avanzar(tester, 3000);
+      expect(find.text('Ingeniería de Software'), findsOneWidget);
+      expect(find.text(TextosDeLaBienvenida.principal), findsNWidgets(4));
+      expect(find.text(TextosDeLaBienvenida.meInteresa), findsNWidgets(4));
+      expect(find.text(TextosDeLaBienvenida.saltarPorAhora), findsOneWidget);
+      await tester.tap(find.text(TextosDeLaBienvenida.principal).first);
+      await tester.pump();
+      expect(find.text(TextosDeLaBienvenida.finalizar), findsOneWidget);
+    });
   });
 }

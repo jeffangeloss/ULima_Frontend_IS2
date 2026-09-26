@@ -10,12 +10,17 @@
 
 import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
+import 'package:ulima_plus/components/portal_consent/portal_consent_view.dart';
 import 'package:ulima_plus/domain/bienvenida/bienvenida_turnos.dart';
 import 'package:ulima_plus/models/registro_models.dart';
 import 'package:ulima_plus/pages/bienvenida/bienvenida_controller.dart';
 import 'package:ulima_plus/pages/bienvenida/conversacion.dart';
+import 'package:ulima_plus/pages/bienvenida/widgets/compositor.dart';
+import 'package:ulima_plus/pages/password_reset/password_reset_ui.dart';
+import 'package:ulima_plus/services/session_navigation.dart';
 
 import 'apoyo_bienvenida.dart';
 
@@ -300,6 +305,88 @@ void main() {
         b.controlador.registro!.portalPasswordCtrl.text,
         'clave-de-prueba',
       );
+    });
+  });
+
+  group('el compositor del registro (RF-BIEN-7 y RF-BIEN-9)', () {
+    Future<Bienvenida> enN1(WidgetTester tester) async {
+      final b = Bienvenida();
+      await montarLaBienvenida(
+        tester,
+        b,
+        argumentos: const {argumentoDeMotivo: MotivoDeLlegada.expirada},
+      );
+      await avanzar(tester, 1500);
+      await tester.tap(find.text(TextosDeLaBienvenida.soyNuevo));
+      await avanzar(tester, 3000);
+      return b;
+    }
+
+    Future<void> escribir(WidgetTester tester, int campo, String texto) async {
+      await tester.enterText(find.byType(TextField).at(campo), texto);
+      await tester.pump();
+    }
+
+    testWidgets('N1 pide el código con teclado numérico y trae «Ya tengo '
+        'cuenta»', (tester) async {
+      await enN1(tester);
+      expect(
+        find.text(TextosDeLaBienvenida.rotuloCodigoDeAlumno),
+        findsOneWidget,
+      );
+      final campo = tester.widget<TextField>(find.byType(TextField));
+      expect(campo.keyboardType, TextInputType.number);
+      expect(find.text(TextosDeLaBienvenida.yaTengoCuenta), findsOneWidget);
+    });
+
+    testWidgets('las dos contraseñas nunca están a la vez en el compositor', (
+      tester,
+    ) async {
+      await enN1(tester);
+      await escribir(tester, 0, '20230001');
+      await tester.tap(find.byType(BotonDeEnvio));
+      await avanzar(tester, 2500);
+      expect(find.text(TextosDeLaBienvenida.pistaNueva), findsOneWidget);
+      expect(find.text(TextosDeLaBienvenida.pistaPortal), findsNothing);
+      await escribir(tester, 0, 'Contrasena1');
+      await escribir(tester, 1, 'Contrasena1');
+      await tester.tap(find.byType(BotonDeEnvio));
+      await avanzar(tester, 3000);
+      // N3, la tarjeta del consentimiento con sus textos literales.
+      expect(find.text(PortalConsentView.titulo), findsOneWidget);
+      expect(find.text(TextosDeLaBienvenida.acepto), findsOneWidget);
+      await tester.tap(find.text(TextosDeLaBienvenida.acepto));
+      await avanzar(tester, 2500);
+      expect(find.text(TextosDeLaBienvenida.pistaPortal), findsOneWidget);
+      expect(find.text(TextosDeLaBienvenida.pistaNueva), findsNothing);
+      expect(find.text(TextosDeLaBienvenida.yaTengoCuenta), findsOneWidget);
+      expect(find.text(TextosDeLaBienvenida.volver), findsOneWidget);
+    });
+
+    testWidgets('N5 trae las seis casillas y solo envía con «Crear mi '
+        'cuenta» (B-5)', (tester) async {
+      final b = await enN1(tester);
+      await escribir(tester, 0, '20230001');
+      await tester.tap(find.byType(BotonDeEnvio));
+      await avanzar(tester, 2500);
+      await escribir(tester, 0, 'Contrasena1');
+      await escribir(tester, 1, 'Contrasena1');
+      await tester.tap(find.byType(BotonDeEnvio));
+      await avanzar(tester, 3000);
+      await tester.tap(find.text(TextosDeLaBienvenida.acepto));
+      await avanzar(tester, 2500);
+      await escribir(tester, 0, 'clave-de-prueba');
+      await tester.tap(find.byType(BotonDeEnvio));
+      await avanzar(tester, 2500);
+      expect(find.byType(PasswordResetOtpField), findsOneWidget);
+      expect(find.text(TextosDeLaBienvenida.notaAuthenticator), findsOneWidget);
+      b.controlador.registro!.passcodeCtrl.text = '123456';
+      await tester.pump();
+      expect(b.servicioDeRegistro.llamadas, 0, reason: 'no envía solo');
+      await tester.tap(find.text(TextosDeLaBienvenida.crearMiCuenta));
+      await tester.pump();
+      expect(b.servicioDeRegistro.llamadas, 1);
+      await avanzar(tester, 4000);
     });
   });
 }

@@ -20,12 +20,14 @@ import '../../components/logo/sello_del_logo.dart';
 import '../../configs/themes.dart';
 import '../../domain/bienvenida/bienvenida_turnos.dart';
 import '../../services/session_navigation.dart';
+import '../specialty_test/widgets/result_view.dart' show PintorDelConfeti;
 import '../splash/capa_de_arranque.dart';
 import '../splash/salidas.dart' show naranjaDelSplash;
 import 'bienvenida_controller.dart';
 import 'conversacion.dart';
 import 'widgets/burbujas.dart';
 import 'widgets/compositor.dart';
+import 'widgets/compositor_del_test.dart';
 import 'widgets/franja_con_sello.dart';
 import 'widgets/revelador.dart';
 
@@ -50,6 +52,10 @@ class _BienvenidaPageState extends State<BienvenidaPage>
     null,
   );
   late final Ticker _pulso = createTicker(_alPulsar);
+  late final AnimationController _confeti = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1800),
+  );
   final List<Worker> _trabajos = <Worker>[];
   Timer? _finDeLaPildora;
   final ValueNotifier<EstadoDeLaPildora?> _pildora =
@@ -73,6 +79,11 @@ class _BienvenidaPageState extends State<BienvenidaPage>
       ever<List<EntradaDeLaConversacion>>(_c.entradas, (_) => _sincronizar()),
       ever<TurnoDeLaBienvenida?>(_c.turno, (_) => _sincronizar()),
       ever<int>(_c.visitaEmpezada, (_) => _sincronizar()),
+      ever<int>(_c.confeti, (_) {
+        if (!mounted || _sinMovimiento) return;
+        unawaited(HapticFeedback.heavyImpact());
+        unawaited(_confeti.forward(from: 0));
+      }),
     ]);
     _revelador.addListener(_alRevelar);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -207,6 +218,7 @@ class _BienvenidaPageState extends State<BienvenidaPage>
       ..dispose();
     _desplazamiento.dispose();
     _latido.dispose();
+    _confeti.dispose();
     _pulso.dispose();
     _rombos.dispose();
     _pildora.dispose();
@@ -259,6 +271,22 @@ class _BienvenidaPageState extends State<BienvenidaPage>
     return Stack(
       children: [
         _conversacion(context, atendida: atendida),
+        Positioned(
+          top: CabeceraConSello.alto(context),
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: IgnorePointer(
+            child: ClipRect(
+              child: AnimatedBuilder(
+                animation: _confeti,
+                builder: (context, _) => _confeti.isAnimating
+                    ? CustomPaint(painter: PintorDelConfeti(_confeti.value))
+                    : const SizedBox.shrink(),
+              ),
+            ),
+          ),
+        ),
         if (enElPrimerCuadro) Positioned.fill(child: _primerCuadro(context)),
         Positioned(
           top: CabeceraConSello.alto(context) + 8,
@@ -332,7 +360,7 @@ class _BienvenidaPageState extends State<BienvenidaPage>
                       primerIdDeUlises,
                     ),
                     conMovimiento: !_sinMovimiento,
-                    resultado: (context) => const SizedBox.shrink(),
+                    resultado: (context) => ResultadoEnLaConversacion(c: _c),
                   );
                 },
               ),
