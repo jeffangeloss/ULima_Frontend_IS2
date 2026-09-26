@@ -12,6 +12,8 @@ pendiente de la aprobación del dueño. Donde una maqueta y la spec difieren, ma
   decisión 3.
 - `splash-actual-recorte.jpg` es el centro de la captura del splash de hoy, sin la barra de estado
   del teléfono.
+- La maqueta de la bienvenida con Ulises, que usa estas tres intros para mostrar el horario con
+  sesión y el relevo sin sesión (RF-SPL-20 y RF-SPL-21), está en `docs/images/UI/bienvenida/`.
 
 Las maquetas difieren de la spec en estos puntos, y en todos manda la spec.
 
