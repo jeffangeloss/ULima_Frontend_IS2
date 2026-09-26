@@ -1600,13 +1600,13 @@ Tres transiciones merecen texto:
 
 ### Mockups
 
-17 archivos PNG en `docs/images/UI/`, uno de ellos sin pantalla equivalente. No son documentación
+17 archivos PNG en `docs/images/UI/`, dos de ellos sin pantalla equivalente. No son documentación
 decorativa: `AGENTS.md:47` los declara contrato — *«Respeta mockups en `docs/images/UI` salvo cambio
 aprobado»*.
 
 <table>
 <tr>
-<td width="33%" align="center"><img src="docs/images/UI/InicioSesion.png" alt="Inicio de sesión"><br><sub><code>InicioSesion.png</code><br><b><code>LoginPage</code></b></sub></td>
+<td width="33%" align="center"><img src="docs/images/UI/InicioSesion.png" alt="Inicio de sesión"><br><sub><code>InicioSesion.png</code><br><b>⚠️ Ninguna pantalla.</b> La tarjeta del login la reemplazó la bienvenida con Ulises (<code>BienvenidaPage</code>).</sub></td>
 <td width="33%" align="center"><img src="docs/images/UI/ConfiguracionCarrera.png" alt="Configuración de carrera"><br><sub><code>ConfiguracionCarrera.png</code><br><b><code>SetupCarreraPage</code></b></sub></td>
 <td width="33%" align="center"><img src="docs/images/UI/Perfil.png" alt="Perfil"><br><sub><code>Perfil.png</code><br><b><code>ProfilePage</code></b></sub></td>
 </tr>

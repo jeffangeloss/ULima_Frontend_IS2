@@ -716,6 +716,14 @@ void main() {
         );
         expect(find.text(TextosDeLaBienvenida.iniciarSesion), findsOneWidget);
         expect(find.text(TextosDeLaBienvenida.volverAIntentar), findsOneWidget);
+        // Y «Ya tengo cuenta», fijo en la pantalla (RF-BIEN-9 y B-30).
+        expect(
+          find.descendant(
+            of: find.byType(MarcoDelCompositor),
+            matching: find.text(TextosDeLaBienvenida.yaTengoCuenta),
+          ),
+          findsOneWidget,
+        );
       },
     );
 

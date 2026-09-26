@@ -52,6 +52,8 @@ void main() {
         ),
       ),
     );
+    // El texto exacto de la spec (RF-SPL-15).
+    expect(etiquetaDeLaIntro, 'ULIMA++, cargando');
     for (var ms = 0; ms <= 1500; ms += 250) {
       await tester.pump(const Duration(milliseconds: 250));
       final nodo = find.bySemanticsLabel(etiquetaDeLaIntro);

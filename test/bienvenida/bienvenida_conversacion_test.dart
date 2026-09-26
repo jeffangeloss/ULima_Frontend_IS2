@@ -8,6 +8,7 @@
 // Archivo probado lib/pages/bienvenida/bienvenida_page.dart.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:ulima_plus/components/logo/sello_del_logo.dart';
@@ -174,6 +175,18 @@ void main() {
       greaterThanOrEqualTo(48),
     );
     expect(find.text(TextosDeLaBienvenida.soyNuevo), findsOneWidget);
+    // El logo oficial de Google, a color y sin filtro (RF-BIEN-6).
+    final logo = tester.widget<SvgPicture>(
+      find.descendant(
+        of: find.byType(BotonDeGoogle),
+        matching: find.byType(SvgPicture),
+      ),
+    );
+    expect(logo.colorFilter, isNull);
+    expect(
+      (logo.bytesLoader as SvgAssetLoader).assetName,
+      'assets/images/google_logo.svg',
+    );
   });
 
   testWidgets('con el teclado abierto la franja queda arriba y el compositor '
