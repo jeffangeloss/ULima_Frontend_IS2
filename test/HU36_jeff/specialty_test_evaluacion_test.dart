@@ -140,6 +140,36 @@ void _controlador() {
       expect(api.getsDeResultado, 2);
     });
 
+    test('caso 4b: de las evaluaciones que esperan en la ruta sale solo la '
+        'última, con la respuesta final', () async {
+      final primera = Completer<Map<String, dynamic>>();
+      final api = ApiFalsaDelTest(evaluaciones: [primera, resultadoJson()]);
+      prepararTest(api);
+      final c = await montarControlador();
+      c.empezar();
+      responderPasos(c, respuestasEnOrden);
+      await pumpEventQueue();
+      // Con la primera en vuelo, el alumno cambia dos veces la última
+      // respuesta, y cada cambio pide otra evaluación que espera en la ruta.
+      c.atras();
+      responderPasos(c, ['un_poco']);
+      c.atras();
+      responderPasos(c, ['bastante']);
+      await pumpEventQueue();
+      expect(api.cuerposDeEvaluacion, hasLength(1));
+      expect(c.fase.value, FaseDelTest.espera);
+      // La intermedia no sale, porque el alumno esperaría su vuelta hasta
+      // 20 s más para un paso que ya se descarta.
+      primera.complete(desempateJson());
+      await pumpEventQueue();
+      expect(api.cuerposDeEvaluacion, hasLength(2));
+      expect(
+        (api.cuerposDeEvaluacion.last['answers'] as Map)['q05'],
+        'bastante',
+      );
+      expect(c.fase.value, FaseDelTest.resultado);
+    });
+
     test('caso 5: atrás desde la espera vuelve al paso que la dispara, con '
         'su respuesta', () async {
       final pendiente = Completer<Map<String, dynamic>>();
