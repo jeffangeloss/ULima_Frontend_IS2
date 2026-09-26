@@ -31,34 +31,37 @@ y `flutter_test` con dobles escritos a mano. Sin dependencias nuevas.
 2026-09-26 en `f0376e8` con todas sus opciones por defecto salvo S-29, B-9 y B-10, que el dueño
 elige ese día. Las acompañan sus enmiendas aprobadas en `specs/features/app-shell/app-shell.spec.md`
 (BR-SHELL-F-00, BR-SHELL-F-02 y BR-SHELL-F-04), `specs/features/auth/auth.spec.md`,
-`specs/features/registro/registro.spec.md` y la enmienda a la spec del test de especialidad que
-anota la spec de la bienvenida en «Cambios en otras specs». Las specs son la fuente de los valores
-exactos (tiempos, medidas, colores, textos y contrastes) y mandan si este plan difiere de ellas.
-Sus referencias `archivo:línea` apuntan a `41ff0a6` y `4e2a0b2`, y el código que este plan cita es
-el de `f0376e8`, que en `lib/` y en `test/` es el mismo.
+`specs/features/registro/registro.spec.md` y la enmienda de la bienvenida que la spec del test de
+especialidad escribe al final desde el 2026-09-26. La spec de la bienvenida suma ese día una
+enmienda técnica a sus targets, con `google_sign_in_button.dart` y `google_sign_in_button_stub.dart`,
+que cambia la Tarea 32 sin tocar ningún comportamiento aprobado. Las specs son la fuente de los
+valores exactos (tiempos, medidas, colores, textos y contrastes) y mandan si este plan difiere de
+ellas. Sus referencias `archivo:línea` apuntan a `41ff0a6` y `4e2a0b2`. El código que este plan
+cita es el de `fcbf2e7`, y en los archivos que no trae el merge de `main` coincide con el de
+`f0376e8`.
 
-**Repo y rama.** `$REPO`, el worktree de la rama `feat/splash-animado`, que al escribir el plan
-está en `f0376e8`.
+**Repo y rama.** `$REPO`, el worktree de la rama `feat/splash-animado`, que al corregir el plan
+está en `fcbf2e7`, el merge que trae `main` con el test de especialidad.
 
 ## La rama del test de especialidad
 
 La bienvenida dibuja el test de especialidad dentro de la conversación y reutiliza su controlador,
 sus piezas de pantalla, sus tokens de color y los cambios de `AuthService` que trae la rama
 `feat/test-especialidad-fe` (spec `specs/features/specialty-test/specialty-test.spec.md` y plan
-`docs/superpowers/plans/2026-09-25-specialty-test-app.md` de esa rama). Esa rama se implementa en
-paralelo y, al escribir este plan, va por su Tarea 10 de 19 (`a03ca54`), con el controlador y sin
-sus vistas.
+`docs/superpowers/plans/2026-09-25-specialty-test-app.md`). Esa rama cierra su Tarea 19 en
+`f4871c1`, entra a `main` con el merge `87403a1` y llega a `feat/splash-animado` con el merge
+`fcbf2e7`, antes de la Tarea 1.
 
-- **Sobre qué se implementa.** Este plan se implementa sobre `main` con la rama del test ya
-  mergeada. Si al llegar a la Tarea 20 esa rama todavía no está en `main`, la Tarea 20 la trae a
-  `feat/splash-animado` con un merge de la rama misma, y cuando llegue a `main` la rama trae
-  `main` con otro merge, que solo suma lo que falte.
-- **Desde qué tarea depende.** Las Tareas 1 a 19 no dependen de ella. Son el splash completo y las
-  piezas de la bienvenida que no tocan el test, y pueden correr mientras la rama del test termina.
-  La dependencia empieza en la **Tarea 20**, que trae la rama, y sigue en todas las tareas desde
-  ahí. La Tarea 20 exige que la rama del test tenga su Tarea 19 hecha, es decir, su spec marcada
-  como implementada y su suite en verde, porque las Tareas 21 y 22 cambian su controlador y sus
-  vistas.
+- **Sobre qué se implementa.** Todas las tareas corren sobre `fcbf2e7`, que ya trae el test de
+  especialidad entero, así que ninguna tarea hace un merge. Si `origin/main` avanza antes de
+  terminar el plan, se trae con `git merge --no-ff origin/main` en un commit aparte, entre dos
+  tareas, y el informe anota qué cambió.
+- **Desde qué tarea depende.** Las Tareas 1 a 19 no usan el código del test, aunque ya está en la
+  rama. Son el splash completo y las piezas de la bienvenida que no tocan el test. La Tarea 14
+  solo conserva su registro en la carga del arranque y sus rutas en `paginasDeLaApp`. El uso
+  empieza en la **Tarea 20**, con los tokens `test*`, y sigue en todas las tareas desde ahí. Las
+  Tareas 21 y 22 cambian su controlador y sus vistas según la enmienda aprobada, que la spec del
+  test escribe al final desde el 2026-09-26.
 - **Qué se usa de ella.** `SpecialtyTestController`, `SpecialtyTestUi`, `OrigenDelTest`,
   `TextosDelTest`, `SpecialtyTestService`, las funciones de `specialty_test_logic.dart`
   (`turnoAntesDePregunta`, `turnoAntesDeDesempate`, `turnoDeEspera`, `textoDeRespuesta`,
@@ -66,17 +69,19 @@ sus vistas.
   `AuthService.catalogsFailed`, `AuthService.reloadCatalogs` y el `timeout` de `completeSetup`, y
   las vistas `question_view.dart`, `waiting_view.dart` y `result_view.dart` con `ulises_bubble.dart`
   y `task_icon.dart`.
-- **Si su código cambia.** Los nombres de arriba salen del plan de esa rama y de su código en
-  `a03ca54`. Si al hacer el merge un nombre cambió, las Tareas 21 a 33 usan el nombre nuevo y el
-  informe de la tarea lo anota. Nunca se reescribe el código de esa rama para que cuadre con este
-  plan.
+- **Si su código cambia.** Los nombres de arriba son los de `f4871c1`. Si un nombre no cuadra con
+  el código de la rama, las Tareas 21 a 33 usan el nombre real y el informe de la tarea lo anota.
+  Nunca se reescribe el código del test para que cuadre con este plan, fuera de lo que pide su
+  enmienda.
 
 ## Restricciones globales
 
 - Solo se tocan los `targets` de las dos specs, más los documentos de la Tarea 33 y, en las
   Tareas 21 y 22, `lib/pages/specialty_test/**`, que está en los targets de la bienvenida por la
-  enmienda al test. El splash nunca toca `lib/pages/setup_carrera/**`, que sale de sus targets
-  (RF-SPL-12).
+  enmienda al test. `lib/components/google_sign_in_button.dart` y
+  `lib/components/google_sign_in_button_stub.dart`, que cambia la Tarea 32, están en los targets de
+  la bienvenida por su enmienda técnica del 2026-09-26. El splash nunca toca
+  `lib/pages/setup_carrera/**`, que sale de sus targets (RF-SPL-12).
 - Sin dependencias ni paquetes nuevos (RF-SPL-17 y RF-BIEN-18). La intro y la bienvenida usan
   `CustomPainter`, `AnimationController`, `Ticker`, `SpringSimulation`, `Curves` y `TextPainter`
   del SDK. `flutter_native_splash` sigue en `dev_dependencies`.
@@ -107,8 +112,8 @@ sus vistas.
   rama y `git status --short`, que solo puede listar los archivos de la tarea.
 - La prosa de comentarios, specs y documentos va sin dos puntos, sin guiones largos, en presente y
   según la RAE.
-- El splash y la bienvenida se publican juntos, en el mismo push a `main` (S-30), y no antes que la
-  rama del test. Este plan no hace push.
+- El splash y la bienvenida se publican juntos, en el mismo push a `main` (S-30). El test de
+  especialidad ya está en `main` desde `87403a1`. Este plan no hace push.
 
 ## Variables de los comandos
 
@@ -122,7 +127,9 @@ máquina.
 - `DART`, el ejecutable `dart` del mismo SDK, que está junto a `flutter` en su carpeta `bin`.
 
 Si `.dart_tool` no existe en el worktree, `"${FLUTTER:?}" pub get --offline` va primero. Los
-comandos usan `--no-pub` para no tocar `pubspec.lock`, salvo el `pub get` de la Tarea 3.
+comandos usan `--no-pub` para no tocar `pubspec.lock`. El único que puede resolver los paquetes por
+su cuenta es `dart run flutter_native_splash:create` de la Tarea 3, porque `pubspec.yaml` cambia, y
+si toca `pubspec.lock` se revierte con `git checkout -- pubspec.lock`.
 
 La suite completa tarda unos tres minutos, así que corre en segundo plano con su salida en un
 archivo del scratchpad, y la tarea espera a que termine antes de dar nada por verde.
@@ -136,26 +143,27 @@ tail -3 "${SCRATCH:?}/suite.txt"
 
 `SCRATCH` es la carpeta del scratchpad de la sesión que ejecuta la tarea, fuera del repo.
 
-## Línea base en `f0376e8`
+## Línea base en `fcbf2e7`
 
 - `"${FLUTTER:?}" analyze --no-pub` da `6 issues found.`, todos `info` y previos. Son
-  `avoid_print` en `lib/main.dart:95`, dos `deprecated_member_use` en
+  `avoid_print` en `lib/main.dart:103`, dos `deprecated_member_use` en
   `lib/services/attendance_risk_service.dart:55`, `unnecessary_import` en
   `test/HU20_jeff/otp_field_ime_test.dart:32` y dos `depend_on_referenced_packages` en
   `test/HU26_sam/export_csv_cajanegra_test.dart:20-21`. La Tarea 14 quita el `avoid_print` de
   `main.dart`, porque la carga deja de usar `print`, así que desde ahí la base es de 5.
-- `"${FLUTTER:?}" test --no-pub` da `+1223: All tests passed!`.
-- La Tarea 20 vuelve a medir las dos cifras después del merge de la rama del test, y esa medida es
-  la base de las Tareas 20 a 33.
+- `"${FLUTTER:?}" test --no-pub` da `+1496: All tests passed!`, con las pruebas de
+  `test/HU36_jeff/` del test de especialidad.
+- Cada tarea compara sus dos cifras con esta base. La de `analyze` baja a 5 en la Tarea 14 y la
+  suite nunca pierde pruebas.
 
 ## Cómo leer los «Esperado»
 
-Este plan se escribe antes de que la rama del test termine, así que sus bloques de código son la
-referencia y no salen de una corrida. Cada «Esperado» dice qué prueba falla y por qué en el rojo, y
-qué archivo o carpeta pasa en el verde, sin fijar la cifra de la suite. Cada tarea anota en su
-informe la cifra de la suite completa, que nunca baja respecto de la tarea anterior. Si una prueba
-del plan choca con una API real, se corrige la prueba o el código para cumplir la spec, se anota
-en el informe y nunca se cambia lo que la spec pide para que una prueba pase. Si
+Los bloques de código de este plan son la referencia y no salen de una corrida. Cada «Esperado»
+dice qué prueba falla y por qué en el rojo, y qué archivo o carpeta pasa en el verde, sin fijar la
+cifra de la suite. Cada tarea anota en su informe la cifra de la suite completa, que nunca baja
+respecto de la tarea anterior. Si una prueba del plan choca con una API real, se corrige la
+prueba o el código para cumplir la spec, se anota en el informe y nunca se cambia lo que la spec
+pide para que una prueba pase. Si
 `flutter analyze` marca un `unused_import` o un `unnecessary_import` en un archivo del plan, se
 quita el import sobrante antes del commit, porque la base no suma avisos.
 
@@ -195,12 +203,16 @@ La spec las deja abiertas o no las nombra. Ninguna cambia un requisito.
 10. **Los emojis de la escala.** La Tarea 22 hace públicos los emojis de las cuatro opciones de la
     escala, que el plan del test deja privados en `question_view.dart`, porque la respuesta del
     alumno los muestra («🤩 Me encantaría»).
-11. **Código queda quieto a los 1360 ms.** El segundo «+» aterriza a los 1210 ms y su rebote de
-    150 ms termina a los 1360 ms, 30 ms después del fin de la entrada que da RF-SPL-9. Hacia
-    `/home` la salida empieza a los 1330 ms, como dice la spec, con el rebote dentro. Hacia la
-    bienvenida el relevo espera a los 1360 ms, porque RF-SPL-21 pide el logo «completo y quieto»
-    y una pose con el «+» a mitad del rebote haría saltar el primer cuadro de la bienvenida. El
-    informe de la Tarea 9 lo anota para el dueño.
+11. **El rebote del segundo «+» de Código termina a los 1330 ms.** RF-SPL-9 da el vuelo del
+    segundo «+» de 830 a 1210 ms, un rebote de 150 ms desde que cada «+» llega y el fin de la
+    entrada a los 1330 ms, y RF-SPL-17 y RF-SPL-21 fijan en 1330 ms la salida hacia `/home` y el
+    relevo a la bienvenida, con el logo completo y quieto. Si el rebote empezara a los 1210 ms,
+    terminaría a los 1360 ms, dentro de la salida o del primer cuadro de la bienvenida. El segundo
+    «+» empieza su rebote a los 1180 ms, 30 ms antes del fin de su vuelo, cuando ya cubre el
+    99,8 % de su curva y está a menos de medio dp de su lugar, así que conserva sus 150 ms y su
+    12 % y termina con la entrada. El primero no choca con nada y rebota de 1160 a 1310 ms, como
+    en la maqueta. La salida y el relevo empiezan a los 1330 ms con el logo quieto, y el informe
+    de la Tarea 9 lo anota para el dueño.
 12. **Los detalles del vuelo que la spec no fija.** RF-BIEN-2 da la estela, las partículas y la
     sombra por su tamaño, su cantidad y su tiempo. La estela deja un punto cada 1300/30 ms sobre la
     misma curva de Ulises, las seis partículas salen de sus pies en abanico hacia arriba hasta
@@ -246,7 +258,7 @@ La spec las deja abiertas o no las nombra. Ninguna cambia un requisito.
 | `lib/pages/splash/arranque_page.dart` | crear | La página vacía de `/arranque` | 12 |
 | `lib/pages/splash/capa_de_arranque.dart` | crear | La capa permanente del `builder`, la intro y su entrada para la bienvenida | 12, 13 y 30 |
 | `lib/pages/splash/carga_del_arranque.dart` | crear | La carga de hoy como función que devuelve la ruta | 14 |
-| `lib/main.dart` | modificar | `runApp` inmediato, `/arranque`, la capa, las `GetPage` una sola vez, el merge de la rama del test y `/login` con la bienvenida | 14, 20 y 29 |
+| `lib/main.dart` | modificar | `runApp` inmediato, `/arranque`, la capa, las `GetPage` una sola vez, con las del test de especialidad que trae `fcbf2e7`, y `/login` con la bienvenida | 14 y 29 |
 | `lib/services/api_client.dart` | modificar | El 401 pasa `motivo: expirada` y su aviso sale abajo, y un comentario deja de nombrar la pantalla del registro | 15 y 29 |
 | `lib/pages/password_reset/*_controller.dart` y `lib/pages/perfil/perfil.dart` | modificar | `motivo: restablecida` y los avisos abajo | 15 |
 | `lib/components/logo/sello_del_logo.dart` | crear | El sello, con la estrella y «ULIMA++» a 1,22 veces la cabecera, y la medida de sus piezas | 17 y 28 |
@@ -288,8 +300,8 @@ Los archivos de apoyo de `test/splash/` y `test/bienvenida/` no terminan en `_te
 ## Orden y cobertura
 
 Las tareas van en orden y en la misma rama. Cada una deja la suite en verde. Las Tareas 1 a 14 son
-el splash, las 15 a 19 son piezas de la bienvenida sin la rama del test y las 20 a 33 son la
-bienvenida sobre esa rama.
+el splash, las 15 a 19 son piezas de la bienvenida que no usan el test de especialidad y las 20 a
+33 son la bienvenida que lo usa.
 
 | Requisito | Tareas | Pruebas |
 | --- | --- | --- |
@@ -330,9 +342,9 @@ bienvenida sobre esa rama.
 
 ## Notas del código real que el plan tiene en cuenta
 
-- `main()` espera Firebase, `StorageService`, los servicios, `tryRestoreSession` y las alertas antes
-  de `runApp` (`main.dart:58-103`). La Tarea 14 mueve todo eso a una función que la capa espera,
-  salvo en web, donde el orden sigue igual (S-22).
+- `main()` espera Firebase, `StorageService`, los servicios, con `SpecialtyTestService` al final,
+  `tryRestoreSession` y las alertas antes de `runApp` (`main.dart:62-111`). La Tarea 14 mueve todo
+  eso a una función que la capa espera, salvo en web, donde el orden sigue igual (S-22).
 - `offAllToLogin` no navega si `Get.context` es null o si `/login` ya es la ruta actual
   (`session_navigation.dart:32-39`). Con `runApp` inmediato, `Get.context` existe durante la carga,
   así que la Tarea 11 suma la guarda de `/arranque` antes de que la Tarea 14 mueva `runApp`.
@@ -401,7 +413,7 @@ abstract final class LogoGeometria {
 
 - [ ] **Paso 1. Línea base.** En la raíz del worktree corre `"${FLUTTER:?}" analyze --no-pub` y la
   suite completa en segundo plano, como dice «Variables de los comandos». Anota las dos cifras en
-  el informe. En `f0376e8` son `6 issues found.` y `+1223: All tests passed!`.
+  el informe. En `fcbf2e7` son `6 issues found.` y `+1496: All tests passed!`.
 
 - [ ] **Paso 2. Escribe la prueba que falla.** Crea `test/splash/splash_geometria_test.dart` con
   este contenido.
@@ -4142,6 +4154,19 @@ void main() {
       expect(_en(1310).cruces[0].escala, closeTo(1, 1e-6));
     });
 
+    test('el segundo «+» rebota de 1180 a 1330 ms, cuando ya está a menos de '
+        'medio dp de su lugar, y termina con la entrada (decisión 11 del plan)',
+        () {
+      final llegando = _en(1180).cruces[1];
+      final medioDp = 0.5 * _r / 90;
+      expect(
+        (llegando.centro - LogoGeometria.centrosDeCruz[1]).distance,
+        lessThan(medioDp),
+      );
+      expect(_en(1180 + 75).cruces[1].escala, closeTo(1.12, 1e-6));
+      expect(_en(1330).cruces[1].escala, closeTo(1, 1e-6));
+    });
+
     test('el texto baja 0,12 R y se desvanece entre 790 y 960 ms', () {
       expect(_en(790).texto!.opacidad, closeTo(1, 1e-6));
       final cayendo = _en(959).texto!;
@@ -4173,8 +4198,8 @@ void main() {
       expect(e.escalaDeEstrella, closeTo(1, 1e-6));
       for (var i = 0; i < 2; i++) {
         expect(e.cruces[i].centro, LogoGeometria.centrosDeCruz[i]);
+        expect(e.cruces[i].escala, closeTo(1, 1e-6), reason: 'quieto');
       }
-      expect(e.cruces[0].escala, closeTo(1, 1e-6));
     });
   });
 
@@ -4197,12 +4222,14 @@ void main() {
       expect(_v.alSalir(1530, 120, centro: _centro, radio: 90).cursor, isNull);
     });
 
-    test('hacia la bienvenida el relevo espera el fin del rebote del segundo '
-        '«+», a los 1360 ms (decisión 11 del plan)', () {
-      expect(_v.finDelReposo(null), 1360);
-      expect(_v.finDelReposo(900), 1360);
-      final quieto = _en(1360, cargaLista: 900);
-      expect(quieto.cruces[1].escala, closeTo(1, 1e-6));
+    test('hacia la bienvenida el relevo es a los 1330 ms, con los dos «+» '
+        'quietos (RF-SPL-17, RF-SPL-21 y decisión 11 del plan)', () {
+      expect(_v.finDelReposo(null), 1330);
+      expect(_v.finDelReposo(900), 1330);
+      final quieto = _en(1330, cargaLista: 900);
+      for (var i = 0; i < 2; i++) {
+        expect(quieto.cruces[i].escala, closeTo(1, 1e-6));
+      }
     });
   });
 
@@ -4257,8 +4284,12 @@ class Codigo extends VarianteDeIntro {
   static const double escalaTecleada = 0.83;
   static const double grosorTecleado = 0.87;
 
-  /// El segundo «+» termina su rebote a los 1360 ms (decisión 11 del plan).
-  static const double quieto = 1360;
+  /// Cuándo empieza el rebote de 150 ms de cada «+». El primero rebota al
+  /// llegar, a los 1160 ms. El segundo empieza 30 ms antes del fin de su
+  /// vuelo, cuando ya cubre el 99,8 % de su curva y está a menos de medio dp
+  /// de su lugar, así que termina a los 1330 ms, con la entrada (decisión 11
+  /// del plan).
+  static const List<double> inicioDelRebote = <double>[1160, 1180];
 
   static const double _r = LogoGeometria.radioNominal;
 
@@ -4320,10 +4351,8 @@ class Codigo extends VarianteDeIntro {
           dy: _caida(ms),
         );
 
-  double _aterrizaje(int i) => inicioDeVuelo[i] + duracionDeVuelo;
-
   double _rebote(int i, double ms) {
-    final a = _aterrizaje(i);
+    final a = inicioDelRebote[i];
     return 1 + 0.12 * medioSeno(tramo(ms, a, a + 150));
   }
 
@@ -4431,10 +4460,12 @@ class Codigo extends VarianteDeIntro {
     );
   }
 
+  /// El logo queda quieto con la entrada, y desde el bucle cuando el cursor
+  /// se apaga en 120 ms (RF-SPL-21 y S-34).
   @override
   double finDelReposo(double? cargaLista) {
-    if (cargaLista == null || cargaLista <= finDeLaEntrada) return quieto;
-    return math.max(quieto, cargaLista + 120);
+    if (cargaLista == null || cargaLista <= finDeLaEntrada) return finDeLaEntrada;
+    return cargaLista + 120;
   }
 
   @override
@@ -4498,7 +4529,8 @@ cd "${REPO:?}"
 ```
 
 Esperado. `All tests passed!` en los tres archivos y `6 issues found.`. El informe anota la
-decisión 11 del plan, el relevo de Código a los 1360 ms, para que el dueño la confirme.
+decisión 11 del plan, el rebote del segundo «+» de 1180 a 1330 ms, para que el dueño la vea en la
+revisión manual.
 
 - [ ] **Paso 6. Commit.**
 
@@ -7290,7 +7322,7 @@ alumno sin especialidad en `/login` (RF-SPL-12). La sección «El arranque» del
 
 **Archivos.**
 - Crear `lib/pages/splash/carga_del_arranque.dart`.
-- Modificar `lib/main.dart:58-262`.
+- Modificar `lib/main.dart:62-285`.
 - Modificar `test/splash/splash_arranque_test.dart` (grupo `la carga y main`).
 - Modificar `README.md` («El arranque»).
 
@@ -7322,6 +7354,7 @@ import 'package:ulima_plus/main.dart';
 import 'package:ulima_plus/pages/splash/arranque_page.dart';
 import 'package:ulima_plus/pages/splash/carga_del_arranque.dart';
 import 'package:ulima_plus/services/auth_service.dart';
+import 'package:ulima_plus/services/specialty_test_service.dart';
 import 'package:ulima_plus/services/storage_service.dart';
 ```
 
@@ -7349,6 +7382,9 @@ import 'package:ulima_plus/services/storage_service.dart';
       expect(ruta, '/login');
       expect(Get.isRegistered<StorageService>(), isTrue);
       expect(Get.isRegistered<AuthService>(), isTrue);
+      // El servicio del test de especialidad llega con fcbf2e7 y sigue
+      // registrado, ahora desde la carga.
+      expect(Get.isRegistered<SpecialtyTestService>(), isTrue);
     });
 
     test('la carga ya no pide las alertas, que pide el home al montarse '
@@ -7365,10 +7401,20 @@ import 'package:ulima_plus/services/storage_service.dart';
       expect(rutaInicialEnWeb('/login'), '/login');
     });
 
-    test('las GetPage se declaran una sola vez, con /arranque', () {
+    test('las GetPage se declaran una sola vez, con /arranque y las rutas del '
+        'test de especialidad', () {
       final nombres = paginasDeLaApp.map((p) => p.name).toList();
       expect(nombres.toSet(), hasLength(nombres.length));
-      expect(nombres, containsAll(<String>[rutaDelArranque, '/home', '/login']));
+      expect(
+        nombres,
+        containsAll(<String>[
+          rutaDelArranque,
+          '/home',
+          '/login',
+          '/setup-carrera',
+          '/test-especialidad',
+        ]),
+      );
     });
 
     testWidgets('fuera de web la app arranca en /arranque con la capa activa',
@@ -7421,6 +7467,7 @@ import '../../services/alert_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/malla_service.dart';
 import '../../services/post_login_route.dart';
+import '../../services/specialty_test_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/time_blocks_service.dart';
 import 'capa_de_arranque.dart';
@@ -7458,6 +7505,10 @@ void registrarLosServicios() {
   // Estado único de los bloques de horario propios (RF-BLQ-7). Tampoco carga
   // nada al arrancar.
   Get.put<TimeBlocksService>(TimeBlocksService(), permanent: true);
+  // Capa de datos del test de especialidad (RF-TEST-2). Permanente porque
+  // guarda en memoria la copia del contenido de la sesión, un test en pausa
+  // y el último resultado. Tampoco carga nada al arrancar.
+  Get.put<SpecialtyTestService>(SpecialtyTestService(), permanent: true);
 }
 
 /// En web no hay intro y la ruta inicial es la de la carga, salvo el alumno
@@ -7466,9 +7517,8 @@ String rutaInicialEnWeb(String ruta) =>
     ruta == '/setup-carrera' ? '/login' : ruta;
 ```
 
-  Si la rama ya registra `SpecialtyTestService` en `main.dart` (lo hace la Tarea 7 del plan del
-  test), esa línea pasa a `registrarLosServicios` en el mismo lugar, al hacer el merge de la
-  Tarea 20.
+  El registro de `SpecialtyTestService`, que `main()` trae desde `fcbf2e7`, pasa a
+  `registrarLosServicios` en el mismo lugar, después de `TimeBlocksService` y con su comentario.
 
 - [ ] **Paso 4. Cambia `main.dart`.** Haz estos cambios en `lib/main.dart`.
 
@@ -7476,7 +7526,8 @@ String rutaInicialEnWeb(String ruta) =>
      Son `package:firebase_core/firebase_core.dart`, `package:lucide_icons_flutter/lucide_icons.dart`,
      `/firebase_options.dart`, `/services/malla_service.dart`,
      `/services/academic_record_service.dart`, `/services/time_blocks_service.dart`,
-     `/services/post_login_route.dart` y `/services/storage_service.dart`. Se quedan
+     `/services/specialty_test_service.dart`, `/services/post_login_route.dart` y
+     `/services/storage_service.dart`. Se quedan
      `/services/auth_service.dart` y `/services/alert_service.dart`, que usa el arranque de web.
 
 ```dart
@@ -7491,7 +7542,7 @@ import 'services/session_navigation.dart';
 import 'services/splash_variante_service.dart';
 ```
 
-  2. Reemplaza `main()` (`main.dart:58-103`) por este.
+  2. Reemplaza `main()` (`main.dart:62-111`) por este.
 
 ```dart
 void main() async {
@@ -7537,8 +7588,10 @@ void main() async {
 /// transición (RF-SPL-4).
 final List<GetPage<dynamic>> paginasDeLaApp = <GetPage<dynamic>>[
   GetPage(name: rutaDelArranque, page: () => const ArranquePage()),
-  // Las demás GetPage siguen igual que hoy (main.dart:129-258), en el mismo
-  // orden y con los mismos comentarios, desde '/login' hasta '/mis-bloques'.
+  // Las demás GetPage siguen igual que hoy (main.dart:137-281), en el mismo
+  // orden y con los mismos comentarios, desde '/login' hasta '/mis-bloques',
+  // con '/setup-carrera' y SetupCarreraBinding y '/test-especialidad' y
+  // SpecialtyTestBinding.
 ];
 
 class MyApp extends StatelessWidget {
@@ -7571,9 +7624,10 @@ class MyApp extends StatelessWidget {
 }
 ```
 
-  El comentario de «Física de scroll uniforme» es el de hoy (`main.dart:118-120`), completo. Las
-  `GetPage` de `/login` a `/mis-bloques` se copian tal cual a `paginasDeLaApp`, con sus
-  comentarios, y el bloque de `GetMaterialApp` pierde el suyo. `AppScrollBehavior` no cambia.
+  El comentario de «Física de scroll uniforme» es el de hoy (`main.dart:126-128`), completo. Las
+  veinte `GetPage` de `/login` a `/mis-bloques` se copian tal cual a `paginasDeLaApp`, con sus
+  comentarios, también las de `/setup-carrera` y `/test-especialidad` con sus bindings, y el bloque
+  de `GetMaterialApp` pierde el suyo. `AppScrollBehavior` no cambia.
 
 - [ ] **Paso 5. Reescribe «El arranque» del README.** En `README.md`, reemplaza el texto que va
   desde el párrafo «`main()` es `async` y hace doce cosas…» hasta el final de la tabla de doce
@@ -7592,7 +7646,7 @@ la red, y la intro decide adónde ir cuando terminan su entrada y la carga.
 | 2 | `SystemChrome.setPreferredOrientations([portraitUp])` | `main()` | La app arranca bloqueada en vertical, y Horario habilita la horizontal. |
 | 3 | `runApp(MyApp(intro: …))` | `main()` | `GetMaterialApp` arranca en `/arranque`, una página `#E77330`, con la capa de la intro en su `builder`. |
 | 4 | `Firebase.initializeApp` y `StorageService` | `cargarElArranque()` | Si fallan, no hay ruta segura y la intro sigue en su bucle, como antes quedaba quieto el splash nativo. |
-| 5 | `registrarLosServicios()` | `cargarElArranque()` | `AuthService`, `AlertService`, `MallaService`, `AcademicRecordService` y `TimeBlocksService`, permanentes. |
+| 5 | `registrarLosServicios()` | `cargarElArranque()` | `AuthService`, `AlertService`, `MallaService`, `AcademicRecordService`, `TimeBlocksService` y `SpecialtyTestService`, permanentes. |
 | 6 | `AuthService.tryRestoreSession()` | `cargarElArranque()` | `GET /auth/me` con el JWT. Un 401 borra la sesión sin navegar mientras la ruta es `/arranque`. |
 | 7 | La ruta de destino | `cargarElArranque()` | `postLoginRoute(user)` si restauró y `/login` si no. Las alertas ya no se piden aquí, porque las pide el home al montarse. |
 | 8 | La salida o el relevo | `CapaDeArranque` | Con sesión, la intro navega sin transición a `/home` abierto en Horario y reproduce su salida hasta la cabecera. Sin sesión, o sin especialidad, deja el logo en el centro y la bienvenida con Ulises toma el relevo en `/login`. |
@@ -7610,7 +7664,7 @@ cd "${REPO:?}"
 "${FLUTTER:?}" analyze --no-pub
 ```
 
-Esperado. `All tests passed!` y `5 issues found.`, porque el `print` de `main.dart:95` pasa a
+Esperado. `All tests passed!` y `5 issues found.`, porque el `print` de `main.dart:103` pasa a
 `debugPrint` y el aviso `avoid_print` desaparece. Desde aquí la base de `analyze` es de 5.
 
 - [ ] **Paso 7. Suite completa y commit.** Corre la suite completa en segundo plano. Esperado,
@@ -7640,7 +7694,7 @@ cuenta» sale abajo desde la Tarea 24, porque lo muestra la bienvenida.
 - Modificar `lib/services/api_client.dart:158-160`.
 - Modificar `lib/pages/password_reset/reset_password_controller.dart:159-166` y `:196`.
 - Modificar `lib/pages/password_reset/forgot_password_controller.dart:10-35`.
-- Modificar `lib/pages/perfil/perfil.dart:774-779` (solo el aviso «Código enviado»).
+- Modificar `lib/pages/perfil/perfil.dart:824-829` (solo el aviso «Código enviado»).
 - Crear `test/bienvenida/bienvenida_ruta_test.dart` (grupo `el motivo de la llegada`).
 - Crear `test/bienvenida/bienvenida_restablecer_test.dart` (grupo `los avisos abajo`).
 
@@ -7735,7 +7789,7 @@ void main() {
     });
 
     test('«Volver a iniciar sesión» del Perfil sigue siendo un VoidCallback', () {
-      // perfil.dart:97 usa `onPressed: offAllToLogin`.
+      // perfil.dart:101 usa `onPressed: offAllToLogin`.
       const VoidCallback boton = offAllToLogin;
       expect(boton, isNotNull);
     });
@@ -8011,7 +8065,7 @@ class ForgotPasswordController extends GetxController {
       );
 ```
 
-  En `lib/pages/perfil/perfil.dart`, el aviso «Código enviado» (`perfil.dart:774-779`) suma
+  En `lib/pages/perfil/perfil.dart`, el aviso «Código enviado» (`perfil.dart:824-829`) suma
   `snackPosition: SnackPosition.BOTTOM,`, porque sale sobre `/reset-password`. Los avisos
   «Error» de las líneas siguientes no cambian.
 
@@ -10055,20 +10109,20 @@ git commit -m "feat(bienvenida): LoginController devuelve el desenlace sin colga
 git log -1 --format='%an <%ae>'
 ```
 
-- [ ] **Paso 7. Punto de control.** Las Tareas 1 a 19 no dependen de la rama del test. Antes de
-  seguir, el informe anota si `feat/test-especialidad-fe` ya terminó su Tarea 19 y si está en
-  `main`, que es lo que exige la Tarea 20.
+- [ ] **Paso 7. Punto de control.** Las Tareas 1 a 19 no usan el código del test de
+  especialidad, que la rama ya trae desde `fcbf2e7`. Antes de seguir, el informe anota si
+  `origin/main` avanzó y, si avanzó, el merge aparte que lo trae («La rama del test de
+  especialidad»).
 
 ---
 
-### Tarea 20. La rama del test entra, y los tokens de la bienvenida
+### Tarea 20. Los tokens de la bienvenida, sobre el test que ya está en la rama
 
-**Requisitos.** Lo que pide «La rama del test de especialidad» de este plan, y RF-BIEN-14 completo
-(decisión B-24, con B-3 en `bienvenidaNuevoFondo`). **Desde esta tarea el plan depende de la rama
-`feat/test-especialidad-fe`.**
+**Requisitos.** RF-BIEN-14 completo (decisión B-24, con B-3 en `bienvenidaNuevoFondo`). **Desde
+esta tarea el plan usa el código del test de especialidad**, que la rama trae desde `fcbf2e7`
+(«La rama del test de especialidad»), así que la tarea no hace ningún merge.
 
 **Archivos.**
-- Merge de `origin/main` o de `feat/test-especialidad-fe` en `feat/splash-animado`.
 - Modificar `lib/configs/themes.dart` (tokens `bienvenida*`).
 - Crear `test/bienvenida/bienvenida_contraste_test.dart`.
 
@@ -10078,68 +10132,23 @@ git log -1 --format='%an <%ae>'
 - Produce, en `MaterialTheme`, `static Color bienvenidaFranja(Brightness b)` y los otros 17
   tokens de la tabla de RF-BIEN-14, con los mismos nombres de la spec.
 
-- [ ] **Paso 1. Comprueba la rama del test.** El merge solo se hace si la rama del test terminó.
+- [ ] **Paso 1. Comprueba que la rama trae el test.**
 
 ```bash
 cd "${REPO:?}"
 git status --short
-git fetch origin
-git log -1 --format='%h %s' feat/test-especialidad-fe
-git show feat/test-especialidad-fe:specs/features/specialty-test/specialty-test.spec.md | sed -n 1,40p | grep -n "implementad"
-git branch -r --contains feat/test-especialidad-fe
+git merge-base --is-ancestor f4871c1 HEAD && echo "el test está en la rama"
+grep -c "Implementada en la rama" specs/features/specialty-test/specialty-test.spec.md
+ls test/HU36_jeff | wc -l
 ```
 
-Esperado. `git status --short` vacío. La spec del test dice en su estado que está implementada,
-que es el cierre de su Tarea 19. Si no lo dice, la tarea se detiene y el informe pide esperar a
-esa rama, porque las Tareas 21 y 22 cambian su controlador y sus vistas. La última línea dice si
-`origin/main` ya la contiene.
+Esperado. `git status --short` vacío, `el test está en la rama`, un `1` de la spec del test, que
+dice en su estado que está implementada, y las pruebas de `test/HU36_jeff/`. Si falta algo, la
+tarea se detiene y el informe lo dice, porque las Tareas 21 y 22 cambian el controlador y las
+vistas del test. Las cifras de `analyze` y de la suite son las de la base, con `5 issues found.`
+desde la Tarea 14.
 
-- [ ] **Paso 2. Haz el merge.** Si `origin/main` contiene la rama del test, trae `main`. Si no, trae
-  la rama del test misma, y cuando llegue a `main` se trae `main` con otro merge.
-
-```bash
-cd "${REPO:?}"
-git merge --no-ff origin/main -m "merge: la rama del arranque trae main con el test de especialidad"
-# O, si la rama del test todavía no está en main:
-# git merge --no-ff feat/test-especialidad-fe -m "merge: la rama del arranque trae el test de especialidad de feat/test-especialidad-fe"
-git status --short
-```
-
-  Se esperan conflictos en tres archivos. Se resuelven así, sin perder nada de ninguna rama.
-
-  1. `lib/main.dart`. La rama del test suma el registro de `SpecialtyTestService`, la `GetPage`
-     de `/test-especialidad` con `SpecialtyTestBinding` y el `SetupCarreraBinding` de
-     `/setup-carrera`. Queda el `main.dart` de esta rama, con la `GetPage` de
-     `/test-especialidad` y el binding de `/setup-carrera` dentro de `paginasDeLaApp`, en el
-     mismo lugar que en la rama del test y con sus imports. El `Get.put<SpecialtyTestService>`
-     pasa a `registrarLosServicios()` de `lib/pages/splash/carga_del_arranque.dart`, después de
-     `TimeBlocksService`, con su import.
-  2. `docs/specs/feature-index.md`. Las dos ramas usan la fila 21. El test de especialidad, que
-     llega primero a `main`, conserva la 21, el splash pasa a la 22 y la bienvenida a la 23. Las
-     menciones «(fila 22)» de la fila 10 y de la fila del splash pasan a «(fila 23)», y la frase
-     «suma la fila 22 de esta spec» de `specs/features/bienvenida/bienvenida.spec.md` («Cambios en
-     otras specs», «Índice») pasa a «suma la fila 23 de esta spec».
-  3. `README.md`, si la rama del test cambió secciones cercanas a «El arranque». Se conservan los
-     cambios de las dos ramas, cada uno en su sección.
-
-  Cualquier otro conflicto se resuelve con el mismo criterio y se anota en el informe.
-
-```bash
-cd "${REPO:?}"
-"${DART:?}" format lib/main.dart lib/pages/splash/carga_del_arranque.dart
-git add lib/main.dart lib/pages/splash/carga_del_arranque.dart docs/specs/feature-index.md specs/features/bienvenida/bienvenida.spec.md README.md
-git status --short
-git commit --no-edit
-git log -1 --format='%an <%ae>'
-```
-
-- [ ] **Paso 3. Mide la base nueva.** Corre `"${FLUTTER:?}" analyze --no-pub` y la suite completa en
-  segundo plano. Esperado. Los avisos de la rama del test sumados a los 5 de esta rama, y
-  `All tests passed!`, con las pruebas de `test/HU36_jeff/` sumadas. Las dos cifras quedan en el
-  informe y son la base de las Tareas 20 a 33. Si algo falla, se compara con la suite de cada
-  rama por separado antes de seguir.
-
-- [ ] **Paso 4. Escribe la prueba que falla.** Crea `test/bienvenida/bienvenida_contraste_test.dart`.
+- [ ] **Paso 2. Escribe la prueba que falla.** Crea `test/bienvenida/bienvenida_contraste_test.dart`.
 
 ```dart
 // test/bienvenida/bienvenida_contraste_test.dart
@@ -10266,7 +10275,7 @@ void main() {
 }
 ```
 
-- [ ] **Paso 5. Corre la prueba y confirma que falla.**
+- [ ] **Paso 3. Corre la prueba y confirma que falla.**
 
 ```bash
 cd "${REPO:?}"
@@ -10275,8 +10284,8 @@ cd "${REPO:?}"
 
 Esperado. Falla la compilación, porque los tokens `bienvenida*` no existen.
 
-- [ ] **Paso 6. Suma los tokens.** En `lib/configs/themes.dart`, después de los tokens `test*` que
-  trae la rama del test, suma estos.
+- [ ] **Paso 4. Suma los tokens.** En `lib/configs/themes.dart`, después de los tokens `test*` del
+  test de especialidad, suma estos.
 
 ```dart
   // ── Bienvenida con Ulises (RF-BIEN-14) ──────────────────────────────────
@@ -10346,7 +10355,7 @@ Esperado. Falla la compilación, porque los tokens `bienvenida*` no existen.
       b == Brightness.light ? primaryDark : const Color(0xFFFF8C42);
 ```
 
-- [ ] **Paso 7. Corre las pruebas y confirma que pasan.**
+- [ ] **Paso 5. Corre las pruebas y confirma que pasan.**
 
 ```bash
 cd "${REPO:?}"
@@ -10355,11 +10364,11 @@ cd "${REPO:?}"
 "${FLUTTER:?}" analyze --no-pub
 ```
 
-Esperado. `All tests passed!` y los avisos de la base del Paso 3. Si un par de los tokens `test*`
-no da la cifra de la spec de la bienvenida, se revisa primero el valor del token en la rama del
-test, y la diferencia va al informe para el dueño sin cambiar el token del test.
+Esperado. `All tests passed!` y `5 issues found.`. Si un par de los tokens `test*` no da la cifra
+de la spec de la bienvenida, se revisa primero el valor del token del test, y la diferencia va al
+informe para el dueño sin cambiar el token del test.
 
-- [ ] **Paso 8. Commit.**
+- [ ] **Paso 6. Commit.**
 
 ```bash
 cd "${REPO:?}"
@@ -10560,7 +10569,7 @@ Esperado. Falla la compilación, porque `OrigenDelTest.bienvenida`, `enBienvenid
 `terminaEnElHome` no existen.
 
 - [ ] **Paso 3. Suma el origen.** En `lib/pages/specialty_test/specialty_test_controller.dart`, haz
-  estos cambios. Los fragmentos son los de `a03ca54`, y si el código de la rama cambió, se aplica la
+  estos cambios. Los fragmentos son los de `f4871c1`, y si el código de la rama cambió, se aplica la
   misma regla en su lugar nuevo.
 
   1. El origen y el texto nuevo.
@@ -10574,7 +10583,7 @@ enum OrigenDelTest { asistente, perfil, bienvenida }
 
 ```dart
   /// Sin `careerId`, en la conversación, como el asistente de hoy
-  /// (`setup_carrera_controller.dart:91-94` y RF-BIEN-10).
+  /// (`setup_carrera_controller.dart:123-126` y RF-BIEN-10).
   static const String sinCarrera = 'No se pudo determinar tu carrera.';
 ```
 
@@ -10642,7 +10651,7 @@ cd "${REPO:?}"
 ```
 
 Esperado. `All tests passed!`. Las pruebas del test de especialidad siguen en verde, porque el
-asistente y el Perfil no cambian. Los avisos, los de la base de la Tarea 20.
+asistente y el Perfil no cambian. `5 issues found.`, los de la base.
 
 - [ ] **Paso 5. Commit.**
 
@@ -18599,7 +18608,7 @@ muestra el botón oficial de Google de hoy, que la Tarea 32 configura.
 - Modificar `lib/pages/registro/registro_controller.dart` (`onClose` y un comentario).
 - Modificar `lib/pages/bienvenida/widgets/compositor.dart` (el botón de Google en web).
 - Modificar los comentarios de `lib/components/portal_consent/portal_consent_view.dart:1-16` y
-  `:36-38`, `lib/services/auth_service.dart:151-159` y `lib/services/api_client.dart:27-35`.
+  `:36-38`, `lib/services/auth_service.dart:189-197` y `lib/services/api_client.dart:27-35`.
 - Borrar `lib/pages/login/login_page.dart`, `lib/pages/registro/registro_page.dart`,
   `lib/pages/registro/registro_binding.dart` y `test/HU33_jeff/registro_page_test.dart`.
 - Modificar `test/bienvenida/apoyo_bienvenida.dart` (`StorageSinToken`,
@@ -19534,7 +19543,7 @@ import '../../../components/google_sign_in_button.dart';
   /// Texto del enlace para salir, «Ahora no» en Portal Sync.
 ```
 
-  4. En `auth_service.dart:153-155`, «arrancaría `/registro` de la pila con `offAllToLogin()`»
+  4. En `auth_service.dart:191-193`, «arrancaría `/registro` de la pila con `offAllToLogin()`»
      pasa a «sacaría a la persona de la conversación del registro con `offAllToLogin()`», y en
      `api_client.dart:33`, «se le sacaría de la pantalla de registro» pasa a «se le sacaría de la
      conversación del registro».
