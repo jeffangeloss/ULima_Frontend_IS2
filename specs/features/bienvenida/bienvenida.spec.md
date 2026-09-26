@@ -61,8 +61,9 @@ targets:
 > `specs/features/specialty-test/specialty-test.spec.md`, esta última aprobada el 2026-09-25 en la
 > rama `feat/test-especialidad-fe`, donde su implementación empieza ese mismo día («Cambios en otras
 > specs»). El dueño aprueba las tres enmiendas con esta spec el 2026-09-26. La del test queda
-> anotada aquí como enmienda aprobada, y esa rama la suma a su spec. Password Reset no tiene spec,
-> así que el sello de sus pantallas vive en esta (RF-BIEN-20).
+> anotada aquí como enmienda aprobada, y desde el 2026-09-26 está escrita al final de la spec del
+> test, que llega a `main` con su implementación en `87403a1`. Password Reset no tiene spec, así
+> que el sello de sus pantallas vive en esta (RF-BIEN-20).
 > Las decisiones de esta spec llevan el prefijo B y las de la spec del splash, el prefijo S, así
 > que B-10 y S-29 nunca se confunden aunque las dos specs numeren desde 1.
 > Las referencias `archivo:línea` apuntan a `4e2a0b2`, la punta de `feat/splash-animado` el
@@ -1388,7 +1389,9 @@ token y cambiaba RS-BE-38 del backend y `docs/specs/api-contracts.md`.
   implementación en curso desde ese día. El dueño aprueba la enmienda el 2026-09-26 con esta
   spec, con B-10 en la opción que elige ese día, y queda anotada aquí como enmienda aprobada. Esa
   rama la suma a su spec con estos puntos, ya como aprobada. Como la implementación avanza, la
-  enmienda puede tocar código ya escrito, como el controlador del test.
+  enmienda puede tocar código ya escrito, como el controlador del test. El 2026-09-26, con la
+  rama ya en `main` (`87403a1`), la enmienda queda escrita al final de esa spec, en «Enmienda de
+  la bienvenida con Ulises».
   - **RF-TEST-1.** Suma un origen `bienvenida`. El alumno que crea su cuenta en la conversación,
     y el que tiene cuenta y todavía no elige su especialidad, hacen el test en ella, sin la ruta
     `/test-especialidad`, sin el paso de carrera y sin `/setup-carrera` (decisión B-10 y
@@ -1448,16 +1451,15 @@ token y cambiaba RS-BE-38 del backend y `docs/specs/api-contracts.md`.
   del splash el 2026-09-26, y no cambia nada más.
 - **Récord académico.** RF-REC-6 habla de una sola pantalla de consentimiento. En la
   conversación, el consentimiento es una tarjeta con los mismos textos y los botones «Acepto» y
-  «Volver» (RF-BIEN-7). El dueño aprueba esta spec el 2026-09-26, y la nota se suma a esa spec
-  con la implementación.
+  «Volver» (RF-BIEN-7). El dueño aprueba esta spec el 2026-09-26, y la nota queda escrita en esa
+  spec el mismo día, en «Nota de la bienvenida con Ulises».
 - **Perfil académico.** Con la decisión B-10, ningún alumno pasa por el asistente de carrera
   desde el arranque ni desde la bienvenida, así que `/setup-carrera` queda sin llegadas y no
-  cambia (RF-BIEN-21). La nota se suma a esa spec con la implementación. Esa spec también tiene
-  la enmienda del test en su rama, así que la nota se escribe sobre la versión que traiga esa
-  rama.
+  cambia (RF-BIEN-21). La nota queda escrita en esa spec el 2026-09-26, en «Nota de la bienvenida
+  con Ulises», sobre la versión con la enmienda del test que ya está en `main`.
 - **Chatbot.** `ChatbotBubble` informa su lugar y espera a Ulises solo en el paso al horario de
   la bienvenida (decisión B-16 y RF-BIEN-11). En las demás llegadas a `/home` aparece como hoy. La
-  nota se suma a esa spec con la implementación.
+  nota queda escrita en esa spec el 2026-09-26, en «Nota de la bienvenida con Ulises».
 - **Maquetas de `docs/images/UI`.** `InicioSesion.png` queda superada por la bienvenida. `AGENTS.md`
   pide respetar esas maquetas salvo un cambio aprobado, así que la aprobación de esta spec es ese
   cambio. La imagen no se toca.
