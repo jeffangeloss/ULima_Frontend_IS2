@@ -8,18 +8,22 @@
 
 import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
+import 'package:ulima_plus/configs/themes.dart';
 import 'package:ulima_plus/models/specialty_test_models.dart';
 import 'package:ulima_plus/pages/specialty_test/specialty_test_controller.dart';
 import 'package:ulima_plus/pages/specialty_test/specialty_test_logic.dart';
+import 'package:ulima_plus/pages/specialty_test/specialty_test_page.dart';
 import 'package:ulima_plus/services/api_client.dart';
 import 'package:ulima_plus/services/specialty_test_service.dart';
 
 import 'datos_de_prueba.dart';
 import 'dobles_de_red.dart';
 import 'dobles_del_controlador.dart';
+import 'montaje_de_pantallas.dart';
 
 ApiException _api(int status, String code, String mensaje, {Object? details}) =>
     ApiException(
@@ -43,6 +47,7 @@ void main() {
   _bienvenida();
   _espera();
   _guardados();
+  _avisos();
 }
 
 void _bienvenida() {
@@ -423,6 +428,65 @@ void _guardados() {
         r.auth.guardados.last,
         const SeleccionDeEspecialidades(principal: kIdVj, intereses: [kIdSi]),
       );
+    });
+  });
+}
+
+void _avisos() {
+  group('WIDGET · Los avisos y el diálogo de la ruta (RF-TEST-11)', () {
+    testWidgets('fila 13: el aviso de error va en blanco sobre errorBg y el '
+        'que informa, en cardBg con borde', (tester) async {
+      prepararTest(ApiFalsaDelTest());
+      await abrirLaRuta(tester);
+      const ui = UiDelTestConGet();
+      const b = Brightness.light;
+      ui.avisar(const AvisoDelTest(TipoDeAviso.error, 'Aviso de prueba.'));
+      await asentar(tester);
+      var barra = tester.widget<GetSnackBar>(find.byType(GetSnackBar));
+      expect(barra.backgroundColor, MaterialTheme.errorBg(b));
+      expect(colorDeTexto(tester, 'Aviso de prueba.'), Colors.white);
+      await tester.pump(const Duration(seconds: 5));
+      await asentar(tester);
+      ui.avisar(const AvisoDelTest(TipoDeAviso.info, 'Otro aviso de prueba.'));
+      await asentar(tester);
+      barra = tester.widget<GetSnackBar>(find.byType(GetSnackBar));
+      expect(barra.backgroundColor, MaterialTheme.cardBg(b));
+      expect(barra.borderColor, MaterialTheme.borderColor(b));
+      expect(
+        colorDeTexto(tester, 'Otro aviso de prueba.'),
+        MaterialTheme.textPrimary(b),
+      );
+      // Con el aviso abierto, cerrar la ruta la cierra igual.
+      ui.cerrar();
+      await asentar(tester);
+      expect(find.text('Pantalla de inicio'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 5));
+      await asentar(tester);
+    });
+
+    testWidgets('fila 5: el diálogo trae el mensaje y «Empezar de nuevo», y '
+        'el atrás no lo cierra', (tester) async {
+      prepararTest(ApiFalsaDelTest());
+      await abrirLaRuta(tester);
+      const ui = UiDelTestConGet();
+      var tocado = false;
+      unawaited(
+        ui
+            .pedirReinicio('El test se actualizó. Vuelve a empezarlo.')
+            .then((_) => tocado = true),
+      );
+      await asentar(tester);
+      expect(
+        find.text('El test se actualizó. Vuelve a empezarlo.'),
+        findsOneWidget,
+      );
+      await tester.binding.handlePopRoute();
+      await asentar(tester);
+      expect(find.text('Empezar de nuevo'), findsOneWidget);
+      expect(tocado, isFalse);
+      await tester.tap(find.text('Empezar de nuevo'));
+      await asentar(tester);
+      expect(tocado, isTrue);
     });
   });
 }

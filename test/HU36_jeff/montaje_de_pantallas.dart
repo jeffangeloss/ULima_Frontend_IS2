@@ -10,7 +10,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:ulima_plus/configs/themes.dart';
+import 'package:ulima_plus/pages/specialty_test/specialty_test_binding.dart';
 import 'package:ulima_plus/pages/specialty_test/specialty_test_controller.dart';
+import 'package:ulima_plus/pages/specialty_test/specialty_test_page.dart';
 
 import 'dobles_del_controlador.dart';
 
@@ -118,4 +120,54 @@ List<String> escucharVibraciones(WidgetTester tester) {
     () => mensajero.setMockMethodCallHandler(SystemChannels.platform, null),
   );
   return vibraciones;
+}
+
+/// Monta la app con la ruta real del test sobre una pantalla de inicio y la
+/// abre con [origen]. Devuelve el `Future` de `Get.toNamed`, que se completa
+/// con la salida al cerrarse la ruta.
+Future<Future<Object?>?> abrirLaRuta(
+  WidgetTester tester, {
+  OrigenDelTest origen = OrigenDelTest.asistente,
+}) async {
+  tester.view.physicalSize = kIphoneSE;
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+  final tema = MaterialTheme(ThemeData().textTheme);
+  await tester.pumpWidget(
+    GetMaterialApp(
+      theme: tema.light(),
+      initialRoute: '/inicio',
+      getPages: [
+        GetPage(
+          name: '/inicio',
+          page: () => const Scaffold(body: Text('Pantalla de inicio')),
+        ),
+        GetPage(
+          name: '/home',
+          page: () => const Scaffold(body: Text('Home de prueba')),
+        ),
+        GetPage(
+          name: SpecialtyTestPage.ruta,
+          page: () => const SpecialtyTestPage(),
+          binding: SpecialtyTestBinding(),
+        ),
+      ],
+    ),
+  );
+  final salida = Get.toNamed<Object?>(
+    SpecialtyTestPage.ruta,
+    arguments: SpecialtyTestPage.argumentos(origen),
+  );
+  await asentar(tester);
+  return salida;
+}
+
+/// Deja pasar las transiciones de ruta y de pantalla. No usa
+/// `pumpAndSettle`, porque el vaivén de la bienvenida y el brillo de la
+/// pluma se repiten sin fin.
+Future<void> asentar(WidgetTester tester) async {
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 600));
+  await tester.pump(const Duration(milliseconds: 600));
 }

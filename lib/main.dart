@@ -46,6 +46,8 @@ import 'pages/password_reset/reset_password_controller.dart';
 import 'pages/password_reset/forgot_password_page.dart';
 import 'pages/password_reset/reset_password_page.dart';
 import 'pages/setup_carrera/setup_carrera_page.dart';
+import 'pages/specialty_test/specialty_test_binding.dart';
+import 'pages/specialty_test/specialty_test_page.dart';
 import 'pages/silabo/silabo_viewer_controller.dart';
 import 'pages/silabo/silabo_viewer_page.dart';
 import 'pages/chatbot/chatbot_page.dart';
@@ -162,6 +164,15 @@ class MyApp extends StatelessWidget {
           binding: RegistroBinding(),
         ),
         GetPage(name: '/setup-carrera', page: () => const SetupCarreraPage()),
+        // Test de especialidad (RF-TEST-1), con el argumento
+        // {'origen': 'asistente'} o {'origen': 'perfil'}. Binding por ruta,
+        // como el resto, así que el controlador muere al cerrar la ruta y
+        // deja el avance en pausa.
+        GetPage(
+          name: SpecialtyTestPage.ruta,
+          page: () => const SpecialtyTestPage(),
+          binding: SpecialtyTestBinding(),
+        ),
         GetPage(
           name: '/home',
           page: () => const HomePage(),

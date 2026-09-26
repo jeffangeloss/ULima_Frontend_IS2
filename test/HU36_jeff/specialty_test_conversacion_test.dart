@@ -6,6 +6,8 @@
 //
 // Datos inventados (datos_de_prueba.dart). El alumno de prueba es 20230001.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -43,6 +45,7 @@ void main() {
 
   _controlador();
   _pantalla();
+  _ruta();
 }
 
 void _controlador() {
@@ -344,6 +347,56 @@ void _pantalla() {
       await _conversacion(tester, ui: ui);
       await tester.tap(find.byTooltip('Pausar el test y seguir luego'));
       expect(ui.cierres, [null]);
+    });
+  });
+}
+
+void _ruta() {
+  group('WIDGET · El atrás del sistema en la ruta (RF-TEST-1 y RF-TEST-4)', () {
+    testWidgets('caso 16: el argumento dice el origen y el atrás en la '
+        'bienvenida cierra la ruta sin salida', (tester) async {
+      final t = prepararTest(ApiFalsaDelTest());
+      final salida = await abrirLaRuta(tester, origen: OrigenDelTest.perfil);
+      final c = Get.find<SpecialtyTestController>();
+      expect(c.origen, OrigenDelTest.perfil);
+      c.empezar();
+      responderPasos(c, ['top']);
+      c.atras();
+      c.atras();
+      await asentar(tester);
+      expect(c.fase.value, FaseDelTest.bienvenida);
+      await tester.binding.handlePopRoute();
+      await asentar(tester);
+      expect(find.text('Pantalla de inicio'), findsOneWidget);
+      expect(await salida, isNull);
+      // El controlador murió con la ruta y dejó el avance en pausa.
+      expect(Get.isRegistered<SpecialtyTestController>(), isFalse);
+      expect(t.service.paused!.answers, {'q01': 'top'});
+    });
+
+    testWidgets('caso 17: en una pregunta, el atrás del sistema lleva a la '
+        'anterior y desde la espera, a la pregunta', (tester) async {
+      prepararTest(
+        ApiFalsaDelTest(evaluaciones: [Completer<Map<String, dynamic>>()]),
+      );
+      await abrirLaRuta(tester);
+      final c = Get.find<SpecialtyTestController>();
+      c.empezar();
+      responderPasos(c, ['top', 'both']);
+      await asentar(tester);
+      await tester.binding.handlePopRoute();
+      await asentar(tester);
+      expect(c.paso.value, 1);
+      expect(find.text('Pregunta 2 de 5'), findsOneWidget);
+      responderPasos(c, ['both', 'nada', 'top', 'nada']);
+      await tester.pump();
+      expect(c.fase.value, FaseDelTest.espera);
+      await tester.binding.handlePopRoute();
+      await asentar(tester);
+      expect(c.fase.value, FaseDelTest.pregunta);
+      expect(c.paso.value, 4);
+      // La evaluación en vuelo vence y se descarta.
+      await tester.pump(const Duration(seconds: 20));
     });
   });
 }

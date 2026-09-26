@@ -128,6 +128,7 @@ void main() {
   tearDown(Get.reset);
 
   _resultado();
+  _ruta();
 }
 
 void _resultado() {
@@ -343,6 +344,42 @@ void _resultado() {
       expect(find.text('75 % afinidad'), findsNothing);
       await tester.pump(const Duration(milliseconds: 1000));
       expect(find.text('75 % afinidad'), findsOneWidget);
+    });
+  });
+}
+
+void _ruta() {
+  group('WIDGET · El atrás del sistema en el resultado (RF-TEST-8)', () {
+    testWidgets('caso 11: en el asistente no hace nada', (tester) async {
+      final t = prepararTest(ApiFalsaDelTest());
+      await abrirLaRuta(tester);
+      final c = Get.find<SpecialtyTestController>();
+      c.empezar();
+      responderPasos(c, respuestasEnOrden);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      expect(find.byType(ResultView), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.byType(ResultView), findsOneWidget);
+      expect(c.fase.value, FaseDelTest.resultado);
+      expect(t.auth.guardados, isEmpty);
+    });
+
+    testWidgets('caso 12: en el Perfil es «Decidir después» y cierra la ruta '
+        'sin guardar', (tester) async {
+      final t = prepararTest(ApiFalsaDelTest());
+      final salida = await abrirLaRuta(tester, origen: OrigenDelTest.perfil);
+      final c = Get.find<SpecialtyTestController>();
+      c.empezar();
+      responderPasos(c, respuestasEnOrden);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.binding.handlePopRoute();
+      await asentar(tester);
+      expect(find.text('Pantalla de inicio'), findsOneWidget);
+      expect(await salida, SalidaDelTest.terminado);
+      expect(t.auth.guardados, isEmpty);
     });
   });
 }
