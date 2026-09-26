@@ -240,6 +240,37 @@ void _pantalla() {
       expect(pluma(4), MaterialTheme.testFeatherOff(b));
     });
 
+    testWidgets('caso 10b: al volver del desempate 1 a la última pregunta, '
+        'la pluma actual vuelve a brillar', (tester) async {
+      final t = prepararTest(ApiFalsaDelTest());
+      t.service.pause(
+        PausedSpecialtyTest(
+          content: SpecialtyTestContent.tryParse(contenidoJson())!,
+          answers: respuestasCompletas(),
+          tiebreaks: [_desempate(1)],
+        ),
+      );
+      final c = ponerControlador();
+      await tester.pump();
+      c.empezar();
+      expect(c.enDesempate, isTrue);
+      await montarPantalla(tester, const QuestionView());
+      double brillo() =>
+          tester
+              .widget<Icon>(find.byKey(TestFeathers.plumaKey(4)))
+              .shadows
+              ?.single
+              .color
+              .a ??
+          0;
+      expect(brillo(), 0);
+      await tester.tap(find.byTooltip('Pregunta anterior'));
+      await tester.pump();
+      expect(c.paso.value, 4);
+      await tester.pump(const Duration(milliseconds: 800));
+      expect(brillo(), greaterThan(0));
+    });
+
     testWidgets('caso 11: en pantalla queda solo el último turno de Ulises, '
         'con sus reglas', (tester) async {
       await _conversacion(tester);

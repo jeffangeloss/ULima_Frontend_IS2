@@ -397,24 +397,30 @@ class _TestFeathersState extends State<TestFeathers>
     duration: const Duration(milliseconds: 1600),
   );
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
+  /// La pluma actual brilla, salvo con menos movimiento o sin pluma actual.
+  /// Se ajusta al montar, al cambiar el movimiento y al cambiar de paso, así
+  /// que al volver del desempate a la última pregunta el brillo sigue.
+  void _ajustarBrillo() {
     if (MediaQuery.disableAnimationsOf(context) || widget.actual == null) {
-      _brillo.stop();
-      _brillo.value = 0;
+      if (_brillo.isAnimating || _brillo.value != 0) {
+        _brillo.stop();
+        _brillo.value = 0;
+      }
     } else if (!_brillo.isAnimating) {
       _brillo.repeat(reverse: true);
     }
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _ajustarBrillo();
+  }
+
+  @override
   void didUpdateWidget(TestFeathers oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.actual == null && _brillo.isAnimating) {
-      _brillo.stop();
-      _brillo.value = 0;
-    }
+    _ajustarBrillo();
   }
 
   @override
