@@ -10,6 +10,8 @@
 // La sección es la 301, código 801, del CURSO DE PRUEBA A, como en
 // test/HU23_jeff/chat_ficha_curso_test.dart.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -89,11 +91,14 @@ class _Ficha extends DescripCursosController {
 }
 
 /// El horario sin su carga remota. Cuenta sus recargas y devuelve
-/// [enrolados] en `uniqueEnrolledCourses`.
+/// [enrolados] en `uniqueEnrolledCourses`. Con [recargados], `reload()`
+/// termina solo cuando ese `Completer` se completa y deja en [enrolados] las
+/// filas que trae, como la recarga real que llega después.
 class _HorarioEspia extends HorarioController {
-  _HorarioEspia(this.enrolados);
+  _HorarioEspia(this.enrolados, {this.recargados});
 
-  final List<Map<String, dynamic>> enrolados;
+  List<Map<String, dynamic>> enrolados;
+  final Completer<List<Map<String, dynamic>>>? recargados;
   int recargas = 0;
 
   @override
@@ -101,7 +106,11 @@ class _HorarioEspia extends HorarioController {
   void onInit() {}
 
   @override
-  Future<void> reload() async => recargas++;
+  Future<void> reload() async {
+    recargas++;
+    final filas = recargados;
+    if (filas != null) enrolados = await filas.future;
+  }
 
   @override
   List<Map<String, dynamic>> get uniqueEnrolledCourses => enrolados;
@@ -275,9 +284,14 @@ void main() {
 
     testWidgets('si esa petición falla, espera recargaHorario y lee '
         'uniqueEnrolledCourses', (tester) async {
+      // El horario tiene la fila vieja de 12 horas y la de 14 llega solo
+      // cuando termina reload(), así que leerlo sin esperar deja 12.
+      final recargados = Completer<List<Map<String, dynamic>>>();
       final horario =
           Get.put<HorarioController>(
-                _HorarioEspia([_seccionJson(asistido: 14)]),
+                _HorarioEspia([
+                  _seccionJson(asistido: 12),
+                ], recargados: recargados),
               )
               as _HorarioEspia;
       final api = ApiRecargaFalsa()..responder(_refresh, _resultado('updated'));
@@ -292,6 +306,12 @@ void main() {
       await _enviarHoja(tester);
 
       expect(ficha.falsas.pedidas, 1);
+      expect(horario.recargas, 1);
+      expect(find.text('12 horas'), findsOneWidget);
+
+      recargados.complete([_seccionJson(asistido: 14)]);
+      await _asentar(tester);
+
       expect(horario.recargas, 1);
       expect(find.text('14 horas'), findsOneWidget);
     });
