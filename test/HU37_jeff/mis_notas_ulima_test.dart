@@ -289,6 +289,76 @@ void main() {
       expect(find.text('2.17'), findsOneWidget);
     });
 
+    // La 5013 está en el sílabo con la sigla EX01, así que solo la pareja
+    // decide si la fila la lleva.
+    for (final match in <String>['none', 'pareja_desconocida']) {
+      testWidgets('la sigla solo con pareja, y la 5013 del sílabo con match '
+          '«$match» se ve sin EX01 (D9 y B7)', (tester) async {
+        await _abrir(
+          tester,
+          api: ApiRecargaFalsa()
+            ..responder(
+              _vistaGet,
+              vistaJson(
+                courses: [
+                  cursoJson(
+                    assessments: [
+                      evaluacionJson(),
+                      evaluacionJson(
+                        key: '07.15',
+                        name: 'Exposición',
+                        week: 10,
+                        weight: 20,
+                        value: null,
+                        mark: 'pending',
+                        assessmentId: 5013,
+                        match: match,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+        );
+
+        expect(find.text('EV01 · Examen escrito 1'), findsOneWidget);
+        expect(find.text('Exposición'), findsOneWidget);
+        expect(find.textContaining('EX01'), findsNothing);
+      });
+    }
+
+    testWidgets('la nota de la fila sigue D10, 14.25 con dos decimales y 15 '
+        'con uno', (tester) async {
+      await _abrir(
+        tester,
+        api: ApiRecargaFalsa()
+          ..responder(
+            _vistaGet,
+            vistaJson(
+              courses: [
+                cursoJson(
+                  assessments: [
+                    evaluacionJson(value: 14.25),
+                    evaluacionJson(
+                      key: '07.15',
+                      name: 'Exposición',
+                      week: 10,
+                      weight: 20,
+                      value: 15,
+                      assessmentId: 5013,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+      );
+
+      expect(find.text('14.25'), findsOneWidget);
+      expect(find.text('14.3'), findsNothing);
+      expect(find.text('15.0'), findsOneWidget);
+    });
+
     testWidgets('ninguna sigla si el sílabo no carga', (tester) async {
       await _abrir(
         tester,
@@ -329,6 +399,28 @@ void main() {
           tester.widget<Text>(find.text(texto)).style!.color!;
       expect(colorDe('10.50'), const Color(0xFF16A34A));
       expect(colorDe('10.40'), const Color(0xFFDC2626));
+    });
+
+    testWidgets('la insignia «Final» sale también con un solo NP, en 0.00 '
+        '(B8)', (tester) async {
+      await _abrir(
+        tester,
+        api: ApiRecargaFalsa()
+          ..responder(
+            _vistaGet,
+            vistaJson(
+              courses: [
+                cursoJson(
+                  assessments: [evaluacionJson(value: null, mark: 'np')],
+                ),
+              ],
+            ),
+          ),
+      );
+
+      expect(find.text('NP'), findsOneWidget);
+      expect(find.text('Final'), findsOneWidget);
+      expect(find.text('0.00'), findsOneWidget);
     });
 
     for (final (lectura, etiqueta) in <(Object?, String)>[
