@@ -40,6 +40,7 @@ void main() {
   tearDown(Get.reset);
 
   _bienvenida();
+  _espera();
 }
 
 void _bienvenida() {
@@ -149,4 +150,214 @@ void _bienvenida() {
       });
     },
   );
+}
+
+/// Llega hasta la espera con todas las respuestas.
+Future<SpecialtyTestController> _hastaLaEspera({
+  OrigenDelTest origen = OrigenDelTest.asistente,
+  UiFalsa? ui,
+}) async {
+  final c = await montarControlador(origen: origen, ui: ui);
+  c.empezar();
+  responderPasos(c, respuestasEnOrden);
+  await pumpEventQueue();
+  return c;
+}
+
+void _espera() {
+  group('UNITARIA · Errores de la espera (RF-TEST-11)', () {
+    test('fila 4: sin conexión deja el aviso de la espera, las respuestas y '
+        '«Pregunta anterior»', () async {
+      prepararTest(
+        ApiFalsaDelTest(evaluaciones: [http.ClientException('sin red')]),
+      );
+      final c = await _hastaLaEspera();
+      expect(c.fase.value, FaseDelTest.espera);
+      expect(c.errorDeEspera.value!.kind, SpecialtyTestFailureKind.offline);
+      expect(
+        c.textoDelErrorDeEspera,
+        'No pudimos conectarnos. Revisa tu conexión e inténtalo de nuevo.',
+      );
+      expect(c.respuestas, respuestasCompletas());
+      c.atras();
+      expect(c.fase.value, FaseDelTest.pregunta);
+      expect(c.errorDeEspera.value, isNull);
+    });
+
+    testWidgets('fila 4: el plazo de 20 s también', (tester) async {
+      prepararTest(
+        ApiFalsaDelTest(evaluaciones: [Completer<Map<String, dynamic>>()]),
+      );
+      final c = Get.put<SpecialtyTestController>(
+        SpecialtyTestController(origen: OrigenDelTest.asistente, ui: UiFalsa()),
+      );
+      await tester.pump();
+      c.empezar();
+      responderPasos(c, respuestasEnOrden);
+      await tester.pump(const Duration(seconds: 19));
+      expect(c.errorDeEspera.value, isNull);
+      await tester.pump(const Duration(seconds: 1));
+      expect(c.errorDeEspera.value!.kind, SpecialtyTestFailureKind.offline);
+    });
+
+    test('fila 5: un 409 o un 400 de respuestas abre el diálogo y «Empezar de '
+        'nuevo» pide el contenido y abre la pregunta 1', () async {
+      for (final falla in [
+        _api(
+          409,
+          'SPECIALTY_TEST_VERSION_OUTDATED',
+          'El test se actualizó. Vuelve a empezarlo.',
+          details: {'currentVersion': '2026-09-25.5'},
+        ),
+        _api(
+          400,
+          'SPECIALTY_TEST_INVALID_ANSWERS',
+          'Las respuestas no corresponden a esta versión del test.',
+        ),
+      ]) {
+        Get.reset();
+        final api = ApiFalsaDelTest(
+          contenido: [
+            contenidoJson(),
+            contenidoJson(version: '2026-09-25.5'),
+          ],
+          evaluaciones: [falla],
+        );
+        prepararTest(api);
+        final ui = UiFalsa()..dialogo = Completer<void>();
+        final c = await _hastaLaEspera(ui: ui);
+        expect(ui.reinicios, [falla.message]);
+        expect(c.fase.value, FaseDelTest.espera);
+        ui.dialogo!.complete();
+        await pumpEventQueue();
+        expect(api.getsDeContenido, 2);
+        expect(c.fase.value, FaseDelTest.pregunta);
+        expect(c.paso.value, 0);
+        expect(c.respuestas, isEmpty);
+        expect(c.contenido.value!.version, '2026-09-25.5');
+      }
+    });
+
+    test('fila 6: el 404 al evaluar avisa, borra las respuestas y cierra '
+        'según el origen', () async {
+      for (final origen in OrigenDelTest.values) {
+        Get.reset();
+        final t = prepararTest(
+          ApiFalsaDelTest(
+            evaluaciones: [
+              _api(404, 'SPECIALTY_TEST_NOT_AVAILABLE', _noDisponible),
+            ],
+          ),
+        );
+        final ui = UiFalsa();
+        final c = await _hastaLaEspera(origen: origen, ui: ui);
+        expect(ui.avisos.single.mensaje, _noDisponible);
+        expect(ui.avisos.single.tipo, TipoDeAviso.info);
+        expect(ui.cierres, [
+          origen == OrigenDelTest.asistente
+              ? SalidaDelTest.seleccionManual
+              : null,
+        ]);
+        expect(c.respuestas, isEmpty);
+        expect(c.errorDeEspera.value, isNull);
+        Get.delete<SpecialtyTestController>();
+        expect(t.service.paused, isNull);
+      }
+    });
+
+    test('fila 7: el desempate que no coincide se repite una vez sin '
+        'desempates y sigue con lo que responda el servidor', () async {
+      final api = ApiFalsaDelTest(
+        evaluaciones: [
+          desempateJson(),
+          _api(
+            400,
+            'SPECIALTY_TEST_TIEBREAK_MISMATCH',
+            'Los desempates enviados no son los que corresponden a estas '
+                'respuestas.',
+            details: {'expected': null},
+          ),
+          resultadoJson(),
+        ],
+      );
+      prepararTest(api);
+      final c = await _hastaLaEspera();
+      responderPasos(c, ['top']);
+      await pumpEventQueue();
+      expect(api.cuerposDeEvaluacion, hasLength(3));
+      expect(api.cuerposDeEvaluacion[1]['tiebreakAnswers'], isNotEmpty);
+      expect(api.cuerposDeEvaluacion[2]['tiebreakAnswers'], isEmpty);
+      expect(c.fase.value, FaseDelTest.resultado);
+    });
+
+    test('fila 7: si vuelve a fallar, queda el error de la espera', () async {
+      final mismatch = _api(
+        400,
+        'SPECIALTY_TEST_TIEBREAK_MISMATCH',
+        'Los desempates enviados no son los que corresponden a estas '
+            'respuestas.',
+      );
+      final api = ApiFalsaDelTest(
+        evaluaciones: [desempateJson(), mismatch, mismatch],
+      );
+      prepararTest(api);
+      final c = await _hastaLaEspera();
+      responderPasos(c, ['top']);
+      await pumpEventQueue();
+      expect(api.cuerposDeEvaluacion, hasLength(3));
+      expect(
+        c.errorDeEspera.value!.kind,
+        SpecialtyTestFailureKind.tiebreakMismatch,
+      );
+      c.atras();
+      expect(c.paso.value, 4);
+      expect(c.desempates, isEmpty);
+    });
+
+    test('fila 8: el 429 muestra el mensaje del servidor y conserva las '
+        'respuestas', () async {
+      const mensaje =
+          'Hiciste demasiados intentos del test. Intenta de nuevo en 12 '
+          'minuto(s).';
+      final api = ApiFalsaDelTest(
+        evaluaciones: [
+          _api(
+            429,
+            'RATE_LIMITED',
+            mensaje,
+            details: {'retryAfterMinutes': 12},
+          ),
+          resultadoJson(),
+        ],
+      );
+      prepararTest(api);
+      final c = await _hastaLaEspera();
+      expect(c.textoDelErrorDeEspera, mensaje);
+      expect(c.respuestas, respuestasCompletas());
+      c.reintentarEvaluacion();
+      await pumpEventQueue();
+      expect(c.fase.value, FaseDelTest.resultado);
+    });
+
+    test('fila 9: un 413 o un 500 muestran el mensaje del servidor y '
+        '«Reintentar»', () async {
+      for (final falla in [
+        _api(413, 'PAYLOAD_TOO_LARGE', 'La petición es demasiado grande.'),
+        _api(500, 'INTERNAL_SERVER_ERROR', 'Error del servidor'),
+      ]) {
+        Get.reset();
+        prepararTest(ApiFalsaDelTest(evaluaciones: [falla]));
+        final c = await _hastaLaEspera();
+        expect(c.textoDelErrorDeEspera, falla.message);
+      }
+    });
+
+    test('fila 10: si Cohere falla, el resultado llega igual con el motivo '
+        'de las plantillas', () async {
+      prepararTest(ApiFalsaDelTest(evaluaciones: [resultadoJson()]));
+      final c = await _hastaLaEspera();
+      expect(c.fase.value, FaseDelTest.resultado);
+      expect(c.resultado.value!.reasonByAi, isFalse);
+    });
+  });
 }

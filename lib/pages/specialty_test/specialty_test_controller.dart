@@ -359,10 +359,156 @@ class SpecialtyTestController extends GetxController {
 
   // ── Evaluación, espera y desempates (RF-TEST-7 y RF-TEST-11) ───────────────
 
-  /// La espera tras el último paso. Esta versión todavía no llama al
-  /// servidor.
-  void _evaluar() => fase.value = FaseDelTest.espera;
+  /// El error de la espera, o null mientras se espera.
+  final errorDeEspera = Rxn<SpecialtyTestFailure>();
+  final resultado = Rxn<SpecialtyTestResult>();
 
-  /// Sin una evaluación en vuelo, no hay nada que descartar.
-  void _descartarEvaluacion() {}
+  /// Sube con cada evaluación pedida y con cada atrás desde la espera. Una
+  /// respuesta que vuelve con otro número se descarta.
+  int _evaluacionVigente = 0;
+  bool _evaluando = false;
+  bool _otraPendiente = false;
+
+  /// La espera sigue a un desempate y no a la última pregunta.
+  bool get esperaTrasDesempate => paso.value >= totalPreguntas;
+
+  void _evaluar() {
+    fase.value = FaseDelTest.espera;
+    errorDeEspera.value = null;
+    final id = ++_evaluacionVigente;
+    // Nunca dos en vuelo. La nueva sale cuando termina o vence la anterior.
+    if (_evaluando) {
+      _otraPendiente = true;
+      return;
+    }
+    unawaited(_lanzarEvaluacion(id));
+  }
+
+  void _descartarEvaluacion() {
+    _evaluacionVigente++;
+    errorDeEspera.value = null;
+  }
+
+  bool _sigueVigente(int id) =>
+      !_cerrado && id == _evaluacionVigente && fase.value == FaseDelTest.espera;
+
+  Future<void> _lanzarEvaluacion(int id) async {
+    _evaluando = true;
+    try {
+      var reintentado = false;
+      while (true) {
+        final c = contenido.value!;
+        final cuerpo = cuerpoDeEvaluacion(
+          version: c.version,
+          respuestas: respuestas,
+          desempates: desempates,
+        );
+        try {
+          final pasoNuevo = await _service.evaluate(cuerpo);
+          if (_sigueVigente(id)) _aplicarPaso(pasoNuevo);
+          return;
+        } on SpecialtyTestFailure catch (f) {
+          if (!_sigueVigente(id)) return;
+          if (f.kind == SpecialtyTestFailureKind.tiebreakMismatch &&
+              !reintentado) {
+            // Una sola vez y sin desempates, porque el servidor decide
+            // cuáles tocan (decisión abierta 19).
+            reintentado = true;
+            desempates.clear();
+            if (paso.value >= c.totalQuestions) {
+              paso.value = c.totalQuestions - 1;
+            }
+            continue;
+          }
+          await _fallaDeEvaluacion(f);
+          return;
+        }
+      }
+    } finally {
+      _evaluando = false;
+      if (_otraPendiente && !_cerrado) {
+        _otraPendiente = false;
+        if (fase.value == FaseDelTest.espera) {
+          unawaited(_lanzarEvaluacion(_evaluacionVigente));
+        }
+      }
+    }
+  }
+
+  void _aplicarPaso(EvaluationStep pasoNuevo) {
+    switch (pasoNuevo) {
+      case TiebreakStep(:final tiebreak, :final ulisesLine):
+        final antes = (tiebreak.order - 1).clamp(0, desempates.length);
+        desempates.assignAll([
+          ...desempates.take(antes),
+          TiebreakRecord(tiebreak: tiebreak, ulisesLine: ulisesLine),
+        ]);
+        paso.value = totalPreguntas + desempates.length - 1;
+        fase.value = FaseDelTest.pregunta;
+      case ResultStep(:final result):
+        _mostrarResultado(result);
+    }
+  }
+
+  Future<void> _fallaDeEvaluacion(SpecialtyTestFailure f) async {
+    switch (f.kind) {
+      case SpecialtyTestFailureKind.versionOutdated:
+      case SpecialtyTestFailureKind.invalidAnswers:
+        await _ui.pedirReinicio(f.message ?? '');
+        if (_cerrado) return;
+        await _empezarConContenidoNuevo();
+      case SpecialtyTestFailureKind.notAvailable:
+        _noDisponible(f.message, avisarSiempre: true);
+      case SpecialtyTestFailureKind.offline:
+      case SpecialtyTestFailureKind.rateLimited:
+      case SpecialtyTestFailureKind.tiebreakMismatch:
+      case SpecialtyTestFailureKind.server:
+        errorDeEspera.value = f;
+    }
+  }
+
+  /// El texto del error de la espera, que es el mensaje del servidor o, sin
+  /// él, el de sin conexión.
+  String get textoDelErrorDeEspera =>
+      errorDeEspera.value?.message ?? TextosDelTest.sinConexion;
+
+  void reintentarEvaluacion() {
+    if (fase.value != FaseDelTest.espera || errorDeEspera.value == null) {
+      return;
+    }
+    _evaluar();
+  }
+
+  /// «Empezar de nuevo» del diálogo de la espera. Pide el contenido otra vez
+  /// y abre la pregunta 1.
+  Future<void> _empezarConContenidoNuevo() async {
+    _borrarRespuestas();
+    contenido.value = null;
+    _vigente = null;
+    fase.value = FaseDelTest.bienvenida;
+    await _cargarContenido();
+    if (_cerrado || carga.value != EstadoDeCarga.lista) return;
+    _abrirPreguntaUno(_vigente!);
+  }
+
+  // ── Resultado (RF-TEST-8) ──────────────────────────────────────────────────
+
+  /// Los corazones que se ven marcados.
+  final corazones = <int>{}.obs;
+
+  void _mostrarResultado(SpecialtyTestResult r) {
+    _avance?.cancel();
+    resultado.value = r;
+    _borrarRespuestas();
+    corazones.assignAll(
+      corazonesIniciales(
+        intereses: _auth.currentUser?.especialidadesInteres ?? const <int>[],
+        idsDelRanking: _idsDe(r),
+      ),
+    );
+    fase.value = FaseDelTest.resultado;
+  }
+
+  List<int> _idsDe(SpecialtyTestResult r) =>
+      r.ranking.map((e) => e.specialtyId).toList(growable: false);
 }
