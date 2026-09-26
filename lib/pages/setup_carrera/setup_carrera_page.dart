@@ -495,7 +495,12 @@ class _ActionChip extends StatelessWidget {
     final disabled = onTap == null;
     final Color tinta;
     if (disabled) {
-      tinta = MaterialTheme.chipDisabledText(b);
+      // El chip desactivado va sin relleno, con el borde gris sobre la
+      // tarjeta de la principal, y así se distingue del chip inactivo sin
+      // bajar la tinta. La etiqueta en `testMuted` llega a 4,5:1 sobre
+      // `testAccentSoft` en los dos temas (RF-TEST-12), con 5,76:1 en claro
+      // y 5,64:1 en oscuro.
+      tinta = MaterialTheme.testMuted(b);
     } else if (active) {
       tinta = MaterialTheme.testAccentDeep(b);
     } else {
@@ -506,7 +511,9 @@ class _ActionChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: active && !disabled
+          color: disabled
+              ? null
+              : active
               ? MaterialTheme.testAccentSoft(b)
               : MaterialTheme.chipDisabledBg(b),
           borderRadius: BorderRadius.circular(8),
