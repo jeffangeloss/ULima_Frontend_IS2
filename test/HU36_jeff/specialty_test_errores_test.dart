@@ -13,6 +13,7 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:ulima_plus/models/specialty_test_models.dart';
 import 'package:ulima_plus/pages/specialty_test/specialty_test_controller.dart';
+import 'package:ulima_plus/pages/specialty_test/specialty_test_logic.dart';
 import 'package:ulima_plus/services/api_client.dart';
 import 'package:ulima_plus/services/specialty_test_service.dart';
 
@@ -41,6 +42,7 @@ void main() {
 
   _bienvenida();
   _espera();
+  _guardados();
 }
 
 void _bienvenida() {
@@ -358,6 +360,69 @@ void _espera() {
       final c = await _hastaLaEspera();
       expect(c.fase.value, FaseDelTest.resultado);
       expect(c.resultado.value!.reasonByAi, isFalse);
+    });
+  });
+}
+
+void _guardados() {
+  group('UNITARIA · Errores de los guardados del resultado (RF-TEST-11)', () {
+    Future<({SpecialtyTestController c, AuthDelControlador auth, UiFalsa ui})>
+    alResultado() async {
+      final t = prepararTest(ApiFalsaDelTest());
+      final ui = UiFalsa();
+      final c = await _hastaLaEspera(ui: ui);
+      expect(c.fase.value, FaseDelTest.resultado);
+      return (c: c, auth: t.auth, ui: ui);
+    }
+
+    test('fila 11: un PUT que falla avisa con el mensaje del servidor o el '
+        'propio, y el corazón vuelve', () async {
+      final r = await alResultado();
+      r.auth.respuestasDeGuardado
+        ..add(_api(404, 'SPECIALTY_NOT_FOUND', 'Mensaje de prueba del 404.'))
+        ..add(Exception('sin red'));
+      r.c.alternarCorazon(kIdSi);
+      await pumpEventQueue();
+      expect(r.c.corazones, isEmpty);
+      expect(r.ui.avisos.last.mensaje, 'Mensaje de prueba del 404.');
+      expect(r.ui.avisos.last.tipo, TipoDeAviso.error);
+      r.c.alternarCorazon(kIdTi);
+      await pumpEventQueue();
+      expect(r.c.corazones, isEmpty);
+      expect(
+        r.ui.avisos.last.mensaje,
+        'No se pudo guardar. Revisa tu conexión e inténtalo de nuevo.',
+      );
+      expect(r.c.fase.value, FaseDelTest.resultado);
+    });
+
+    test('fila 12: un PUT sin respuesta en 15 s avisa que no se confirmó, y '
+        'el asistente no termina', () async {
+      final r = await alResultado();
+      r.c.alternarCorazon(kIdSi);
+      await pumpEventQueue();
+      r.auth.respuestasDeGuardado
+        ..add(TimeoutException('plazo'))
+        ..add(TimeoutException('plazo'));
+      r.c.alternarCorazon(kIdTi);
+      await pumpEventQueue();
+      expect(r.c.corazones, {kIdSi});
+      await r.c.elegirPrincipal(kIdVj);
+      expect(r.ui.alHome, 0);
+      expect(r.c.botonesActivos, isTrue);
+      expect(r.ui.avisos.map((a) => a.mensaje), [
+        'No se pudo confirmar el guardado. Revisa tu conexión e inténtalo de '
+            'nuevo.',
+        'No se pudo confirmar el guardado. Revisa tu conexión e inténtalo de '
+            'nuevo.',
+      ]);
+      // Repetir es seguro, porque cada PUT manda la selección entera.
+      await r.c.elegirPrincipal(kIdVj);
+      expect(r.ui.alHome, 1);
+      expect(
+        r.auth.guardados.last,
+        const SeleccionDeEspecialidades(principal: kIdVj, intereses: [kIdSi]),
+      );
     });
   });
 }

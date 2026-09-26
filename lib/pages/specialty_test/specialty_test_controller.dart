@@ -5,9 +5,11 @@
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
 import '../../models/specialty_test_models.dart';
+import '../../services/api_client.dart';
 import '../../services/auth_service.dart';
 import '../../services/specialty_test_service.dart';
 import 'specialty_test_logic.dart';
@@ -506,9 +508,183 @@ class SpecialtyTestController extends GetxController {
         idsDelRanking: _idsDe(r),
       ),
     );
+    _corazonesConfirmados = Set<int>.of(corazones);
     fase.value = FaseDelTest.resultado;
   }
 
   List<int> _idsDe(SpecialtyTestResult r) =>
       r.ranking.map((e) => e.specialtyId).toList(growable: false);
+
+  // ── Elegir, corazones y Decidir después (RF-TEST-9) ─────────────────────────
+
+  /// Un guardado de los botones en vuelo.
+  final guardando = false.obs;
+
+  /// Un guardado de los corazones en vuelo.
+  final guardandoCorazones = false.obs;
+  bool _corazonesPendientes = false;
+
+  /// Los últimos corazones que confirmó el servidor.
+  Set<int> _corazonesConfirmados = <int>{};
+
+  /// Los botones responden cuando no hay ningún guardado en vuelo.
+  bool get botonesActivos => !guardando.value && !guardandoCorazones.value;
+
+  /// La ganadora ya es la principal, y el botón dice «Ya es tu principal».
+  bool get yaEsPrincipal {
+    final r = resultado.value;
+    if (r == null || r.tie) return false;
+    return r.ranking.first.specialtyId == principalActual;
+  }
+
+  /// «Elegir como principal». Con empate, la pantalla pregunta cuál y pasa
+  /// aquí su `specialtyId`.
+  Future<void> elegirPrincipal(int elegida) async {
+    final r = resultado.value;
+    if (r == null || !botonesActivos) return;
+    int? otra;
+    if (r.tie) {
+      for (final w in r.winners) {
+        if (w.specialtyId != elegida) otra = w.specialtyId;
+      }
+    }
+    final seleccion = seleccionAlElegir(
+      elegida: elegida,
+      principalActual: principalActual,
+      corazones: corazones,
+      idsDelRanking: _idsDe(r),
+      otraGanadora: otra,
+    );
+    if (!await _guardarBotones(seleccion)) return;
+    if (enAsistente) {
+      _ui.irAlHome();
+      return;
+    }
+    _ui.cerrar(SalidaDelTest.terminado);
+    _ui.avisar(
+      const AvisoDelTest(
+        TipoDeAviso.exito,
+        TextosDelTest.guardadoMensaje,
+        titulo: TextosDelTest.guardadoTitulo,
+      ),
+    );
+  }
+
+  /// El corazón de una fila. Cambia al tocarlo y guarda enseguida. Los
+  /// toques seguidos se juntan y se manda el último estado.
+  void alternarCorazon(int specialtyId) {
+    if (resultado.value == null || guardando.value) return;
+    if (corazones.contains(specialtyId)) {
+      corazones.remove(specialtyId);
+    } else {
+      corazones.add(specialtyId);
+    }
+    if (guardandoCorazones.value) {
+      _corazonesPendientes = true;
+      return;
+    }
+    unawaited(_guardarCorazones());
+  }
+
+  Future<void> _guardarCorazones() async {
+    final r = resultado.value!;
+    guardandoCorazones.value = true;
+    try {
+      while (true) {
+        final enviados = Set<int>.of(corazones);
+        final seleccion = seleccionConCorazones(
+          principalActual: principalActual,
+          corazones: enviados,
+          idsDelRanking: _idsDe(r),
+        );
+        final error = await _guardar(seleccion);
+        if (_cerrado) return;
+        if (error != null) {
+          // Vuelven al último estado confirmado, y los toques juntados se
+          // descartan con el guardado que falló.
+          corazones.assignAll(_corazonesConfirmados);
+          _corazonesPendientes = false;
+          _ui.avisar(error);
+          return;
+        }
+        _corazonesConfirmados = enviados;
+        if (!_corazonesPendientes) return;
+        _corazonesPendientes = false;
+        if (setEquals(corazones.toSet(), _corazonesConfirmados)) return;
+      }
+    } finally {
+      if (!_cerrado) guardandoCorazones.value = false;
+    }
+  }
+
+  /// «Decidir después». En el asistente manda la selección actual para
+  /// marcar la configuración como completa; en el Perfil cierra sin guardar,
+  /// porque los corazones ya están guardados.
+  Future<void> decidirDespues() async {
+    final r = resultado.value;
+    if (r == null || !botonesActivos) return;
+    if (!enAsistente) {
+      _ui.cerrar(SalidaDelTest.terminado);
+      return;
+    }
+    final seleccion = seleccionConCorazones(
+      principalActual: principalActual,
+      corazones: corazones,
+      idsDelRanking: _idsDe(r),
+    );
+    if (await _guardarBotones(seleccion)) _ui.irAlHome();
+  }
+
+  /// «Rehacer el test» vuelve a la pregunta 1 con la misma copia y sin
+  /// respuestas, sin pasar por la bienvenida.
+  void rehacer() {
+    if (resultado.value == null || !botonesActivos) return;
+    final c = contenido.value!;
+    resultado.value = null;
+    _abrirPreguntaUno(c);
+  }
+
+  /// El atrás del sistema en el resultado. En el asistente no hace nada; en
+  /// el Perfil es «Decidir después» (decisión abierta 12).
+  void atrasEnResultado() {
+    if (enAsistente) return;
+    unawaited(decidirDespues());
+  }
+
+  Future<bool> _guardarBotones(SeleccionDeEspecialidades seleccion) async {
+    guardando.value = true;
+    final error = await _guardar(seleccion);
+    if (_cerrado) return false;
+    guardando.value = false;
+    if (error != null) {
+      _ui.avisar(error);
+      return false;
+    }
+    return true;
+  }
+
+  /// Un `PUT` con plazo de 15 s. Devuelve null si guardó, o el aviso que
+  /// explica el fallo.
+  Future<AvisoDelTest?> _guardar(SeleccionDeEspecialidades seleccion) async {
+    final careerId = _auth.currentUser?.careerId;
+    if (careerId == null) {
+      return const AvisoDelTest(TipoDeAviso.error, TextosDelTest.noSeGuardo);
+    }
+    try {
+      await _auth.completeSetup(
+        careerId: careerId,
+        especialidadPrincipal: seleccion.principal,
+        especialidadesInteres: seleccion.intereses,
+        timeout: SpecialtyTestService.saveTimeout,
+      );
+      return null;
+    } on TimeoutException {
+      // El guardado puede estar hecho en el servidor.
+      return const AvisoDelTest(TipoDeAviso.error, TextosDelTest.noSeConfirmo);
+    } on ApiException catch (e) {
+      return AvisoDelTest(TipoDeAviso.error, e.message);
+    } catch (_) {
+      return const AvisoDelTest(TipoDeAviso.error, TextosDelTest.noSeGuardo);
+    }
+  }
 }
