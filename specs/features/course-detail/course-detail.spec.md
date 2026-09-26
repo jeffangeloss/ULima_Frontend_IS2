@@ -18,6 +18,15 @@ targets:
 > spec del chat. La fase 1 del chat ya implementa este ajuste. Las pestañas y los contratos de
 > esta spec no cambian.
 
+> **Enmienda propuesta del 2026-09-25, pendiente de aprobación del dueño**
+> (`specs/features/recarga-portal/recarga-portal.spec.md`, RF-RCG-8). Hoy esta spec no describe
+> el bloque de asistencia. La enmienda le suma, bajo las horas y el anillo, la hora de la última
+> lectura, tomada de `asistenciaLeidaEn`, y el botón «Actualizar», que abre la hoja de recarga
+> desde la ULima. Tras una recarga exitosa, la ficha vuelve a leer solo su sección con
+> `DescripCursosController.recargarSeccion` y conserva la pestaña elegida. En el estado sin datos,
+> el botón «Actualizar desde miUlima» pasa a decir «Actualizar desde la ULima» y abre la misma
+> hoja en vez de `/portal-sync`. Mientras la enmienda no se apruebe, rige el texto de esta spec.
+
 ## Requirements
 
 - R18: Students can view announcements from the section delegate.
@@ -32,7 +41,7 @@ targets:
 
 ## API Dependencies
 
-- `GET /course-detail/sections/:sectionId`
+- `GET /course-detail/sections/:sectionId`, que con la enmienda propuesta trae también `asistenciaLeidaEn` en la `section`
 - `GET /course-detail/sections/:sectionId/announcements`
 - `GET /course-detail/sections/:sectionId/contacts`
 - `GET /course-detail/teachers`

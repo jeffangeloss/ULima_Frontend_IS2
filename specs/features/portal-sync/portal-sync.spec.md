@@ -18,6 +18,17 @@ targets:
 
 > Estado: **implementada el 2026-09-02**, con el diseño ALTERNATIVO (credenciales), no el original de WebView. Ver §Cambio de diseño.
 
+> **Enmienda propuesta del 2026-09-25, pendiente de aprobación del dueño**
+> (`specs/features/recarga-portal/recarga-portal.spec.md`). BR-SYNC-F-06 deja de borrar
+> `CalculadoraController` después de importar y llama a `recargarTodo()` (RF-RCG-11), porque la
+> fila «Notas oficiales» de la calculadora y el aviso de `IMPORT_REQUIRED` abren `/portal-sync`
+> con la calculadora montada debajo. La recarga de notas parciales y asistencia no usa esta
+> pantalla ni `PortalSyncService`. Tiene su propia hoja, que reutiliza `PasswordResetOtpField` con
+> un borde en reposo opcional que esta pantalla no usa, y su propio servicio,
+> `RecargaUlimaService`, contra `POST /portal-sync/refresh`. El aviso de `IMPORT_REQUIRED` de esa
+> hoja es una entrada más a `/portal-sync`, que espera su resultado. Mientras la enmienda no se
+> apruebe, rige el texto de esta spec.
+
 ## User Stories
 
 | ID | Description |

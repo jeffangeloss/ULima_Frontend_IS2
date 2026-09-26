@@ -10,6 +10,18 @@ targets:
 
 # Grades
 
+> **Enmienda propuesta del 2026-09-25, pendiente de aprobación del dueño**
+> (`specs/features/recarga-portal/recarga-portal.spec.md`). La calculadora conserva su diseño y
+> cambia solo dos cosas, según la maqueta aprobada. El birrete sin texto junto al título pasa a
+> la fila «Notas oficiales», con la hora de la última lectura de la ULima, que lleva a
+> `/mis-notas` (RF-RCG-5). Las notas que ya publicó la ULima entran como filas de `NotaTile` con
+> la marca «ULima», sin tacho, y cuentan en el promedio, sin guardarse nunca en
+> `simulated_grades` (RF-RCG-7). Lo que no cambia está en «Qué no cambia de la calculadora» de
+> esa spec. La misma enmienda anota dos desfases de este texto con el código. Las notas del
+> alumno se guardan en `simulated_grades`, no en `student_score`, y las pruebas de «Verification»
+> viven hoy en `test/HU07_sam/` y `test/HU06_sam/`, no en las carpetas `_aurelio`. Mientras la
+> enmienda no se apruebe, rige el texto de esta spec.
+
 ## Requirements
 
 - R6: Students can enter grades by assessment.
@@ -31,6 +43,7 @@ targets:
 - `POST /grades/me/calculate` — calcula el promedio ponderado en backend.
 - `GET /grades/me/notes` — recupera notas guardadas del alumno.
 - `POST /grades/me/notes` — guarda notas del alumno en backend.
+- `GET /grades/me/ulima`, propuesto, con las notas que publica la ULima (RF-RCG-7 de `specs/features/recarga-portal/recarga-portal.spec.md`).
 
 ## Verification
 
