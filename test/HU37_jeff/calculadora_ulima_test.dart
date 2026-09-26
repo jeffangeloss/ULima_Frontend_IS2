@@ -343,12 +343,14 @@ void main() {
 
     testWidgets('el tacho de una simulada que sigue a una fila de la ULima '
         "llama a eliminarNota con su índice en curso['notas']", (tester) async {
+      // «Práctica» es la fila visible 1 y la simulada 0, así que la prueba
+      // falla si CursoCard pasa la posición visible en lugar de su índice.
       final (c, _) = await _montar(
         tester,
         vista: _vistaCon([evaluacionJson(assessmentId: 5011, value: 15)]),
         simuladas: [
-          _simulada('5011', 'Examen escrito', 15, 13),
           _simulada('5012', 'Práctica', 25, 16),
+          _simulada('5011', 'Examen escrito', 15, 13),
         ],
       );
 
@@ -358,7 +360,7 @@ void main() {
       await tester.tap(find.text('Eliminar'));
       await tester.pumpAndSettle();
 
-      expect(c.borradas, [(0, 1)]);
+      expect(c.borradas, [(0, 0)]);
     });
 
     testWidgets('«Registrar Nota» no ofrece una evaluación ya publicada', (
