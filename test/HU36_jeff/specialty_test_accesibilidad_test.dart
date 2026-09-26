@@ -6,6 +6,8 @@
 //
 // Datos inventados (datos_de_prueba.dart). El alumno de prueba es 20230001.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -13,6 +15,7 @@ import 'package:ulima_plus/pages/specialty_test/specialty_test_controller.dart';
 import 'package:ulima_plus/pages/specialty_test/widgets/question_view.dart';
 import 'package:ulima_plus/pages/specialty_test/widgets/test_buttons.dart';
 import 'package:ulima_plus/pages/specialty_test/widgets/ulises_bubble.dart';
+import 'package:ulima_plus/pages/specialty_test/widgets/waiting_view.dart';
 import 'package:ulima_plus/pages/specialty_test/widgets/welcome_view.dart';
 
 import 'datos_de_prueba.dart';
@@ -50,6 +53,7 @@ void main() {
 
   _bienvenida();
   _preguntas();
+  _espera();
 }
 
 void _bienvenida() {
@@ -314,5 +318,36 @@ void _preguntas() {
       await tester.pump(const Duration(milliseconds: 350));
       await tester.pumpAndSettle();
     });
+  });
+}
+
+void _espera() {
+  group('WIDGET · Accesibilidad de la espera (RF-TEST-13)', () {
+    for (final escala in [1.0, 1.3, 2.0]) {
+      testWidgets('con texto a $escala no desborda, y el foco y la región viva '
+          'quedan en la burbuja', (tester) async {
+        final semantica = tester.ensureSemantics();
+        final pendiente = Completer<Map<String, dynamic>>();
+        prepararTest(ApiFalsaDelTest(evaluaciones: [pendiente]));
+        final c = ponerControlador();
+        await tester.pump();
+        c.empezar();
+        responderPasos(c, respuestasEnOrden);
+        await montarPantalla(tester, const WaitingView(), escala: escala);
+        await tester.pump();
+        expect(tester.takeException(), isNull);
+        expect(
+          Focus.of(tester.element(find.text(kLoading))).hasPrimaryFocus,
+          isTrue,
+        );
+        expect(
+          tester.getSemantics(find.byType(UlisesTurnView)),
+          isSemantics(isLiveRegion: true),
+        );
+        pendiente.complete(resultadoJson());
+        await tester.pump();
+        semantica.dispose();
+      });
+    }
   });
 }

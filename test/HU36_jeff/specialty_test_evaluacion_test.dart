@@ -8,14 +8,20 @@
 
 import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
+import 'package:ulima_plus/configs/themes.dart';
 import 'package:ulima_plus/pages/specialty_test/specialty_test_controller.dart';
+import 'package:ulima_plus/pages/specialty_test/widgets/question_view.dart';
+import 'package:ulima_plus/pages/specialty_test/widgets/ulises_bubble.dart';
+import 'package:ulima_plus/pages/specialty_test/widgets/waiting_view.dart';
 
 import 'datos_de_prueba.dart';
 import 'dobles_de_red.dart';
 import 'dobles_del_controlador.dart';
+import 'montaje_de_pantallas.dart';
 
 Map<String, dynamic> _cuerpo([
   List<Map<String, dynamic>> desempates = const [],
@@ -34,6 +40,7 @@ void main() {
   tearDown(Get.reset);
 
   _controlador();
+  _pantalla();
 }
 
 void _controlador() {
@@ -270,6 +277,100 @@ void _controlador() {
       expect(api.cuerposDeEvaluacion, hasLength(2));
       expect(api.cuerposDeEvaluacion[1], api.cuerposDeEvaluacion[0]);
       expect(otra.fase.value, FaseDelTest.resultado);
+    });
+  });
+}
+
+/// Llega a la espera con la evaluación pendiente de [evaluacion] y monta la
+/// pantalla.
+Future<SpecialtyTestController> _enLaEspera(
+  WidgetTester tester,
+  List<Object> evaluaciones, {
+  bool sinMovimiento = false,
+}) async {
+  prepararTest(ApiFalsaDelTest(evaluaciones: evaluaciones));
+  final c = ponerControlador();
+  await tester.pump();
+  c.empezar();
+  responderPasos(c, respuestasEnOrden);
+  await montarPantalla(
+    tester,
+    const WaitingView(),
+    sinMovimiento: sinMovimiento,
+  );
+  return c;
+}
+
+List<String> _burbujas(WidgetTester tester) => tester
+    .widgetList<UlisesBubble>(find.byType(UlisesBubble))
+    .map((b) => b.text)
+    .toList();
+
+void _pantalla() {
+  group('WIDGET · La espera (RF-TEST-7)', () {
+    testWidgets('caso 9: con las plumas llenas, el cierre de la última, su '
+        'sello, la línea de espera y el indicador', (tester) async {
+      final pendiente = Completer<Map<String, dynamic>>();
+      await _enLaEspera(tester, [pendiente]);
+      expect(find.text('Pregunta 5 de 5'), findsOneWidget);
+      for (var i = 0; i < 5; i++) {
+        expect(
+          tester.widget<Icon>(find.byKey(TestFeathers.plumaKey(i))).color,
+          MaterialTheme.testFeatherOn(Brightness.light),
+        );
+      }
+      expect(_burbujas(tester), ['Cierre de prueba del bloque dos.', kLoading]);
+      expect(find.text('Cierra el bloque 2 de 2'), findsOneWidget);
+      final indicador = tester.widget<CircularProgressIndicator>(
+        find.byType(CircularProgressIndicator),
+      );
+      expect(indicador.color, MaterialTheme.testAccent(Brightness.light));
+      pendiente.complete(resultadoJson());
+      await tester.pump();
+    });
+
+    testWidgets('caso 10: tras un desempate va solo la línea de espera', (
+      tester,
+    ) async {
+      final pendiente = Completer<Map<String, dynamic>>();
+      final c = await _enLaEspera(tester, [desempateJson(), pendiente]);
+      await tester.pump();
+      responderPasos(c, ['top']);
+      await tester.pump();
+      expect(find.text('Desempate 1'), findsOneWidget);
+      expect(_burbujas(tester), [kLoading]);
+      pendiente.complete(resultadoJson());
+      await tester.pump();
+    });
+
+    testWidgets('caso 11: sin conexión, el aviso y «Reintentar» en lugar de '
+        'la línea de espera', (tester) async {
+      final c = await _enLaEspera(tester, [
+        http.ClientException('sin red'),
+        resultadoJson(),
+      ]);
+      await tester.pump();
+      expect(
+        find.text(
+          'No pudimos conectarnos. Revisa tu conexión e inténtalo de nuevo.',
+        ),
+        findsOneWidget,
+      );
+      expect(_burbujas(tester), ['Cierre de prueba del bloque dos.']);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      await tester.tap(find.text('Reintentar'));
+      await tester.pump();
+      expect(c.fase.value, FaseDelTest.resultado);
+    });
+
+    testWidgets('caso 12: con menos movimiento el indicador no aparece y la '
+        'burbuja sola dice que se espera', (tester) async {
+      final pendiente = Completer<Map<String, dynamic>>();
+      await _enLaEspera(tester, [pendiente], sinMovimiento: true);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.text(kLoading), findsOneWidget);
+      pendiente.complete(resultadoJson());
+      await tester.pump();
     });
   });
 }
