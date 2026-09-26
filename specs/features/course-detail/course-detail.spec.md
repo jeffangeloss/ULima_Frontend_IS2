@@ -18,7 +18,7 @@ targets:
 > spec del chat. La fase 1 del chat ya implementa este ajuste. Las pestañas y los contratos de
 > esta spec no cambian.
 
-> **Enmienda propuesta del 2026-09-25, pendiente de aprobación del dueño**
+> **Enmienda del 2026-09-25, aprobada por el dueño el 2026-09-26 y pendiente de implementación**
 > (`specs/features/recarga-portal/recarga-portal.spec.md`, RF-RCG-8). Hoy esta spec no describe
 > el bloque de asistencia. La enmienda le suma, bajo las horas y el anillo, la hora de la última
 > lectura, tomada de `asistenciaLeidaEn`, y el botón «Actualizar», que abre la hoja de recarga
@@ -27,7 +27,8 @@ targets:
 > y no repite `HorarioController.reload()`, y conserva la pestaña elegida. En el estado sin datos,
 > el botón «Actualizar desde miUlima» pasa a decir «Actualizar desde la ULima» y abre la misma
 > hoja en vez de `/portal-sync`, y el bloque muestra el aviso de error y la línea de lectura
-> parcial encima del botón. Sin `RecargaUlimaService` registrado, el bloque queda como hoy. Mientras la enmienda no se apruebe, rige el texto de esta spec.
+> parcial encima del botón. Sin `RecargaUlimaService` registrado, el bloque queda como hoy.
+> Hasta que se implemente, el código sigue el texto de esta spec.
 
 ## Requirements
 
@@ -43,7 +44,7 @@ targets:
 
 ## API Dependencies
 
-- `GET /course-detail/sections/:sectionId`, que con la enmienda propuesta trae también `asistenciaLeidaEn` en la `section`
+- `GET /course-detail/sections/:sectionId`, que con la enmienda aprobada el 2026-09-26 trae también `asistenciaLeidaEn` en la `section`
 - `GET /course-detail/sections/:sectionId/announcements`
 - `GET /course-detail/sections/:sectionId/contacts`
 - `GET /course-detail/teachers`

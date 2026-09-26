@@ -18,7 +18,7 @@ targets:
 
 > Estado: **implementada el 2026-09-02**, con el diseño ALTERNATIVO (credenciales), no el original de WebView. Ver §Cambio de diseño.
 
-> **Enmienda propuesta del 2026-09-25, pendiente de aprobación del dueño**
+> **Enmienda del 2026-09-25, aprobada por el dueño el 2026-09-26 y pendiente de implementación**
 > (`specs/features/recarga-portal/recarga-portal.spec.md`). BR-SYNC-F-06 deja de borrar
 > `CalculadoraController` después de importar y llama a `recargarTodo()` (RF-RCG-11), porque la
 > fila «Notas oficiales» de la calculadora y el aviso de `IMPORT_REQUIRED` abren `/portal-sync`
@@ -27,11 +27,11 @@ targets:
 > cuatro parámetros opcionales (alto de casilla, relleno, borde en reposo y solo lectura) cuyo
 > valor por defecto deja esta pantalla como está, y su propio servicio,
 > `RecargaUlimaService`, contra `POST /portal-sync/refresh`. El aviso de `IMPORT_REQUIRED` de esa
-> hoja es una entrada más a `/portal-sync`, que espera su resultado. El borrador del backend suma
-> a la importación el `409 PORTAL_REFRESH_IN_PROGRESS`, cuando hay una recarga del mismo alumno
-> en curso, y `details.kind` en sus dos `429`. Esta pantalla los muestra con el `message` del
-> backend, como hoy muestra el `429` y todo código que no traduce, sin cambio de código. Mientras
-> la enmienda no se apruebe, rige el texto de esta spec.
+> hoja es una entrada más a `/portal-sync`, que espera su resultado. La spec del backend, aprobada
+> el mismo día, suma a la importación el `409 PORTAL_REFRESH_IN_PROGRESS`, cuando hay una
+> recarga del mismo alumno en curso, y `details.kind` en sus dos `429`. Esta pantalla los muestra con el `message` del
+> backend, como hoy muestra el `429` y todo código que no traduce, sin cambio de código.
+> Hasta que se implemente, el código sigue el texto de esta spec.
 
 ## User Stories
 

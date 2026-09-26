@@ -22,27 +22,32 @@ targets:
   - ../../../lib/main.dart
   - ../../../test/HU37_jeff/**
   - ../../../docs/specs/api-contracts.md
-  # AGENTS.md y KNOWLEDGE.md entran solo si el dueño aprueba la decisión B12.
+  # AGENTS.md y KNOWLEDGE.md entran por la decisión B12, que el dueño aprueba el 2026-09-26.
   - ../../../AGENTS.md
   - ../../../KNOWLEDGE.md
-  # README.md entra siempre, porque RF-RCG-5 vuelve falsa su frase sobre la entrada a
-  # /mis-notas (README.md:102). Lo demás de esa línea cambia solo con B10 y B12.
+  # README.md entra porque RF-RCG-5 vuelve falsa su frase sobre la entrada a /mis-notas
+  # (README.md:102). Lo demás de esa línea cambia por B10 y B12, aprobadas el 2026-09-26.
   - ../../../README.md
 ---
 
 # Recarga de notas parciales y asistencia desde la ULima
 
-> Estado. **Borrador del 2026-09-25, pendiente de aprobación del dueño.** Nada de esta spec
-> está aprobado, salvo lo que «Pedido y decisiones del dueño» le atribuye al dueño con su
-> fecha. Cada punto que el dueño todavía no decide figura en «Decisiones abiertas» con la
-> opción que la spec adopta por defecto, y esa opción tampoco cuenta como aprobada.
+> Estado. **Aprobada por el dueño el 2026-09-26, pendiente de implementación.** El dueño
+> responde «aplica» a la versión `b8facce` de esta spec y lo confirma como «Recarga: todas las
+> recomendadas», así que aprueba las decisiones B1 a B19 y los puntos D1 a D24 en su opción
+> recomendada, que es la que cada fila de «Decisiones» adopta por defecto. La misma aprobación
+> fija en 65 000 el máximo del presupuesto de tiempo del backend, con 3 s reservados para la red,
+> igual en las dos specs, y esta versión alinea con ese valor la cota de 68 000 de la versión
+> `b8facce` (hueco 5 y D18).
 > Contraparte del backend. `ULima_Backend_IS2/specs/features/recarga-portal/recarga-portal.spec.md`
-> (RS-BE-48 a RS-BE-60), también en borrador, en la rama `feat/recarga-notas-asistencia`
-> (commit `c0c918c`). Esta spec consume las rutas que ese borrador propone y no inventa ningún
-> campo. Lo que al contrato le falta para la maqueta, o no garantiza, está en «Contrato que se
-> consume», en «Huecos del contrato».
-> Enmienda, también como propuesta, `grades.spec.md`, `course-detail.spec.md`,
-> `portal-sync.spec.md`, `academic-record.spec.md` (RF-REC-6) y `schedule.spec.md` (ver
+> (RS-BE-48 a RS-BE-60), en la rama `feat/recarga-notas-asistencia`, que el dueño aprueba el
+> mismo día en su versión `0161dee`. La aprobación incluye el diseño de BD de su migración
+> `0015`, y aplicarla en producción sigue pidiendo un respaldo y el permiso del dueño en el
+> momento del despliegue. Esta spec consume las rutas de esa spec y no inventa ningún campo. Lo
+> que al contrato le falta para la maqueta, o no garantiza, está en «Contrato que se consume»,
+> en «Huecos del contrato».
+> Enmienda `grades.spec.md`, `course-detail.spec.md`, `portal-sync.spec.md`,
+> `academic-record.spec.md` (RF-REC-6) y `schedule.spec.md`, con la misma aprobación (ver
 > «Cambios en otras specs»). La rama `feat/recarga-notas-asistencia-fe` parte de `origin/main`
 > en `19fed1b`, y todas las referencias `archivo:línea` citan ese estado.
 > Las pruebas de esta spec todavía no existen. Por la regla de `specs/README.md`, esta spec no
@@ -58,7 +63,7 @@ targets:
 | HU-RCG-02 | Como alumno, quiero que la calculadora cuente las notas que la ULima ya publica, sin registrarlas a mano, y seguir simulando las que faltan. |
 | HU-RCG-03 | Como alumno, quiero actualizar mi asistencia desde la ficha del curso y saber de cuándo es el dato que veo. |
 
-## Pedido y decisiones del dueño (2026-09-25, vinculantes)
+## Pedido y decisiones del dueño (2026-09-25 y 2026-09-26, vinculantes)
 
 | # | Decisión | Dónde queda |
 | --- | --- | --- |
@@ -66,13 +71,15 @@ targets:
 | 2 | Un solo inicio de sesión trae notas y asistencia juntas, y cualquiera de los dos botones actualiza ambas. | RF-RCG-1 y RF-RCG-3 |
 | 3 | La calculadora conserva su diseño actual, idea de un integrante del equipo, y solo se reorganiza según la maqueta aprobada `calculadora-reorganizada.html`, con tres cambios. El birrete gris sin texto pasa a una fila «Notas oficiales» con la hora de la última lectura y el estilo de «Selecciona un Curso». La pantalla de notas oficiales (`/mis-notas`) conserva su diseño y suma la franja «Actualizar desde la ULima», las evaluaciones de la ULima con semana, peso y nota o «Sin nota», la hoja de recarga y el aviso rojo persistente con «Reintentar». En la calculadora, cada evaluación con nota de la ULima aparece como una fila de `nota_tile` con la marca «ULima», sin tacho, y cuenta en el promedio. | RF-RCG-5, RF-RCG-6 y RF-RCG-7 |
 | 4 | El bloque de asistencia de la ficha del curso lleva también su botón de recarga y la hora de la última lectura. | RF-RCG-8 |
+| 5 | El 2026-09-26 aprueba esta spec y la del backend con todas las opciones recomendadas («aplica», confirmado como «Recarga: todas las recomendadas»), es decir, B1 a B19 y D1 a D24 en la opción que cada fila adopta por defecto. | «Decisiones» |
+| 6 | En esa misma aprobación, el presupuesto de tiempo del backend tiene un máximo de 65 000 y reserva 3 s para la red, igual en el backend y en la app. La cota de esta spec pasa de 68 000 a 65 000, como la de RS-BE-50. | RF-RCG-1, RF-RCG-3, hueco 5 y D18 |
 
 La maqueta aprobada vive fuera del repositorio, con datos inventados, y es el cambio aprobado
 sobre las maquetas de `docs/images/UI` que pide respetar `AGENTS.md`. Esta spec copia sus
 textos y sus medidas. La maqueta muestra la lista «Qué no cambia», que esta spec copia y amplía
 en «Qué no cambia de la calculadora». La maqueta no dibuja la ficha del curso, la espera de la hoja ni los errores
-distintos del rechazo de la contraseña, así que esas piezas salen de esta spec y quedan como
-decisiones abiertas.
+distintos del rechazo de la contraseña, así que esas piezas salen de esta spec, que las fija
+como puntos D, y el dueño las aprueba con ellos el 2026-09-26.
 
 ## Contexto
 
@@ -140,9 +147,9 @@ estado.
 - **`recargar({password, passcode})`** hace `POST /portal-sync/refresh` con el cuerpo exacto
   `{ "credentials": { "password": …, "passcode": … }, "consent": true }`. No manda `cookies`, ni el
   código del alumno, ni ninguna otra clave, porque el backend valida en modo estricto. El plazo de
-  la app es de 90 s, el mismo de la importación (D18). El borrador del backend acota su peor caso
-  a esos 90 s, contados desde que recibe la petición, así que el tiempo de la red del teléfono
-  queda fuera de esa cota (hueco 5). Con `200` aplica
+  la app es de 90 s, el mismo de la importación (D18). La spec del backend acota su peor caso a
+  87 s, contados desde que recibe la petición, y reserva así 3 s de ese plazo para la ida y la
+  vuelta por la red del teléfono (hueco 5). Con `200` aplica
   `view` a `vista` y guarda los estados por curso del último resultado. Con error deja un
   `AvisoRecarga` (título, cuerpo y acción, RF-RCG-4) en `ultimoAviso`.
 - **Plazo vencido o fallo de red** (D23). El backend puede terminar y escribir después de que la
@@ -201,7 +208,7 @@ De arriba abajo lleva lo siguiente.
    pinta. A la derecha va la X de cerrar (`Icons.close`, tooltip `Cerrar`, blanco táctil de 48).
 2. El aviso de consentimiento (13, `onSurface` al 70 %), con el texto exacto
    `Al tocar «Actualizar» aceptas que ULima++ lea en miUlima tus notas parciales y tu asistencia. La contraseña y el código se usan una sola vez y no se guardan.`
-   Es la opción por defecto de la decisión B4. No toca el texto congelado de `PortalConsentView`.
+   Es la opción aprobada de la decisión B4. No toca el texto congelado de `PortalConsentView`.
 3. El rótulo `Contraseña de miUlima` (14, negrita) y el campo, oculto por defecto, con la pista
    `Tu contraseña del portal`, `autofillHints: password` y un ojo a la derecha que alterna
    `Mostrar contraseña` y `Ocultar contraseña` en su tooltip. El campo mide al menos 52 de alto,
@@ -267,10 +274,10 @@ terminar, vacía los dos campos.
   éxito, sin línea de lectura parcial. Si no, sigue el del error. Con el presupuesto por defecto
   del backend, de 60 000, su peor caso es de 82 s desde que recibe la petición, así que el backend
   ya terminó cuando vence el plazo de la app, salvo que la ida y la vuelta por la red del teléfono
-  sumen más de 8 s. Con un presupuesto mayor, hasta el máximo de 68 000, ese margen se achica hasta
-  desaparecer (hueco 5). En ese caso, y tras un fallo de red, el backend puede seguir trabajando
-  hasta su peor caso, y un «Reintentar» en ese lapso recibe `409 PORTAL_REFRESH_IN_PROGRESS`, cuyo
-  aviso ya pide esperar.
+  sumen más de 8 s. Con un presupuesto mayor, hasta el máximo de 65 000, ese margen se achica
+  hasta los 3 s que reserva la cota (hueco 5). Si la red tarda más que ese margen, y tras un
+  fallo de red, el backend puede seguir trabajando hasta su peor caso, y un «Reintentar» en ese
+  lapso recibe `409 PORTAL_REFRESH_IN_PROGRESS`, cuyo aviso ya pide esperar.
 - **`401`.** Es la expiración del JWT y la maneja `ApiClient` como siempre, que cierra la sesión.
   El backend nunca responde `401` por un fallo del portal.
 
@@ -356,7 +363,8 @@ todo el ancho, en `lib/components/recarga_ulima/fila_notas_oficiales.dart`.
   reemplaza `onInit`, sigue pasando sin cambios.
 - **README.** La frase de `README.md:102` que dice que a `/mis-notas` se llega por el ícono
   `school_outlined` de la calculadora deja de ser cierta con este cambio, así que el PR de
-  implementación la corrige para nombrar la fila «Notas oficiales», con o sin la decisión B12.
+  implementación la corrige para nombrar la fila «Notas oficiales», aparte de lo que cambia por
+  la decisión B12.
 
 ### RF-RCG-6. La pantalla «Notas oficiales» (`/mis-notas`, cambio 2)
 
@@ -365,7 +373,7 @@ datos y lo que muestra cada fila, y suma la franja.
 
 **Fuente.** `MisNotasController` deja de usar `OfficialGradesService` y lee `RecargaUlimaService`.
 `load()` llama a `cargar()`, y la lista sale de `vista.cursos`, en el orden en que llegan. Es la
-opción por defecto de la decisión B10. `OfficialGradesService` no cambia y lo siguen usando las
+opción aprobada de la decisión B10. `OfficialGradesService` no cambia y lo siguen usando las
 pantallas del docente. Para la sigla del prefijo (D9), el controller lee además
 `EvaluationSyllabusService`, que la calculadora ya deja en caché, y si su carga falla las filas
 van sin prefijo.
@@ -406,7 +414,7 @@ semana, las sin semana al final, y luego por clave).
 **Insignia «Final».** Igual que hoy. Suma el valor por el peso entre 100 de cada evaluación
 publicada, cuenta `NP` como 0 (decisión B8) y las `pending` como 0, y aparece solo si el curso
 tiene al menos una `graded` o `np`. Su umbral sigue en 10.5 (`mis_notas_page.dart:208`) con la
-opción por defecto de la decisión B9.
+opción aprobada de la decisión B9.
 
 **Estados.**
 
@@ -454,7 +462,7 @@ una misma tarjeta nunca mezcla `14.25` y `14.3`. Las funciones de formato viven 
 **Promedio y suma de pesos.** `POST /grades/me/calculate` recibe las filas visibles del curso, las
 simuladas y las de la ULima, con `NP` como 0 (decisión B8) y el peso exacto de la ULima, sin
 truncar. La barra «Suma de pesos» suma también esas filas. El aviso «Desaprobado» conserva su
-umbral de hoy, por debajo de 11 (`curso_card.dart:95`), con la opción por defecto de la decisión
+umbral de hoy, por debajo de 11 (`curso_card.dart:95`), con la opción aprobada de la decisión
 B9.
 
 **Una evaluación con las dos notas.** Si el alumno tiene una nota simulada para una evaluación
@@ -631,9 +639,9 @@ Es la lista «Qué no cambia» de la maqueta aprobada, con lo que el código fij
   `Cursos con notas: N` con su estilo.
 - La `CursoCard`, con su cabecera naranja, `Sección: N`, el nombre, `Ciclo: …`, el promedio de 36,
   el aviso `Desaprobado` con su ícono y su umbral de 11, y la barra `Suma de pesos: X% / 100%`.
-  La opción por defecto de la decisión B9 conserva los dos umbrales de hoy, 11 para el aviso y
-  10.5 para la insignia `Final`. Sus otras dos opciones cambian lo aprobado, una el aviso y la
-  otra la insignia.
+  La opción aprobada de la decisión B9 conserva los dos umbrales de hoy, 11 para el aviso y
+  10.5 para la insignia `Final`. Las otras dos opciones, que el dueño no elige, cambian lo
+  aprobado, una el aviso y la otra la insignia.
 - Las filas de las notas simuladas, con peso, nota con un decimal, tacho y el diálogo
   `Eliminar Nota`.
 - El botón ancho `+ Registrar Nota`, la hoja `Selecciona un Curso` y el modal `Registrar Nota`
@@ -649,8 +657,8 @@ Es la lista «Qué no cambia» de la maqueta aprobada, con lo que el código fij
 - En `/mis-notas`, la barra naranja con `Notas oficiales`, las tarjetas de curso, la insignia
   `Final` y la flecha de recarga, que sigue consultando solo a ULima++.
 
-D7 y D15 tocan la `CursoCard` más allá de los tres cambios aprobados, y los dos quedan
-abiertos. D7 ordena las filas según el sílabo, que es el orden que dibuja la maqueta pero
+D7 y D15 tocan la `CursoCard` más allá de los tres cambios aprobados, y el dueño aprueba los
+dos el 2026-09-26. D7 ordena las filas según el sílabo, que es el orden que dibuja la maqueta pero
 reordena las simuladas, que hoy salen en el orden en que se registraron. D15 suma una línea al
 final de la tarjeta cuando la ULima publica evaluaciones que no están en el sílabo.
 
@@ -660,7 +668,8 @@ firma de `eliminarNota` que conserva RF-RCG-7 es la que lo permite.
 
 ## Textos nuevos
 
-Todos son propuesta de esta spec, salvo los que copian la maqueta aprobada, marcados con (M).
+Los que copian la maqueta aprobada llevan la marca (M). Los demás los propone esta spec, y el
+dueño los aprueba con ella el 2026-09-26.
 
 | Dónde | Texto |
 | --- | --- |
@@ -704,30 +713,33 @@ Cambio de alumno sin logout (JWT vencido)
 Detalle en `docs/specs/api-contracts.md`, secciones Grades, Official Grades, Schedule, Course
 Detail y Portal Sync.
 
-- `POST /portal-sync/refresh` (propuesto, RS-BE-49 a RS-BE-56). Cuerpo, errores, `details.kind` y
-  `details.retryAfterMinutes` del `429`, estados por curso y `view`, con el `409 IMPORT_REQUIRED`
-  por cambio de ciclo (decisión B19) y la cota del presupuesto de RS-BE-50 (hueco 5). Sus dos
-  fases leen los menús de Asistencia y de Nota con `parseAulas`, así que sin RS-BE-48 toda
-  recarga termina en `502 PORTAL_UNREADABLE` (decisión B1).
-- `POST /portal-sync/import`, que el borrador del backend amplía de forma aditiva con el
+- `POST /portal-sync/refresh` (aprobado el 2026-09-26 y por implementar, RS-BE-49 a RS-BE-56).
+  Cuerpo, errores, `details.kind` y `details.retryAfterMinutes` del `429`, estados por curso y
+  `view`, con el `409 IMPORT_REQUIRED` por cambio de ciclo (decisión B19) y la cota del
+  presupuesto de RS-BE-50, con su máximo de 65 000 (hueco 5). Sus dos fases leen los menús de
+  Asistencia y de Nota con `parseAulas`, así que sin RS-BE-48 toda recarga termina en
+  `502 PORTAL_UNREADABLE` (decisión B1).
+- `POST /portal-sync/import`, que la spec del backend amplía de forma aditiva con el
   `409 PORTAL_REFRESH_IN_PROGRESS`, cuando hay una recarga del mismo alumno en curso, y con
   `details.kind` en sus dos `429` (RS-BE-50). `/portal-sync` los muestra con el `message` del
   backend, igual que hoy muestra el `429` y todo código que no traduce
   (`portal_sync_service.dart:111-118`), así que la app no cambia por ellos.
-- `GET /grades/me/ulima` (propuesto, RS-BE-57).
+- `GET /grades/me/ulima` (aprobado el 2026-09-26 y por implementar, RS-BE-57).
 - `asistenciaLeidaEn` en `secciones` de `GET /schedule/me/sessions` y de
-  `GET /course-detail/sections` y `GET /course-detail/sections/:sectionId` (propuesto, RS-BE-58).
+  `GET /course-detail/sections` y `GET /course-detail/sections/:sectionId` (aprobado el
+  2026-09-26 y por implementar, RS-BE-58).
 - `POST /grades/me/calculate`, sin cambios, que ahora recibe también las filas de la ULima.
 - `GET /grades/me/notes`, `POST /grades/me/notes` y `DELETE /grades/me/notes/:sectionId/:assessmentId`,
   sin cambios. Nunca reciben una nota de la ULima.
 - `GET /grades/me/courses`, sin cambios, para el orden del sílabo y la sigla.
-- `GET /official-grades/me` deja de tener pantalla de alumno si el dueño aprueba la opción por
-  defecto de B10. La ruta sigue en el backend.
+- `GET /official-grades/me` deja de tener pantalla de alumno por la opción aprobada de B10. La
+  ruta sigue en el backend.
 
 ### Huecos del contrato
 
-Lo que la maqueta o la app piden y el contrato propuesto no trae o no garantiza. La spec no
-inventa campos y resuelve cada uno con lo que ya existe, como opción por defecto.
+Lo que la maqueta o la app piden y el contrato aprobado no trae o no garantiza. La spec no
+inventa campos y resuelve cada uno con lo que ya existe, en la opción por defecto que el dueño
+aprueba el 2026-09-26.
 
 1. `GET /grades/me/ulima` no trae la sigla de la evaluación del sílabo, y la fila de `/mis-notas`
    la muestra como prefijo, como hoy. Por defecto la app la toma de `syllabi` en
@@ -739,24 +751,27 @@ inventa campos y resuelve cada uno con lo que ya existe, como opción por defect
 3. `asistenciaLeidaEn` es `null` para las horas importadas antes de la migración `0015`, así que
    la app no puede decir de cuándo son. Por defecto no pinta la línea (D2).
 4. El contrato no dice si la ULima redondea el promedio final, y de eso depende cuál sería el
-   umbral único si el dueño elige una de las dos alternativas de la decisión B9. La opción por
-   defecto de la app conserva los dos umbrales de hoy y no depende de ese dato.
-5. La cota del presupuesto del backend no cuenta la red del teléfono (D18). RS-BE-50 valida
-   `PORTAL_REFRESH_BUDGET_MS` entre 20 000 y 68 000, con 60 000 por defecto, y usa el menor
-   entre ese valor y 90 000 − 2 · `PORTAL_TIMEOUT_MS` − 6 000. El presupuesto cubre también el
-   inicio de sesión, y el peor caso suma el presupuesto, una petición en vuelo
-   (`PORTAL_TIMEOUT_MS`, 8 s por defecto), 6 s de transacción y respuesta y el cierre de sesión
-   (otros 8 s). Con los valores por defecto son 82 s, y con el máximo llegan a 90 s, siempre
-   contados desde que el backend recibe la petición. Con el valor por defecto quedan unos 8 s
-   para la ida y la vuelta por la red, y con el máximo no queda ninguno, así que la app puede
-   dejar de esperar justo antes de que el backend responda. Por defecto, la app adopta esa cota
-   sin pedir otro cambio al backend, y D23 cubre la escritura que llega después del plazo.
-   Alternativas, pedir que la fórmula reserve además un margen para la red, por ejemplo 5 s, con
-   un máximo de 63 000, o subir el plazo de la app (D18).
+   umbral único con una de las dos alternativas de la decisión B9, que el dueño no elige. La
+   opción aprobada conserva los dos umbrales de hoy y no depende de ese dato.
+5. La red del teléfono dentro de la cota del presupuesto del backend (D18). RS-BE-50 valida
+   `PORTAL_REFRESH_BUDGET_MS` entre 20 000 y 65 000, con 60 000 por defecto, y usa el menor
+   entre ese valor y 81 000 − 2 · `PORTAL_TIMEOUT_MS`. Esa fórmula resta a los 90 s de la app
+   una petición en vuelo y el cierre de sesión (2 · `PORTAL_TIMEOUT_MS`, con 8 s cada uno por
+   defecto), 6 s de transacción y respuesta y 3 s para la ida y la vuelta por la red del
+   teléfono. El presupuesto cubre también el inicio de sesión, y el peor caso, contado desde que
+   el backend recibe la petición, suma el presupuesto, esa petición en vuelo, la transacción con
+   la respuesta y el cierre de sesión. Con los valores por defecto son 82 s, que dejan 8 s para
+   la red, y con el máximo son 87 s, que dejan los 3 s reservados. El dueño aprueba el
+   2026-09-26 este máximo de 65 000 con 3 s para la red, igual en el backend y en la app, en
+   lugar del de 68 000, que no deja ningún margen para la red. Si la ida y la vuelta pasan de
+   esos 3 s con el máximo, la app puede dejar de esperar justo antes de que el backend responda,
+   y D23 cubre la escritura que llega después del plazo. Los márgenes de 6 s y de 3 s no están
+   medidos, y los comprueba la medición de B15, que es la V5 del backend.
 
 ## Cambios en otras specs
 
-Todos son propuesta y siguen el estado de esta spec.
+El dueño los aprueba el 2026-09-26 junto con esta spec, y cada nota de enmienda registra esa
+aprobación.
 
 - `specs/features/grades/grades.spec.md`. Nota de enmienda con los tres cambios aprobados, dos en
   la calculadora (RF-RCG-5 y RF-RCG-7) y uno en `/mis-notas` (RF-RCG-6), que remite a «Qué no
@@ -768,8 +783,8 @@ Todos son propuesta y siguen el estado de esta spec.
   borrarla (RF-RCG-11), la hoja reutiliza `PasswordResetOtpField` con cuatro parámetros
   opcionales que `/portal-sync` no usa (RF-RCG-2) y el aviso de `IMPORT_REQUIRED` es una entrada
   nueva a `/portal-sync`. Anota también que la pantalla muestra con el `message` del backend el
-  `409 PORTAL_REFRESH_IN_PROGRESS` y el `429` con `details.kind` que la importación suma en el
-  borrador del backend, sin cambio de código.
+  `409 PORTAL_REFRESH_IN_PROGRESS` y el `429` con `details.kind` que la importación suma en la
+  spec del backend, sin cambio de código.
 - `specs/features/academic-record/academic-record.spec.md`. RF-REC-6 sigue rigiendo la
   importación. La recarga no pasa por `PortalConsentView` y lleva su propio aviso (decisión B4).
 - `specs/features/schedule/schedule.spec.md`. `HorarioController.reload()` también corre una vez
@@ -778,12 +793,14 @@ Todos son propuesta y siguen el estado de esta spec.
   que faltaba, las correcciones de la importación que ya recoge el contrato del backend
   (representantes, asistencia y `400 INVALID_REQUEST_BODY`), lo que la importación comparte con
   la recarga (tope de rechazos, guarda de un inicio de sesión a la vez y `details.kind`), el
-  `409 IMPORT_REQUIRED` por cambio de ciclo y la cota del presupuesto (hueco 5).
+  `409 IMPORT_REQUIRED` por cambio de ciclo y la cota del presupuesto, con su máximo de 65 000
+  (hueco 5).
 - `docs/specs/feature-index.md`. La fila 21.
-- `README.md:102`, siempre, en la frase que nombra la entrada a `/mis-notas` (RF-RCG-5). La misma
-  línea cambia además la fuente de `/mis-notas` con la decisión B10 y la frase «Nunca se
-  mezclan» con la decisión B12.
-- `AGENTS.md` y `KNOWLEDGE.md`, solo con la decisión B12.
+- `README.md:102`, en el PR de implementación, en la frase que nombra la entrada a `/mis-notas`
+  (RF-RCG-5). La misma línea cambia además la fuente de `/mis-notas` por la decisión B10 y la
+  frase «Nunca se mezclan» por la decisión B12.
+- `AGENTS.md` y `KNOWLEDGE.md`, en el PR de implementación, con el texto único de la decisión
+  B12.
 
 ## Qué NO entra
 
@@ -800,55 +817,64 @@ Todos son propuesta y siguen el estado de esta spec.
   (decisión B11) y cualquier cambio en las pantallas del docente.
 - Fechas por sesión de la asistencia o un porcentaje nuevo en el bloque.
 
-## Decisiones abiertas
+## Decisiones
 
-Ninguna está aprobada. La numeración no cambia aunque se resuelvan, porque la citan los
-requisitos.
+El dueño aprueba el 2026-09-26 todas las decisiones y todos los puntos en su opción
+recomendada, que es la que cada fila adopta por defecto (decisión 5 del dueño). La numeración
+no cambia, porque la citan los requisitos, y la columna «Alternativa» guarda lo que el dueño no
+elige.
 
 ### Decisiones del backend que cambian la app (B1 a B19)
 
-Llevan el número de «Decisiones abiertas» de la spec del backend, y su opción por defecto es la de
-allá, salvo B9. La opción por defecto del backend para B9 cambia la calculadora aprobada, así que
-la app adopta por defecto la opción que conserva lo aprobado y deja las del backend como
-alternativas.
+Llevan el número de las decisiones de la spec del backend, y su opción aprobada es la misma en
+las dos specs. En B9, la versión `0161dee` del backend adopta la opción de la app, que
+conserva los dos umbrales de la calculadora aprobada.
 
-| # | Decisión | Opción por defecto y efecto en la app | Alternativa |
+| # | Decisión | Opción aprobada el 2026-09-26 y efecto en la app | Alternativa |
 | --- | --- | --- | --- |
-| B1 | RS-BE-48 como corrección aparte | Sí. La app no cambia, pero ningún botón funciona sin RS-BE-48 en producción. Los menús de Asistencia y de Nota llegan con el mismo formato de lista, RS-BE-51 y RS-BE-52 leen los dos con `parseAulas` y, sin RS-BE-48, toda recarga termina en `502 PORTAL_UNREADABLE`, que la app muestra con su aviso. Por eso la app se publica solo con RS-BE-48 desplegado («Verificación»). | Publicarlo junto con la recarga, con la misma condición de publicación. |
+| B1 | RS-BE-48 como corrección aparte | Sí. RS-BE-48 va primero, en un PR propio del backend que lleva también la parte de delegados. La app no cambia, pero ningún botón funciona sin RS-BE-48 en producción. Los menús de Asistencia y de Nota llegan con el mismo formato de lista, RS-BE-51 y RS-BE-52 leen los dos con `parseAulas` y, sin RS-BE-48, toda recarga termina en `502 PORTAL_UNREADABLE`, que la app muestra con su aviso. Por eso la app se publica solo con RS-BE-48 desplegado («Verificación»). | Publicarlo junto con la recarga, con la misma condición de publicación. |
 | B2 | Endpoint propio o importación completa | `POST /portal-sync/refresh` y la hoja de RF-RCG-2. | Los botones abren `/portal-sync` con el consentimiento de RF-REC-6 en cada toque, y `/mis-notas` necesita además B13. |
-| B3 | Cupo, tope de rechazos y guarda de inicio de sesión | 5 por hora y 3 rechazos cada 15 minutos, contados junto con los de la importación con contraseña, que además comparte con la recarga la guarda de un solo inicio de sesión a la vez. La app muestra los textos de RF-RCG-4 sin citar números. | Otros números o una guarda solo entre recargas, que no cambian la app. |
+| B3 | Cupo, tope de rechazos y guarda de inicio de sesión | 5 recargas por hora, aparte de las 5 de la importación, y 3 rechazos cada 15 minutos, contados junto con los de la importación con contraseña, que además comparte con la recarga la guarda de un solo inicio de sesión a la vez. La app muestra los textos de RF-RCG-4 sin citar números. | Compartir las 5 por hora con la importación, otros números o una guarda solo entre recargas, que no cambian la app. |
 | B4 | Consentimiento en cada recarga | El aviso de la hoja aprobada y `consent: true` en cada recarga, sin tocar `PortalConsentView`. | Una casilla sin marcar, `Acepto que ULima++ lea en miUlima mis notas parciales y mi asistencia.`, que enciende «Actualizar» junto con los dos campos. |
-| B5 | Tabla, hora de lectura y migración `0015` | La app depende solo de la forma del contrato. | Otro guardado con la misma forma no cambia la app. |
+| B5 | Tabla, hora de lectura y migración `0015` | La tabla `student_portal_score` y las dos horas de lectura de `enrollment`, en la migración `0015`, con borrado en cascada desde la matrícula. Es una aprobación de diseño de BD, y aplicar la `0015` en producción sigue pidiendo un respaldo y el permiso del dueño en el momento del despliegue. La app depende solo de la forma del contrato. | Otro guardado con la misma forma no cambia la app. |
 | B6 | Nota simulada cuando la ULima publica la misma evaluación | Se ve la de la ULima, la simulada no se borra y vuelve si la ULima la retira (RF-RCG-7). | Borrar la simulada al guardar la de la ULima. |
 | B7 | Notas de la ULima sin pareja en el sílabo | Se ven en `/mis-notas`, no entran a la calculadora y la tarjeta avisa (RF-RCG-7). | Entran a la calculadora con su peso, aunque la suma pase de 100. |
 | B8 | «NP» | Se ve `NP` y cuenta como 0 en el promedio y en «Final». | No contarlo, o hacer fallar al curso hasta tener una muestra. |
-| B9 | Umbral único de aprobación | Ningún umbral único. Se conservan los dos de hoy, 11 para el aviso «Desaprobado» de la calculadora (`curso_card.dart:95`) y 10.5 para la insignia «Final» de `/mis-notas` (`mis_notas_page.dart:208`). Es la única opción que calza con la maqueta aprobada, que dibuja `prom < 11` y `fin >= 10.5` y pone los dos en «Qué no cambia». Difiere de la opción por defecto del backend. | 10.5 en las dos pantallas, que es la opción por defecto del backend y cambia la calculadora aprobada, porque el aviso baja de 11 a 10.5. U 11 en las dos si la ULima no redondea, que cambia la insignia «Final» aprobada. |
+| B9 | Umbral único de aprobación | Ningún umbral único. Se conservan los dos de hoy, 11 para el aviso «Desaprobado» de la calculadora (`curso_card.dart:95`) y 10.5 para la insignia «Final» de `/mis-notas` (`mis_notas_page.dart:208`). Es la única opción que calza con la maqueta aprobada, que dibuja `prom < 11` y `fin >= 10.5` y pone los dos en «Qué no cambia», y la misma del backend. | 10.5 en las dos pantallas, que cambia la calculadora aprobada, porque el aviso baja de 11 a 10.5. U 11 en las dos si la ULima no redondea, que cambia la insignia «Final» aprobada. |
 | B10 | Papel de `/mis-notas` y de las notas del docente | `/mis-notas` lee `GET /grades/me/ulima`, y las notas de `student_score` se quedan sin pantalla de alumno. | Mostrar las dos por evaluación, con la de la ULima mandando, o retirar la carga docente. |
 | B11 | Alertas de riesgo y chatbot | Siguen como hoy. | Que lean las notas de la ULima, cada uno con su enmienda. |
-| B12 | La regla «las notas son personales y no oficiales» | Cambia en el PR de implementación, en `AGENTS.md:58`, `KNOWLEDGE.md:72` y `README.md:102`, con el texto de abajo. | Otro texto, o no tocarla, y entonces la calculadora no puede mostrar las notas de la ULima. |
+| B12 | La regla «las notas son personales y no oficiales» | Cambia en el PR de implementación, en `AGENTS.md:58`, `KNOWLEDGE.md:72` y `README.md:102`, con el texto de abajo, que es el mismo en los dos repositorios. | Un texto distinto en cada repositorio, otro texto o no tocarla, y entonces la calculadora no puede mostrar las notas de la ULima. |
 | B13 | La importación completa también lee el panel Nota | No. | Sí, y la importación también actualizaría `/mis-notas`. |
 | B14 | Borrado de las notas de la ULima a pedido | Sin ruta nueva. | `DELETE /grades/me/ulima` y un botón en `/mis-notas`, con su spec. |
-| B15 | Medición desde `iad1` antes de publicar | Obligatoria, y la app se publica solo después de esa medición y del despliegue del backend. | Publicar confiando solo en el presupuesto de 60 s. |
-| B16 | Quién carga las evaluaciones del sílabo en ciclos futuros | La carga manual del dueño. Sin ella, todas las notas de la ULima quedan sin pareja y solo se ven en `/mis-notas`. | Una spec aparte para un cargador. |
+| B15 | Medición desde `iad1` antes de publicar | Obligatoria. Con la `0015` aplicada, el dueño corre tres recargas con su cuenta desde un despliegue en `iad1`. La app se publica después del despliegue del backend y solo si las tres terminan en 45 s o menos y sin `504`. | Otro tope, o publicar confiando solo en el presupuesto de 60 s. |
+| B16 | Quién carga las evaluaciones del sílabo en ciclos futuros | La carga manual del dueño antes de cada ciclo. Sin ella, todas las notas de la ULima quedan sin pareja y solo se ven en `/mis-notas`. | Una spec aparte para un cargador. |
 | B17 | Sondeos de solo lectura | Autorizados para V1 a V4 del backend. | Implementar sin sondear. |
 | B18 | Mostrar el «Promedio» de la ULima | No se muestra. | Mostrarlo en la tarjeta de `/mis-notas` cuando valga más que 0, con su campo en el contrato. |
 | B19 | Cambio de ciclo durante la recarga | El backend lee el ciclo de la ULima tras iniciar sesión y, si difiere del período activo, responde `409 IMPORT_REQUIRED` sin escribir nada y sin devolver el cupo. La app muestra el aviso de `IMPORT_REQUIRED` con «Cargar mis datos» (RF-RCG-4). Si el ciclo nuevo todavía no empieza, la importación no lo activa y la recarga sigue en ese `409` hasta la fecha de inicio, así que en ese lapso «Cargar mis datos» no lo resuelve. | Un código propio para ese caso, con su propio aviso en la app, que no lleve a `/portal-sync` a un alumno cuyo ciclo todavía no empieza. |
 
-Texto propuesto para B12, en el PR de implementación. En `AGENTS.md` y `KNOWLEDGE.md`, la regla
-pasa a decir `Las notas que el alumno registra en la calculadora son personales y no oficiales (simulated_grades). La calculadora muestra además, fijas y con la marca «ULima», las notas parciales que publica la ULima (GET /grades/me/ulima).`
+Texto aprobado para B12, que el PR de implementación escribe en `AGENTS.md` y `KNOWLEDGE.md`.
+El dueño pide un solo texto para los dos repositorios, así que es el mismo de la decisión 12 de
+la spec del backend y reemplaza a los dos textos que cada borrador propone por separado. «Las notas
+que el alumno registra en la calculadora son personales y no oficiales
+(`simulated_grades`). La calculadora muestra además, fijas y con la marca “ULima”, las
+notas parciales que publica la ULima, que guarda la tabla `student_portal_score`, escribe
+solo `POST /portal-sync/refresh` y lee `GET /grades/me/ulima`.»
+
 En `README.md:102`, la frase «Nunca se mezclan» pasa a describir esa convivencia. En esa misma
-línea, la fuente de `/mis-notas` pasa a `GET /grades/me/ulima` solo con la opción por defecto de
-B10, y la entrada a `/mis-notas` cambia siempre, porque depende de RF-RCG-5 y no de B12.
+línea, la fuente de `/mis-notas` pasa a `GET /grades/me/ulima` por la opción aprobada de B10, y
+la entrada a `/mis-notas` cambia porque depende de RF-RCG-5 y no de B12.
 
 ### Puntos que fija esta spec (D1 a D24)
 
-Ninguno figura en «Pedido y decisiones del dueño», así que la spec los fija con un valor por
-defecto que el dueño puede cambiar. Cuatro de ellos, D8, D11, D13 y D14, cambian por defecto lo
-que dibuja la maqueta aprobada, y su fila lo dice con «Cambia la maqueta aprobada». En esos
-cuatro, la alternativa es la maqueta. D7 y D15, además, suman cambios a la `CursoCard` más allá
-de los tres aprobados, como anota «Qué no cambia de la calculadora».
+La spec fija cada punto con un valor por defecto, y el dueño los aprueba todos en ese valor el
+2026-09-26. Cuatro de ellos, D8, D11, D13 y D14, cambian lo que dibuja la maqueta aprobada, y su
+fila lo dice con «Cambia la maqueta aprobada», así que el dueño aprueba con ellos esos cuatro
+retoques a la maqueta, cuya alternativa es la maqueta tal cual. D7 y D15, además, suman cambios
+a la `CursoCard` más allá de los tres aprobados, como anota «Qué no cambia de la calculadora». D12
+y D24 dejan los dos colores que no llegan a 4,5:1 como en el resto de la app, y D18 recoge el
+máximo de 65 000 del presupuesto del backend (decisión 6 del dueño).
 
-| # | Punto | Valor por defecto | Alternativa | Dónde |
+| # | Punto | Valor aprobado | Alternativa | Dónde |
 | --- | --- | --- | --- | --- |
 | D1 | Lugar del botón y de la hora en el bloque de asistencia | Una fila nueva bajo las horas y el anillo, con la hora a la izquierda y «Actualizar» a la derecha | El botón bajo el anillo y la hora bajo el título «Asistencia», que suma menos alto pero se corta con el texto grande | RF-RCG-8 |
 | D2 | Asistencia sin hora de lectura | No se pinta la línea | `Última lectura sin registrar` | RF-RCG-8 |
@@ -867,7 +893,7 @@ de los tres aprobados, como anota «Qué no cambia de la calculadora».
 | D15 | Aviso de sílabo que no coincide | La línea al final de la tarjeta del curso, que es un cambio a la `CursoCard` más allá de los tres aprobados | Sin aviso, o un aviso en la fila «Notas oficiales» | RF-RCG-7 |
 | D16 | Refresco de la calculadora tras importar | `recargarTodo()` en vez de `Get.delete` | Dejar el borrado y cerrar `/mis-notas` antes de abrir `/portal-sync` | RF-RCG-11 |
 | D17 | Vida del aviso rojo | En memoria, hasta el siguiente envío, «Cargar mis datos», el cierre de sesión o el cierre de la app | Guardarlo para mostrarlo al volver a abrir la app | RF-RCG-4 |
-| D18 | Plazo de la app | 90 s, como la importación, con la cota del presupuesto de RS-BE-50, cuyo peor caso es de 82 s con los valores por defecto y de 90 s con el máximo de 68 000, contados desde que el backend recibe la petición (hueco 5) | Pedir al backend que su fórmula reserve un margen para la red, o subir el plazo de la app a unos 100 s, más que el de la importación | RF-RCG-1 y RF-RCG-3 |
+| D18 | Plazo de la app | 90 s, como la importación, con la cota del presupuesto de RS-BE-50, que reserva 3 s para la red. Su peor caso es de 82 s con los valores por defecto y de 87 s con el máximo de 65 000, contados desde que el backend recibe la petición (hueco 5) | El máximo de 68 000 sin margen para la red, o subir el plazo de la app a unos 100 s, más que el de la importación | RF-RCG-1 y RF-RCG-3 |
 | D19 | Aviso de éxito | Ninguno, la hora nueva ya lo dice | Un `SnackBar` con `Notas y asistencia actualizadas.` | RF-RCG-3 |
 | D20 | Carpeta de pruebas | `test/HU37_jeff/`, la misma historia del backend | Otra carpeta | «Pruebas previstas» |
 | D21 | Dónde vive el código | `RecargaUlimaService` como `GetxService` permanente, piezas en `lib/components/recarga_ulima/` y funciones puras en `lib/domain/recarga_ulima/` | Sumar la recarga a `PortalSyncService`, que no es un servicio compartido | RF-RCG-1 |
@@ -970,5 +996,7 @@ Todas van en `test/HU37_jeff/` (D20), con datos inventados y el alumno `20230001
   misma revisión en Android con TalkBack.
 - La app se publica solo con el backend de RS-BE-48 a RS-BE-60 desplegado, incluido RS-BE-48,
   sin el cual ningún botón funciona (decisión B1), con `PORTAL_REFRESH_BUDGET_MS` dentro de la
-  cota de RS-BE-50, que lo hace compatible con el plazo de D18 (hueco 5), la migración `0015`
-  aplicada con su aprobación de BD y la medición de B15 hecha.
+  cota de RS-BE-50, con su máximo de 65 000, que lo hace compatible con el plazo de D18 (hueco
+  5), y con la medición de B15 hecha, con tres recargas de 45 s o menos y sin `504`. La migración `0015`
+  tiene aprobado su diseño de BD desde el 2026-09-26, y se aplica en producción solo con un
+  respaldo y el permiso del dueño en el momento del despliegue.
