@@ -11,10 +11,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:ulima_plus/components/calculadora/nota_tile.dart';
 import 'package:ulima_plus/configs/themes.dart';
+import 'package:ulima_plus/domain/malla/malla_entities.dart';
 import 'package:ulima_plus/models/evaluation_model.dart';
 import 'package:ulima_plus/pages/calculadora/calculadora_controller.dart';
 import 'package:ulima_plus/pages/calculadora/calculadora_page.dart';
 import 'package:ulima_plus/services/api_client.dart';
+import 'package:ulima_plus/services/courses_service.dart';
+import 'package:ulima_plus/services/evaluations_service.dart';
 import 'package:ulima_plus/services/recarga_ulima_service.dart';
 
 import 'recarga_dobles.dart';
@@ -134,6 +137,33 @@ Map<String, dynamic> _vistaCon(
   lastReadAt: lastReadAt,
   courses: [cursoJson(lastReadAt: lastReadAt, assessments: evaluaciones)],
 );
+
+/// `GET /grades/me/courses` con la sección 81 y su sílabo, que
+/// `CoursesService` lee de `cursos` y `EvaluationSyllabusService` de
+/// `syllabi`.
+Map<String, dynamic> _cursosDelBackend() => <String, dynamic>{
+  'cursos': [
+    {
+      'id': '690417',
+      'nombre': 'TALLER DE PROTOTIPADO',
+      'ciclo': '2026-2',
+      'secciones': [
+        {'idSeccion': '81', 'codigoSeccion': '812'},
+      ],
+    },
+  ],
+  'syllabi': [
+    {
+      'cursoId': '81',
+      'cursoNombre': 'TALLER DE PROTOTIPADO',
+      'evaluaciones': [
+        {'id': '5011', 'nombre': 'Examen escrito', 'sigla': 'EV01', 'peso': 15},
+        {'id': '5012', 'nombre': 'Práctica', 'sigla': 'PC01', 'peso': 25},
+        {'id': '5013', 'nombre': 'Exposición', 'sigla': 'EX01', 'peso': 20},
+      ],
+    },
+  ],
+};
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -457,6 +487,81 @@ void main() {
       expect(api.cuerposDe('/grades/me/calculate'), hasLength(promedios));
       expect(find.text('ULima'), findsNothing);
       expect(find.text('Examen escrito'), findsOneWidget);
+    });
+  });
+
+  group('WIDGET · la carga real con la vista ya cargada (RF-RCG-7)', () {
+    testWidgets('_inicializarCursos pone las filas de la ULima de una vista '
+        'que llega antes que los cursos y las manda al promedio', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(800, 2400);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.reset);
+      final cursosDeSiempre = CoursesService.instance;
+      final silaboDeSiempre = EvaluationSyllabusService.instance;
+      addTearDown(() {
+        CoursesService.setTestInstance(cursosDeSiempre);
+        EvaluationSyllabusService.setTestInstance(silaboDeSiempre);
+      });
+      loguear(
+        alumna()
+          ..courseProgress = CourseProgress(
+            approvedLevels: <int>{},
+            approvedElectives: <String>{},
+            currentCourses: [
+              {'idSeccion': '81'},
+            ],
+          ),
+      );
+      final api = ApiRecargaFalsa(calcularPromedio: true)
+        ..responder(
+          _vistaGet,
+          _vistaCon([evaluacionJson(assessmentId: 5011, value: 15)]),
+        )
+        ..responder('GET /grades/me/courses', _cursosDelBackend())
+        ..responder('GET /grades/me/notes', {
+          'cursos': [
+            {
+              'sectionId': 81,
+              'notas': [
+                {'assessmentId': 5012, 'valor': 16},
+              ],
+            },
+          ],
+        });
+      CoursesService.setTestInstance(CoursesService(apiClient: api));
+      EvaluationSyllabusService.setTestInstance(
+        EvaluationSyllabusService(apiClient: api),
+      );
+      Get.put<RecargaUlimaService>(RecargaUlimaService(apiClient: api));
+      await RecargaUlimaService.to.cargar();
+      expect(RecargaUlimaService.to.vista, isNotNull);
+
+      // El controller real corre su onInit. El sílabo y los cursos llegan
+      // después de conectarUlima(), así que solo _inicializarCursos pone las
+      // filas de la ULima.
+      Get.put<CalculadoraController>(CalculadoraController(apiClient: api));
+      await tester.pumpWidget(
+        GetMaterialApp(
+          theme: const MaterialTheme(TextTheme()).light(),
+          home: const CalculadoraPage(),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      // La vista no vuelve a cambiar, así que su ever no rehace las filas.
+      expect(api.veces(_vistaGet), 1);
+      expect(find.text('Examen escrito 1'), findsOneWidget);
+      expect(find.text('ULima'), findsOneWidget);
+      expect(find.text('Práctica'), findsOneWidget);
+      expect(api.cuerposDe('/grades/me/calculate').single, {
+        'notas': [
+          {'valor': 15.0, 'peso': 15.0},
+          {'valor': 16.0, 'peso': 25.0},
+        ],
+      });
     });
   });
 }
