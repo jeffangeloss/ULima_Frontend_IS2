@@ -767,7 +767,9 @@ class _TarjetaDeTarea extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
                 color: encendida ? color : MaterialTheme.testLine(b),
-                width: 1.5,
+                // El borde más grueso de la encendida acompaña al color
+                // (RF-TEST-13).
+                width: encendida ? 1.5 : 1,
               ),
               boxShadow: encendida
                   ? [

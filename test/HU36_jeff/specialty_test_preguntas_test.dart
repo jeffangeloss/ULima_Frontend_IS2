@@ -102,6 +102,8 @@ void _duelo() {
         final d = _decoracion(tester, valor);
         expect(d.color, MaterialTheme.cardBg(b));
         expect(d.border!.top.color, MaterialTheme.testLine(b));
+        // El borde de 1 px, que pasa a 1,5 solo en la encendida.
+        expect(d.border!.top.width, 1);
         expect(_baldosa(tester, valor).color, isNull);
       }
       expect(
@@ -124,6 +126,7 @@ void _duelo() {
       expect(d.boxShadow!.single.spreadRadius, 4);
       expect(_baldosa(tester, 'top').color, _swClaro);
       expect(_baldosa(tester, 'bottom').apagada, isTrue);
+      expect(_decoracion(tester, 'bottom').border!.top.width, 1);
       final otra = tester.widget<Text>(find.text('Tarea de prueba uno abajo'));
       expect(otra.style!.color, MaterialTheme.testInk2(Brightness.light));
       expect(otra.style!.fontWeight, FontWeight.w600);
