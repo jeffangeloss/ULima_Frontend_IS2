@@ -120,6 +120,9 @@ class CapaDeArranque extends StatefulWidget {
   @visibleForTesting
   static EscenaDelPaso? get pasoActual => _estado?._escenaDelPaso.value;
 
+  /// Ulises en el paso al horario, para las pruebas.
+  static const Key claveDeUlisesDelPaso = Key('capa-ulises-del-paso');
+
   @override
   State<CapaDeArranque> createState() => _CapaDeArranqueState();
 }
@@ -572,7 +575,10 @@ class _CapaDeArranqueState extends State<CapaDeArranque>
                           size: Size.infinite,
                           painter: _PintorDeLaCapa(this),
                         ),
-                        _UlisesDelPaso(escena: _escenaDelPaso),
+                        _UlisesDelPaso(
+                          escena: _escenaDelPaso,
+                          opacidadDeLaCapa: _opacidad,
+                        ),
                       ],
                     ),
                   ),
@@ -664,44 +670,54 @@ class _PintorDeLaCapa extends CustomPainter {
 /// Ulises en el paso al horario, en una capa aislada, como en el
 /// recibimiento (RF-BIEN-18).
 class _UlisesDelPaso extends StatelessWidget {
-  const _UlisesDelPaso({required this.escena});
+  const _UlisesDelPaso({required this.escena, required this.opacidadDeLaCapa});
 
   final ValueNotifier<EscenaDelPaso?> escena;
+
+  /// En los fundidos, Ulises se desvanece con lo que pinta la capa
+  /// (RF-BIEN-11 y RF-BIEN-15).
+  final ValueNotifier<double> opacidadDeLaCapa;
 
   @override
   Widget build(BuildContext context) => ValueListenableBuilder<EscenaDelPaso?>(
     valueListenable: escena,
-    builder: (context, e, _) {
-      final PoseDeUlises? pose = e?.ulises;
-      if (pose == null || pose.opacidad <= 0) return const SizedBox.shrink();
-      return Stack(
-        children: [
-          Positioned(
-            left: pose.centro.dx - pose.lado / 2,
-            top: pose.centro.dy - pose.lado / 2,
-            child: RepaintBoundary(
-              child: Opacity(
-                opacity: pose.opacidad.clamp(0.0, 1.0),
-                child: Transform.rotate(
-                  angle: pose.giro,
-                  child: Transform.scale(
-                    scaleX: pose.escalaX,
-                    scaleY: pose.escalaY,
-                    child: ClipOval(
-                      child: Image.asset(
-                        'assets/images/ulises_chatbot.png',
-                        width: pose.lado,
-                        height: pose.lado,
-                        fit: BoxFit.cover,
-                      ),
+    builder: (context, e, _) => ValueListenableBuilder<double>(
+      valueListenable: opacidadDeLaCapa,
+      builder: (context, capa, _) => _ulises(e?.ulises, capa),
+    ),
+  );
+
+  Widget _ulises(PoseDeUlises? pose, double capa) {
+    final opacidad = (pose?.opacidad ?? 0) * capa;
+    if (pose == null || opacidad <= 0) return const SizedBox.shrink();
+    return Stack(
+      children: [
+        Positioned(
+          left: pose.centro.dx - pose.lado / 2,
+          top: pose.centro.dy - pose.lado / 2,
+          child: RepaintBoundary(
+            child: Opacity(
+              opacity: opacidad.clamp(0.0, 1.0),
+              child: Transform.rotate(
+                angle: pose.giro,
+                child: Transform.scale(
+                  scaleX: pose.escalaX,
+                  scaleY: pose.escalaY,
+                  child: ClipOval(
+                    key: CapaDeArranque.claveDeUlisesDelPaso,
+                    child: Image.asset(
+                      'assets/images/ulises_chatbot.png',
+                      width: pose.lado,
+                      height: pose.lado,
+                      fit: BoxFit.cover,
                     ),
                   ),
                 ),
               ),
             ),
           ),
-        ],
-      );
-    },
-  );
+        ),
+      ],
+    );
+  }
 }

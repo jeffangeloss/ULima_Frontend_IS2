@@ -35,6 +35,7 @@ class DatosDelPaso {
     required this.lugarDeLaConversacion,
     required this.avatar,
     required this.colorDeFondo,
+    required this.colorDeLaPagina,
   });
 
   /// La franja, de borde a borde desde arriba, con sus esquinas de 26 dp.
@@ -54,6 +55,9 @@ class DatosDelPaso {
 
   /// El fondo de la conversación, que también tapa el avatar en la imagen.
   final Color colorDeFondo;
+
+  /// El fondo de /home, bajo su cabecera.
+  final Color colorDeLaPagina;
 
   /// La capa descarta la imagen y el texto medido al retirarse.
   void desechar() {
@@ -267,6 +271,16 @@ void pintarElPaso(
   DatosDelPaso datos,
   DestinoDeLaSalida? destino,
 ) {
+  // Mientras el cuerpo de /home sube, la capa corre la página entera, así que
+  // lo que baja de su cabecera asoma bajo la franja. Una banda del fondo de
+  // /home lo tapa, y el cuerpo se ve subir desde la cabecera (RF-BIEN-11).
+  if (destino != null && e.paginaOpacidad > 0 && e.paginaDy > 0) {
+    canvas.drawRect(
+      Rect.fromLTWH(e.franja.left, e.franja.bottom, e.franja.width, e.paginaDy),
+      Paint()..color = datos.colorDeLaPagina,
+    );
+  }
+
   // La conversación y el compositor, sobre su fondo, sin el avatar del que
   // sale Ulises.
   if (e.opacidadDeLaConversacion > 0) {

@@ -240,13 +240,17 @@ class _BienvenidaPageState extends State<BienvenidaPage>
   }
 
   DatosDelPaso? _datosDelPaso() {
-    final sello = PiezasDelSello.medir(context, _claveDelSello);
+    final sello = PiezasDelSello.medir(_claveDelSello);
+    // La franja se mide con el contexto del sello, que está bajo el Material.
+    final contextoDelSello = _claveDelSello.currentContext;
     final caja =
         _claveDeLaConversacion.currentContext?.findRenderObject()
             as RenderRepaintBoundary?;
-    if (sello == null) return null;
-    if (caja == null || !caja.hasSize) {
-      sello.desechar();
+    if (sello == null ||
+        contextoDelSello == null ||
+        caja == null ||
+        !caja.hasSize) {
+      sello?.desechar();
       return null;
     }
     final b = Theme.brightnessOf(context);
@@ -257,7 +261,7 @@ class _BienvenidaPageState extends State<BienvenidaPage>
         0,
         0,
         MediaQuery.sizeOf(context).width,
-        CabeceraConSello.alto(context),
+        CabeceraConSello.alto(contextoDelSello),
       ),
       colorDeLaFranja: MaterialTheme.bienvenidaFranja(b),
       sello: sello,
@@ -267,6 +271,7 @@ class _BienvenidaPageState extends State<BienvenidaPage>
           ? null
           : avatar.localToGlobal(Offset.zero) & avatar.size,
       colorDeFondo: MaterialTheme.pageBg(b),
+      colorDeLaPagina: Theme.of(context).colorScheme.surface,
     );
   }
 
@@ -379,7 +384,10 @@ class _BienvenidaPageState extends State<BienvenidaPage>
             // finishAutofillContext (RF-BIEN-6).
             body: AutofillGroup(
               onDisposeAction: AutofillContextAction.cancel,
-              child: _cuerpo(context),
+              // Con el contexto del cuerpo, bajo el Material del Scaffold,
+              // así que las medidas del texto usan el estilo de la app y no el
+              // de error de MaterialApp (RF-BIEN-2 y RF-BIEN-16).
+              child: Builder(builder: _cuerpo),
             ),
           ),
         ),

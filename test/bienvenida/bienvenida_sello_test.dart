@@ -11,12 +11,10 @@
 // lib/pages/bienvenida/bienvenida_page.dart.
 
 import 'dart:async';
-import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:ulima_plus/components/header/app_header.dart';
@@ -75,25 +73,8 @@ Future<void> _montar(
   await tester.pump();
 }
 
-/// Carga Roboto del SDK de Flutter con el nombre de familia del tema, como
-/// test/HU23_jeff/chats_pestana_test.dart. Con la fuente de pruebas cada letra
-/// mide 1 em y la cabecera de /home no cabe con el texto al 200 %.
-Future<void> _cargarRoboto() async {
-  final raiz = Platform.environment['FLUTTER_ROOT'];
-  expect(raiz, isNotNull, reason: 'flutter test fija FLUTTER_ROOT');
-  final archivo = File(
-    '$raiz/bin/cache/artifacts/material_fonts/Roboto-Regular.ttf',
-  );
-  expect(archivo.existsSync(), isTrue, reason: archivo.path);
-  final cargador = FontLoader('Roboto')
-    ..addFont(
-      Future<ByteData>.value(ByteData.sublistView(archivo.readAsBytesSync())),
-    );
-  await cargador.load();
-}
-
 void main() {
-  setUpAll(_cargarRoboto);
+  setUpAll(cargarRoboto);
 
   setUp(() {
     Get.testMode = true;

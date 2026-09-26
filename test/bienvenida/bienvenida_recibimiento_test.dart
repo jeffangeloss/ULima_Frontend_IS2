@@ -10,11 +10,9 @@
 // Archivos probados lib/pages/bienvenida/widgets/recibimiento.dart y
 // lib/pages/bienvenida/widgets/vuelo_de_ulises.dart.
 
-import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:ulima_plus/components/logo/escena_del_logo.dart';
@@ -23,6 +21,7 @@ import 'package:ulima_plus/domain/bienvenida/bienvenida_turnos.dart';
 import 'package:ulima_plus/pages/bienvenida/widgets/compositor.dart';
 import 'package:ulima_plus/pages/bienvenida/widgets/recibimiento.dart';
 import 'package:ulima_plus/pages/bienvenida/widgets/vuelo_de_ulises.dart';
+import 'package:ulima_plus/pages/specialty_test/widgets/ulises_bubble.dart';
 import 'package:ulima_plus/services/session_navigation.dart';
 
 import 'apoyo_bienvenida.dart';
@@ -36,27 +35,8 @@ Map<String, Object> _conPose() => <String, Object>{argumentoDePose: _pose()};
 Finder _fondo() => find.byKey(Recibimiento.claveDelFondo);
 Finder _ulises() => find.byKey(Recibimiento.claveDeUlises);
 
-/// Carga Roboto del SDK de Flutter con el nombre de familia del tema.
-Future<void> _cargarRoboto() async {
-  final raiz = Platform.environment['FLUTTER_ROOT'];
-  expect(
-    raiz,
-    isNotNull,
-    reason: 'flutter test fija FLUTTER_ROOT; sin él no hay Roboto que medir',
-  );
-  final archivo = File(
-    '$raiz/bin/cache/artifacts/material_fonts/Roboto-Regular.ttf',
-  );
-  expect(archivo.existsSync(), isTrue, reason: archivo.path);
-  final cargador = FontLoader('Roboto')
-    ..addFont(
-      Future<ByteData>.value(ByteData.sublistView(archivo.readAsBytesSync())),
-    );
-  await cargador.load();
-}
-
 void main() {
-  setUpAll(_cargarRoboto);
+  setUpAll(cargarRoboto);
   setUp(() {
     Get.testMode = true;
     Get.reset();
@@ -286,6 +266,39 @@ void main() {
     expect(nuevo.top - si.bottom, 10);
     expect(nuevo.bottom, 667 - 26);
   });
+
+  for (final escala in [1.3, 2.0]) {
+    testWidgets('con el texto a $escala, Ulises salta al avatar real del '
+        'primer grupo y la subida llega a la franja real (RF-BIEN-2, '
+        'RF-BIEN-4 y RF-BIEN-16)', (tester) async {
+      await montarLaBienvenida(
+        tester,
+        Bienvenida(),
+        argumentos: _conPose(),
+        escala: escala,
+      );
+      await avanzar(tester, 3000);
+      await tester.tap(find.text(TextosDeLaBienvenida.siEntrar));
+      // La burbuja ya terminó de entrar y Ulises todavía no se posa.
+      await avanzar(tester, 500);
+      final recibimiento = tester.widget<Recibimiento>(
+        find.byType(Recibimiento),
+      );
+      final avatar = tester.getRect(find.byType(UlisesAvatar).first);
+      expect(recibimiento.avatar.center.dx, closeTo(avatar.center.dx, 0.5));
+      expect(recibimiento.avatar.center.dy, closeTo(avatar.center.dy, 0.5));
+      expect(recibimiento.avatar.width, avatar.width);
+      // Al final de la subida el fondo es la franja, con su alto real.
+      await avanzar(tester, 450);
+      final cuadro = Recibimiento.cuadroActual(tester.element(_fondo()));
+      final franja = tester.getRect(find.byType(CabeceraConSello));
+      expect(
+        cuadro.areaDelFondo?.height ?? franja.height,
+        closeTo(franja.height, 0.5),
+      );
+      await avanzar(tester, 2000);
+    });
+  }
 
   for (final escala in [1.0, 1.3, 2.0]) {
     testWidgets('en 375 × 667 con el texto a $escala, nada entra en el margen '

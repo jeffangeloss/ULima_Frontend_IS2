@@ -332,9 +332,19 @@ class PiezasDelSello {
   /// Mide el sello de [claveDelSello] con el estilo y la escala con que se
   /// dibuja, o null si todavía no tiene tamaño. Quien lo recibe desecha
   /// [ulima] con [desechar].
-  static PiezasDelSello? medir(BuildContext context, GlobalKey claveDelSello) {
-    final caja = claveDelSello.currentContext?.findRenderObject();
-    if (caja is! RenderBox || !caja.hasSize || !caja.attached) return null;
+  ///
+  /// El estilo, el tema y la escala salen del contexto del propio sello, y no
+  /// del de quien pregunta: por encima del Material del Scaffold el estilo
+  /// heredado es el de error de MaterialApp, en monospace y subrayado.
+  static PiezasDelSello? medir(GlobalKey claveDelSello) {
+    final context = claveDelSello.currentContext;
+    final caja = context?.findRenderObject();
+    if (context == null ||
+        caja is! RenderBox ||
+        !caja.hasSize ||
+        !caja.attached) {
+      return null;
+    }
     final sello = caja.localToGlobal(Offset.zero) & caja.size;
     final estilo = DefaultTextStyle.of(context).style
         .merge(SelloDelLogo.estilo(Theme.of(context).colorScheme))
@@ -357,12 +367,16 @@ class PiezasDelSello {
     );
     glifos.dispose();
     // La fila del sello centra en vertical la estrella, «ULIMA» y los «++»,
-    // así que cada pieza se mide desde el centro de su caja.
+    // así que cada pieza se mide desde el centro de su caja. La fila puede
+    // ser más baja que el texto, como en la franja, y entonces cada caja mide
+    // lo que la fila y su texto se pinta desde arriba.
     final izquierdaDeUlima =
         sello.left + SelloDelLogo.tamanoDeEstrella + SelloDelLogo.separacion;
+    final altoDeUlima = math.min(ulima.height, sello.height);
+    final altoDeLosMas = math.min(tamanoDeLosMas.height, sello.height);
     final esquinaDeLosMas = Offset(
       izquierdaDeUlima + ulima.width,
-      sello.center.dy - tamanoDeLosMas.height / 2,
+      sello.center.dy - altoDeLosMas / 2,
     );
     final mas = SelloDelLogo.medidasDeLosMas(
       tamano: tamanoDeLosMas,
@@ -378,7 +392,7 @@ class PiezasDelSello {
       ulima: ulima,
       origenDeUlima: Offset(
         izquierdaDeUlima,
-        sello.center.dy - ulima.height / 2,
+        sello.center.dy - altoDeUlima / 2,
       ),
       mas: <Offset>[for (final c in mas.centros) esquinaDeLosMas + c],
       largoDeLosMas: mas.largo,

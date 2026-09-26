@@ -4,8 +4,10 @@
 // `flutter test` no lo corre como suite. Todo dato es inventado.
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:ulima_plus/configs/themes.dart';
@@ -409,4 +411,25 @@ Future<void> llegarAE2(
   await tester.pump();
   await tester.tap(find.byType(BotonDeEnvio));
   await avanzar(tester, 2000);
+}
+
+/// Carga Roboto del SDK de Flutter con el nombre de familia del tema, para
+/// medir el texto como en la app. Con la letra de prueba, todas las
+/// familias miden lo mismo.
+Future<void> cargarRoboto() async {
+  final raiz = Platform.environment['FLUTTER_ROOT'];
+  expect(
+    raiz,
+    isNotNull,
+    reason: 'flutter test fija FLUTTER_ROOT; sin él no hay Roboto que medir',
+  );
+  final archivo = File(
+    '$raiz/bin/cache/artifacts/material_fonts/Roboto-Regular.ttf',
+  );
+  expect(archivo.existsSync(), isTrue, reason: archivo.path);
+  final cargador = FontLoader('Roboto')
+    ..addFont(
+      Future<ByteData>.value(ByteData.sublistView(archivo.readAsBytesSync())),
+    );
+  await cargador.load();
 }

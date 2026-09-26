@@ -241,7 +241,7 @@ class _RecibimientoState extends State<Recibimiento>
         // Tras un toque en reposo, la subida cuenta desde este cuadro.
         _respuestaEn ??= _ms;
         if (!_sinMovimiento) {
-          _destino ??= PiezasDelSello.medir(context, widget.claveDelSello);
+          _destino ??= PiezasDelSello.medir(widget.claveDelSello);
         }
         final desde = _ms - _respuestaEn!;
         if (!_selloPosado && desde >= _finDeLaSubida) {
@@ -327,7 +327,9 @@ class _RecibimientoState extends State<Recibimiento>
   /// (RF-BIEN-15).
   void _moverLaEstrella() {
     final m = _medidas!;
-    if (widget.conSesion == true || m.enConversacion) return;
+    // Con sesión, o mientras todavía no se sabe, la estrella no se mueve
+    // (RF-BIEN-21).
+    if (widget.conSesion != false || m.enConversacion) return;
     if (_sinMovimiento) {
       _estrella = m.estrella;
       _radio = m.radio;

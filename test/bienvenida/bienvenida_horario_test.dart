@@ -45,6 +45,7 @@ const _pantalla = Size(375, 667);
 const _avatar = Rect.fromLTWH(12, 130, 40, 40);
 const _burbuja = Rect.fromLTWH(12, 595, 60, 60);
 const _colorDeLaCabecera = Color(0xFF1E1E24);
+const _colorDeLaPagina = Color(0xFFFEFDFC);
 
 PiezasDelSello _sello() => PiezasDelSello(
   estrella: const Offset(142, 75),
@@ -66,6 +67,7 @@ DatosDelPaso _datos({Rect? avatar = _avatar}) => DatosDelPaso(
   lugarDeLaConversacion: const Rect.fromLTWH(0, 102, 375, 565),
   avatar: avatar,
   colorDeFondo: const Color(0xFFF5F5F7),
+  colorDeLaPagina: _colorDeLaPagina,
 );
 
 DestinoDeLaSalida _destino() => DestinoDeLaSalida.desdeMedida(
@@ -129,6 +131,8 @@ Future<Bienvenida> _hastaElPaso(
   WidgetTester tester, {
   bool informa = true,
   bool sinMovimiento = false,
+  double escala = 1,
+  void Function()? antesDeEntrar,
 }) async {
   final b = Bienvenida(auth: AuthDeLaBienvenida(alEntrar: alumnaDePrueba()));
   await montarLaBienvenida(
@@ -136,6 +140,7 @@ Future<Bienvenida> _hastaElPaso(
     b,
     argumentos: const {argumentoDeMotivo: MotivoDeLlegada.expirada},
     sinMovimiento: sinMovimiento,
+    escala: escala,
     conCapa: true,
     home: () => _HomeConBurbuja(informa: informa),
   );
@@ -144,6 +149,7 @@ Future<Bienvenida> _hastaElPaso(
   await tester.enterText(find.byType(TextField).first, 'secreta-de-prueba');
   // Un cuadro tras teclear, para que «Entrar» se encienda.
   await tester.pump();
+  antesDeEntrar?.call();
   await tester.tap(find.text(TextosDeLaBienvenida.entrar));
   // E3 entra 650 ms después y el paso empieza 900 ms después de E3.
   for (
@@ -156,6 +162,18 @@ Future<Bienvenida> _hastaElPaso(
   expect(CapaDeArranque.fase, isNot(FaseDeLaCapa.inactiva));
   return b;
 }
+
+/// La opacidad con que se ve Ulises en la capa durante el paso.
+double _opacidadDeUlisesEnLaCapa(WidgetTester tester) => tester
+    .widget<Opacity>(
+      find
+          .ancestor(
+            of: find.byKey(CapaDeArranque.claveDeUlisesDelPaso),
+            matching: find.byType(Opacity),
+          )
+          .first,
+    )
+    .opacity;
 
 /// La burbuja oculta mientras Ulises vuela, con su GestureDetector dentro.
 Finder _burbujaOculta() => find.descendant(
@@ -374,6 +392,149 @@ void main() {
       expect(CapaDeArranque.fase, FaseDeLaCapa.inactiva);
       expect(dura, lessThanOrEqualTo(300));
       expect(visto, isFalse);
+    });
+  });
+
+  group(
+    'el paso sale de lo que se ve (RF-BIEN-4, RF-BIEN-11 y RF-BIEN-16)',
+    () {
+      // Con la letra de prueba todas las familias miden lo mismo, así que el
+      // sello se mide con Roboto, como en la app.
+      setUpAll(cargarRoboto);
+
+      for (final escala in <double>[1.0, 1.3]) {
+        testWidgets('con el texto a $escala, «ULIMA», los «++» y la franja del '
+            'primer cuadro caen sobre los del sello real', (tester) async {
+          late Rect ulima;
+          late Rect losMas;
+          late Rect franja;
+          await _hastaElPaso(
+            tester,
+            escala: escala,
+            antesDeEntrar: () {
+              final sello = find.byType(SelloDelLogo);
+              ulima = tester.getRect(
+                find.descendant(of: sello, matching: find.text('ULIMA')),
+              );
+              losMas = tester.getRect(
+                find
+                    .descendant(of: sello, matching: find.byType(CustomPaint))
+                    .last,
+              );
+              franja = tester.getRect(find.byType(CabeceraConSello));
+            },
+          );
+          final e = CapaDeArranque.pasoActual!;
+          expect(e.escalaDeUlima, 1);
+          expect(e.origenDeUlima.dx, closeTo(ulima.left, 0.5));
+          expect(e.origenDeUlima.dy, closeTo(ulima.top, 0.5));
+          // Cada «+» va al 25 % y al 75 % de la caja de los «++», como los
+          // dibuja su pintor, y dentro de su alto.
+          expect(e.cruces, hasLength(2));
+          for (var i = 0; i < 2; i++) {
+            final c = e.cruces[i].centro;
+            expect(
+              c.dx,
+              closeTo(losMas.left + losMas.width * (0.25 + 0.5 * i), 0.5),
+            );
+            expect(c.dy, inInclusiveRange(losMas.top, losMas.bottom));
+          }
+          expect(e.franja.top, 0);
+          expect(e.franja.height, closeTo(franja.height, 0.5));
+          await avanzar(tester, 1800);
+        });
+      }
+    },
+  );
+
+  group('Ulises en los fundidos del paso (RF-BIEN-11 y RF-BIEN-15)', () {
+    testWidgets('con reducir movimiento, Ulises se desvanece con la capa en '
+        '220 ms', (tester) async {
+      await _hastaElPaso(tester, sinMovimiento: true);
+      await avanzar(tester, 16);
+      expect(CapaDeArranque.fase, FaseDeLaCapa.fundido);
+      await avanzar(tester, 96);
+      expect(CapaDeArranque.opacidad, inExclusiveRange(0, 1));
+      expect(
+        _opacidadDeUlisesEnLaCapa(tester),
+        closeTo(CapaDeArranque.opacidad, 0.05),
+      );
+      await avanzar(tester, 300);
+      expect(CapaDeArranque.fase, FaseDeLaCapa.inactiva);
+    });
+
+    testWidgets('si la cabecera no se mide, Ulises se desvanece con la capa en '
+        '300 ms', (tester) async {
+      await _hastaElPaso(tester, informa: false);
+      for (
+        var t = 0;
+        t < 500 && CapaDeArranque.fase != FaseDeLaCapa.fundido;
+        t += 16
+      ) {
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      expect(CapaDeArranque.fase, FaseDeLaCapa.fundido);
+      await avanzar(tester, 150);
+      expect(CapaDeArranque.opacidad, inExclusiveRange(0, 1));
+      expect(
+        _opacidadDeUlisesEnLaCapa(tester),
+        closeTo(CapaDeArranque.opacidad, 0.05),
+      );
+      await avanzar(tester, 400);
+      expect(CapaDeArranque.fase, FaseDeLaCapa.inactiva);
+    });
+  });
+
+  group('la cabecera de /home bajo la franja (RF-BIEN-11)', () {
+    test('mientras el cuerpo sube, una banda del fondo de /home tapa lo que '
+        'bajó de la cabecera, debajo de la conversación', () {
+      final datos = _datos();
+      final destino = _destino();
+      final e = pasoAlHorario(
+        ms: 450,
+        datos: datos,
+        destino: destino,
+        burbuja: _burbuja,
+        pantalla: _pantalla,
+      );
+      expect(e.paginaDy, greaterThan(1));
+      expect(e.paginaOpacidad, greaterThan(0));
+      final banda = Rect.fromLTWH(
+        e.franja.left,
+        e.franja.bottom,
+        e.franja.width,
+        e.paginaDy,
+      );
+      expect(
+        (Canvas canvas) => pintarElPaso(canvas, e, datos, destino),
+        paints..rect(rect: banda, color: _colorDeLaPagina),
+      );
+      // En el primer cuadro la página no se ve y no hay banda.
+      final inicio = pasoAlHorario(
+        ms: 0,
+        datos: datos,
+        destino: destino,
+        burbuja: _burbuja,
+        pantalla: _pantalla,
+      );
+      expect(
+        (Canvas canvas) => pintarElPaso(canvas, inicio, datos, destino),
+        isNot(paints..rect(color: _colorDeLaPagina)),
+      );
+      // Y cuando el cuerpo llegó, tampoco.
+      final fin = pasoAlHorario(
+        ms: 1000,
+        datos: datos,
+        destino: destino,
+        burbuja: _burbuja,
+        pantalla: _pantalla,
+      );
+      expect(fin.paginaDy, lessThan(0.5));
+      expect(
+        (Canvas canvas) => pintarElPaso(canvas, fin, datos, destino),
+        isNot(paints..rect(color: _colorDeLaPagina)),
+      );
+      datos.sello.ulima.dispose();
     });
   });
 }

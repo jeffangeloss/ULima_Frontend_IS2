@@ -139,6 +139,42 @@ void main() {
       await avanzar(tester, 2000);
     });
 
+    for (final ms in <int>[300, 1300]) {
+      testWidgets('con el token a los $ms ms y el texto a 2,0, Ulises aterriza '
+          'en su lugar con sesión, lejos de la estrella, que no se mueve '
+          '(RF-BIEN-2 y RF-BIEN-21)', (tester) async {
+        final b = Bienvenida(
+          auth: AuthDeLaBienvenida(
+            usuario: alumnaDePrueba(setupComplete: false),
+          ),
+          tokenGuardado: () => Future<String?>.delayed(
+            Duration(milliseconds: ms),
+            () => 'jwt-de-prueba',
+          ),
+        );
+        await montarLaBienvenida(tester, b, escala: 2);
+        final fondo = find.byKey(Recibimiento.claveDelFondo);
+        final antes = Recibimiento.estrellaActual(tester.element(fondo));
+        await avanzar(tester, 1900);
+        final estrella = Recibimiento.estrellaActual(tester.element(fondo));
+        expect(estrella.centro, antes.centro, reason: '«Si no cabe» no aplica');
+        expect(estrella.radio, antes.radio);
+        final ulises = tester.getRect(find.byKey(Recibimiento.claveDeUlises));
+        // El lugar de la maqueta con sesión: 104 dp a la izquierda y 138 dp
+        // debajo del centro de la estrella.
+        expect(
+          (ulises.center - (estrella.centro + const Offset(-104, 138)))
+              .distance,
+          lessThan(2),
+        );
+        expect(
+          (ulises.center - estrella.centro).distance,
+          greaterThanOrEqualTo(estrella.radio + 12 + ulises.width / 2 - 1),
+        );
+        await avanzar(tester, 3000);
+      });
+    }
+
     testWidgets('el sello late al posarse, sin respuesta del alumno', (
       tester,
     ) async {
