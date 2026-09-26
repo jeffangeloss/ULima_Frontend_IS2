@@ -12,6 +12,8 @@ targets:
   - ../../../lib/pages/perfil/perfil.dart
   - ../../../lib/services/session_navigation.dart
   - ../../../lib/services/api_client.dart
+  - ../../../lib/components/google_sign_in_button.dart
+  - ../../../lib/components/google_sign_in_button_stub.dart
   - ../../../lib/components/google_sign_in_button_web.dart
   - ../../../lib/components/chatbot_bubble.dart
   - ../../../lib/components/logo/**
@@ -72,6 +74,12 @@ targets:
 > escribe con la implementación.
 > Donde esta spec y la maqueta difieren, manda la spec, y `docs/images/UI/bienvenida/README.md`
 > lista las diferencias.
+> Enmienda técnica del 2026-09-26 a los targets, que no cambia ningún comportamiento aprobado.
+> Suma `lib/components/google_sign_in_button.dart` y `lib/components/google_sign_in_button_stub.dart`,
+> la fachada del botón de Google y su rama de Android e iOS. El botón de Google que aprueba B-25,
+> el oficial de GIS en web con su logo, recibe su configuración por la firma de esa fachada
+> (RF-BIEN-6 y decisión B-35), así que las dos ramas de la fachada cambian con ella. En Android e
+> iOS la rama sigue sin dibujar nada, porque ahí va el botón propio con el logo oficial.
 
 ## User Stories
 
@@ -1327,6 +1335,7 @@ token y cambiaba RS-BE-38 del backend y `docs/specs/api-contracts.md`.
 | `lib/pages/password_reset/forgot_password_page.dart` y `reset_password_page.dart` | Encienden la cabecera con el sello y declaran íconos claros en la barra de estado (RF-BIEN-20) |
 | `lib/pages/perfil/perfil.dart` | Solo la posición del aviso «Código enviado», que sale abajo porque aparece sobre `/reset-password` (RF-BIEN-20) |
 | `lib/components/google_sign_in_button_web.dart` | `renderButton` con el `GSIButtonConfiguration` que sale de los valores de `lib/domain/bienvenida/`, y vuelve a dibujarse si cambia el tema (RF-BIEN-6) |
+| `lib/components/google_sign_in_button.dart` y `google_sign_in_button_stub.dart` | La firma de `googleSignInButton` recibe la configuración de GIS. En Android e iOS la rama del stub sigue sin dibujar nada (enmienda técnica del 2026-09-26 a los targets, RF-BIEN-6 y decisión B-25) |
 | `lib/components/chatbot_bubble.dart` | Informa su lugar y queda oculta hasta que Ulises aterriza solo cuando la capa se lo pide en el paso al horario (decisión B-16 y RF-BIEN-11) |
 | `lib/pages/splash/**` | La capa permanente del `builder` suma su entrada para el paso al horario de la bienvenida (decisión B-33 y RF-SPL-4) |
 | `lib/components/portal_consent/portal_consent_view.dart` | Solo el comentario de cabecera, que nombra `/registro`. La bienvenida usa sus constantes y Portal Sync sigue usando la pantalla |
