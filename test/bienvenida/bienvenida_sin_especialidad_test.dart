@@ -47,6 +47,23 @@ void main() {
       expect(b.delAlumno, isEmpty);
     });
 
+    test('con el token y la configuración completa, o un docente, la visita '
+        'se despide y pide el paso al horario (RF-BIEN-21)', () async {
+      for (final usuario in [alumnaDePrueba(), docenteDePrueba()]) {
+        final b = Bienvenida(
+          auth: AuthDeLaBienvenida(usuario: usuario),
+          token: 'jwt-de-prueba',
+        );
+        await b.visitar();
+        expect(b.deUlises, [TextosDeLaBienvenida.e3]);
+        expect(b.controlador.turno.value, TurnoDeLaBienvenida.pasoAlHorario);
+        expect(b.controlador.conSesion, isTrue);
+        expect(b.controlador.test, isNull);
+        expect(b.rutas, isEmpty);
+        Get.reset();
+      }
+    });
+
     test('sin token, o con un motivo, la llegada es la de siempre aunque '
         'currentUser quede en memoria', () async {
       final sinToken = Bienvenida(

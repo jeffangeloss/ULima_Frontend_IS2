@@ -4,8 +4,15 @@
 // (specs/features/bienvenida/bienvenida.spec.md).
 // RF-BIEN-6. LoginController deja de navegar y devuelve el desenlace, atrapa
 // el fallo crudo de la red y apaga `submitting`, y vacía sus campos al
-// salir. Las Tareas 23 y 27 suman los turnos E1, E2 y E3.
-// Archivo probado lib/pages/login/login_controller.dart.
+// salir. Los turnos E1, E2 y E3, con el código, la contraseña, Google en
+// Android, iOS y web, el error, sin conexión, «Soy nuevo», «¿Olvidaste tu
+// contraseña?» y el destino según el rol y la configuración. Mientras se
+// espera un login el compositor no responde, y el desenlace que llega en
+// otra visita se descarta (BR-AUTH-F-08 y RF-BIEN-1). El autocompletado de
+// E1 y E2 en un mismo grupo.
+// Archivos probados lib/pages/login/login_controller.dart,
+// lib/pages/bienvenida/bienvenida_controller.dart y
+// lib/pages/bienvenida/widgets/compositor.dart.
 
 import 'dart:async';
 
@@ -482,16 +489,28 @@ void main() {
     test(
       '«Soy nuevo» en E1 y en E2 vacía el login y empieza el registro',
       () async {
+        void comprobar(Bienvenida b) {
+          expect(b.delAlumno.last, TextosDeLaBienvenida.soyNuevo);
+          expect(b.login.codeController.text, '');
+          expect(b.login.passwordController.text, '');
+          expect(b.controlador.turno.value, TurnoDeLaBienvenida.n1Codigo);
+          expect(b.controlador.registro, isNotNull);
+          expect(b.deUlises.sublist(b.deUlises.length - 2), [
+            TextosDeLaBienvenida.n1a,
+            TextosDeLaBienvenida.n1b,
+          ]);
+        }
+
+        final enE1 = Bienvenida();
+        await enE1.visitar();
+        enE1.controlador.responderAlSaludo(yaUsa: true);
+        enE1.login.codeController.text = '20230001';
+        enE1.controlador.soyNuevo();
+        comprobar(enE1);
+        Get.reset();
         final b = await enE2();
         b.controlador.soyNuevo();
-        expect(b.delAlumno.last, TextosDeLaBienvenida.soyNuevo);
-        expect(b.login.codeController.text, '');
-        expect(b.login.passwordController.text, '');
-        expect(b.controlador.turno.value, TurnoDeLaBienvenida.n1Codigo);
-        expect(b.deUlises.sublist(b.deUlises.length - 2), [
-          TextosDeLaBienvenida.n1a,
-          TextosDeLaBienvenida.n1b,
-        ]);
+        comprobar(b);
       },
     );
 

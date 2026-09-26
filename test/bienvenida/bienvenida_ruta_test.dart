@@ -4,10 +4,15 @@
 // (specs/features/bienvenida/bienvenida.spec.md).
 // RF-BIEN-1 y B-21. offAllToLogin suma el motivo de la llegada como argumento
 // de ruta. El 401 pasa `expirada` y su aviso sale abajo (B-29). El cierre de
-// sesión y «Volver a iniciar sesión» del Perfil no pasan motivo. La Tarea 29
-// suma la ruta de la bienvenida y sus visitas.
-// Archivos probados lib/services/session_navigation.dart y
-// lib/services/api_client.dart.
+// sesión y «Volver a iniciar sesión» del Perfil no pasan motivo. Cada montaje
+// es una visita, con el primer cuadro sacado de los argumentos, el reinicio
+// que cierra los tramos, y lo que una visita vieja deja en vuelo, que no toca
+// la nueva. La Tarea 29 suma que /login muestra la bienvenida y que
+// /registro sale.
+// Archivos probados lib/services/session_navigation.dart,
+// lib/services/api_client.dart,
+// lib/pages/bienvenida/bienvenida_controller.dart y
+// lib/pages/bienvenida/bienvenida_page.dart.
 
 import 'dart:async';
 import 'dart:convert';

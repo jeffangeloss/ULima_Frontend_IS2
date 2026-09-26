@@ -4,10 +4,15 @@
 // (specs/features/bienvenida/bienvenida.spec.md).
 // RF-BIEN-10 y la enmienda aprobada a la spec del test. Con el origen
 // `bienvenida`, el controlador del test se crea y se cierra sin GetX, no usa
-// la precarga ni la pausa, termina en el paso al horario y descarta lo que
-// responde después de cerrarse. Las Tareas 22, 25 y 27 suman las piezas
-// compactas y los turnos del test en la conversación.
-// Archivo probado lib/pages/specialty_test/specialty_test_controller.dart.
+// la precarga ni la pausa, empieza siempre en la pregunta 1, termina en el
+// paso al horario y descarta lo que responde después de cerrarse. Las
+// tarjetas compactas del duelo y la escala con solo sus opciones en el
+// compositor (B-13), y los turnos del test en la conversación, desde T0
+// hasta el resultado y la selección manual.
+// Archivos probados lib/pages/specialty_test/specialty_test_controller.dart,
+// lib/pages/specialty_test/widgets/question_view.dart,
+// lib/pages/bienvenida/bienvenida_controller.dart y
+// lib/pages/bienvenida/widgets/compositor_del_test.dart.
 
 import 'dart:async';
 
