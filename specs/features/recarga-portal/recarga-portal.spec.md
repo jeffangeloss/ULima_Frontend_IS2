@@ -49,7 +49,11 @@ targets:
 > Enmienda `grades.spec.md`, `course-detail.spec.md`, `portal-sync.spec.md`,
 > `academic-record.spec.md` (RF-REC-6) y `schedule.spec.md`, con la misma aprobación (ver
 > «Cambios en otras specs»). La rama `feat/recarga-notas-asistencia-fe` parte de `origin/main`
-> en `19fed1b`, y todas las referencias `archivo:línea` citan ese estado.
+> en `19fed1b`, y todas las referencias `archivo:línea` citan ese estado. Después trae `main` en
+> `87403a1`, con el test de especialidad, en un merge que conserva los dos lados en
+> `lib/main.dart`, `lib/services/auth_service.dart` y `lib/configs/themes.dart` y deja esta
+> funcionalidad en la fila 22 del índice, porque el test llega primero a `main` con la 21. Las
+> referencias `archivo:línea` siguen citando `19fed1b`.
 > Las pruebas de esta spec existen en `test/HU37_jeff/`, y cada requisito enlaza con `[@test]`
 > los archivos que lo verifican. Falta la revisión manual de «Verificación», y la app se publica
 > solo con las condiciones de B1 y B15. Los ejemplos usan datos inventados (alumno `20230001`,
@@ -830,7 +834,7 @@ aprobación.
   la recarga (tope de rechazos, guarda de un inicio de sesión a la vez y `details.kind`), el
   `409 IMPORT_REQUIRED` por cambio de ciclo y la cota del presupuesto, con su máximo de 65 000
   (hueco 5).
-- `docs/specs/feature-index.md`. La fila 21.
+- `docs/specs/feature-index.md`. La fila 22.
 - `README.md:102`, en el PR de implementación, en la frase que nombra la entrada a `/mis-notas`
   (RF-RCG-5). La misma línea cambia además la fuente de `/mis-notas` por la decisión B10 y la
   frase «Nunca se mezclan» por la decisión B12.
