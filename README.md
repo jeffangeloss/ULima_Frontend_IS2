@@ -127,22 +127,26 @@ Dart 3 no es decorativo: `UserModel.especialidades` usa la sintaxis de elemento 
 
 ### El arranque — [`lib/main.dart`](lib/main.dart)
 
-`main()` es `async` y hace doce cosas en este orden exacto (`lib/main.dart:48-84`). El orden es load-bearing: la restauración de sesión ocurre **antes** de `runApp`, así que la app nunca parpadea el login para un usuario que ya tenía sesión.
+Desde el splash animado (`specs/features/splash/splash.spec.md`), `main()` llama a `runApp` apenas
+bloquea la vertical, y la carga de hoy corre en paralelo con la intro en
+`lib/pages/splash/carga_del_arranque.dart`. La app se ve antes, porque el primer cuadro ya no espera
+la red, y la intro decide adónde ir cuando terminan su entrada y la carga.
 
-| # | Paso | Línea | Por qué |
+| # | Paso | Dónde | Por qué |
 |---:|:---|:---|:---|
-| 1 | `WidgetsFlutterBinding.ensureInitialized()` | `:49` | Requisito previo a tocar canales de plataforma. |
-| 2 | `SystemChrome.setPreferredOrientations([portraitUp])` | `:50-52` | La app arranca **bloqueada en vertical**. El landscape se habilita pantalla por pantalla. |
-| 3 | `Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform)` | `:53` | Siempre, aunque Firebase solo lo use el chat de sección. |
-| 4 | `LucideIcons.info.codePoint;` | `:54` | Expresión suelta, sin asignación ni llamada. Presumiblemente fuerza la carga del paquete de íconos. **No hay comentario que lo explique.** |
-| 5 | `Get.putAsync<StorageService>(() => StorageService().init(), permanent: true)` | `:57-60` | `init()` resuelve `SharedPreferences.getInstance()`. Primero, porque todos los demás lo necesitan. |
-| 6-8 | `Get.put` de `AuthService`, `AlertService`, `MallaService`, todos `permanent: true` | `:61-63` | Los cuatro únicos `GetxService` de la app. |
-| 9 | `await AuthService.to.tryRestoreSession()` | `:66` | `GET /auth/me` con el JWT del almacén seguro. |
-| 10 | Cálculo de `initialRoute` | `:67-82` | `postLoginRoute(user)` si restauró; `'/login'` si no. |
-| 11 | Precarga de alertas **solo si `!user.isTeacher`** | `:73-79` | `/alerts/me` lleva `requireRole` de alumno; un docente recibiría 403. El `catch` hace `print(...)`. |
-| 12 | `runApp(MyApp(initialRoute: initialRoute))` | `:84` | |
+| 1 | `WidgetsFlutterBinding.ensureInitialized()` | `main()` | Requisito previo a tocar canales de plataforma. |
+| 2 | `SystemChrome.setPreferredOrientations([portraitUp])` | `main()` | La app arranca bloqueada en vertical, y Horario habilita la horizontal. |
+| 3 | `runApp(MyApp(intro: …))` | `main()` | `GetMaterialApp` arranca en `/arranque`, una página `#E77330`, con la capa de la intro en su `builder`. |
+| 4 | `Firebase.initializeApp` y `StorageService` | `cargarElArranque()` | Si fallan, no hay ruta segura y la intro sigue en su bucle, como antes quedaba quieto el splash nativo. |
+| 5 | `registrarLosServicios()` | `cargarElArranque()` | `AuthService`, `AlertService`, `MallaService`, `AcademicRecordService`, `TimeBlocksService` y `SpecialtyTestService`, permanentes. |
+| 6 | `AuthService.tryRestoreSession()` | `cargarElArranque()` | `GET /auth/me` con el JWT. Un 401 borra la sesión sin navegar mientras la ruta es `/arranque`. |
+| 7 | La ruta de destino | `cargarElArranque()` | `postLoginRoute(user)` si restauró y `/login` si no. Las alertas ya no se piden aquí, porque las pide el home al montarse. |
+| 8 | La salida o el relevo | `CapaDeArranque` | Con sesión, la intro navega sin transición a `/home` abierto en Horario y reproduce su salida hasta la cabecera. Sin sesión, o sin especialidad, deja el logo en el centro y la bienvenida con Ulises toma el relevo en `/login`. |
 
-`MyApp` es un `StatelessWidget` que recibe `initialRoute` por constructor y monta el `GetMaterialApp` (`lib/main.dart:87-214`):
+En web no hay intro. `main()` conserva el orden de antes, con la carga y las alertas antes de
+`runApp`, y el único cambio es que el alumno sin especialidad arranca en `/login`.
+
+`MyApp` es un `StatelessWidget` que recibe `initialRoute` y la `intro` por constructor y monta el `GetMaterialApp` (`lib/main.dart:87-214`):
 
 ```dart
 final materialTheme = MaterialTheme(Theme.of(context).textTheme);
@@ -153,8 +157,10 @@ return GetMaterialApp(
   themeMode: ThemeMode.system,
   debugShowCheckedModeBanner: false,
   scrollBehavior: const AppScrollBehavior(),
-  initialRoute: initialRoute,
-  getPages: [ /* 15 rutas nombradas */ ],
+  initialRoute: initialRoute, // /arranque fuera de web
+  builder: (context, child) =>
+      CapaDeArranque(intro: intro, child: child ?? const SizedBox.shrink()),
+  getPages: paginasDeLaApp,
 );
 ```
 
@@ -169,7 +175,7 @@ return GetMaterialApp(
 
 **Orientaciones.** `main.dart` fija `portraitUp`, y cinco archivos amplían la rotación o la restauran. `_scheduleOrientations` y `_mallaMapOrientations` son la misma lista `[portraitUp, landscapeLeft, landscapeRight]`. Solo dos pantallas la aplican por sí mismas, el shell mientras la pestaña activa es "Horario" ([`lib/pages/home/home_page.dart`](lib/pages/home/home_page.dart)`:24-31` y `:56-60`) y la malla clásica en modo mapa (`malla_page.dart:32-51`). Las dos vuelven a vertical en su `dispose()`, y el shell también al cambiar de pestaña. La campana del header fuerza vertical antes de abrir las alertas y, al volver, devuelve la rotación del horario si la pestaña activa es Horario (`app_header.dart:100-109`). El horario hace lo mismo al abrir la ficha del curso, «Mis bloques», el formulario de un bloque nuevo y, para el docente, la lista de alumnos impedidos y en riesgo (`horario.dart:678-687`, `:1132-1138`, `:1163-1169` y `:1604-1617`). La hoja de acciones de un bloque repite el patrón al abrir su edición (`time_block_actions_sheet.dart:217-221`).
 
-> ⚠️ **Solo Android, iOS y Web arrancan.** `firebase_options.dart:27-45` lanza `UnsupportedError` para macOS, Windows y Linux, y `Firebase.initializeApp` está en el paso 3 de `main()`. Los directorios `macos/`, `windows/` y `linux/` existen en el repo pero la app moriría en el arranque en esas tres plataformas.
+> ⚠️ **Solo Android, iOS y Web arrancan.** `firebase_options.dart:27-45` lanza `UnsupportedError` para macOS, Windows y Linux, y `Firebase.initializeApp` está en el paso 4 del arranque. Los directorios `macos/`, `windows/` y `linux/` existen en el repo pero la app moriría en el arranque en esas tres plataformas.
 
 ---
 

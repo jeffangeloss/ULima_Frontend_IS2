@@ -9,18 +9,27 @@
 // Archivos probados lib/services/session_navigation.dart y, desde la Tarea
 // 12, lib/pages/splash/capa_de_arranque.dart.
 
+import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ulima_plus/components/logo/escena_del_logo.dart';
+import 'package:ulima_plus/main.dart';
+import 'package:ulima_plus/pages/splash/arranque_page.dart';
 import 'package:ulima_plus/pages/splash/capa_de_arranque.dart';
+import 'package:ulima_plus/pages/splash/carga_del_arranque.dart';
 import 'package:ulima_plus/pages/splash/estado_de_la_capa.dart';
 import 'package:ulima_plus/pages/splash/variantes/variantes.dart';
+import 'package:ulima_plus/services/auth_service.dart';
 import 'package:ulima_plus/services/session_navigation.dart';
+import 'package:ulima_plus/services/specialty_test_service.dart';
 import 'package:ulima_plus/services/splash_variante_service.dart';
+import 'package:ulima_plus/services/storage_service.dart';
 
 import 'apoyo_splash.dart';
 
@@ -424,4 +433,82 @@ void main() {
       );
     },
   );
+
+  group('la carga y main (RF-SPL-4, RF-SPL-12 y RF-SPL-18)', () {
+    setUp(reiniciarArranque);
+    tearDown(reiniciarArranque);
+
+    test('un fallo de Firebase o del almacén es un fallo antes de los '
+        'servicios', () async {
+      await expectLater(
+        cargarElArranque(
+          iniciarFirebase: () async => throw StateError('sin Firebase'),
+        ),
+        throwsA(isA<FalloAntesDeLosServicios>()),
+      );
+      expect(Get.isRegistered<AuthService>(), isFalse);
+    });
+
+    test('sin sesión guardada registra los servicios y devuelve /login, sin '
+        'red', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      FlutterSecureStorage.setMockInitialValues(<String, String>{});
+      final ruta = await cargarElArranque(iniciarFirebase: () async {});
+      expect(ruta, '/login');
+      expect(Get.isRegistered<StorageService>(), isTrue);
+      expect(Get.isRegistered<AuthService>(), isTrue);
+      // El servicio del test de especialidad llega con fcbf2e7 y sigue
+      // registrado, ahora desde la carga.
+      expect(Get.isRegistered<SpecialtyTestService>(), isTrue);
+    });
+
+    test('la carga ya no pide las alertas, que pide el home al montarse '
+        '(S-7)', () {
+      final fuente = File(
+        'lib/pages/splash/carga_del_arranque.dart',
+      ).readAsStringSync();
+      expect(fuente, isNot(contains('fetchAlerts')));
+    });
+
+    test('en web, el alumno sin especialidad arranca en /login', () {
+      expect(rutaInicialEnWeb('/setup-carrera'), '/login');
+      expect(rutaInicialEnWeb('/home'), '/home');
+      expect(rutaInicialEnWeb('/login'), '/login');
+    });
+
+    test('las GetPage se declaran una sola vez, con /arranque y las rutas del '
+        'test de especialidad', () {
+      final nombres = paginasDeLaApp.map((p) => p.name).toList();
+      expect(nombres.toSet(), hasLength(nombres.length));
+      expect(
+        nombres,
+        containsAll(<String>[
+          rutaDelArranque,
+          '/home',
+          '/login',
+          '/setup-carrera',
+          '/test-especialidad',
+        ]),
+      );
+    });
+
+    testWidgets('fuera de web la app arranca en /arranque con la capa activa', (
+      tester,
+    ) async {
+      telefono(tester);
+      await tester.pumpWidget(
+        MyApp(
+          intro: IntroDelArranque(
+            carga: CargaFalsa().call,
+            variantes: VariantesFijas(VarianteSplash.ensamble),
+            random: Random(1),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(find.byType(ArranquePage), findsOneWidget);
+      expect(find.byType(CapaDeArranque), findsOneWidget);
+      expect(CapaDeArranque.fase, isNot(FaseDeLaCapa.inactiva));
+    });
+  });
 }
