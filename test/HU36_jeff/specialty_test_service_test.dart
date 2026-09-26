@@ -341,6 +341,79 @@ void _evaluacion() {
         );
       },
     );
+
+    test('caso 12b: la evaluación del mismo alumno espera a la que sigue en '
+        'vuelo y sale cuando esta termina', () async {
+      _loguear();
+      final primera = Completer<Map<String, dynamic>>();
+      final api = ApiFalsaDelTest(evaluaciones: [primera, resultadoJson()]);
+      final s = _servicio(api);
+      final a = s.evaluate(const {'n': 1});
+      final b = s.evaluate(const {'n': 2});
+      await pumpEventQueue();
+      expect(api.cuerposDeEvaluacion, [
+        {'n': 1},
+      ]);
+      primera.complete(desempateJson());
+      expect(await a, isA<TiebreakStep>());
+      expect(await b, isA<ResultStep>());
+      expect(api.cuerposDeEvaluacion, [
+        {'n': 1},
+        {'n': 2},
+      ]);
+    });
+
+    testWidgets('caso 12c: si la anterior vence a los 20 s, la que espera '
+        'sale en ese momento', (tester) async {
+      _loguear();
+      final api = ApiFalsaDelTest(
+        evaluaciones: [Completer<Map<String, dynamic>>(), resultadoJson()],
+      );
+      final s = _servicio(api);
+      Object? error;
+      unawaited(
+        s
+            .evaluate(const {'n': 1})
+            .then((_) {}, onError: (Object e) => error = e),
+      );
+      EvaluationStep? paso;
+      unawaited(s.evaluate(const {'n': 2}).then((p) => paso = p));
+      await tester.pump(const Duration(seconds: 19, milliseconds: 999));
+      expect(api.cuerposDeEvaluacion, hasLength(1));
+      await tester.pump(const Duration(milliseconds: 1));
+      expect(
+        (error! as SpecialtyTestFailure).kind,
+        SpecialtyTestFailureKind.offline,
+      );
+      expect(api.cuerposDeEvaluacion, hasLength(2));
+      expect(paso, isA<ResultStep>());
+    });
+
+    test('caso 12d: otro alumno no espera la evaluación del anterior, y la '
+        'que esperaba con el anterior ya no sale', () async {
+      final auth = _loguear();
+      final primera = Completer<Map<String, dynamic>>();
+      final api = ApiFalsaDelTest(evaluaciones: [primera, resultadoJson()]);
+      final s = _servicio(api);
+      unawaited(
+        s.evaluate(const {'n': 1}).then((_) {}, onError: (Object _) {}),
+      );
+      Object? error;
+      unawaited(
+        s
+            .evaluate(const {'n': 2})
+            .then((_) {}, onError: (Object e) => error = e),
+      );
+      auth.userRx.value = alumno(code: 'alumna.b.test');
+      expect(await s.evaluate(const {'n': 3}), isA<ResultStep>());
+      primera.complete(desempateJson());
+      await pumpEventQueue();
+      expect(api.cuerposDeEvaluacion, [
+        {'n': 1},
+        {'n': 3},
+      ]);
+      expect(error, isA<SpecialtyTestFailure>());
+    });
   });
 }
 

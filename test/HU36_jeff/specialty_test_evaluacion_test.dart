@@ -188,12 +188,13 @@ void _controlador() {
 
     test('caso 8: seguir un test en pausa con todo respondido evalúa '
         'enseguida con la versión de su copia', () async {
+      final primera = Completer<Map<String, dynamic>>();
       final api = ApiFalsaDelTest(
         contenido: [
           contenidoJson(),
           contenidoJson(version: '2026-09-25.5'),
         ],
-        evaluaciones: [Completer<Map<String, dynamic>>(), resultadoJson()],
+        evaluaciones: [primera, resultadoJson()],
       );
       final t = prepararTest(api);
       final c = await montarControlador();
@@ -202,11 +203,42 @@ void _controlador() {
       c.pausar();
       Get.delete<SpecialtyTestController>();
       expect(t.service.paused!.answeredQuestions, 5);
+      // La evaluación de la ruta cerrada termina antes de seguir, así que la
+      // nueva no espera a nadie.
+      primera.complete(resultadoJson());
+      await pumpEventQueue();
+      final otra = await montarControlador();
+      otra.empezar();
+      expect(otra.fase.value, FaseDelTest.espera);
+      expect(api.cuerposDeEvaluacion, hasLength(2));
+      await pumpEventQueue();
+      expect(api.cuerposDeEvaluacion.last['version'], kVersionDePrueba);
+      expect(otra.fase.value, FaseDelTest.resultado);
+    });
+
+    test('caso 8b: pausar en la espera y seguir enseguida no manda otra '
+        'evaluación mientras la primera sigue en vuelo', () async {
+      final primera = Completer<Map<String, dynamic>>();
+      final api = ApiFalsaDelTest(evaluaciones: [primera, resultadoJson()]);
+      prepararTest(api);
+      final c = await montarControlador();
+      c.empezar();
+      responderPasos(c, respuestasEnOrden);
+      expect(c.fase.value, FaseDelTest.espera);
+      c.pausar();
+      Get.delete<SpecialtyTestController>();
       final otra = await montarControlador();
       otra.empezar();
       expect(otra.fase.value, FaseDelTest.espera);
       await pumpEventQueue();
-      expect(api.cuerposDeEvaluacion.last['version'], kVersionDePrueba);
+      expect(api.cuerposDeEvaluacion, hasLength(1));
+      expect(otra.errorDeEspera.value, isNull);
+      // El paso de la primera llega a una ruta cerrada y se descarta, y solo
+      // entonces sale la evaluación de la ruta nueva.
+      primera.complete(desempateJson());
+      await pumpEventQueue();
+      expect(api.cuerposDeEvaluacion, hasLength(2));
+      expect(api.cuerposDeEvaluacion[1], api.cuerposDeEvaluacion[0]);
       expect(otra.fase.value, FaseDelTest.resultado);
     });
   });

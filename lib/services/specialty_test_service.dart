@@ -154,6 +154,11 @@ class SpecialtyTestService extends GetxService {
 
   Future<void>? _lastInFlight;
 
+  /// Termina cuando la última evaluación pedida del dueño actual responde o
+  /// vence su plazo. La siguiente la espera, así que nunca hay dos en vuelo,
+  /// aunque la ruta que la pide se cierre y otra siga el test (RF-TEST-7).
+  Future<void>? _evaluateInFlight;
+
   /// El último resultado hay que pedirlo otra vez. Empieza en true, y una
   /// evaluación que termina en resultado lo vuelve a poner en true.
   bool _lastStale = true;
@@ -205,6 +210,7 @@ class SpecialtyTestService extends GetxService {
     _lastStatus.value = LastResultStatus.loading;
     _lastStale = true;
     _lastInFlight = null;
+    _evaluateInFlight = null;
   }
 
   /// `GET /specialty-test/content`. Cada llamada pide el contenido, salvo
@@ -258,10 +264,23 @@ class SpecialtyTestService extends GetxService {
   /// `cuerpoDeEvaluacion`. Si el paso es un resultado, el servidor ya lo
   /// guardó, así que el último resultado queda viejo aunque la app descarte
   /// el paso (RF-TEST-4). Lanza [SpecialtyTestFailure].
+  ///
+  /// Si otra evaluación del mismo alumno sigue en vuelo, esta sale cuando
+  /// aquella responde o vence, y mientras tanto no sale nada (RF-TEST-7).
+  /// Una que espera y encuentra otro dueño al salir no se manda.
   Future<EvaluationStep> evaluate(Map<String, dynamic> body) async {
     _adoptarDueno();
     final generation = _generation;
+    final anterior = _evaluateInFlight;
+    final propia = Completer<void>();
+    _evaluateInFlight = propia.future;
     try {
+      if (anterior != null) {
+        await anterior;
+        if (generation != _generation) {
+          throw const SpecialtyTestFailure(SpecialtyTestFailureKind.server);
+        }
+      }
       final json = await _api
           .postJson('/specialty-test/me/evaluate', body: body)
           .timeout(evaluateTimeout);
@@ -274,6 +293,11 @@ class SpecialtyTestService extends GetxService {
       return step;
     } catch (e) {
       throw SpecialtyTestFailure.from(e);
+    } finally {
+      propia.complete();
+      if (identical(_evaluateInFlight, propia.future)) {
+        _evaluateInFlight = null;
+      }
     }
   }
 

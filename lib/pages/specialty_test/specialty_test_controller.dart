@@ -378,7 +378,9 @@ class SpecialtyTestController extends GetxController {
     fase.value = FaseDelTest.espera;
     errorDeEspera.value = null;
     final id = ++_evaluacionVigente;
-    // Nunca dos en vuelo. La nueva sale cuando termina o vence la anterior.
+    // Nunca dos en vuelo. La nueva sale cuando termina o vence la anterior,
+    // y de las que esperan en esta ruta sale solo la última. El service
+    // sostiene la regla aunque la ruta se cierre y otra siga el test.
     if (_evaluando) {
       _otraPendiente = true;
       return;
