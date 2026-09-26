@@ -320,30 +320,39 @@ class _TarjetaGanadora extends StatelessWidget {
     final resumen = r.tie
         ? 'Empate, ${nombres.join(' y ')}, ${primera.affinity} % de afinidad'
         : 'Tu n.º 1, ${primera.name}, ${primera.affinity} % de afinidad';
-    final tarjeta = Container(
-      key: ResultView.tarjetaKey,
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 6),
-      decoration: BoxDecoration(
-        color: k.oscuro ? k.fondo : null,
-        gradient: k.oscuro
-            ? null
-            : LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [k.color, oscurecido(k.color)],
-              ),
-        borderRadius: BorderRadius.circular(22),
-        border: k.oscuro
-            ? Border.all(color: k.color.withValues(alpha: 0.35))
-            : null,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Semantics(
-            container: true,
-            label: resumen,
-            child: ExcludeSemantics(
+    final motivo = r.reason ?? '';
+    // Un solo nodo con el resumen y el motivo, y «Leer más» como su botón
+    // hijo (RF-TEST-13).
+    final etiqueta = [
+      resumen,
+      if (motivo.isNotEmpty)
+        r.reasonByAi ? 'Motivo redactado con IA. $motivo' : motivo,
+    ].join('. ');
+    final tarjeta = Semantics(
+      container: true,
+      label: etiqueta,
+      child: Container(
+        key: ResultView.tarjetaKey,
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 6),
+        decoration: BoxDecoration(
+          color: k.oscuro ? k.fondo : null,
+          gradient: k.oscuro
+              ? null
+              : LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [k.color, oscurecido(k.color)],
+                ),
+          borderRadius: BorderRadius.circular(22),
+          border: k.oscuro
+              ? Border.all(color: k.color.withValues(alpha: 0.35))
+              : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // El resumen y el motivo se leen en la etiqueta de la tarjeta.
+            ExcludeSemantics(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -417,16 +426,16 @@ class _TarjetaGanadora extends StatelessWidget {
                 ],
               ),
             ),
-          ),
-          const SizedBox(height: 9),
-          _Motivo(
-            texto: r.reason ?? '',
-            porIa: r.reasonByAi,
-            colores: k,
-            abierto: motivoAbierto,
-            onTap: onMotivo,
-          ),
-        ],
+            const SizedBox(height: 9),
+            _Motivo(
+              texto: motivo,
+              porIa: r.reasonByAi,
+              colores: k,
+              abierto: motivoAbierto,
+              onTap: onMotivo,
+            ),
+          ],
+        ),
       ),
     );
     // El giro de entrada, 600 ms, una sola vez. Al terminar, la tarjeta
@@ -540,9 +549,8 @@ class _MotivoState extends State<_Motivo> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Semantics(
-              label: porIa ? 'Motivo redactado con IA. $texto' : texto,
-              excludeSemantics: true,
+            // El motivo se lee en la etiqueta de la tarjeta.
+            ExcludeSemantics(
               child: Text.rich(
                 key: _parrafo,
                 TextSpan(

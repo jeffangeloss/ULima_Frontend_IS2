@@ -9,6 +9,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:ulima_plus/pages/specialty_test/specialty_test_controller.dart';
@@ -354,6 +355,16 @@ void _espera() {
   });
 }
 
+/// Los nodos hijos de [nodo] en el árbol de accesibilidad.
+List<SemanticsNode> _hijos(SemanticsNode nodo) {
+  final hijos = <SemanticsNode>[];
+  nodo.visitChildren((hijo) {
+    hijos.add(hijo);
+    return true;
+  });
+  return hijos;
+}
+
 /// Llega al resultado de [evaluacion] y monta la pantalla.
 Future<SpecialtyTestController> _enElResultado(
   WidgetTester tester, {
@@ -380,39 +391,56 @@ Future<SpecialtyTestController> _enElResultado(
 void _resultado() {
   group('WIDGET · Accesibilidad del resultado (RF-TEST-13)', () {
     testWidgets('la tarjeta es un nodo con la número uno, su afinidad y el '
-        'motivo con la insignia «IA»', (tester) async {
+        'motivo con la insignia «IA», y «Leer más» es su botón hijo', (
+      tester,
+    ) async {
       final semantica = tester.ensureSemantics();
       await _enElResultado(
         tester,
         evaluacion: resultadoJson(reasonSource: 'ai'),
       );
+      final tarjeta = tester.getSemantics(find.byKey(ResultView.tarjetaKey));
+      expect(
+        tarjeta.label,
+        'Tu n.º 1, Desarrollo de Videojuegos, 75 % de afinidad. Motivo '
+        'redactado con IA. $kMotivoLargo',
+      );
+      // Ni el resumen ni el motivo quedan como nodos sueltos.
       expect(
         find.bySemanticsLabel(
           'Tu n.º 1, Desarrollo de Videojuegos, 75 % de afinidad',
         ),
-        findsOneWidget,
+        findsNothing,
       );
       expect(
         find.bySemanticsLabel('Motivo redactado con IA. $kMotivoLargo'),
-        findsOneWidget,
+        findsNothing,
       );
+      final hijos = _hijos(tarjeta);
+      expect(hijos, hasLength(1));
       expect(
-        tester.getSemantics(find.text('Leer más')),
-        isSemantics(isButton: true),
+        hijos.single,
+        isSemantics(label: 'Leer más', isButton: true, hasTapAction: true),
       );
+      expect(tester.getSemantics(find.text('Leer más')), same(hijos.single));
       semantica.dispose();
     });
 
-    testWidgets('con empate la tarjeta nombra las dos', (tester) async {
+    testWidgets('con empate la tarjeta nombra las dos, y un motivo que cabe '
+        'va sin botón', (tester) async {
       final semantica = tester.ensureSemantics();
-      await _enElResultado(tester, evaluacion: resultadoJson(empate: true));
-      expect(
-        find.bySemanticsLabel(
-          'Empate, Sistemas de Información y Desarrollo de Videojuegos, 62 % '
-          'de afinidad',
-        ),
-        findsOneWidget,
+      const corto = 'Motivo corto de prueba que cabe entero.';
+      await _enElResultado(
+        tester,
+        evaluacion: resultadoJson(empate: true, motivo: corto),
       );
+      final tarjeta = tester.getSemantics(find.byKey(ResultView.tarjetaKey));
+      expect(
+        tarjeta.label,
+        'Empate, Sistemas de Información y Desarrollo de Videojuegos, 62 % '
+        'de afinidad. $corto',
+      );
+      expect(_hijos(tarjeta), isEmpty);
       semantica.dispose();
     });
 
