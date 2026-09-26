@@ -132,10 +132,13 @@ class _CarreraStep extends StatelessWidget {
                 ),
                 const SizedBox(height: 14),
                 Obx(() {
-                  // Sin catálogo, el aviso y «Reintentar» (RF-TEST-1). La
-                  // carrera sale del usuario, así que «Continuar» sigue
-                  // activo.
-                  if (controller.catalogoFallido) {
+                  // Sin el catálogo de carreras, el aviso y «Reintentar»
+                  // (RF-TEST-1). Si solo fallan las especialidades, la
+                  // carrera ya tiene nombre y su tarjeta se queda, igual
+                  // que la selección solo avisa sin opciones. La carrera
+                  // sale del usuario, así que «Continuar» sigue activo.
+                  if (controller.catalogoFallido &&
+                      controller.selectedCarreraName.isEmpty) {
                     return TestErrorMessage(
                       text: 'No pudimos cargar tu carrera.',
                       onRetry: controller.reintentarCatalogos,

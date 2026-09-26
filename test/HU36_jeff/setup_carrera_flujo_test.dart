@@ -62,6 +62,15 @@ Future<SetupCarreraController> _asistente(
   return c;
 }
 
+/// Toca el único «Reintentar» y deja terminar la recarga de los catálogos.
+Future<void> _reintentar(WidgetTester tester) async {
+  await tester.runAsync(() async {
+    await tester.tap(find.text('Reintentar'));
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+  });
+  await tester.pump();
+}
+
 void main() {
   // Get.put de un GetxService agenda onReady con
   // Get.engine.addPostFrameCallback, que necesita el binding.
@@ -160,8 +169,46 @@ void main() {
       },
     );
 
-    testWidgets('caso 6: sin catálogo, la carrera y la selección muestran su '
-        'aviso con «Reintentar», y «Continuar» sigue activo', (tester) async {
+    testWidgets('caso 6: sin el catálogo de carreras, la carrera y la '
+        'selección muestran su aviso con «Reintentar», y «Continuar» sigue '
+        'activo', (tester) async {
+      // Las dos cargas de la sesión y el primer «Reintentar» fallan. Con las
+      // carreras caídas, las especialidades no llegan a pedirse.
+      final api = ApiFalsaDelTest(
+        carreras: [
+          http.ClientException('sin red'),
+          http.ClientException('sin red'),
+          http.ClientException('sin red'),
+          carrerasJson(),
+        ],
+      );
+      await _sesion(tester, api);
+      final c = await _asistente(tester, salida: SalidaDelTest.seleccionManual);
+      expect(find.text('No pudimos cargar tu carrera.'), findsOneWidget);
+      expect(find.text('Carrera de Prueba'), findsNothing);
+      await _reintentar(tester);
+      expect(find.text('No pudimos cargar tu carrera.'), findsOneWidget);
+      await tester.tap(find.text('Continuar'));
+      await tester.pump();
+      expect(c.step.value, SetupStep.seleccion);
+      expect(
+        find.text('No pudimos cargar las especialidades.'),
+        findsOneWidget,
+      );
+      await _reintentar(tester);
+      expect(find.text('No pudimos cargar las especialidades.'), findsNothing);
+      expect(find.text('Ingeniería de Software'), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+      expect(c.step.value, SetupStep.carrera);
+      expect(find.text('No pudimos cargar tu carrera.'), findsNothing);
+      expect(find.text('Carrera de Prueba'), findsOneWidget);
+    });
+
+    testWidgets('caso 6b: si solo fallan las especialidades, la carrera '
+        'muestra su tarjeta y solo la selección muestra el aviso', (
+      tester,
+    ) async {
       final api = ApiFalsaDelTest(
         especialidades: [
           http.ClientException('sin red'),
@@ -172,7 +219,10 @@ void main() {
       );
       await _sesion(tester, api);
       final c = await _asistente(tester, salida: SalidaDelTest.seleccionManual);
-      expect(find.text('No pudimos cargar tu carrera.'), findsOneWidget);
+      // El catálogo cuenta como fallido, pero la carrera sí cargó.
+      expect(c.catalogoFallido, isTrue);
+      expect(find.text('No pudimos cargar tu carrera.'), findsNothing);
+      expect(find.text('Carrera de Prueba'), findsOneWidget);
       await tester.tap(find.text('Continuar'));
       await tester.pump();
       expect(c.step.value, SetupStep.seleccion);
@@ -180,20 +230,13 @@ void main() {
         find.text('No pudimos cargar las especialidades.'),
         findsOneWidget,
       );
-      await tester.runAsync(() async {
-        await tester.tap(find.text('Reintentar'));
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      });
-      await tester.pump();
+      await _reintentar(tester);
       expect(
         find.text('No pudimos cargar las especialidades.'),
         findsOneWidget,
       );
-      await tester.runAsync(() async {
-        await tester.tap(find.text('Reintentar'));
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      });
-      await tester.pump();
+      await _reintentar(tester);
+      expect(find.text('No pudimos cargar las especialidades.'), findsNothing);
       expect(find.text('Ingeniería de Software'), findsOneWidget);
     });
 
