@@ -16,9 +16,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:ulima_plus/domain/bienvenida/bienvenida_turnos.dart';
 import 'package:ulima_plus/services/api_client.dart';
 import 'package:ulima_plus/services/session_navigation.dart';
 import 'package:ulima_plus/services/storage_service.dart';
+
+import 'apoyo_bienvenida.dart';
 
 class _StorageEspia extends StorageService {
   int cierres = 0;
@@ -116,5 +119,65 @@ void main() {
       await tester.pump(const Duration(seconds: 5));
       await tester.pumpAndSettle();
     });
+  });
+
+  // Cerrar el registro programa un cuadro, así que el binding va primero.
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  group('las visitas (RF-BIEN-1 y B-19)', () {
+    test('cada visita reinicia la conversación, cierra los tramos y vacía el '
+        'login', () async {
+      final b = Bienvenida();
+      await b.visitar();
+      b.controlador.responderAlSaludo(yaUsa: false);
+      expect(b.controlador.registro, isNotNull);
+      b.login.codeController.text = '20230001';
+      await b.visitar();
+      expect(b.controlador.entradas, isEmpty);
+      expect(b.controlador.registro, isNull);
+      expect(b.login.codeController.text, '');
+      expect(b.controlador.turno.value, TurnoDeLaBienvenida.recibimiento);
+    });
+
+    test('una visita vieja no toca la nueva', () async {
+      final b = Bienvenida();
+      final vieja = b.controlador.nuevaVisita();
+      final nueva = b.controlador.nuevaVisita();
+      await b.controlador.empezarVisita(nueva);
+      b.controlador.responderAlSaludo(yaUsa: false);
+      await b.controlador.empezarVisita(vieja);
+      b.controlador.terminarVisita(vieja);
+      expect(b.controlador.registro, isNotNull);
+      expect(b.controlador.turno.value, TurnoDeLaBienvenida.n1Codigo);
+      b.controlador.terminarVisita(nueva);
+      expect(b.controlador.registro, isNull);
+    });
+
+    test('con un motivo arranca directo en E1, con el primer grupo y sin la '
+        'pregunta (B-8)', () async {
+      for (final motivo in MotivoDeLlegada.values) {
+        final b = Bienvenida();
+        await b.visitar(motivo: motivo);
+        expect(b.deUlises, [
+          TextosDeLaBienvenida.saludo,
+          TextosDeLaBienvenida.e1,
+        ]);
+        expect(b.controlador.turno.value, TurnoDeLaBienvenida.e1Codigo);
+        Get.reset();
+      }
+    });
+
+    test(
+      'al pasar al horario se borra el historial y se vacía el login',
+      () async {
+        final b = Bienvenida();
+        await b.visitar();
+        b.controlador.responderAlSaludo(yaUsa: true);
+        b.login.codeController.text = '20230001';
+        b.controlador.pasoHecho();
+        expect(b.controlador.entradas, isEmpty);
+        expect(b.login.codeController.text, '');
+      },
+    );
   });
 }
