@@ -423,3 +423,114 @@ Map<String, dynamic> cuerpoDeEvaluacion({
         TiebreakAnswer(id: d.tiebreak.id, answer: d.answer!).toJson(),
   ],
 };
+
+// ── Selección de especialidades (RF-TEST-9 y RF-TEST-14) ─────────────────────
+
+/// Una selección lista para `PUT /academic-profile/me/specialties`, que
+/// reemplaza la selección entera (BR-AP-04).
+class SeleccionDeEspecialidades {
+  const SeleccionDeEspecialidades({
+    this.principal,
+    this.intereses = const <int>[],
+  });
+
+  final int? principal;
+  final List<int> intereses;
+
+  @override
+  bool operator ==(Object other) =>
+      other is SeleccionDeEspecialidades &&
+      other.principal == principal &&
+      other.intereses.length == intereses.length &&
+      Iterable<int>.generate(
+        intereses.length,
+      ).every((i) => other.intereses[i] == intereses[i]);
+
+  @override
+  int get hashCode => Object.hash(principal, Object.hashAll(intereses));
+
+  @override
+  String toString() => 'Seleccion($principal, $intereses)';
+}
+
+/// La principal solo si es oficial y los intereses oficiales sin la
+/// principal, en su orden y sin repetir (RF-TEST-14). Así nunca viaja un id
+/// antiguo, que con BR-AP-07 daría `404 SPECIALTY_NOT_FOUND`.
+SeleccionDeEspecialidades seleccionOficial({
+  required int? principal,
+  required Iterable<int> intereses,
+  required Set<int> oficiales,
+}) {
+  final principalOficial = principal != null && oficiales.contains(principal)
+      ? principal
+      : null;
+  final vistos = <int>{};
+  final interesesOficiales = <int>[
+    for (final id in intereses)
+      if (oficiales.contains(id) && id != principalOficial && vistos.add(id))
+        id,
+  ];
+  return SeleccionDeEspecialidades(
+    principal: principalOficial,
+    intereses: interesesOficiales,
+  );
+}
+
+/// Los corazones marcados al abrir el resultado, que son los intereses del
+/// alumno que están en el ranking.
+Set<int> corazonesIniciales({
+  required Iterable<int> intereses,
+  required Iterable<int> idsDelRanking,
+}) {
+  final ranking = idsDelRanking.toSet();
+  return intereses.where(ranking.contains).toSet();
+}
+
+List<int> _enOrdenDelRanking(Set<int> ids, List<int> idsDelRanking) =>
+    idsDelRanking.where(ids.contains).toList();
+
+/// La selección al elegir [elegida] como principal. Los intereses son los
+/// corazones, la principal anterior si es otra y está en el ranking
+/// (decisión abierta 23) y, con empate, la otra ganadora (decisión abierta
+/// 11). Los ids salen solo del ranking.
+SeleccionDeEspecialidades seleccionAlElegir({
+  required int elegida,
+  required int? principalActual,
+  required Set<int> corazones,
+  required List<int> idsDelRanking,
+  int? otraGanadora,
+}) {
+  final intereses = <int>{...corazones, ?principalActual, ?otraGanadora}
+    ..remove(elegida);
+  return seleccionOficial(
+    principal: elegida,
+    intereses: _enOrdenDelRanking(intereses, idsDelRanking),
+    oficiales: idsDelRanking.toSet(),
+  );
+}
+
+/// La selección de un corazón o de «Decidir después», con la principal
+/// actual sin cambios y los corazones como intereses.
+SeleccionDeEspecialidades seleccionConCorazones({
+  required int? principalActual,
+  required Set<int> corazones,
+  required List<int> idsDelRanking,
+}) => seleccionOficial(
+  principal: principalActual,
+  intereses: _enOrdenDelRanking(corazones, idsDelRanking),
+  oficiales: idsDelRanking.toSet(),
+);
+
+// ── Fecha en hora de Lima (RF-TEST-10) ────────────────────────────────────────
+
+/// Lima está en UTC−5 todo el año, sin horario de verano.
+const Duration _desfaseLima = Duration(hours: 5);
+
+/// «dd/mm/aaaa» de [instante] en hora de Lima, sin depender de la zona del
+/// teléfono.
+String fechaEnLima(DateTime instante) {
+  final lima = instante.toUtc().subtract(_desfaseLima);
+  final dd = lima.day.toString().padLeft(2, '0');
+  final mm = lima.month.toString().padLeft(2, '0');
+  return '$dd/$mm/${lima.year}';
+}

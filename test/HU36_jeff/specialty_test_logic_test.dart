@@ -19,6 +19,7 @@ import 'datos_de_prueba.dart';
 void main() {
   _iconos();
   _conversacion();
+  _seleccion();
 }
 
 void _iconos() {
@@ -345,5 +346,140 @@ void _conversacion() {
         isEmpty,
       );
     });
+  });
+}
+
+void _seleccion() {
+  // El ranking de prueba es vj (7), si (6), ti (5) y sw (1).
+  const ranking = <int>[kIdVj, kIdSi, kIdTi, kIdSw];
+
+  group(
+    'UNITARIA · Selección oficial y corazones (RF-TEST-9 y RF-TEST-14)',
+    () {
+      test('caso 18: la selección oficial saca los ids antiguos y la principal '
+          'de los intereses', () {
+        expect(
+          seleccionOficial(
+            principal: 3,
+            intereses: [kIdSi, 3, 99, kIdSi, kIdTi],
+            oficiales: {kIdSw, kIdTi, kIdSi, kIdVj},
+          ),
+          const SeleccionDeEspecialidades(intereses: [kIdSi, kIdTi]),
+        );
+        expect(
+          seleccionOficial(
+            principal: kIdSi,
+            intereses: [kIdSi, kIdVj],
+            oficiales: {kIdSw, kIdTi, kIdSi, kIdVj},
+          ),
+          const SeleccionDeEspecialidades(principal: kIdSi, intereses: [kIdVj]),
+        );
+      });
+
+      test('caso 19: al abrir, los corazones son los intereses que están en '
+          'el ranking', () {
+        expect(
+          corazonesIniciales(intereses: [kIdSi, 3], idsDelRanking: ranking),
+          {kIdSi},
+        );
+      });
+
+      test('caso 20: elegir la ganadora manda los corazones sin ella', () {
+        expect(
+          seleccionAlElegir(
+            elegida: kIdVj,
+            principalActual: null,
+            corazones: {kIdTi, kIdVj},
+            idsDelRanking: ranking,
+          ),
+          const SeleccionDeEspecialidades(principal: kIdVj, intereses: [kIdTi]),
+        );
+      });
+
+      test('caso 21: una principal anterior del ranking pasa a interés; una '
+          'antigua no viaja', () {
+        expect(
+          seleccionAlElegir(
+            elegida: kIdVj,
+            principalActual: kIdSw,
+            corazones: {kIdTi},
+            idsDelRanking: ranking,
+          ),
+          const SeleccionDeEspecialidades(
+            principal: kIdVj,
+            intereses: [kIdTi, kIdSw],
+          ),
+        );
+        expect(
+          seleccionAlElegir(
+            elegida: kIdVj,
+            principalActual: 3,
+            corazones: const {},
+            idsDelRanking: ranking,
+          ),
+          const SeleccionDeEspecialidades(principal: kIdVj),
+        );
+      });
+
+      test(
+        'caso 22: con empate, la ganadora que no se elige pasa a interés',
+        () {
+          expect(
+            seleccionAlElegir(
+              elegida: kIdSi,
+              principalActual: null,
+              corazones: const {},
+              idsDelRanking: [kIdSi, kIdVj, kIdTi, kIdSw],
+              otraGanadora: kIdVj,
+            ),
+            const SeleccionDeEspecialidades(
+              principal: kIdSi,
+              intereses: [kIdVj],
+            ),
+          );
+        },
+      );
+
+      test('caso 23: un corazón deja la principal como está y manda los '
+          'corazones en el orden del ranking', () {
+        expect(
+          seleccionConCorazones(
+            principalActual: kIdSw,
+            corazones: {kIdTi, kIdSi},
+            idsDelRanking: ranking,
+          ),
+          const SeleccionDeEspecialidades(
+            principal: kIdSw,
+            intereses: [kIdSi, kIdTi],
+          ),
+        );
+        // Una principal antigua no viaja (decisión abierta 26).
+        expect(
+          seleccionConCorazones(
+            principalActual: 3,
+            corazones: {kIdTi},
+            idsDelRanking: ranking,
+          ),
+          const SeleccionDeEspecialidades(intereses: [kIdTi]),
+        );
+      });
+    },
+  );
+
+  group('UNITARIA · Fecha en hora de Lima (RF-TEST-10)', () {
+    test(
+      'caso 24: la fecha sale en UTC−5 sin importar la zona del teléfono',
+      () {
+        expect(fechaEnLima(DateTime.utc(2026, 9, 26, 3, 30)), '25/09/2026');
+        expect(fechaEnLima(DateTime.utc(2026, 9, 25, 20, 15)), '25/09/2026');
+        expect(fechaEnLima(DateTime.utc(2026, 9, 26, 4, 59)), '25/09/2026');
+        expect(fechaEnLima(DateTime.utc(2026, 9, 26, 5)), '26/09/2026');
+        expect(fechaEnLima(DateTime.utc(2027, 1, 1, 2)), '31/12/2026');
+        expect(
+          fechaEnLima(DateTime.utc(2026, 3, 5, 12).toLocal()),
+          '05/03/2026',
+        );
+      },
+    );
   });
 }
