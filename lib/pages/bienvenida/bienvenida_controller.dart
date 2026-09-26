@@ -584,7 +584,7 @@ class BienvenidaController extends GetxController {
   }
 
   /// Los títulos de hoy con un punto final, y con SIN_TOKEN el mensaje si no
-  /// repite el título (`registro_page.dart:405-433`).
+  /// repite el título (RF-BIEN-8).
   void _decirLaDuda(RegistroController r) {
     final confirmada = r.cuentaConfirmada.value;
     final lineas = confirmada

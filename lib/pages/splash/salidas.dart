@@ -58,6 +58,7 @@ class DestinoDeLaSalida {
     final em = medida.escalaDeTexto.scale(medida.estilo.fontSize ?? 20);
     final base = todo.computeDistanceToActualBaseline(TextBaseline.alphabetic);
     final anchoDeMas = (todo.width - ulima.width) / 2;
+    todo.dispose();
     final y = medida.texto.top + base - 0.34 * em;
     return DestinoDeLaSalida._(
       pantalla: pantalla,
@@ -89,6 +90,13 @@ class DestinoDeLaSalida {
   final Color colorDelBorde;
   final TextPainter pintorDeUlima;
   final TextPainter pintorDeLosMas;
+
+  /// La capa lo desecha al retirarse o al reemplazarlo.
+  void desechar() {
+    pintorDeUlima.dispose();
+    pintorDeLosMas.dispose();
+  }
+
   final double anchoDeUlima;
 }
 

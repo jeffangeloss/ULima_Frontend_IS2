@@ -29,9 +29,10 @@ class ApiException implements Exception {
 /// `/auth/login` porque un login rechazado es un 401 normal. `/auth/register`
 /// porque su fallo más común —miUlima rechaza la contraseña o el passcode—
 /// también responde 401, y quien se está registrando no tiene ninguna sesión
-/// que caducar: sin la exención se le borraría la sesión inexistente, se le
-/// sacaría de la conversación del registro con `offAllToLogin()` y leería
-/// "Sesión expirada". Ver BR-REG-F-04 de `specs/features/registro`.
+/// que caducar: sin la exención se le borraría la sesión inexistente. El
+/// registro va en la conversación de /login, donde `offAllToLogin()` no navega
+/// ni se avisa "Sesión expirada", pero la exención no depende de eso. Ver
+/// BR-REG-F-04 de `specs/features/registro`.
 ///
 /// `/auth/logout` NO va acá: su 401 sí limpia la sesión (es lo que se pidió),
 /// solo se salta la navegación. Esa excepción vive dentro del `if`.

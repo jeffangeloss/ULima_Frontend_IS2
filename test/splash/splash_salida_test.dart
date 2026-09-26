@@ -126,6 +126,14 @@ void main() {
       expect(d.tamanoDeCruz, greaterThan(0));
     });
 
+    test('desechar libera los textos medidos del destino', () {
+      final d = DestinoDeLaSalida.desdeMedida(_medida(), _pantalla);
+      expect(d.pintorDeUlima.debugDisposed, isFalse);
+      d.desechar();
+      expect(d.pintorDeUlima.debugDisposed, isTrue);
+      expect(d.pintorDeLosMas.debugDisposed, isTrue);
+    });
+
     for (final v in variantes) {
       group(v.tipo.name, () {
         test('empieza con el panel en toda la pantalla y la estrella en su '

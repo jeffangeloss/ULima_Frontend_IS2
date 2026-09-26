@@ -33,7 +33,6 @@ class DesenlaceDelLogin {
 class LoginController extends GetxController {
   final codeController = TextEditingController();
   final passwordController = TextEditingController();
-  final errorMessage = RxnString();
   final submitting = false.obs;
   final passwordVisible = false.obs;
 
@@ -59,14 +58,12 @@ class LoginController extends GetxController {
 
   Future<void> _onGoogleUserChanged(GoogleSignInAccount? account) async {
     if (account == null || submitting.value) return;
-    errorMessage.value = null;
     submitting.value = true;
     try {
       final error = await _auth.finishGoogleLogin(account);
       final desenlace = error == null
           ? const DesenlaceDelLogin.sesionPuesta()
           : DesenlaceDelLogin.error(error);
-      if (error != null) errorMessage.value = error;
       desenlaceDeGoogleEnWeb.value = desenlace;
     } catch (_) {
       desenlaceDeGoogleEnWeb.value = const DesenlaceDelLogin.sinConexion();
@@ -88,7 +85,6 @@ class LoginController extends GetxController {
   void vaciarCampos() {
     codeController.clear();
     passwordController.clear();
-    errorMessage.value = null;
     passwordVisible.value = false;
     // Un desenlace de Google en web sin atender no llega a la visita nueva.
     desenlaceDeGoogleEnWeb.value = null;
@@ -101,15 +97,12 @@ class LoginController extends GetxController {
     if (code.isEmpty || password.isEmpty) {
       // Es solo defensa, porque la bienvenida no deja enviar un campo vacío.
       const mensaje = 'Ingresa tu código y contraseña.';
-      errorMessage.value = mensaje;
       return const DesenlaceDelLogin.error(mensaje);
     }
-    errorMessage.value = null;
     submitting.value = true;
     try {
       final error = await _auth.login(code: code, password: password);
       if (error != null) {
-        errorMessage.value = error;
         return DesenlaceDelLogin.error(error);
       }
       return const DesenlaceDelLogin.sesionPuesta();
@@ -124,7 +117,6 @@ class LoginController extends GetxController {
 
   /// Entra con Google en Android e iOS, sin navegar.
   Future<DesenlaceDelLogin> entrarConGoogle() async {
-    errorMessage.value = null;
     submitting.value = true;
     // Tras un 401 el usuario viejo sigue en memoria sin token, así que la
     // sesión solo queda puesta si entra un usuario nuevo (RF-BIEN-21).
@@ -132,7 +124,6 @@ class LoginController extends GetxController {
     try {
       final error = await _auth.loginWithGoogle();
       if (error != null) {
-        errorMessage.value = error;
         return DesenlaceDelLogin.error(error);
       }
       // `loginWithGoogle` devuelve null también cuando la persona cancela.

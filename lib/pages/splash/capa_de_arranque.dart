@@ -120,6 +120,10 @@ class CapaDeArranque extends StatefulWidget {
   @visibleForTesting
   static EscenaDelPaso? get pasoActual => _estado?._escenaDelPaso.value;
 
+  /// La cabecera medida de la salida o del paso en curso, para las pruebas.
+  @visibleForTesting
+  static DestinoDeLaSalida? get destinoActual => _estado?._destinoDeLaSalida;
+
   /// Ulises en el paso al horario, para las pruebas.
   static const Key claveDeUlisesDelPaso = Key('capa-ulises-del-paso');
 
@@ -360,7 +364,7 @@ class _CapaDeArranqueState extends State<CapaDeArranque>
     );
     final medida = PuntosDeAterrizaje.cabecera.value;
     if (medida != null && Get.currentRoute == '/home') {
-      _destinoDeLaSalida = DestinoDeLaSalida.desdeMedida(medida, _vista);
+      _cambiarElDestino(DestinoDeLaSalida.desdeMedida(medida, _vista));
       _msInicioDeSalida = _ms;
       _inicioDeFase = _ahora;
       _fase.value = FaseDeLaCapa.salida;
@@ -414,7 +418,7 @@ class _CapaDeArranqueState extends State<CapaDeArranque>
     _sinMovimiento = MediaQuery.disableAnimationsOf(context);
     PuntosDeAterrizaje.cabecera.value = null;
     PuntosDeAterrizaje.burbuja.value = null;
-    _destinoDeLaSalida = null;
+    _cambiarElDestino(null);
     _burbuja = null;
     _conVuelo = false;
     _cuadrosEsperando = 0;
@@ -464,7 +468,7 @@ class _CapaDeArranqueState extends State<CapaDeArranque>
         return;
       }
       destino = DestinoDeLaSalida.desdeMedida(medida, _vista);
-      _destinoDeLaSalida = destino;
+      _cambiarElDestino(destino);
       _burbuja = PuntosDeAterrizaje.burbuja.value;
       // La burbuja espera oculta a Ulises solo en este paso (B-16).
       _conVuelo = _burbuja != null && datos.avatar != null;
@@ -496,6 +500,12 @@ class _CapaDeArranqueState extends State<CapaDeArranque>
     _empezarElFundido(duracion);
   }
 
+  /// La cabecera medida lleva dos textos, que se desechan al cambiarla.
+  void _cambiarElDestino(DestinoDeLaSalida? destino) {
+    _destinoDeLaSalida?.desechar();
+    _destinoDeLaSalida = destino;
+  }
+
   void _alPintarLaBienvenida() {
     if (_fase.value == FaseDeLaCapa.relevo) _retirar();
   }
@@ -512,6 +522,7 @@ class _CapaDeArranqueState extends State<CapaDeArranque>
     // al retirarse (RF-BIEN-11).
     _paso?.desechar();
     _paso = null;
+    _cambiarElDestino(null);
     _escenaDelPaso.value = null;
     PuntosDeAterrizaje.ulisesEnVuelo.value = false;
     _fase.value = FaseDeLaCapa.inactiva;
@@ -524,9 +535,15 @@ class _CapaDeArranqueState extends State<CapaDeArranque>
     if (identical(CapaDeArranque._estado, this)) {
       CapaDeArranque._estado = null;
       // Una capa que sale del árbol ya no cubre nada, así que /home no queda
-      // esperando para pedir sus orientaciones (RF-SPL-20).
+      // esperando para pedir sus orientaciones (RF-SPL-20), ni la burbuja
+      // esperando a Ulises.
       EstadoDeLaCapa.cubre.value = false;
+      PuntosDeAterrizaje.ulisesEnVuelo.value = false;
     }
+    _paso?.desechar();
+    _paso = null;
+    _destinoDeLaSalida?.desechar();
+    _destinoDeLaSalida = null;
     for (final notificador in <ChangeNotifier>[
       _fase,
       _escena,

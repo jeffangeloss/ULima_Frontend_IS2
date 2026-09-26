@@ -488,6 +488,29 @@ void main() {
     });
   });
 
+  group('lo que la capa suelta (RF-BIEN-11)', () {
+    testWidgets('al retirarse, la capa desecha los textos medidos de la '
+        'cabecera', (tester) async {
+      await _hastaElPaso(tester);
+      await avanzar(tester, 150);
+      final destino = CapaDeArranque.destinoActual!;
+      expect(destino.pintorDeUlima.debugDisposed, isFalse);
+      await avanzar(tester, 1700);
+      expect(CapaDeArranque.fase, FaseDeLaCapa.inactiva);
+      expect(destino.pintorDeUlima.debugDisposed, isTrue);
+      expect(destino.pintorDeLosMas.debugDisposed, isTrue);
+    });
+
+    testWidgets('si la capa sale del árbol a mitad del paso, la burbuja '
+        'vuelve a verse', (tester) async {
+      await _hastaElPaso(tester);
+      await avanzar(tester, 150);
+      expect(PuntosDeAterrizaje.ulisesEnVuelo.value, isTrue);
+      await tester.pumpWidget(const SizedBox.shrink());
+      expect(PuntosDeAterrizaje.ulisesEnVuelo.value, isFalse);
+    });
+  });
+
   group('la cabecera de /home bajo la franja (RF-BIEN-11)', () {
     test('mientras el cuerpo sube, una banda del fondo de /home tapa lo que '
         'bajó de la cabecera, debajo de la conversación', () {
