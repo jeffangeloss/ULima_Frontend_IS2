@@ -319,6 +319,13 @@ envuelve la interfaz del chat y la inclina de un lado a otro, como el gesto de l
   figura en ninguna lista anterior de esta página. La lista dispara si al menos uno de los nuevos
   no está borrado, no es un carnet y su cuerpo cumple `esSeisSiete`. Todos los ids nuevos quedan
   como vistos, disparen o no.
+- **Persistencia de Realtime Database.** El detector toma la primera lista del stream como
+  historial, y eso depende de que la app no active la persistencia de Realtime Database, que hoy
+  queda apagada, ya que ningún archivo de `lib/` llama a `setPersistenceEnabled`. Con la
+  persistencia activa, la primera lista puede salir de la copia que guarda el teléfono, y los
+  mensajes que llegan del servidor justo después, aunque tengan horas, cuentan como nuevos y
+  pueden inclinar el chat al abrirlo. Si algún día se activa, hay que revisar esta regla y el
+  detector.
 - **Dónde se revisa.** Cada lista se revisa una sola vez, cuando llega del stream, dentro de ese
   `map`, y nunca dentro de `build`. Si dispara, la página sube un contador propio, un
   `ValueNotifier<int>`, y un `ValueListenableBuilder` pasa ese valor al envoltorio, que cubre el
