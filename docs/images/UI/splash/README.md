@@ -9,7 +9,7 @@ pendiente de la aprobación del dueño. Donde una maqueta y la spec difieren, ma
   Repetir, carga lenta y sin movimiento.
 - `ensamble-adaptada.html` es Ensamble con el arranque de la spec (RF-SPL-7), desde la estrella
   completa del splash nativo. Su casilla «Arranque alternativo» muestra la alternativa de la
-  decisión 3.
+  decisión S-3.
 - `splash-actual-recorte.jpg` es el centro de la captura del splash de hoy, sin la barra de estado
   del teléfono.
 - La maqueta de la bienvenida con Ulises, que usa estas tres intros para mostrar el horario con

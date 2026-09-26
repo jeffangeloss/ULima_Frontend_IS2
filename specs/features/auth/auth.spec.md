@@ -266,17 +266,25 @@ de la spec sigue igual. Las referencias `archivo:línea` apuntan a `4e2a0b2`.
   usuario y E2 con la contraseña (RF-BIEN-6). La validación, el servicio y los mensajes no
   cambian. El botón de envío de E1 y «Entrar» quedan inactivos mientras su campo está vacío, y
   «Ingresa tu código y contraseña.» sigue en `LoginController` como defensa. Tras un error, la
-  conversación vuelve a E1 con el código escrito y la contraseña vacía (decisión 6 de la
+  conversación vuelve a E1 con el código escrito y la contraseña vacía (decisión B-6 de la
   bienvenida). Tras el éxito, la navegación la hace la bienvenida y no `LoginController`, con
   `postLoginRoute` para decidir entre el paso al horario de RF-BIEN-11 y `/setup-carrera`.
 - **Fallo de red en el login.** `AuthService.login` solo atrapa `ApiException`
   (`auth_service.dart:218-250`), así que hoy un fallo de red deja `submitting` en `true` y el botón
-  «Entrar» girando (`login_controller.dart:73-75`). La bienvenida atrapa ese fallo, muestra «No hay
-  conexión. Revisa tu internet e inténtalo de nuevo.» y apaga el indicador.
+  «Entrar» girando (`login_controller.dart:73-75`), y en web `_onGoogleUserChanged` queda
+  bloqueado por ese `submitting` (`login_controller.dart:36`). `LoginController.submit` atrapa ese
+  fallo con un `finally` que apaga `submitting` en todos los casos, y la bienvenida muestra «No
+  hay conexión. Revisa tu internet e inténtalo de nuevo.». Queda como deuda que `login` guarda el
+  token antes de cargar los catálogos (`auth_service.dart:235-242`), así que un fallo de red en
+  ese tramo deja una sesión que el siguiente arranque restaura («Qué NO entra» de la
+  bienvenida).
 - **BR-AUTH-F-03 y BR-AUTH-F-04.** La sesión que no se restaura y el cierre de sesión siguen
   llevando a `/login`, que ahora muestra la bienvenida. `offAllToLogin` suma el parámetro
   opcional `motivo`, con `expirada` desde el interceptor del 401 y `restablecida` desde el
-  restablecimiento de contraseña (RF-BIEN-1 y RF-BIEN-3).
+  restablecimiento de contraseña (RF-BIEN-1 y RF-BIEN-3). El botón «Volver a iniciar sesión» del
+  Perfil (`perfil.dart:97`) no pasa motivo y sigue compilando. Por defecto, los avisos «Sesión
+  expirada» y «Contraseña actualizada» salen abajo para no tapar el sello (decisión B-29 de la
+  bienvenida).
 - **BR-AUTH-F-07.** Un 401 dentro de la conversación, con la sesión ya puesta, no navega, porque
   `/login` ya es la ruta actual. La bienvenida lo detecta y vuelve a E1 con «Tu sesión caducó o
   iniciaste sesión en otro dispositivo.» (RF-BIEN-12).
@@ -285,8 +293,11 @@ de la spec sigue igual. Las referencias `archivo:línea` apuntan a `4e2a0b2`.
   oficial de `assets/images/google_logo.svg` y los colores de la marca de Google, en lugar de
   «Google» (`login_page.dart:423-429`). En web, `renderButton` recibe un `GSIButtonConfiguration`
   con el texto `continueWith`, el idioma `es`, el tema `outline` en claro y `filledBlack` en
-  oscuro, la forma rectangular, el logo a la izquierda y el ancho del compositor hasta 400 px.
-  Los mensajes de error no cambian, y ninguno ofrece crear una cuenta (RF-BIEN-9).
+  oscuro, la forma rectangular, el logo a la izquierda y el ancho del compositor hasta 400 px,
+  valores que salen de una función pura (decisión B-35 de la bienvenida). La cuenta de web llega a
+  la bienvenida por un resultado observable de `LoginController`. Los campos de E1 y E2 comparten
+  un `AutofillGroup` (RF-BIEN-6). Los mensajes de error no cambian, y ninguno ofrece crear una
+  cuenta (RF-BIEN-9).
 - **UI Behavior.** La tarjeta de `login_page.dart` sale, y con ella la frase «La UI ya está
   implementada y no requiere cambios visuales». La pantalla sin sesión es la bienvenida, con sus
   estados de carga, error y éxito en la conversación (RF-BIEN-5 y RF-BIEN-12). «¿Olvidaste tu
@@ -295,8 +306,10 @@ de la spec sigue igual. Las referencias `archivo:línea` apuntan a `4e2a0b2`.
 - **Navigation.** El login correcto termina en el paso al horario, con `Get.offAll` a `/home`, sin
   transición y con el argumento de la pestaña Horario (RF-SPL-20 y RF-BIEN-11), o en
   `/setup-carrera` para un alumno con la configuración a medias.
-- **Implementation Plan.** `login_controller.dart` deja de navegar y devuelve el resultado a la
-  bienvenida, y `login_page.dart` sale. Lo demás del plan de arriba ya está hecho y no cambia.
+- **Implementation Plan.** `login_controller.dart` deja de navegar, devuelve el resultado a la
+  bienvenida y vacía sus campos cuando la bienvenida sale hacia `/home` o `/setup-carrera`, y
+  `login_page.dart` sale. `login_binding.dart` no reinicia nada dentro del build (RF-BIEN-1). Lo
+  demás del plan de arriba ya está hecho y no cambia.
 - **Test Links.** Las pruebas de la enmienda son `test/bienvenida/bienvenida_ruta_test.dart`,
   `bienvenida_entrar_test.dart` y `bienvenida_errores_test.dart` (pendientes), y siguen
   `test/HU01_jeff/login_navigation_paths_test.dart` y `login_relogin_regression_test.dart`,

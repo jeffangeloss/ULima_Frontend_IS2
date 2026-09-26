@@ -22,12 +22,12 @@ targets:
 > Ajustada el 2026-09-25 por la spec del splash animado (`specs/features/splash/splash.spec.md`),
 > que suma BR-SHELL-F-04, la estrella del logo junto a «ULIMA++» y los íconos claros de la barra
 > de estado sobre el header. **Pendiente de la aprobación del dueño**, junto con esa spec (su
-> decisión 11 para la estrella). Ese ajuste no cambia BR-SHELL-F-00 a BR-SHELL-F-03.
+> decisión S-11 para la estrella). Ese ajuste no cambia BR-SHELL-F-00 a BR-SHELL-F-03.
 > Enmendada el mismo 2026-09-25 por la misma spec, porque el dueño pide que quien tiene sesión vea
 > su horario después del splash (RF-SPL-20). BR-SHELL-F-02 suma la pestaña inicial Horario con
 > un argumento de ruta y BR-SHELL-F-00 suma la orientación de Horario mientras la intro cubre la
 > pantalla. **Las dos enmiendas quedan pendientes de la aprobación del dueño**, junto con esa spec
-> (sus decisiones 24, 25, 26 y 31).
+> (sus decisiones S-24, S-25, S-26 y S-31).
 
 ## Scope
 
@@ -61,7 +61,8 @@ targets:
   vertical.
 - Enmienda pendiente de aprobación (RF-SPL-20 de la spec del splash). Si el shell se monta en
   Horario mientras la capa de la intro cubre la pantalla, sigue en vertical y pide las
-  orientaciones de Horario cuando la capa se retira (decisión 26 de esa spec).
+  orientaciones de Horario cuando la capa se retira (decisión S-26 de esa spec). Pasa lo mismo
+  cuando llega desde el paso al horario de la bienvenida, que usa la misma capa (RF-BIEN-11).
 
 ### BR-SHELL-F-01: Enlace promocional desde el nombre de la aplicación
 
@@ -88,8 +89,8 @@ targets:
 - Enmienda pendiente de aprobación (RF-SPL-20 de la spec del splash). Con el argumento de ruta
   `{'pestana': 'horario'}`, el shell abre en la pestaña Horario, que busca por su etiqueta, así que
   sirve para el alumno, el delegado, el subdelegado, el profesor titular y el jefe de práctica
-  (decisiones 24 y 31 de esa spec). Lo pasan la intro del splash y, según su spec, la bienvenida
-  con Ulises. Las demás llegadas a `/home` no lo pasan (decisión 25 de esa spec).
+  (decisiones S-24 y S-31 de esa spec). Lo pasan la intro del splash y, según su spec, la
+  bienvenida con Ulises. Las demás llegadas a `/home` no lo pasan (decisión S-25 de esa spec).
   `[@test] ../../../test/splash/home_pestana_inicial_test.dart` (pendiente)
 - El footer del docente no cambia.
 - Con cinco pestañas o menos, la etiqueta activa del footer va en 14 px y las demás en 12 px.
@@ -127,8 +128,8 @@ targets:
 - El header declara íconos claros en la barra de estado con un
   `AnnotatedRegion<SystemUiOverlayStyle>`, en los temas claro y oscuro, porque la intro del splash
   deja aplicado el último estilo de la barra y hoy ningún archivo de `lib/` fija uno (RF-SPL-4 de
-  la spec del splash). Esta parte no depende de la decisión 11.
-- Si el dueño elige la alternativa de la decisión 11 de la spec del splash, la estrella no entra y
+  la spec del splash). Esta parte no depende de la decisión S-11.
+- Si el dueño elige la alternativa de la decisión S-11 de la spec del splash, la estrella no entra y
   el header sigue solo con el texto.
   `[@test] ../../../test/components/header/app_header_test.dart` (pendiente del caso nuevo)
 

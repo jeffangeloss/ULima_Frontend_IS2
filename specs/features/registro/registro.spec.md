@@ -274,29 +274,33 @@ lista, y el resto de la spec sigue igual. Las referencias `archivo:línea` apunt
   `registro_binding.dart`, y `lib/pages/registro/**` sigue por `registro_controller.dart`.
   `lib/pages/login/login_page.dart` sale del código con la tarjeta del login.
 - **RS-FE-1.** Desde la bienvenida, «Soy nuevo» abre el registro dentro de la conversación, y la
-  cuenta queda lista para usarse sin salir de la app. La ruta `/registro` sale (decisión 23 de la
-  bienvenida).
+  cuenta queda lista para usarse sin salir de la app. La ruta `/registro` sale (decisión B-23 de
+  la bienvenida).
 - **RS-FE-2.** Las dos contraseñas se piden en turnos distintos del compositor, N2 y N4, con el
   consentimiento en medio, y el compositor de una se cierra antes de que aparezca el de la otra.
   La de ULima++ se rotula como propia de la app. Nunca se ven las dos a la vez.
-- **RS-FE-3.** «Ya tengo cuenta» está en todos los turnos antes del envío y «Soy nuevo» en todos
-  los de «Sí, entrar», fijos. Ningún texto de Ulises ofrece crear una cuenta según por qué falló un
-  login.
+- **RS-FE-3.** «Ya tengo cuenta» está en todos los turnos antes del envío y en `incierto`, y «Soy
+  nuevo» en todos los de «Sí, entrar», fijos. Ningún texto de Ulises ofrece crear una cuenta según
+  por qué falló un login.
 - **RS-FE-4.** Ningún fallo del registro cierra sesiones, saca de la conversación ni muestra un
   mensaje que no describa lo que pasó. El mensaje es una burbuja de Ulises con los textos de hoy.
 - **RS-FE-5.** Sin cambios. `incierto` es un turno de la conversación con sus dos salidas.
 - **RS-FE-6.** Las credenciales viven en los `TextEditingController` de `RegistroController`, que
   la bienvenida crea al empezar la rama y cierra ella misma, sin `Get.put`, al tocar «Ya tengo
-  cuenta», al pasar al test, al reiniciarse y cuando GetX retira `/login`. Cerrarlo borra los cinco
-  campos con `clear` antes de `dispose`. Las contraseñas, su repetición y el código del
-  authenticator nunca entran en el historial de la conversación, que solo guarda sus rótulos. El
-  código de alumno sí aparece en su burbuja, como en la maqueta, así que entra en el historial en
-  memoria y muere con él. El comentario de `registro_controller.dart:100-102`, que hoy lo deja
+  cuenta», al pasar al test, al reiniciarse, también tras un 401, y en el `dispose` de la página
+  de la bienvenida, guardado por la visita (RF-BIEN-1). GetX nunca lo cierra con la ruta, porque
+  el controlador de la bienvenida es permanente. Cerrarlo borra los cinco campos con `clear`
+  enseguida, y el `dispose` va después del cuadro en que el campo del compositor sale del árbol.
+  La contraseña de ULima++ vive en `passwordCtrl` desde N2 hasta que el tramo se cierra. Las
+  contraseñas, su repetición y el código del authenticator nunca entran en el historial de la
+  conversación, que solo guarda sus rótulos. El código de alumno sí aparece en su burbuja, como en
+  la maqueta, así que entra en el historial en memoria y muere con él, al salir de la bienvenida o
+  al reiniciarla. El comentario de `registro_controller.dart:100-102`, que hoy lo deja
   fuera de todo `Rx`, se ajusta a eso.
 - **BR-REG-F-01.** El orden queda en cinco turnos, el código (N1), la contraseña de ULima++ con su
   repetición (N2), el consentimiento (N3), la contraseña de miUlima (N4) y el código del
   authenticator (N5), que va justo antes del botón «Crear mi cuenta». El envío es siempre ese
-  botón, y no el sexto dígito (decisión 5 de la bienvenida).
+  botón, y no el sexto dígito (decisión B-5 de la bienvenida).
 - **Consentimiento.** Es una tarjeta de Ulises con los textos literales de `PortalConsentView`,
   tomados de sus constantes, y las respuestas rápidas «Acepto» y «Volver». Aceptado una vez, dura
   lo que dura la rama.
@@ -307,17 +311,30 @@ lista, y el resto de la spec sigue igual. Las referencias `archivo:línea` apunt
   código del authenticator borrado y lo demás intacto.
 - **BR-REG-F-07.** Los `warnings` del 201 van en una burbuja de Ulises con «Algunas cosas que
   notamos» y cada `message` tal cual.
+- **BR-REG-F-08.** Sin cambios en el plazo de 120 s. Un fallo de red durante el envío, también
+  cuando el sistema corta la conexión con la app en segundo plano, sigue siendo `SIN_CONEXION` y
+  vuelve a N5, como hoy vuelve a `verificar`. Tratarlo como `incierto` es la alternativa de la
+  decisión B-32 de la bienvenida.
 - **BR-REG-F-09.** El `PopScope` pasa a la bienvenida y veta el atrás del sistema mientras se
-  envía, con el aviso de hoy.
+  envía, con el aviso de hoy, que por defecto sale abajo para no tapar el sello (decisión B-29 de
+  la bienvenida).
 - **BR-REG-F-11.** Si «Iniciar sesión» entra desde `incierto`, la conversación sigue con el test o
   con el paso al horario, según la configuración, en lugar de `Get.offAllNamed(postLoginRoute)`.
+  `incierto` suma el enlace «Ya tengo cuenta», que cierra el tramo del registro y lleva a iniciar
+  sesión, donde está «¿Olvidaste tu contraseña?». Si el login falla, el texto accionable ya no
+  dice «desde el login», porque esa pantalla deja de existir. Por defecto dice «Seguimos sin poder
+  confirmarlo. Puedes volver a intentar el registro: si te dice que ya existe una cuenta con ese
+  código, es que sí se creó y puedes recuperar la contraseña con “Ya tengo cuenta”.» (decisión
+  B-30 de la bienvenida y `registro_controller.dart:321-323`).
 - **UI Behavior.** Los seis estados siguen en `RegistroController` y se dibujan como turnos
   (RF-BIEN-7 y RF-BIEN-8). `enviando` es la píldora «Creando tu cuenta…», el pulso del sello y
-  las burbujas «Estoy creando tu cuenta y trayendo tu ciclo. Tarda cerca de un minuto.» y «No
-  cierres la app mientras tanto.». `listo` es la píldora «Cuenta creada» y la burbuja «¡Craa! Tu
-  cuenta ya está lista.» con el conteo de cursos, sin el nombre (decisión 4 de la bienvenida) y
-  sin el botón «Entrar», porque la conversación sigue con el test. Salen los títulos, las bajadas
-  y las filas del resumen de la pantalla.
+  las burbujas «Estoy creando tu cuenta y trayendo tu ciclo.» y «Puede tomar un par de minutos:
+  no cierres la app.», la advertencia de hoy, que por defecto no cambia (decisión B-17 de la
+  bienvenida). `listo` es la píldora «Cuenta creada» y una burbuja con «¡Craa! Tu cuenta ya está
+  lista.» y el conteo de cursos, que no va con 0 cursos ni sin `summary`, sin el nombre (decisión
+  B-4 de la bienvenida) y sin el botón «Entrar», porque la conversación sigue con el test. Salen
+  los títulos, las bajadas y las filas del resumen de la pantalla, también «Clases en tu horario»
+  y «Cursos de tu avance» (decisión B-31 de la bienvenida).
 - **Data Flow.** Después del 201 y de `adoptarSesion`, el registro no navega a
   `postLoginRoute(user)`. La bienvenida sigue con el test de especialidad (RF-BIEN-10), y el
   alumno llega a `/home` en Horario al terminarlo (RF-BIEN-11).

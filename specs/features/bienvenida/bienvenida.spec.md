@@ -14,6 +14,9 @@ targets:
   - ../../../lib/components/google_sign_in_button_web.dart
   - ../../../lib/components/chatbot_bubble.dart
   - ../../../lib/components/logo/**
+  - ../../../lib/components/portal_consent/portal_consent_view.dart
+  - ../../../lib/pages/splash/**
+  - ../../../lib/services/auth_service.dart
   - ../../../lib/configs/themes.dart
   - ../../../test/bienvenida/**
   - ../../../test/HU01_jeff/**
@@ -36,11 +39,16 @@ targets:
 > `specs/features/splash/splash.spec.md`, que también está pendiente de aprobación.
 > Enmienda `specs/features/auth/auth.spec.md` y `specs/features/registro/registro.spec.md`, y
 > propone una enmienda a `specs/features/specialty-test/specialty-test.spec.md`, que el dueño
-> aprueba el 2026-09-25 en la rama `feat/test-especialidad-fe` y que sigue sin implementar
-> («Cambios en otras specs»). Las tres enmiendas quedan pendientes de aprobación con esta spec.
+> aprueba el 2026-09-25 en la rama `feat/test-especialidad-fe`, donde su implementación empieza
+> ese mismo día («Cambios en otras specs»). Las tres enmiendas quedan pendientes de aprobación con
+> esta spec.
+> Las decisiones de esta spec llevan el prefijo B y las de la spec del splash, el prefijo S, así
+> que B-10 y S-29 nunca se confunden aunque las dos specs numeren desde 1.
 > Las referencias `archivo:línea` apuntan a `4e2a0b2`, la punta de `feat/splash-animado` el
-> 2026-09-25. Las de la spec del test apuntan a `cabfb43` de `feat/test-especialidad-fe`, y las
-> de `google_sign_in_web`, a la versión 0.12.4+4 que fija `pubspec.lock`.
+> 2026-09-25, cuyo código no cambia hasta `28a1ec1`. Las de la spec del test apuntan a `e718c29`
+> de `feat/test-especialidad-fe`, el último commit que cambia esa spec, porque los siguientes
+> solo suman su implementación. Las de `google_sign_in_web` apuntan a la versión 0.12.4+4 y las
+> de GetX a la 4.7.3, que fija `pubspec.lock`.
 > Los `[@test]` apuntan a pruebas que todavía no existen. Cada uno lleva «(pendiente)» y se
 > escribe con la implementación.
 > Donde esta spec y la maqueta difieren, manda la spec, y `docs/images/UI/bienvenida/README.md`
@@ -74,17 +82,25 @@ El diagnóstico sobre `4e2a0b2` es lo que la spec reemplaza o conserva.
   (`session_navigation.dart:32-39`), y una prueba prohíbe `Get.offAllNamed('/login')` fuera de ese
   archivo (`test/HU02_jeff/session_navigation_guard_test.dart`).
 - **Quién llega a `/login`.** El arranque sin sesión (`main.dart:98-100`), el cierre de sesión
-  del Perfil y del docente, el 401 del `ApiClient` con el aviso «Sesión expirada»
-  (`api_client.dart:143-160`) y el restablecimiento de contraseña, que al terminar cierra la
-  sesión y llama a `offAllToLogin` con el aviso «Contraseña actualizada»
+  del Perfil y del docente, el botón «Volver a iniciar sesión» del Perfil cuando no carga sus
+  datos (`perfil.dart:97`, con `onPressed: offAllToLogin`), el 401 del `ApiClient` con el aviso
+  «Sesión expirada» (`api_client.dart:143-160`) y el restablecimiento de contraseña, que al
+  terminar cierra la sesión y llama a `offAllToLogin` con el aviso «Contraseña actualizada»
   (`reset_password_controller.dart:150-166`). Con la spec del splash, el arranque sin sesión llega
   además con la pose del logo como argumento de ruta (RF-SPL-21).
+- **Los avisos arriba.** «Sesión expirada» (`api_client.dart:159`), «Contraseña actualizada»
+  (`reset_password_controller.dart:162-165`) y el aviso «Estamos creando tu cuenta» del registro
+  (`registro_page.dart:73-78`) son `Get.snackbar`, que en GetX sale arriba si no se dice otra
+  cosa (`extension_navigation.dart:434`, `SnackPosition.TOP`).
 - **El docente.** Entra con un usuario alfanumérico, así que el campo usa teclado de texto y la
   pista «Tu código o usuario» (`login_page.dart:94-106`).
 - **El login con código.** `LoginController.submit` valida que ningún campo esté vacío, llama a
   `AuthService.login` y navega con `postLoginRoute` (`login_controller.dart:61-84`).
   `AuthService.login` solo atrapa `ApiException` (`auth_service.dart:218-250`), así que un fallo
   de red sale crudo, `submit` no llega a apagar `submitting` y el botón «Entrar» queda girando.
+  Además, `login` guarda el token antes de cargar los catálogos (`auth_service.dart:235-242`), así
+  que un fallo de red en ese tramo deja el token guardado sin `currentUser`, y el siguiente
+  arranque en frío restaura esa sesión.
 - **Google.** En Android y en iOS, el botón propio dice «Google» junto al logo oficial de
   `assets/images/google_logo.svg` (`login_page.dart:401-434`) y llama a `loginWithGoogle`
   (`auth_service.dart:255-268`). En web va el botón oficial de Google Identity Services, que se
@@ -100,15 +116,24 @@ El diagnóstico sobre `4e2a0b2` es lo que la spec reemplaza o conserva.
   (`registro_binding.dart:12-17` y `registro_controller.dart:149-163`). El paso de datos no llama
   al backend (`:165-184`), el consentimiento usa los textos de `PortalConsentView`
   (`portal_consent_view.dart:41-56`), el envío corre hasta 120 s (`registro_service.dart:28` y
-  `:36-94`), un `PopScope` impide salir mientras se envía (`registro_page.dart:40-62`) y los
-  estados `listo` e `incierto` cierran el recorrido (`:311-369` y `:393-462`). El enlace «Ya
-  tengo cuenta» vuelve al login con `Get.back` (`:195-202`).
+  `:36-94`) con la advertencia «Puede tomar un par de minutos: no cierres la app.»
+  (`registro_page.dart:301-302`), un `PopScope` impide salir mientras se envía
+  (`registro_page.dart:40-62`) y los estados `listo` e `incierto` cierran el recorrido
+  (`:311-369` y `:393-462`). `listo` muestra tres cifras, «Cursos matriculados», «Clases en tu
+  horario» y «Cursos de tu avance» (`:335-337`). El enlace «Ya tengo cuenta» vuelve al login con
+  `Get.back` (`:195-202`). Si la red falla antes de la respuesta, `RegistroService` lo traduce a
+  `SIN_CONEXION` (`registro_service.dart:65-71`) y el controlador vuelve a `verificar`
+  (`registro_controller.dart:283-285`). Solo el plazo vencido lleva a `incierto`.
 - **Después del registro.** Una cuenta nueva llega con `setupComplete` en `false` y
   `postLoginRoute` la manda a `/setup-carrera` (`post_login_route.dart:11-14`). La spec del test,
   aprobada en su rama, pone ahí la carrera, el test en la ruta `/test-especialidad` y la
   selección manual (RF-TEST-1). Su contenido exige el token del alumno, porque el servidor
   resuelve cada `specialtyId` con la carrera del alumno (RS-BE-38 de la spec del backend, rama
-  `feat/test-especialidad`).
+  `feat/test-especialidad`). La ruta crea su controlador con `SpecialtyTestBinding`, un `lazyPut`
+  sin `fenix`, y en ese controlador viven la regla de una sola evaluación en vuelo, el descarte
+  del paso tras un atrás desde la espera y los guardados de uno en uno (RF-TEST-4, RF-TEST-7 y
+  RF-TEST-9). Sin `careerId`, el asistente de hoy no guarda y dice «No se pudo determinar tu
+  carrera.» (`setup_carrera_controller.dart:91-94`).
 - **Los bindings y los avisos.** `main.dart:124-128` recuerda que un `Get.put` fuera de un
   binding, con un aviso abierto, puede atar el controlador a la ruta del aviso, que GetX borra al
   cerrarlo, y con él sus `TextEditingController`.
@@ -125,45 +150,76 @@ El diagnóstico sobre `4e2a0b2` es lo que la spec reemplaza o conserva.
 ## Requisitos
 
 Los tiempos de la maqueta se cuentan en milisegundos y sus medidas en píxeles de una pantalla de
-306 × 646. La app las escala a su pantalla en dp, y donde la spec fija una medida propia, manda
-la spec.
+306 × 646. Por defecto, la app las lleva a dp con un solo criterio (B-27).
+
+- **El dibujo se escala por 1,2.** La maqueta dibuja la estrella de R = 90 dp con 75 px, así que
+  lo que se dibuja junto a ella, que es Ulises con su vuelo, su sombra, su estela, sus partículas
+  y su salto, se multiplica por 1,2 y guarda la proporción de la maqueta aprobada.
+- **La interfaz va en dp iguales a sus píxeles.** La tarjeta del saludo, los botones, las
+  burbujas, el compositor, sus textos, sus rellenos y sus márgenes miden en dp o en sp lo mismo
+  que en la maqueta, como el resto de la conversación, porque su texto crece con la escala del
+  sistema y sus controles tienen el mínimo de 48 dp de RF-BIEN-16. Frente a la estrella se ven un
+  poco más chicos que en la maqueta.
+- **Las posiciones se anclan.** No se escalan con la pantalla. Cada requisito dice a qué se
+  ancla cada pieza, como la estrella al centro de la pantalla (RF-SPL-5) o los botones al borde
+  inferior.
+- Donde la spec fija una medida propia, manda la spec.
 
 ### RF-BIEN-1. La ruta sin sesión y quién llega a ella
 
 - **La ruta.** La bienvenida ocupa `/login`, que conserva su nombre y todos sus llamadores
-  (decisión 32 del splash). La `GetPage` de `/login` pasa a mostrar la bienvenida, y la tarjeta
-  de `login_page.dart` sale de la app, también en web (decisión 25).
+  (decisión S-32). La `GetPage` de `/login` pasa a mostrar la bienvenida, y la tarjeta
+  de `login_page.dart` sale de la app, también en web (decisión B-25).
 - **Los controladores.** `LoginBinding` sigue registrando `LoginController` como permanente, con
   sus campos, `submit`, `loginWithGoogle` y la escucha de web, y registra también el controlador
-  de la bienvenida como permanente (decisión 19). Al volver a entrar a `/login`, `LoginController`
-  limpia sus campos después del cuadro, como hoy (`login_binding.dart:28-34`), y la bienvenida
-  empieza su conversación desde cero al montarse, con los argumentos de la ruta nueva, así que su
-  primer cuadro nunca muestra la visita anterior. Reiniciar la bienvenida borra la conversación y
-  cierra el tramo del registro si quedó abierto (RF-BIEN-9).
+  de la bienvenida como permanente (decisión B-19). `LoginBinding` corre dentro del build de la
+  ruta (`_getChild` de `default_route.dart`), así que ahí no reinicia nada.
+- **Cada montaje es una visita.** Cada vez que la página de la bienvenida se monta, su `State`
+  crea un identificador de visita nuevo. Estas son las reglas.
+  - El primer cuadro sale solo de los argumentos de la ruta y de ese identificador, que son la
+    pose, el motivo o ninguno (RF-BIEN-2 y RF-BIEN-3), y nunca del estado del controlador
+    permanente. Mientras el controlador no atiende esa visita, la página pinta ese primer cuadro
+    y no lee el estado que queda de la visita anterior, como la franja con el sello tras un
+    cierre de sesión.
+  - Después de ese cuadro, la página le pide al controlador que empiece su visita. El
+    controlador borra la conversación, cierra los tramos del registro y del test si siguen
+    abiertos (RF-BIEN-9 y RF-BIEN-10) y desde ahí la página pinta su estado. El reinicio no se
+    pinta nunca antes de ese cuadro. `LoginController` limpia sus campos también después del
+    cuadro, como hoy (`login_binding.dart:28-34`).
+  - El `dispose` de la página le avisa al controlador que su visita termina, y el controlador
+    lo ignora si ya atiende una visita más nueva. Así, en el restablecimiento de contraseña,
+    donde por un momento conviven dos `/login` (`reset_password_controller.dart:159-161`), la
+    página vieja no toca la visita nueva.
+  - Ese `dispose` es el gancho que cierra los tramos cuando la bienvenida sale del árbol, porque
+    GetX nunca retira un controlador permanente con la ruta.
 - **La navegación queda en la bienvenida.** `LoginController` deja de navegar. Sus tres caminos,
   el código, Google en Android e iOS y Google en web, devuelven a la bienvenida si la sesión quedó
   puesta o el mensaje del error, y la bienvenida decide el turno siguiente (RF-BIEN-6).
-- **`/registro` sale.** Salen la ruta, `RegistroPage` y `RegistroBinding` (decisión 23).
+- **`/registro` sale.** Salen la ruta, `RegistroPage` y `RegistroBinding` (decisión B-23).
   `RegistroController`, sus validadores y `RegistroService` siguen y los usa la bienvenida
   (RF-BIEN-7).
 - **El motivo de la llegada.** `offAllToLogin` suma un parámetro opcional `motivo`, que viaja como
-  argumento de ruta junto a la pose del splash (RF-SPL-21 y decisión 21). El interceptor del 401
+  argumento de ruta junto a la pose del splash (RF-SPL-21 y decisión B-21). El interceptor del 401
   pasa `expirada` y el restablecimiento de contraseña pasa `restablecida`. El cierre de sesión del
-  Perfil y del docente no pasa ningún motivo y no cambia. La prueba que prohíbe navegar a `/login`
-  fuera de `session_navigation.dart` sigue igual.
+  Perfil y del docente y el botón «Volver a iniciar sesión» del Perfil no pasan ningún motivo y
+  no cambian. Como los parámetros nuevos son nombrados y opcionales, `onPressed: offAllToLogin`
+  de `perfil.dart:97` sigue compilando. La prueba que prohíbe navegar a `/login` fuera de
+  `session_navigation.dart` sigue igual.
 
 | Llegada | Argumentos | Cómo empieza | Requisito |
 | --- | --- | --- | --- |
 | Arranque en frío sin sesión | La pose del logo | El recibimiento | RF-BIEN-2 |
-| Web, que no tiene intro (decisión 22 del splash) | Ninguno | El recibimiento corto | RF-BIEN-3 |
-| Cierre de sesión del Perfil o del docente | Ninguno | El recibimiento corto (decisión 7) | RF-BIEN-3 |
-| Un 401 con el aviso «Sesión expirada» | `motivo: expirada` | Directo a «Sí, entrar» (decisión 8) | RF-BIEN-3 |
-| Contraseña restablecida | `motivo: restablecida` | Directo a «Sí, entrar» (decisión 8) | RF-BIEN-3 |
+| Web, que no tiene intro (decisión S-22) | Ninguno | El recibimiento corto | RF-BIEN-3 |
+| Cierre de sesión del Perfil o del docente | Ninguno | El recibimiento corto (decisión B-7) | RF-BIEN-3 |
+| «Volver a iniciar sesión» del Perfil sin datos | Ninguno | El recibimiento corto (decisión B-7) | RF-BIEN-3 |
+| Un 401 con el aviso «Sesión expirada» | `motivo: expirada` | Directo a «Sí, entrar» (decisión B-8) | RF-BIEN-3 |
+| Contraseña restablecida | `motivo: restablecida` | Directo a «Sí, entrar» (decisión B-8) | RF-BIEN-3 |
 
 - **Las salidas.** La bienvenida sale hacia `/home` por el paso al horario (RF-BIEN-11), hacia
-  `/setup-carrera` en el caso de la decisión 10 y hacia `/forgot-password`, que se abre encima con
-  `Get.toNamed`, como hoy (decisión 9). Volver de `/forgot-password` deja la conversación como
-  estaba.
+  `/setup-carrera` en el caso de la decisión B-10 y hacia `/forgot-password`, que se abre encima con
+  `Get.toNamed`, como hoy (decisión B-9). Volver de `/forgot-password` deja la conversación como
+  estaba. Al salir hacia `/home` o hacia `/setup-carrera`, la bienvenida borra el historial y
+  `LoginController` vacía sus dos campos (RF-BIEN-5).
 - **La orientación.** Vertical, como toda ruta fuera de Horario (BR-SHELL-F-00 de app-shell).
 
 `[@test] ../../../test/bienvenida/bienvenida_ruta_test.dart` (pendiente)
@@ -174,66 +230,95 @@ Es lo que ve el alumno sin sesión al abrir la app, entre el relevo del splash y
 respuesta. La maqueta lo muestra en las funciones `welcome` y `ulisesLlega`.
 
 - **El primer cuadro.** La bienvenida recibe la pose del logo como argumento de ruta (RF-SPL-21 y
-  decisión 33 del splash) y pinta en su primer cuadro `#E77330` de borde a borde y el logo blanco
+  decisión S-33) y pinta en su primer cuadro `#E77330` de borde a borde y el logo blanco
   en esa pose, con la geometría de RF-SPL-2, en los dos temas. Avisa a la capa del splash cuando
   lo pinta, y la capa se retira sin fundido, así que la pantalla no cambia.
 - **Quieto.** Durante 160 ms nada se mueve.
 - **El vuelo de Ulises.** Ulises, recortado en círculo, entra desde arriba a la derecha, fuera de
-  la pantalla, con 52 dp y una inclinación de −26°. Recorre en 1300 ms, con la curva seno, una
-  curva de Bézier cúbica hasta su lugar, que en la maqueta va de (360, −44) a (66, 438) con los
-  puntos de control (250, 40) y (−90, 250). Se inclina según su velocidad, hasta 14° a mitad del
-  vuelo, se comprime cinco veces como un aleteo, crece hasta 58 dp y deja una estela de puntos
-  blancos que se apagan en 560 ms, a lo sumo 30 por vuelo. Su sombra en el suelo crece al
-  acercarse.
+  la pantalla, con 62 dp y una inclinación de −26°. Recorre en 1300 ms, con la curva seno, una
+  curva de Bézier cúbica hasta su lugar. Sus puntos son los de la maqueta medidos desde el punto
+  de aterrizaje y multiplicados por 1,2, así que el inicio queda a (+353, −578) dp del aterrizaje
+  y los de control a (+221, −478) y (−187, −226) dp. En la maqueta la curva va de (360, −44) a
+  (66, 438), con los de control en (250, 40) y (−90, 250). Si el inicio cae dentro de la
+  pantalla, como en una tableta, se corre hacia arriba y a la derecha hasta quedar fuera de ella.
+  Se inclina según su velocidad, hasta 14° a mitad del vuelo, se comprime cinco veces como un
+  aleteo, crece hasta 70 dp y deja una estela de puntos blancos de 7 dp que se apagan en 560 ms, a
+  lo sumo 30 por vuelo. Su sombra en el suelo crece al acercarse.
 - **El aterrizaje.** Se posa con un rebote de 480 ms que lo aplasta contra el suelo y lo estira
   antes de asentarse, y suelta seis partículas blancas. Enseguida asiente en 320 ms, con un giro
   de −6° y un 6 % más de escala, mientras aparece su saludo.
 - **El fondo.** Mientras Ulises vuela, el fondo pasa en 1100 ms, con la curva seno, de `#E77330`
   al color de la franja, que es `#FF6600` en claro y `#262626` en oscuro (RF-BIEN-14). El logo
   sigue blanco y quieto.
-- **Dónde queda cada cosa.** La estrella se queda en su pose, entera y sin nada encima, con un
-  margen libre de 12 dp alrededor de su círculo. Ulises aterriza abajo a la izquierda de la
-  estrella, con 58 dp y su centro al 21,6 % del ancho y al 67,8 % del alto de la pantalla, como en
-  la maqueta. La tarjeta del saludo va a su derecha, desde 19 dp después de su borde hasta 12 dp
-  del borde derecho, con su pico hacia Ulises y su borde superior 22 dp arriba del centro de
-  Ulises. Los dos botones van abajo, a 22 dp de los lados y 26 dp sobre el borde inferior del
-  área segura, con 50 dp de alto y 10 dp entre ellos, «Sí, entrar» arriba y «Soy nuevo» abajo.
-- **Si no cabe.** Si Ulises, la tarjeta o los botones entrarían en el margen de la estrella, por
-  una pantalla baja o por la escala de texto, la estrella sube lo justo antes de que Ulises
-  aterrice, en 300 ms con easeInOutCubic, sin acercarse a menos de 24 dp del área segura de
-  arriba. Si aun así no cabe, la estrella baja su radio en el mismo movimiento, hasta 60 dp como
-  mínimo. Nada tapa nunca la estrella.
+- **Dónde queda cada cosa.** Con la opción por defecto de B-27, las posiciones se calculan una
+  vez, al empezar el vuelo, con la escala de texto de ese momento.
+  - La estrella se queda en su pose, entera y sin nada encima, con un margen libre de 12 dp
+    alrededor de su círculo.
+  - Ulises aterriza abajo a la izquierda de la estrella, con 70 dp y su centro 104 dp a la
+    izquierda y 138 dp debajo del centro de la estrella, que es su lugar en la maqueta,
+    (−87, +115) px, multiplicado por 1,2.
+  - La tarjeta del saludo va a su derecha, desde 11 dp después del borde derecho de Ulises hasta
+    12 dp del borde derecho de la columna (RF-BIEN-17), con su borde superior 22 dp arriba del
+    centro de Ulises, radio de 18 dp y relleno de 9 dp arriba, 13 dp a los lados y 11 dp abajo.
+    Su pico es un cuadrado de 14 dp girado 45°, que asoma 5 dp por la izquierda a 17 dp del borde
+    superior, hacia Ulises.
+  - Los dos botones van abajo, a 22 dp de los lados y 26 dp sobre el borde inferior del área
+    segura, con 10 dp entre ellos y un alto de 50 dp como mínimo, que crece si el texto lo pide,
+    «Sí, entrar» arriba y «Soy nuevo» abajo.
+- **En el iPhone SE del dueño.** Con 375 × 667 dp, sin barra inferior y con el texto al 100 %, la
+  estrella queda en el centro, a 333,5 dp del borde superior, y no se mueve. Ulises aterriza con
+  su centro a (83,5; 471,5) dp, el borde superior de la tarjeta queda unos 14 dp por debajo del
+  margen de la estrella y su borde inferior, unos 22 dp por encima de los botones, que empiezan
+  a 531 dp. Con el texto al 130 %, si el saludo pasa a dos líneas, la estrella sube unos 15 dp,
+  y al 200 % sube unos 95 dp (B-28). Son estimaciones con los altos de línea de «El saludo», y
+  `bienvenida_recibimiento_test` las fija en 375 × 667.
+- **Si no cabe (B-28).** Si el borde inferior de Ulises o de la tarjeta queda a menos de 16 dp de
+  los botones, por una pantalla baja o por la escala de texto, Ulises y la tarjeta suben juntos lo
+  justo. Si al subir entran en el margen de la estrella, la estrella sube lo justo antes de que
+  Ulises aterrice, en 300 ms con easeInOutCubic, sin acercarse a menos de 24 dp del área segura de
+  arriba, y si aun así no cabe, su radio baja en el mismo movimiento, hasta 60 dp como mínimo. Si
+  ni así cabe, no hay tarjeta ni botones grandes, y al aterrizar Ulises la estrella sube al sello
+  y la conversación empieza con su primer grupo, «¡Craa! Hola, soy Ulises 👋» y «¿Ya usas
+  ULima++?», y las respuestas rápidas «Sí, entrar» y «Soy nuevo». Nada tapa nunca la estrella.
 - **El saludo.** La tarjeta entra en 360 ms con un leve rebote, con «¡Craa! Hola, soy Ulises 👋»
-  en 12 sp y «¿Ya usas ULima++?» en 17 sp y negrita. 380 ms después entran los botones, en
-  400 ms, desde 18 dp más abajo (decisión 2). Hasta que entran, los toques no hacen nada.
-- **Los botones.** «Sí, entrar» va relleno y «Soy nuevo» con borde, en 16 sp y negrita, con los
-  colores de RF-BIEN-14 (decisión 3). Cada uno se oscurece un 7 % al tocarlo.
+  en 12 sp, seminegrita y alto de línea 1,4, y debajo, a 1 dp, «¿Ya usas ULima++?» en 17 sp,
+  negrita y alto de línea 1,25. Una línea que no cabe a lo ancho pasa a dos. 380 ms después
+  entran los botones, en 400 ms, desde 18 dp más abajo (decisión B-2). Los toques cuentan desde
+  que los botones empiezan a entrar, y antes no hacen nada.
+- **Los botones.** «Sí, entrar» va relleno y «Soy nuevo» con borde, en 16 sp y negrita, con radio
+  de 16 dp y los colores de RF-BIEN-14 (decisión B-3). Cada uno se oscurece un 7 % al tocarlo.
 - **Al responder.** La tarjeta y los botones se van en 280 ms, el logo sube al sello (RF-BIEN-4)
   y Ulises salta a su avatar en la conversación, que ya trae su primer grupo con el nombre
   «Ulises», las burbujas «¡Craa! Hola, soy Ulises 👋» y «¿Ya usas ULima++?» y la respuesta del
   alumno, «Sí, entrar» o «Soy nuevo» (RF-BIEN-5).
-- **El salto de Ulises.** Empieza 120 ms después del toque. Se agacha en 190 ms, salta en 720 ms
-  en un arco de unos 120 dp hasta su avatar de 40 dp y se posa con el rebote al 60 %. Al posarse,
-  su avatar queda en la conversación y el nombre «Ulises» aparece en 250 ms. 650 ms después
-  empieza el primer turno de la rama elegida.
+- **El salto de Ulises.** Empieza 120 ms después del toque. Se agacha en 190 ms y salta en 720 ms
+  hasta su avatar de 40 dp, en un arco con los puntos de control 144 dp sobre su lugar y 132 dp
+  sobre el avatar, que son los 120 y 110 px de la maqueta multiplicados por 1,2, y se posa con el
+  rebote al 60 %. Al posarse, su avatar queda en la conversación y el nombre «Ulises» aparece en
+  250 ms. 650 ms después empieza el primer turno de la rama elegida.
 - **Tiempo.** La tarjeta aparece 1,94 s después del relevo y los botones empiezan a entrar a los
-  2,32 s, enteros a los 2,72 s. Sumada la entrada del splash, de 1,15 a 1,33 s, los botones
-  empiezan a verse de 3,5 a 3,7 s después del primer cuadro de Flutter (decisión 2).
+  2,32 s, enteros a los 2,72 s. Sumada la entrada del splash, de 1,15 a 1,33 s, el que vuelve
+  puede tocar «Sí, entrar» de 3,5 a 3,7 s después del primer cuadro de Flutter, unos 3 s más
+  tarde que hoy la tarjeta del login, que aparece apenas terminan Firebase y el almacenamiento
+  (decisiones B-2 y S-6).
 
 `[@test] ../../../test/bienvenida/bienvenida_recibimiento_test.dart` (pendiente)
 
 ### RF-BIEN-3. Llegar sin pose
 
-- **Recibimiento corto.** Sin argumentos, que es la llegada de web y del cierre de sesión
-  (decisión 7), el primer cuadro es `#E77330` de borde a borde con el logo completo en su pose de
-  reposo, la estrella de R = 90 dp centrada en la pantalla física (RF-SPL-5) y los «++» en su
-  lugar (RF-SPL-2). Desde ahí sigue igual que RF-BIEN-2, desde «Quieto». La bienvenida precarga la
-  imagen de Ulises al montarse, porque sin pose no la precargó el splash.
+- **Recibimiento corto.** Sin argumentos, que es la llegada de web, del cierre de sesión y del
+  botón «Volver a iniciar sesión» del Perfil (decisión B-7), el primer cuadro es `#E77330` de
+  borde a borde con el logo completo en su pose de reposo, la estrella de R = 90 dp centrada en la
+  pantalla física (RF-SPL-5) y los «++» en su lugar (RF-SPL-2). En web la estrella se centra en la
+  vista, porque en el navegador `display.size` da el tamaño del monitor y no el de la ventana.
+  Desde ahí sigue igual que RF-BIEN-2, desde «Quieto». La bienvenida precarga la imagen de Ulises
+  al montarse, porque sin pose no la precargó el splash.
 - **Directo a «Sí, entrar».** Con `motivo: expirada` o `motivo: restablecida`, la bienvenida
   abre con la franja y el sello ya en su lugar (RF-BIEN-4), el primer grupo de Ulises con
   «¡Craa! Hola, soy Ulises 👋» y el primer turno de «Sí, entrar» (RF-BIEN-6), sin la pregunta ni
-  los dos botones grandes (decisión 8). «Soy nuevo» queda en el compositor, como en todo turno de
-  esa rama (RF-BIEN-9). Los avisos «Sesión expirada» y «Contraseña actualizada» siguen como hoy.
+  los dos botones grandes (decisión B-8). «Soy nuevo» queda en el compositor, como en todo turno de
+  esa rama (RF-BIEN-9). Los avisos «Sesión expirada» y «Contraseña actualizada» conservan su
+  texto de hoy y, por defecto, salen abajo y no sobre el sello (B-29).
 - En los dos casos, el sello y su logo están enteros desde el primer cuadro.
 
 `[@test] ../../../test/bienvenida/bienvenida_recibimiento_test.dart` (pendiente)
@@ -255,9 +340,15 @@ respuesta. La maqueta lo muestra en las funciones `welcome` y `ulisesLlega`.
   izquierda a derecha desde el 55 %.
 - **El logo no se pierde.** Desde el relevo del splash hasta el paso al horario, la estrella y
   sus «++» están enteros y a la vista, sin nada encima, también con el teclado abierto, durante
-  el envío, en cualquier error y con reducir movimiento. Las únicas salidas que lo dejan de
-  mostrar son las pantallas de hoy de «¿Olvidaste tu contraseña?» (decisión 9) y el asistente de
-  carrera (decisión 10).
+  el envío, en cualquier error y con reducir movimiento, donde cada cambio es un fundido cruzado
+  que deja siempre un logo a la vista (RF-BIEN-15). Ningún aviso, confeti ni capa pasa sobre el
+  sello. Por defecto, los avisos de GetX salen abajo (B-29), y el confeti del test se dibuja bajo
+  la franja (RF-BIEN-10).
+- **Dónde se deja de ver.** Con las opciones por defecto, el logo deja de verse solo en dos
+  salidas, que abre cada una su decisión. Son las pantallas de hoy de «¿Olvidaste tu contraseña?»
+  (decisión B-9) y el asistente de carrera del alumno que tiene cuenta y todavía no elige su
+  especialidad (decisión B-10, que se decide junto con S-29). Los pedidos del dueño, en
+  «Decisiones», nombran estas excepciones.
 - **El latido.** Con cada respuesta del alumno y al posarse el sello, la estrella late durante
   380 ms. Su escala sube un 13 % en el primer 42 % del latido y un 5 % entre el 48 % y el 92 %,
   cada vez con la forma de medio seno, y un anillo blanco crece de 0,62 a 1,5 veces el radio de
@@ -270,7 +361,7 @@ respuesta. La maqueta lo muestra en las funciones `welcome` y `ulisesLlega`.
   del envío, los rombos vuelven a la opacidad plena en 200 ms.
 - **Semántica.** El sello es un encabezado con la etiqueta «ULIMA++», que el lector anuncia una
   vez. El dibujo queda fuera de la semántica.
-- **Sin estrella en la cabecera.** Con la alternativa de la decisión 11 del splash, el sello
+- **Sin estrella en la cabecera.** Con la alternativa de la decisión S-11, el sello
   conserva su estrella, y en el paso al horario la estrella se achica hasta la altura del texto y
   se disuelve a su izquierda, como en RF-SPL-11.
 
@@ -317,8 +408,13 @@ respuesta. La maqueta lo muestra en las funciones `welcome` y `ulisesLlega`.
   ícono `LucideIcons.circleAlert` en `testAccentText` a la izquierda del texto (RF-BIEN-12). Un
   error de validación local va bajo el campo y no entra en la conversación.
 - **El historial.** Vive solo en la memoria del controlador de la bienvenida, como el texto de las
-  burbujas. No se guarda en disco y se borra al reiniciar la bienvenida y al pasar al horario. Es
-  de solo lectura, y tocar una burbuja no hace nada.
+  burbujas. No se guarda en disco y se borra al reiniciar la bienvenida, también tras el 401 de
+  RF-BIEN-12, y al salir de ella por el paso al horario o hacia `/setup-carrera`. Es de solo
+  lectura, y tocar una burbuja no hace nada.
+- **Los campos del login al salir.** En esas mismas salidas y en ese reinicio, `LoginController`
+  vacía el código y la contraseña. Hoy la contraseña de ULima++ queda en `passwordController`
+  durante toda la sesión, porque `resetFields` solo corre al volver a `/login`, y la bienvenida
+  deja de arrastrarla.
 - **El teclado.** Cuando el compositor trae un campo, el campo toma el foco y el teclado se abre,
   salvo con lector de pantalla (RF-BIEN-16). La conversación se encoge, la franja queda arriba y
   el último mensaje a la vista. La acción «Siguiente» del teclado pasa de «Contraseña» a «Repetir
@@ -343,16 +439,28 @@ de auth, enmendadas («Cambios en otras specs»).
   campo de E1 acepta el usuario alfanumérico del docente y no valida dígitos. El botón de envío de
   E1 y «Entrar» quedan inactivos mientras su campo está vacío, así que el mensaje «Ingresa tu
   código y contraseña.» sigue en `LoginController` solo como defensa.
+- **El autocompletado.** Los campos de E1 y de E2 van en un mismo `AutofillGroup`. Durante E2, el
+  campo de E1 sigue montado dentro del grupo, invisible y fuera de la semántica, para que el
+  llavero de iOS y el gestor de contraseñas de Google emparejen el usuario con la contraseña.
+  Cuando la sesión queda puesta, la bienvenida llama a `TextInput.finishAutofillContext()` antes
+  de vaciar los campos, para que el sistema ofrezca guardarlos. Si la revisión manual de
+  «Verificación» muestra que no los emparejan o no ofrecen guardarlos, la implementación se
+  detiene y el cambio vuelve a esta spec.
 - **Entrar.** «Entrar» llama a `AuthService.login` por `LoginController`. Mientras espera, el
   botón muestra su indicador y el compositor no responde (BR-AUTH-F-08). Si la sesión queda
   puesta, el compositor se cierra, entra la respuesta del alumno, el sello late, Ulises dice la
   despedida y, 900 ms después, empieza el paso al horario.
 - **El error del login.** Ulises dice el mensaje de hoy (`auth_service.dart:28-36`) y la
-  conversación vuelve a E1, con el código escrito y la contraseña vacía (decisión 6). Ese mensaje
+  conversación vuelve a E1, con el código escrito y la contraseña vacía (decisión B-6). Ese mensaje
   nunca ofrece crear una cuenta (RF-BIEN-9).
-- **Sin conexión.** La bienvenida atrapa el fallo crudo de la red que `AuthService.login` no
-  atrapa. Ulises dice «No hay conexión. Revisa tu internet e inténtalo de nuevo.» y E2 sigue
-  abierto con la contraseña escrita. El botón deja de girar, lo que corrige el defecto de hoy.
+- **Sin conexión.** `LoginController.submit` atrapa el fallo crudo de la red que
+  `AuthService.login` no atrapa, con un `finally` que apaga `submitting` en todos los casos, y le
+  devuelve a la bienvenida el resultado «sin conexión». Ulises dice «No hay conexión. Revisa tu
+  internet e inténtalo de nuevo.» y E2 sigue abierto con la contraseña escrita. El botón deja de
+  girar, lo que corrige el defecto de hoy, y en web `_onGoogleUserChanged`
+  (`login_controller.dart:36`) no queda bloqueado por un `submitting` colgado. Si el fallo llega
+  después de que `login` guarde el token y antes de los catálogos, el token queda guardado sin
+  usuario, una deuda previa que anota «Qué NO entra».
 - **Google en Android e iOS.** «Continuar con Google» es el botón propio, con el logo oficial de
   `google_logo.svg` en 20 dp, 48 dp de alto, radio de 12 dp y los colores de la marca de Google
   (RF-BIEN-14), y llama a `loginWithGoogle`. Si la persona cancela el selector, no pasa nada. Si
@@ -360,18 +468,24 @@ de auth, enmendadas («Cambios en otras specs»).
   «Continuar con Google», y sigue E3. Un error se dice como burbuja de Ulises y E1 sigue abierto.
 - **Google en web.** Va el botón oficial de GIS en lugar del propio, con el texto `continueWith`,
   el idioma `es`, el tema `outline` en claro y `filledBlack` en oscuro, la forma rectangular, el
-  logo a la izquierda y el ancho del compositor hasta 400 px, el máximo de GIS (decisión 25). La
-  cuenta sigue llegando por `onCurrentUserChanged`.
+  logo a la izquierda y el ancho del compositor hasta 400 px, el máximo de GIS (decisión B-25).
+  Esos valores salen de una función pura de `lib/domain/bienvenida/` (decisión B-35).
+  - **La cuenta.** Sigue llegando por `onCurrentUserChanged`, sin nadie que espere un resultado.
+    `LoginController` publica el desenlace de `finishGoogleLogin`, la sesión puesta o el mensaje
+    del error, en un resultado observable, que la bienvenida escucha mientras E1 está abierto y
+    trata igual que el de Android e iOS.
+  - **El tema.** La configuración queda fija al dibujar el botón, así que un cambio del tema del
+    sistema con E1 abierto lo vuelve a dibujar. El aviso de GIS por un `initialize()` repetido
+    que eso puede dejar en la consola se acepta, porque web no se despliega.
 - **«¿Olvidaste tu contraseña?».** Abre `/forgot-password` encima de la bienvenida, como hoy
-  (decisión 9).
+  (decisión B-9).
 - **«Soy nuevo».** Está en E1 y en E2. Al tocarlo, entra la respuesta «Soy nuevo», los campos del
   login se vacían y empieza el primer turno de RF-BIEN-7. Lo escrito no pasa de una rama a la
   otra, como hoy entre `/login` y `/registro`.
 - **Adónde va.** Con la sesión puesta, un docente o un alumno con la configuración completa va al
   paso al horario. Un alumno con la configuración a medias va a `/setup-carrera`, como hoy, con
-  un fundido de 300 ms en lugar de E3 (decisión 10). Con la alternativa de la decisión 24 del
-  splash, en la que el docente abre en Secciones, la despedida del docente es solo «¡Hola de
-  nuevo!».
+  un fundido de 300 ms en lugar de E3 (decisión B-10). Con la alternativa de la decisión S-24,
+  en la que el docente abre en Secciones, la despedida del docente es solo «¡Hola de nuevo!».
 
 `[@test] ../../../test/bienvenida/bienvenida_entrar_test.dart` (pendiente)
 
@@ -400,7 +514,7 @@ justo antes del botón que envía.
   `validarPasscode`, que acepta de 6 a 8 dígitos. Sus mensajes van bajo el campo.
 - **El envío es un botón.** N5 no envía solo al completar las seis casillas, porque SecurID da 8
   dígitos con el PIN delante y cada envío fallido gasta uno de los cinco intentos por hora
-  (decisión 5).
+  (decisión B-5).
 - **«Volver».** Reabre el turno anterior con lo que se escribió, como hoy entre pasos
   (BR-REG-F-05). Entra la respuesta «Volver» y Ulises repite la pregunta de ese turno. Aceptado
   una vez, el consentimiento dura lo que dura la rama, así que al volver a avanzar desde N2 se
@@ -416,17 +530,22 @@ justo antes del botón que envía.
 ### RF-BIEN-8. El envío del registro y sus desenlaces
 
 - **Mientras se envía.** Se cierra el compositor, entra la respuesta de N5 y Ulises dice «Estoy
-  creando tu cuenta y trayendo tu ciclo. Tarda cerca de un minuto.» y «No cierres la app mientras
-  tanto.» (decisión 17). La píldora «Creando tu cuenta…», con su indicador, aparece bajo la franja
-  y el pulso recorre los rombos del sello (RF-BIEN-4). No hay «Volver» ni «Ya tengo cuenta».
+  creando tu cuenta y trayendo tu ciclo.» y, en otra burbuja, la advertencia de hoy, «Puede tomar
+  un par de minutos: no cierres la app.» (`registro_page.dart:301-302` y decisión B-17). La
+  píldora «Creando tu cuenta…», con su indicador, aparece bajo la franja y el pulso recorre los
+  rombos del sello (RF-BIEN-4). No hay «Volver» ni «Ya tengo cuenta».
 - **El plazo.** Es el de `RegistroService`, 120 s, y su vencimiento no es un fallo (BR-REG-F-08).
 - **No se sale.** Un `PopScope` de la bienvenida veta el atrás del sistema mientras se envía y
   muestra el aviso de hoy, «Estamos creando tu cuenta» con «No cierres la app: si sales ahora
-  podrías quedarte con una cuenta a medias.» (BR-REG-F-09 y `registro_page.dart:73-78`).
+  podrías quedarte con una cuenta a medias.» (BR-REG-F-09 y `registro_page.dart:73-78`), que por
+  defecto sale abajo y no sobre el sello (decisión B-29).
 - **Un 201.** Se para el pulso, la píldora pasa a verde con un visto y «Cuenta creada», y Ulises
-  dice «¡Craa! Tu cuenta ya está lista.» seguido de la frase del conteo. Con N cursos en el
-  resumen, la frase es «Traje tus N cursos del ciclo.», con uno es «Traje tu curso del ciclo.» y
-  sin conteo no va. El nombre no se agrega (decisión 4). La píldora se va 900 ms después.
+  dice en una sola burbuja, como en la maqueta, «¡Craa! Tu cuenta ya está lista.» seguido de la
+  frase del conteo. Con N cursos en el resumen, la frase es «Traje tus N cursos del ciclo.» y con
+  uno es «Traje tu curso del ciclo.». Con 0 cursos no va, y tampoco sin `summary`, porque
+  entonces `RegistroResult.fromJson` deja el conteo en 0 (`registro_models.dart:41-52`). El
+  nombre no se agrega (decisión B-4). Las cifras «Clases en tu horario» y «Cursos de tu avance»
+  del resumen de hoy no aparecen (decisión B-31). La píldora se va 900 ms después.
 - **Los avisos del 201.** Si la respuesta trae `warnings`, Ulises suma una burbuja con «Algunas
   cosas que notamos» en negrita y cada `message` tal cual en su línea, precedido de «· », como hoy
   en `listo` (`registro_page.dart:339-354`). Un 201 con avisos es un éxito (BR-REG-F-07).
@@ -441,20 +560,33 @@ justo antes del botón que envía.
   (`registro_controller.dart:265-286`). Todo lo escrito se conserva salvo el código del
   authenticator, que se borra (BR-REG-F-05). Desde N5, «Volver» lleva a N4 con la contraseña de
   miUlima intacta.
-- **Sin conexión.** Ulises dice «No hay conexión. Revisa tu internet e inténtalo de nuevo.» y el
-  compositor vuelve a N5.
+- **Sin conexión.** Si la red falla antes de que llegue la respuesta, también porque el sistema
+  corta la conexión con la app en segundo plano, `RegistroService` lo traduce a `SIN_CONEXION`
+  (`registro_service.dart:65-71`). Ulises dice «No hay conexión. Revisa tu internet e inténtalo de
+  nuevo.» y el compositor vuelve a N5, como hoy vuelve a `verificar`
+  (`registro_controller.dart:283-285`). Como el pedido pudo llegar al servidor, un reenvío puede
+  recibir el 409 de la fila siguiente, que confirma que la cuenta existe (decisión B-32).
+- **Ya existe una cuenta.** Con `USER_ALREADY_EXISTS`, Ulises dice el texto de hoy, «Ya existe una
+  cuenta con ese código. Inicia sesión o recupera tu contraseña.», y el compositor vuelve a N1,
+  que trae «Ya tengo cuenta». Ese enlace lleva a iniciar sesión y, desde E2, a «¿Olvidaste tu
+  contraseña?». El texto no nombra el enlace, y se deja así como riesgo conocido para no cambiar
+  `RegistroService`.
 - **Incierto.** Con el plazo vencido, Ulises dice «No pudimos confirmar si tu cuenta se creó.» y
   «Es posible que sí se haya creado. Prueba entrar con el código y la contraseña que acabas de
   elegir.». Con `SIN_TOKEN`, el 201 ya llegó, y dice «Tu cuenta ya está creada.» y «Entra con el
   código y la contraseña que acabas de elegir.», más el mensaje del error si no repite el título
-  (`registro_page.dart:405-433`). El compositor trae las respuestas rápidas «Volver a intentar el
-  registro» e «Iniciar sesión», la principal (BR-REG-F-11).
+  (`registro_page.dart:405-433`). Los dos títulos son los de hoy con un punto final. El
+  compositor trae las respuestas rápidas «Volver a intentar el registro» e «Iniciar sesión», la
+  principal (BR-REG-F-11), y debajo el enlace «Ya tengo cuenta», que cierra el tramo del registro
+  y lleva a E1 (decisión B-30).
 - **«Iniciar sesión» desde incierto.** Llama a `intentarIniciarSesion`, con la píldora principal
   en espera y sin segundo toque. Si entra, la cuenta existía y sigue el test (RF-BIEN-10), o el
   paso al horario si la configuración ya está completa. Si no entra, Ulises dice «Seguimos sin
   poder confirmarlo. Puedes volver a intentar el registro: si te dice que ya existe una cuenta
-  con ese código, es que sí se creó y puedes recuperar la contraseña desde el login.», o el
-  mensaje sin conexión, y el turno sigue igual.
+  con ese código, es que sí se creó y puedes recuperar la contraseña con “Ya tengo cuenta”.», o
+  el mensaje sin conexión, y el turno sigue igual. El texto de hoy termina en «desde el login»
+  (`registro_controller.dart:321-323`), una pantalla que ya no existe, y por defecto nombra el
+  enlace que el alumno tiene a la vista (decisión B-30).
 - **«Volver a intentar el registro».** Vuelve a N5 con el código del authenticator borrado y la
   contraseña de miUlima intacta.
 
@@ -474,21 +606,25 @@ justo antes del botón que envía.
 - **Quién crea y cierra el controlador.** La bienvenida crea `RegistroController` al empezar N1 y
   lo cierra ella misma, sin `Get.put`, porque un aviso abierto, como «Sesión expirada», ataría el
   controlador a la ruta del aviso (`main.dart:124-128`). Cerrarlo borra los cinco campos con
-  `clear` antes de `dispose`, como `onClose` (decisión 20).
-- **Cuándo se cierra.** Al tocar «Ya tengo cuenta», al pasar al test después de adoptar la
-  sesión, al reiniciar la bienvenida y cuando GetX retira `/login`. Las contraseñas de miUlima y
-  el código del authenticator se borran además apenas se usan, como hoy
-  (`registro_controller.dart:244-246`). La contraseña de ULima++ sigue en memoria solo mientras
-  dura `incierto`, para su salida «Iniciar sesión» (BR-REG-F-11).
+  `clear` enseguida, como `onClose`, y el `dispose` de sus `TextEditingController` va después del
+  cuadro en que el campo del compositor ya no está en el árbol, para no reabrir el error de un
+  `TextEditingController` usado después de su `dispose` (decisión B-20).
+- **Cuándo se cierra.** Al tocar «Ya tengo cuenta», también desde `incierto`, al pasar al test
+  después de adoptar la sesión, al reiniciar la bienvenida, también tras el 401 de RF-BIEN-12, y
+  en el `dispose` de la página de la bienvenida, guardado por la visita (RF-BIEN-1). GetX nunca lo
+  cierra con la ruta, porque el controlador de la bienvenida es permanente. Las contraseñas de
+  miUlima y el código del authenticator se borran además apenas se usan, como hoy
+  (`registro_controller.dart:244-246`). La contraseña de ULima++ vive en `passwordCtrl` desde N2
+  hasta que el tramo se cierra, y en `incierto` es la que usa «Iniciar sesión» (BR-REG-F-11).
 - **Las dos contraseñas nunca a la vez.** La de ULima++ y la de miUlima van en turnos distintos
   del compositor, con el consentimiento en medio, y el compositor de una se cierra antes de que
   aparezca el de la otra (RS-FE-2).
 - **Sin oráculo de cuentas.** «Soy nuevo» está siempre en los turnos de «Sí, entrar», y «Ya
-  tengo cuenta» en todos los turnos del registro antes del envío, fijos, como hoy los enlaces del
-  login y del registro (RS-FE-3 y BR-REG-F-02). Ningún texto de Ulises ofrece crear una cuenta ni
-  cambia según por qué falló un login, también tras «Tu correo no está registrado en el
-  sistema.» de Google. Ningún turno anterior al envío consulta al backend por un código, y la
-  pregunta «¿Ya usas ULima++?» no depende de nada guardado en el teléfono.
+  tengo cuenta» en todos los turnos del registro antes del envío y en `incierto`, fijos, como hoy
+  los enlaces del login y del registro (RS-FE-3 y BR-REG-F-02). Ningún texto de Ulises ofrece
+  crear una cuenta ni cambia según por qué falló un login, también tras «Tu correo no está
+  registrado en el sistema.» de Google. Ningún turno anterior al envío consulta al backend por un
+  código, y la pregunta «¿Ya usas ULima++?» no depende de nada guardado en el teléfono.
 - **La deuda de hoy.** El `409 USER_ALREADY_EXISTS` del backend sigue distinguiendo por sí mismo
   si un código tiene cuenta, como anota la spec del registro en «Deuda conocida». La bienvenida
   no lo agrava ni lo arregla.
@@ -504,14 +640,24 @@ specs»).
 
 - **Cuándo empieza.** Después del 201 y de adoptar la sesión, o después de entrar desde
   `incierto` con la configuración a medias. El contenido exige el token, así que el test no
-  empieza mientras se crea la cuenta (decisión 1).
+  empieza mientras se crea la cuenta (decisión B-1).
+- **El controlador del test.** Es el mismo que usa la ruta `/test-especialidad`, con la regla de
+  una sola evaluación en vuelo, el descarte del paso tras un atrás desde la espera y los guardados
+  de uno en uno (RF-TEST-4, RF-TEST-7 y RF-TEST-9). En `/login` no existe `SpecialtyTestBinding`,
+  así que la bienvenida lo crea ella misma al empezar T0, sin `Get.put`, por el mismo riesgo de
+  `main.dart:124-128` que en el registro, y lo cierra ella misma al pasar al horario, al
+  reiniciarse, también tras el 401 de RF-BIEN-12, y en el `dispose` de su página, guardado por la
+  visita (RF-BIEN-1 y decisión B-34). Al cerrarlo, el tramo del test queda terminado, y una
+  evaluación o un `PUT` que responde después se descarta sin tocar la conversación. Lo que ese
+  `PUT` guarda en el servidor queda allí, como en RF-TEST-9, y el `clear()` de `logout()` y la
+  guarda por dueño del service siguen como en RF-TEST-2.
 - **T0, la invitación.** Al empezar, la bienvenida pide el contenido una vez con
   `SpecialtyTestService.fetchContent`. Mientras llega, Ulises muestra una burbuja de
   `SkeletonPulse`. Cuando llega, dice «¿Empezamos tu test de especialidad? Son T preguntas
   cortas.», donde T es el número de preguntas del contenido, y el compositor trae «Saltar y elegir
   por mi cuenta» y «Empezar el test», la principal. El paso de carrera no aparece, porque la
-  carrera sale del usuario (decisión 11), y tampoco las líneas `welcome` del contenido, porque
-  Ulises ya se presentó (decisión 12).
+  carrera sale del usuario (decisión B-11), y tampoco las líneas `welcome` del contenido, porque
+  Ulises ya se presentó (decisión B-12).
 - **Si el contenido no llega.** Sin conexión, con el plazo vencido, con un contenido no válido o
   con otro error, Ulises dice «No pudimos cargar el test.» y el compositor trae «Saltar y elegir
   por mi cuenta» y «Reintentar». Con `404 SPECIALTY_TEST_NOT_AVAILABLE`, la conversación pasa a la
@@ -525,7 +671,7 @@ specs»).
   mayúsculas y `testAccentText`. Debajo, las dos tarjetas apiladas con la moneda «o» entre ellas y,
   en dos columnas, «Me gustan las dos» y «Ninguna me llama», con las etiquetas de `duelOptions`,
   una debajo de otra desde la escala de texto 1,3. Las tarjetas son las de la maqueta, de 56 dp de
-  alto como mínimo, con la baldosa de 40 dp y el ícono de la tarea en 22 dp (decisión 13), y
+  alto como mínimo, con la baldosa de 40 dp y el ícono de la tarea en 22 dp (decisión B-13), y
   siguen las reglas de RF-TEST-5 para quedar neutras hasta el toque, encenderse en el color de su
   especialidad, llevar la insignia del visto y apagar la otra.
 - **La escala en el compositor.** El rótulo «Escala de gusto · N de T» y las cuatro opciones de
@@ -540,20 +686,26 @@ specs»).
   respuesta previa marcada, con las reglas de RF-TEST-4 sobre los desempates y la evaluación en
   vuelo. Desde la pregunta 1 lleva a T0.
 - **La espera.** Ulises dice `ulises.loading` con un indicador de 16 dp en `testAccent` a su
-  lado (RF-TEST-7). El compositor queda vacío.
+  lado (RF-TEST-7). El compositor queda vacío, y no hay barra ni plumas llenas, porque en la
+  conversación no hay barra (enmienda propuesta a RF-TEST-7).
 - **El desempate.** Ulises dice la `ulisesLine` del servidor, y el compositor trae el duelo con el
   rótulo «Desempate 1» o «Desempate 2».
-- **El resultado.** Entra el confeti una vez con `HapticFeedback.heavyImpact`, y Ulises dice
+- **El resultado.** Entra el confeti una vez con `HapticFeedback.heavyImpact`, dibujado bajo la
+  franja, así que nunca pasa sobre el sello (RF-BIEN-4), y Ulises dice
   `headline` y, si llega, `tiebreakOutcome` (RF-TEST-8). Debajo van, a lo ancho de la columna, la
   tarjeta de la número uno con las piezas de RF-TEST-8 y una segunda tarjeta con los electivos y
   «También te puede interesar», con sus corazones de 48 dp. El compositor trae «Elegir como
   principal», a lo ancho, y debajo, en dos columnas, «Decidir después» y «Rehacer el test». El
-  resultado queda en la conversación, que desplaza (decisión 15).
+  resultado queda en la conversación, que desplaza (decisión B-15).
 - **Guardar.** Rigen las reglas de RF-TEST-9, con un guardado a la vez, el plazo de 15 s, los
   corazones que guardan enseguida y el primer guardado que completa la configuración. Si «Elegir
   como principal» o «Decidir después» guardan, entra su respuesta, Ulises dice «¡Listo! Te llevo
   a tu horario 🪶» y, 900 ms después, empieza el paso al horario (RF-BIEN-11). Si fallan o vencen,
   Ulises dice el aviso de RF-TEST-11 y el compositor vuelve a responder.
+- **Sin carrera.** `completeSetup` exige un `careerId` entero. Si `user.careerId` llega nulo, la
+  bienvenida no lo llama, Ulises dice «No se pudo determinar tu carrera.», el mensaje de hoy del
+  asistente (`setup_carrera_controller.dart:91-94`), y el compositor vuelve a responder. Es el
+  mismo punto muerto que hoy tiene el asistente, y queda como riesgo conocido.
 - **«Rehacer el test».** Entra su respuesta y la conversación vuelve a la pregunta 1 con el mismo
   contenido, sin pasar por T0.
 - **La selección manual.** Con «Saltar y elegir por mi cuenta» o el `404`, Ulises dice «Elige una
@@ -563,7 +715,7 @@ specs»).
   con «Reintentar». Al guardar sigue la despedida de «Guardar». El atrás del sistema en este turno
   lleva a T0 si el test está disponible.
 - **Sin pausa.** No hay botón de pausa ni de salto dentro de las preguntas, porque el alumno nuevo
-  no tiene un asistente al que volver (decisión 14). Cerrar la app a mitad deja la configuración a
+  no tiene un asistente al que volver (decisión B-14). Cerrar la app a mitad deja la configuración a
   medias (RF-BIEN-13).
 - **Lo que no aparece.** El héroe de RF-TEST-3 con sus pastillas «3 a 4 min» y «Rehazlo en
   Perfil», la barra de 52 px de RF-TEST-4 con las plumas, el historial plegado y la pausa. El
@@ -579,11 +731,18 @@ Cierra la conversación del que vuelve y la del nuevo. La maqueta lo muestra en 
 
 - **La navegación.** La bienvenida navega a `/home` con `Get.offAll`, con el `page` y el `binding`
   de su `GetPage`, `routeName: '/home'`, `Transition.noTransition` y el argumento
-  `{'pestana': 'horario'}` de RF-SPL-20, igual que la intro del splash (RF-SPL-4). La capa de la
-  app que usa la intro dibuja encima la franja, el sello y a Ulises mientras `/home` se monta
-  debajo. Antes de navegar, la capa toma una imagen de la conversación y del compositor para
-  desvanecerla, y la bienvenida cierra el tramo del registro si sigue abierto y borra el
-  historial. La imagen se descarta al retirarse la capa.
+  `{'pestana': 'horario'}` de RF-SPL-20, igual que la intro del splash (RF-SPL-4).
+- **La capa.** La página de la bienvenida sale del árbol con `Get.offAll`, así que el paso lo
+  dibuja la capa del `builder` de `GetMaterialApp`, la misma que usa la intro, que la spec del
+  splash declara como pieza permanente y que tiene una entrada para la bienvenida (RF-SPL-4 y
+  decisión B-33). Antes de navegar, la bienvenida le entrega por esa entrada la franja, el sello,
+  a Ulises en su último avatar y una imagen de la conversación y del compositor para
+  desvanecerla. Después cierra los tramos del registro y del test si siguen abiertos, borra el
+  historial y vacía los campos de `LoginController` (RF-BIEN-5). La capa dibuja encima mientras
+  `/home` se monta debajo, bloquea los toques, mide la cabecera y `ChatbotBubble` como en
+  RF-SPL-11, lleva la semántica de RF-BIEN-16 y avisa a `HomePage` cuando se retira, para que
+  Horario pida sus orientaciones (RF-SPL-20). La imagen se descarta al retirarse la capa. La capa
+  está montada en todas las plataformas, también en web, donde no hay intro (decisión S-22).
 - **La franja y el sello.** En 1050 ms, las esquinas de la franja pasan de 26 dp a 0 en el primer
   40 % con easeInOutCubic y su color va al `headerColor` del tema. La conversación y el compositor
   se desvanecen en el primer 35 %. La página de `/home` aparece entre el 22 % y el 55 %, y su
@@ -596,19 +755,23 @@ Cierra la conversación del que vuelve y la del nuevo. La maqueta lo muestra en 
   arriba en una Bézier que baja a la esquina de `ChatbotBubble`. Crece hasta 1,6 veces en el
   primer 45 % y se achica hasta 56 dp, con un aleteo que se apaga al final y una inclinación de
   hasta 12°. Se posa en 420 ms con un aplastamiento, y en ese cuadro aparece la burbuja real, con
-  su latido (decisión 16).
+  su latido (decisión B-16).
 - **Dónde aterriza.** En el lugar inicial de `ChatbotBubble`, que la burbuja informa una vez que
   se dibuja, como la cabecera informa su estrella (RF-SPL-11). La burbuja queda oculta hasta que
-  Ulises aterriza.
+  Ulises aterriza, y solo cuando la capa, al medirla, le avisa de un aterrizaje en curso, lo que
+  pasa únicamente en este paso con la opción por defecto de B-16. En cualquier otra llegada a
+  `/home`, como la del splash (decisión S-28), la burbuja aparece con la página, como hoy. Si la
+  burbuja no se puede medir, aparece con la página y Ulises se desvanece con la conversación.
 - **El docente.** No tiene burbuja en `/home` (`home_page.dart:112`), así que Ulises se desvanece
   con la conversación en el primer 35 %.
 - **El último cuadro.** La capa muestra lo mismo que la página de debajo, y al retirarse la
   pantalla no cambia.
 - **La orientación.** Mientras la capa cubre la pantalla, la app sigue en vertical, y Horario pide
-  sus orientaciones cuando la capa se retira, como con la intro (decisión 26 del splash).
-- **Si algo falla.** Si la cabecera o la burbuja no se pueden medir, si la ruta de debajo cambia,
-  por ejemplo por un 401 de las peticiones de `/home`, o si la capa de la intro no está montada,
-  como puede pasar en web sin intro (decisión 22 del splash), el paso es un fundido de 300 ms.
+  sus orientaciones cuando la capa se retira, como con la intro (decisión S-26).
+- **Si algo falla.** Si la cabecera no se puede medir o si la ruta de debajo cambia, por ejemplo
+  por un 401 de las peticiones de `/home`, el paso es un fundido cruzado de 300 ms en el que la
+  capa se desvanece sobre `/home`, ya montada debajo, así que la estrella de su cabecera se ve
+  durante todo el fundido.
 - **Durante el paso.** Ningún toque llega a la página de debajo ni a la conversación.
 
 `[@test] ../../../test/bienvenida/bienvenida_horario_test.dart` (pendiente)
@@ -622,7 +785,7 @@ una burbuja de Ulises (RF-BIEN-5).
 | Momento | Caso | Qué ve el alumno |
 | --- | --- | --- |
 | Recibimiento y turnos sin envío | Sin conexión | Nada |
-| E2 | `401 USER_NOT_FOUND` o `INVALID_PASSWORD` | «Código o contraseña incorrectos.» y vuelta a E1 con el código (decisión 6) |
+| E2 | `401 USER_NOT_FOUND` o `INVALID_PASSWORD` | «Código o contraseña incorrectos.» y vuelta a E1 con el código (decisión B-6) |
 | E2 | `403 NOT_ENROLLED` | «No tienes una matrícula activa.» y vuelta a E1 con el código |
 | E2 | Otro error del backend | Su mensaje y vuelta a E1 con el código |
 | E2 | Sin conexión | «No hay conexión. Revisa tu internet e inténtalo de nuevo.», con E2 abierto y la contraseña escrita |
@@ -632,22 +795,26 @@ una burbuja de Ulises (RF-BIEN-5).
 | E1, Google | Sin `idToken` u otro fallo | «No se obtuvo información de Google.» o «No se pudo iniciar sesión con Google.» |
 | N1 a N5 | Validación local | Los mensajes de hoy bajo el campo |
 | Envío | Cada código de la tabla de la spec del registro | Su mensaje y vuelta a N1 o a N5 según esa tabla (RF-BIEN-8) |
-| Envío | Sin conexión | «No hay conexión. Revisa tu internet e inténtalo de nuevo.» y vuelta a N5 |
+| Envío | Sin conexión, también si el sistema corta la conexión en segundo plano | «No hay conexión. Revisa tu internet e inténtalo de nuevo.» y vuelta a N5 (decisión B-32) |
 | Envío | 120 s sin respuesta | `incierto` con el plazo vencido |
 | Envío | 201 sin token o ilegible | `incierto` con la cuenta confirmada |
+| `incierto` | «Iniciar sesión» no entra | «Seguimos sin poder confirmarlo…», con «Ya tengo cuenta» a la vista (decisión B-30) |
 | Después del 201 | Los catálogos fallan | Nada, como en BR-REG-F-10 |
 | T0 | El contenido no llega | «No pudimos cargar el test.», con «Reintentar» |
 | Test | Cada fila de RF-TEST-11 | Su texto como burbuja de Ulises y la misma salida que allí |
 | Cualquier turno con sesión | Un 401 | «Tu sesión caducó o iniciaste sesión en otro dispositivo.» y E1 |
-| Paso al horario | La cabecera o la burbuja no se miden | El fundido de 300 ms |
+| Paso al horario | La cabecera no se mide o la ruta de debajo cambia | El fundido cruzado de 300 ms |
+| Paso al horario | La burbuja no se mide | Ulises se desvanece y la burbuja aparece con la página |
 
 - **El 401 con sesión.** Después de adoptar la sesión, `/login` sigue siendo la ruta actual, así que
   el interceptor del 401 borra la sesión y `offAllToLogin` no navega (`api_client.dart:143-160`).
   Tras cada fallo de un turno con sesión, la bienvenida comprueba si el token guardado sigue ahí
-  (decisión 22). Si ya no está, hace la misma limpieza local que `AuthService.logout`, sin llamar al
-  backend porque no hay token, y Ulises dice «Tu sesión caducó o iniciaste sesión en otro
+  (decisión B-22). Si ya no está, hace la misma limpieza local que `AuthService.logout`, sin
+  llamar al backend porque no hay token, y Ulises dice «Tu sesión caducó o iniciaste sesión en otro
   dispositivo.», que es el texto del aviso «Sesión expirada», que en `/login` no aparece. Después
-  vuelve a E1. Las respuestas del test en memoria se pierden, como al cerrar sesión (RF-TEST-2).
+  vuelve a E1. Ese reinicio cierra los tramos del registro y del test, borra el historial anterior
+  al 401 y vacía los campos de `LoginController` (RF-BIEN-5). Las respuestas del test en memoria
+  se pierden, como al cerrar sesión (RF-TEST-2).
 
 `[@test] ../../../test/bienvenida/bienvenida_errores_test.dart` (pendiente)
 
@@ -669,8 +836,13 @@ una burbuja de Ulises (RF-BIEN-5).
 | Paso al horario | Nada |
 
 - **Segundo plano.** La conversación queda como está y sus animaciones se pausan. Si el sistema
-  corta la petición del registro mientras la app está en segundo plano, el plazo de 120 s lleva a
-  `incierto`, como hoy.
+  corta la conexión del registro mientras la app está en segundo plano, `http` lanza una excepción
+  de red, `RegistroService` la traduce a `SIN_CONEXION` (`registro_service.dart:65-71`) y el
+  controlador vuelve a `verificar` (`registro_controller.dart:283-285`), así que la conversación
+  vuelve a N5 con «No hay conexión.», como hoy. El plazo de 120 s solo lleva a `incierto` cuando
+  la conexión sigue abierta sin respuesta. Como el pedido pudo llegar al servidor, un reenvío
+  desde N5 puede recibir el 409, y la decisión B-32 abre la opción de tratar ese corte como
+  `incierto`.
 - **Cerrar la app a mitad.** Nada de la conversación se guarda, así que el siguiente arranque en
   frío pasa por el splash y decide con la sesión guardada.
 
@@ -678,7 +850,7 @@ una burbuja de Ulises (RF-BIEN-5).
 | --- | --- |
 | En el recibimiento, en «Sí, entrar» o en el registro antes del envío | La bienvenida desde el principio. Las credenciales murieron con el proceso |
 | Durante el envío | La bienvenida desde el principio. La cuenta puede existir, y si la persona repite el registro recibe «Ya existe una cuenta con ese código. Inicia sesión o recupera tu contraseña.», que es el riesgo que RS-FE-5 acepta |
-| Después del 201, antes de guardar la especialidad | La sesión está guardada con la configuración a medias, así que abre `/setup-carrera` (decisión 10), donde el test empieza de cero (RF-TEST-8) |
+| Después del 201, antes de guardar la especialidad | La sesión está guardada con la configuración a medias, así que abre `/setup-carrera` (decisión B-10), donde el test empieza de cero (RF-TEST-8) |
 | Después del primer corazón o de guardar | La configuración está completa y abre `/home` en Horario |
 
 `[@test] ../../../test/bienvenida/bienvenida_atras_test.dart` (pendiente)
@@ -689,7 +861,7 @@ una burbuja de Ulises (RF-BIEN-5).
   y sus colores son tokens de `MaterialTheme`. Reusa `pageBg`, `cardBg`, `textPrimary`,
   `headerColor` y los tokens del test (RF-TEST-12), que son `testInk2`, `testMuted`, `testLine`,
   `testChipBg`, `testAccent`, `testAccentHi`, `testAccentInk`, `testAccentText` y
-  `testAccentSoft` (decisión 24).
+  `testAccentSoft` (decisión B-24).
 - **Tokens nuevos.** Salen de la paleta de la maqueta, salvo donde la tabla dice otra cosa.
 
 | Token | Claro | Oscuro | Uso |
@@ -702,7 +874,7 @@ una burbuja de Ulises (RF-BIEN-5).
 | `bienvenidaSaludoSub` | `#7A3300` | `#FFC49A` | «¡Craa! Hola, soy Ulises 👋» en la tarjeta |
 | `bienvenidaEntrarFondo` | `#FFFFFF` | `#FF8C42` | Botón «Sí, entrar» |
 | `bienvenidaEntrarTinta` | `#1A0E05` | `#16161C` | Texto de «Sí, entrar» |
-| `bienvenidaNuevoFondo` | `#B84A00` | transparente | Botón «Soy nuevo», con la decisión 3 (la maqueta usa blanco al 14 %) |
+| `bienvenidaNuevoFondo` | `#B84A00` | transparente | Botón «Soy nuevo», con la decisión B-3 (la maqueta usa blanco al 14 %) |
 | `bienvenidaNuevoBorde` | `#FFFFFF` | `#5A5A66` | Borde de 1,5 dp de «Soy nuevo» |
 | `bienvenidaNuevoTinta` | `#FFFFFF` | `#EDEDF3` | Texto de «Soy nuevo» |
 | `bienvenidaPildora` | `#0F172A` | `#33333B` | Píldora «Creando tu cuenta…» |
@@ -746,21 +918,31 @@ una burbuja de Ulises (RF-BIEN-5).
 ### RF-BIEN-15. Reducir movimiento
 
 Con `MediaQuery.disableAnimationsOf(context)` en `true`, nada se mueve, gira ni cambia de escala.
+Cada cambio del logo es un fundido cruzado, en el que el logo que llega aparece encima mientras
+el que se va sigue entero debajo hasta quedar cubierto, así que ningún cuadro queda sin logo
+(RF-BIEN-4).
 
 - **El recibimiento.** Ulises no vuela. Aparece en su lugar con un fundido de 160 ms, 120 ms
   después del relevo, sin sombra, estela ni partículas. El fondo cambia en 150 ms. La tarjeta y los
   botones aparecen con fundidos de 180 ms, sin desplazamiento.
-- **La subida al sello.** El fondo y el logo se desvanecen en 220 ms, el logo aparece en el sello
-  en otros 220 ms, y Ulises pasa a su avatar con un fundido de 140 ms.
+- **Si no cabe.** La estrella no se desliza. Si RF-BIEN-2 la sube o la achica, la estrella en su
+  lugar nuevo aparece encima en 220 ms mientras la del centro sigue entera debajo, y después la
+  del centro se quita.
+- **La subida al sello.** La franja con el sello entero y la conversación aparecen encima en
+  220 ms, mientras el fondo de pantalla completa y el logo grande siguen enteros debajo hasta
+  quedar cubiertos, y después se quitan. Ulises pasa a su avatar con un fundido de 140 ms.
 - **El sello.** No late. Durante el envío no hay pulso, y la píldora con «Creando tu cuenta…»
   dice sola que se espera, con su indicador quieto.
 - **La conversación.** Las burbujas y el compositor entran con un fundido de 200 ms, sin subir, y
   la conversación salta al final sin desplazarse. El cursor del campo no parpadea.
 - **El ritmo se queda.** Las pausas entre burbujas no son movimiento, así que siguen.
 - **El test.** Rige RF-TEST-13, sin confeti, giro ni crecimiento.
-- **El paso al horario.** La conversación y el sello se desvanecen en 220 ms mientras aparece
-  `/home`, el sello aparece en la cabecera en 200 ms y la burbuja de Ulises aparece en su lugar,
-  sin latido.
+- **El paso al horario.** `/home` se monta entera bajo la capa, con la estrella y «ULIMA++» en su
+  cabecera, y la capa, con la franja, el sello, la conversación y el compositor, se desvanece
+  encima en 220 ms, así que el sello y la estrella de la cabecera se ven a la vez durante todo el
+  fundido. La burbuja de Ulises aparece en su lugar, sin latido.
+- **La maqueta.** Con «Reducir movimiento», sus funciones `toSeal` y `toHorario` apagan el logo y
+  lo vuelven a encender, y en eso manda esta spec (RF-BIEN-19).
 
 `[@test] ../../../test/bienvenida/bienvenida_movimiento_test.dart` (pendiente)
 
@@ -775,6 +957,8 @@ Con `MediaQuery.disableAnimationsOf(context)` en `true`, nada se mueve, gira ni 
   (`MediaQuery.accessibleNavigation`), la tarjeta y los botones aparecen con el relevo, sin
   esperar el aterrizaje, y el foco del lector pasa a la tarjeta, que se lee «¡Craa! Hola, soy
   Ulises. ¿Ya usas ULima++?», y después a los dos botones.
+- **El paso al horario.** Mientras la capa hace el paso, el lector solo ve su nodo «ULIMA++», sin
+  «cargando», que no es región viva, y al retirarse la capa pasa a `/home` (RF-SPL-15).
 - **Cada turno.** Con lector de pantalla, las burbujas de un turno entran juntas, y el foco del
   lector pasa a la primera burbuja nueva de Ulises. El orden de lectura sigue por las burbujas y
   termina en el compositor. El campo no toma el foco del teclado solo, y el lector anuncia su
@@ -791,8 +975,8 @@ Con `MediaQuery.disableAnimationsOf(context)` en `true`, nada se mueve, gira ni 
   enlaces. Intro envía. El foco del teclado se ve con el anillo de 2 dp en `bienvenidaFoco`.
 - **Tamaño de texto.** Todo respeta `MediaQuery.textScaler` hasta el 200 %. Ningún contenedor de
   texto tiene alto fijo. Las burbujas crecen, el compositor desplaza por dentro cuando pasa del
-  60 % del alto y el recibimiento aplica su regla «Si no cabe» (RF-BIEN-2). A 375 × 667, con 1,0,
-  1,3 y 2,0, nada desborda.
+  60 % del alto y el recibimiento aplica su regla «Si no cabe» (RF-BIEN-2 y decisión B-28). A
+  375 × 667, con 1,0, 1,3 y 2,0, nada desborda, y con 1,0 la estrella no se mueve.
 - **Sin límite de tiempo.** Ningún turno vence, salvo la vigencia propia del código del
   authenticator, que no depende de la app. Las pausas del ritmo no quitan tiempo para responder.
 - **El color nunca va solo.** Los errores llevan su ícono y su texto, y la respuesta elegida en el
@@ -810,7 +994,8 @@ Con `MediaQuery.disableAnimationsOf(context)` en `true`, nada se mueve, gira ni 
 - **Pantallas anchas.** En tabletas y en web, la conversación, el compositor, Ulises, la tarjeta
   del saludo y los botones del recibimiento van en una columna de 600 dp como máximo, centrada.
   La franja va de borde a borde, y la estrella sigue en el centro de la pantalla física
-  (RF-SPL-5).
+  (RF-SPL-5), salvo en web, donde se centra en la vista (RF-BIEN-3). Ulises aterriza medido desde
+  la estrella y la tarjeta llega hasta 12 dp del borde derecho de la columna (RF-BIEN-2).
 
 `[@test] ../../../test/bienvenida/bienvenida_barra_estado_test.dart` (pendiente)
 
@@ -848,11 +1033,24 @@ Sin prueba automática. La medición va en «Verificación».
 - La maqueta difiere de la spec en estos puntos.
   - El test empieza mientras se crea la cuenta, con «Mientras tanto, ¿empezamos tu test de
     especialidad? Son 14 preguntas cortas.», «Prefiero esperar» y «Empezar el test»
-    (decisión 1).
-  - El código del authenticator se envía solo al completar las seis casillas (decisión 5).
-  - «Soy nuevo» usa blanco al 14 % sobre el naranja (decisión 3), la pista de los campos usa
+    (decisión B-1).
+  - El código del authenticator se envía solo al completar las seis casillas (decisión B-5).
+  - «Soy nuevo» usa blanco al 14 % sobre el naranja (decisión B-3), la pista de los campos usa
     `#8A94A6` y el foco usa `#FF6600` (RF-BIEN-14).
-  - Ulises llama «Valeria» a la alumna (decisión 4).
+  - Ulises llama «Valeria» a la alumna (decisión B-4).
+  - Mientras se crea la cuenta, Ulises dice «Tarda cerca de un minuto.». Por defecto la spec usa
+    la advertencia de hoy, «Puede tomar un par de minutos: no cierres la app.» (decisión B-17).
+  - Con la cuenta creada, la burbuja dice «¡Craa! Tu cuenta ya está lista, Valeria. Traje tus 6
+    cursos del ciclo.». La spec la deja sin el nombre (decisión B-4) y sin las otras dos cifras
+    del resumen de hoy (decisión B-31).
+  - Ulises mide 52 y 58 px, y la tarjeta y los botones miden en px lo mismo que en la app en dp.
+    En la app el dibujo se escala por 1,2 y la interfaz no, así que Ulises mide 62 y 70 dp y la
+    tarjeta y los botones se ven un poco más chicos frente a la estrella. Ulises aterriza medido
+    desde la estrella y no en un porcentaje de la pantalla, y la maqueta no tiene la regla «Si no
+    cabe» (RF-BIEN-2 y decisiones B-27 y B-28).
+  - Con «Reducir movimiento», la subida al sello y el paso al horario apagan el logo y lo vuelven
+    a encender. En la app son fundidos cruzados que nunca dejan la pantalla sin logo
+    (RF-BIEN-15).
   - E2 no trae «Soy nuevo», N2, N4 y N5 no traen «Volver» ni «Ya tengo cuenta», y no hay turno de
     error, de `incierto` ni de sesión expirada.
   - El duelo no trae «Me gustan las dos» ni «Ninguna me llama», y el resultado dice «Elegir
@@ -882,24 +1080,32 @@ del login y los de los errores son los de hoy, y los del test son los de su spec
   miUlima.», «Contraseña de ULima++ lista», «Para traer tus cursos entro a miUlima una sola vez.
   Antes, lee esto 👇», «Tu contraseña de miUlima, la del portal.», «Contraseña de miUlima lista»,
   «Último paso. El código de tu authenticator.» y «Código del authenticator listo».
-- **Envío.** «Estoy creando tu cuenta y trayendo tu ciclo. Tarda cerca de un minuto.», «No cierres
-  la app mientras tanto.», «Creando tu cuenta…», «Cuenta creada», «¡Craa! Tu cuenta ya está
-  lista.», «Traje tus N cursos del ciclo.», «Traje tu curso del ciclo.», «No pudimos confirmar si
-  tu cuenta se creó.» y «Tu cuenta ya está creada.».
+- **Envío.** «Estoy creando tu cuenta y trayendo tu ciclo.», «Cuenta creada», «¡Craa! Tu cuenta
+  ya está lista.», «Traje tus N cursos del ciclo.» y «Traje tu curso del ciclo.». Con la
+  alternativa de la decisión B-17, también «Tarda cerca de un minuto.» o la frase que diga el
+  tope.
+- **`incierto`.** «Seguimos sin poder confirmarlo. Puedes volver a intentar el registro: si te
+  dice que ya existe una cuenta con ese código, es que sí se creó y puedes recuperar la contraseña
+  con “Ya tengo cuenta”.», que cambia el final del texto de hoy (decisión B-30).
 - **Test.** «¿Empezamos tu test de especialidad? Son T preguntas cortas.», «Esto o aquello · N de
   T», «Escala de gusto · N de T» y «¡Listo! Te llevo a tu horario 🪶».
 - **Sesión.** «Tu sesión caducó o iniciaste sesión en otro dispositivo.», que hoy es el texto del
   aviso «Sesión expirada».
 - **Semántica.** «Tú, <texto>», «Enviar», «Mostrar contraseña» y «Ocultar contraseña».
 
+No son nuevos y siguen con su texto de hoy «Puede tomar un par de minutos: no cierres la app.»,
+que pasa de la bajada del envío a una burbuja de Ulises, «Creando tu cuenta…», que pasa del
+título a la píldora, y los dos títulos de `incierto`, «No pudimos confirmar si tu cuenta se creó» y
+«Tu cuenta ya está creada», que pasan a burbujas con un punto final.
+
 Salen de la app «¿No tienes cuenta? Créala», «O inicia sesión con» y el «Google» del botón de
 Android e iOS. De la pantalla del registro salen sus títulos y bajadas, que son «Crea tu cuenta
 de ULima++», «Elige la contraseña con la que entrarás al app. No es la de miUlima.»,
 «Verificamos que eres alumno», «Entramos a miUlima con tus datos una sola vez, para traer tus
-cursos y tu avance. No los guardamos.», el título «Creando tu cuenta…» con su bajada «Estamos
-entrando a miUlima y trayendo tus cursos, tu horario y tu avance. Puede tomar un par de minutos:
-no cierres la app.», «Listo, <nombre>», «Listo, ya tienes cuenta», las filas del resumen y sus
-botones «Continuar» y «Entrar». «Creando tu cuenta…» sigue como texto de la píldora.
+cursos y tu avance. No los guardamos.», la primera frase de la bajada del envío, «Estamos
+entrando a miUlima y trayendo tus cursos, tu horario y tu avance.», «Listo, <nombre>», «Listo, ya
+tienes cuenta», las filas del resumen, «Cursos matriculados», «Clases en tu horario» y «Cursos de
+tu avance» (decisión B-31), y sus botones «Continuar» y «Entrar».
 
 ## Contrato que se consume
 
@@ -910,9 +1116,9 @@ Ninguno nuevo con las opciones por defecto.
   `GET /academic-profile/specialties` dentro de `adoptarSesion`, como hoy.
 - `GET /specialty-test/content`, `POST /specialty-test/me/evaluate` y
   `PUT /academic-profile/me/specialties` para el test, como en su spec.
-- Las rutas de `/password-reset/**` siguen en sus pantallas de hoy (decisión 9).
+- Las rutas de `/password-reset/**` siguen en sus pantallas de hoy (decisión B-9).
 
-Con la alternativa de la decisión 1, el test necesita el contenido antes de que exista el token,
+Con la alternativa de la decisión B-1, el test necesita el contenido antes de que exista el token,
 lo que cambia RS-BE-38 del backend y `docs/specs/api-contracts.md` («Decisiones»).
 
 ## Pantallas y archivos
@@ -924,7 +1130,7 @@ lo que cambia RS-BE-38 del backend y `docs/specs/api-contracts.md` («Decisiones
 | `lib/pages/bienvenida/bienvenida_page.dart` | La página de `/login` con el recibimiento, la franja, la conversación y el compositor |
 | `lib/pages/bienvenida/bienvenida_controller.dart` | El recorrido, los turnos, el historial, el motivo de la llegada, los tramos del login, del registro y del test y el paso al horario |
 | `lib/pages/bienvenida/widgets/**` | El recibimiento, el sello, las burbujas, el compositor, el vuelo de Ulises y el paso al horario |
-| `lib/domain/bienvenida/bienvenida_turnos.dart` | Funciones puras de los turnos, el turno de cada error, el atrás, el conteo de cursos, la fórmula del pulso y del latido y la regla «Si no cabe» (decisión 26) |
+| `lib/domain/bienvenida/bienvenida_turnos.dart` | Funciones puras de los turnos, el turno de cada error, el atrás, el conteo de cursos, la fórmula del pulso y del latido, las medidas del recibimiento, la regla «Si no cabe» y la configuración del botón de GIS en web como valores simples (decisiones B-26, B-27, B-28 y B-35) |
 | `test/bienvenida/*.dart` | Las pruebas de «Pruebas por requisito» |
 
 ### Cambian
@@ -932,16 +1138,19 @@ lo que cambia RS-BE-38 del backend y `docs/specs/api-contracts.md` («Decisiones
 | Archivo | Qué cambia |
 | --- | --- |
 | `lib/main.dart` | `/login` muestra la bienvenida y sale `/registro` |
-| `lib/pages/login/login_binding.dart` | Registra también el controlador de la bienvenida, permanente, y lo reinicia después del cuadro |
-| `lib/pages/login/login_controller.dart` | Deja de navegar y devuelve el resultado a la bienvenida |
-| `lib/pages/registro/registro_controller.dart` | Suma un cierre propio que borra y descarta sus cinco campos, para que la bienvenida lo cierre sin GetX. Sus reglas no cambian |
+| `lib/pages/login/login_binding.dart` | Registra también el controlador de la bienvenida, permanente, sin reiniciar nada dentro del build. Cada visita empieza después del primer cuadro de su página (RF-BIEN-1) |
+| `lib/pages/login/login_controller.dart` | Deja de navegar y devuelve el resultado a la bienvenida, también el de Google en web por un resultado observable. `submit` atrapa el fallo crudo de la red con un `finally` que apaga `submitting`. Vacía sus campos al salir la bienvenida (RF-BIEN-5 y RF-BIEN-6) |
+| `lib/pages/registro/registro_controller.dart` | Suma un cierre propio que borra sus cinco campos enseguida y hace el `dispose` después de que el campo del compositor sale del árbol, para que la bienvenida lo cierre sin GetX. El texto de `intentarIniciarSesion` nombra «Ya tengo cuenta» (decisión B-30). Sus reglas no cambian |
 | `lib/services/session_navigation.dart` | `offAllToLogin` suma el parámetro `motivo` |
-| `lib/services/api_client.dart` | El interceptor del 401 pasa `motivo: expirada` |
-| `lib/pages/password_reset/reset_password_controller.dart` | Pasa `motivo: restablecida` |
-| `lib/components/google_sign_in_button_web.dart` | `renderButton` con `GSIButtonConfiguration` |
-| `lib/components/chatbot_bubble.dart` | Informa su lugar y queda oculta hasta que Ulises aterriza (decisión 16) |
+| `lib/services/api_client.dart` | El interceptor del 401 pasa `motivo: expirada` y su aviso sale abajo (decisión B-29). El comentario de `esRuta401Exenta` deja de nombrar la pantalla de registro |
+| `lib/pages/password_reset/reset_password_controller.dart` | Pasa `motivo: restablecida` y su aviso sale abajo (decisión B-29) |
+| `lib/components/google_sign_in_button_web.dart` | `renderButton` con el `GSIButtonConfiguration` que sale de los valores de `lib/domain/bienvenida/`, y vuelve a dibujarse si cambia el tema (RF-BIEN-6) |
+| `lib/components/chatbot_bubble.dart` | Informa su lugar y queda oculta hasta que Ulises aterriza solo cuando la capa se lo pide en el paso al horario (decisión B-16 y RF-BIEN-11) |
+| `lib/pages/splash/**` | La capa permanente del `builder` suma su entrada para el paso al horario de la bienvenida (decisión B-33 y RF-SPL-4) |
+| `lib/components/portal_consent/portal_consent_view.dart` | Solo el comentario de cabecera, que nombra `/registro`. La bienvenida usa sus constantes y Portal Sync sigue usando la pantalla |
+| `lib/services/auth_service.dart` | Solo el comentario de `adoptarSesion` que nombra `/registro` (`:151-159`). `login`, `loginWithGoogle`, `finishGoogleLogin`, `adoptarSesion` y `logout` siguen igual |
 | `lib/configs/themes.dart` | Los tokens de RF-BIEN-14 |
-| `lib/pages/specialty_test/**` | Las piezas del duelo, la escala, la espera y el resultado se pueden dibujar dentro del compositor y de la conversación (enmienda propuesta a la spec del test) |
+| `lib/pages/specialty_test/**` | Las piezas del duelo, la escala, la espera y el resultado se pueden dibujar dentro del compositor y de la conversación, y su controlador se puede crear y cerrar fuera de `SpecialtyTestBinding` (decisión B-34 y enmienda propuesta a la spec del test) |
 | `README.md` | Las secciones del login, del registro y de la ruta post-login |
 | `test/HU01_jeff/**`, `test/HU33_jeff/**` y `test/HU34_jeff/registro_consent_test.dart` | Pasan a montar la bienvenida donde montaban la tarjeta del login o la pantalla del registro |
 
@@ -950,42 +1159,50 @@ lo que cambia RS-BE-38 del backend y `docs/specs/api-contracts.md` («Decisiones
 | Archivo | Por qué |
 | --- | --- |
 | `lib/pages/login/login_page.dart` | La bienvenida reemplaza a la tarjeta |
-| `lib/pages/registro/registro_page.dart` y `lib/pages/registro/registro_binding.dart` | El registro corre dentro de la conversación (decisión 23) |
+| `lib/pages/registro/registro_page.dart` y `lib/pages/registro/registro_binding.dart` | El registro corre dentro de la conversación (decisión B-23) |
 | `test/HU33_jeff/registro_page_test.dart` | Sus casos pasan a `bienvenida_registro_test.dart` |
 
 ### No cambian
 
 | Archivo | Por qué |
 | --- | --- |
-| `lib/services/auth_service.dart` | `login`, `loginWithGoogle`, `finishGoogleLogin`, `adoptarSesion` y `logout` siguen igual, y la bienvenida atrapa el fallo de red que `login` no atrapa |
-| `lib/services/registro_service.dart` | El plazo de 120 s y los mensajes siguen igual |
-| `lib/components/portal_consent/portal_consent_view.dart` | La bienvenida usa sus constantes, y Portal Sync sigue usando la pantalla |
+| `lib/services/registro_service.dart` | El plazo de 120 s y los mensajes siguen igual, también el de `USER_ALREADY_EXISTS` y el `SIN_CONEXION` de un corte durante el envío. Cambia solo con la alternativa de la decisión B-32 |
 | `lib/services/post_login_route.dart` | Sigue decidiendo entre `/home` y `/setup-carrera` |
-| `lib/pages/password_reset/**`, salvo el controlador del restablecimiento | Sus pantallas siguen (decisión 9) |
+| `lib/pages/password_reset/**`, salvo el controlador del restablecimiento | Sus pantallas siguen (decisión B-9) |
 | `test/HU02_jeff/session_navigation_guard_test.dart` | Sigue prohibiendo navegar a `/login` fuera de `session_navigation.dart` |
 
 ## Cambios en otras specs
 
 - **Auth.** Enmienda en `specs/features/auth/auth.spec.md`, pendiente de aprobación con esta
-  spec. El formulario pasa a los turnos E1 y E2, `LoginController` deja de navegar, el fallo de
-  red deja de colgar el botón, la tarjeta sale, el botón de Google de Android e iOS dice
-  «Continuar con Google», el de web se configura con `continueWith` y `/login` recibe el motivo de
-  la llegada. BR-AUTH-F-01 a BR-AUTH-F-10 siguen en todo lo demás.
+  spec. El formulario pasa a los turnos E1 y E2, `LoginController` deja de navegar, atrapa el
+  fallo de red y deja de colgar el botón, la tarjeta sale, el botón de Google de Android e iOS
+  dice «Continuar con Google», el de web se configura con `continueWith`, `/login` recibe el
+  motivo de la llegada y el aviso «Sesión expirada» sale abajo por defecto. BR-AUTH-F-01 a
+  BR-AUTH-F-10 siguen en todo lo demás.
 - **Registro.** Enmienda en `specs/features/registro/registro.spec.md`, pendiente de aprobación
   con esta spec. RS-FE-1 a RS-FE-6 y BR-REG-F-01 a BR-REG-F-11 siguen, aplicadas a los turnos de
   la conversación. Salen la ruta `/registro`, la pantalla de seis estados y su botón «Entrar»,
-  y `listo` pasa directo al test.
+  y `listo` pasa directo al test. `incierto` suma «Ya tengo cuenta» y, por defecto, su texto
+  nombra ese enlace en lugar del login (decisión B-30).
 - **Test de especialidad (enmienda propuesta a una spec aprobada).** La spec vive en
-  `feat/test-especialidad-fe`, aprobada el 2026-09-25 y sin implementar. Si el dueño aprueba esta
-  spec, esa rama suma la enmienda con estos puntos, que se escriben allí como «pendiente de
-  aprobación» hasta que el dueño la confirme.
+  `feat/test-especialidad-fe`, aprobada el 2026-09-25, con su último cambio en `e718c29` y la
+  implementación en curso desde ese día. Si el dueño aprueba esta spec, esa rama suma la
+  enmienda con estos puntos, que se escriben allí como «pendiente de aprobación» hasta que el
+  dueño la confirme. Como la implementación avanza, la enmienda puede tocar código ya escrito,
+  como el controlador del test.
   - **RF-TEST-1.** Suma un origen `bienvenida`. El alumno que crea su cuenta en la conversación
     hace el test en ella, sin la ruta `/test-especialidad`, sin el paso de carrera y sin
     `/setup-carrera`. El asistente sigue para el alumno con sesión y la configuración a medias
-    que abre la app o entra con su código (decisión 10), y el Perfil sigue abriendo la ruta con
-    `origen: perfil`.
+    que abre la app o entra con su código (decisión B-10), y el Perfil sigue abriendo la ruta con
+    `origen: perfil`. Con origen `bienvenida`, el controlador del test no lo crea
+    `SpecialtyTestBinding`. Lo crea la bienvenida al empezar T0, sin `Get.put`, y lo cierra ella
+    al pasar al horario, al reiniciarse, también tras un 401, y en el `dispose` de su página. Las
+    reglas que viven en ese controlador, una sola evaluación en vuelo, el descarte del paso tras
+    un atrás desde la espera y los guardados de uno en uno, no cambian (decisión B-34).
   - **RF-TEST-2.** Con origen `bienvenida`, el contenido se pide una vez en T0 y no hay precarga.
-    Las respuestas siguen solo en memoria.
+    Las respuestas siguen solo en memoria. Una evaluación o un `PUT` que responde después del
+    cierre del controlador se descarta sin tocar la pantalla, y la guarda por dueño y
+    el `clear()` de `logout()` siguen igual.
   - **RF-TEST-3.** Con origen `bienvenida` no hay pantalla de bienvenida del test. Su papel lo
     toma T0, con «¿Empezamos tu test de especialidad? Son T preguntas cortas.», «Empezar el test» y
     «Saltar y elegir por mi cuenta», y sus estados de carga, error y no disponible pasan a
@@ -996,11 +1213,14 @@ lo que cambia RS-BE-38 del backend y `docs/specs/api-contracts.md` («Decisiones
     «Pregunta anterior» es un enlace del compositor y la conversación entera es el historial. Las
     reglas de las líneas de Ulises, del sello de bloque y del atrás no cambian.
   - **RF-TEST-5 y RF-TEST-6.** El duelo y la escala se dibujan también en el compositor, con las
-    tarjetas compactas de la maqueta (decisión 13) y la tarea de la escala en la burbuja de
+    tarjetas compactas de la maqueta (decisión B-13) y la tarea de la escala en la burbuja de
     Ulises.
+  - **RF-TEST-7.** Con origen `bienvenida`, la espera no tiene «la barra y las plumas llenas»,
+    porque no hay barra. Es la burbuja con `ulises.loading` y su indicador, con el compositor
+    vacío.
   - **RF-TEST-8.** Con origen `bienvenida`, el resultado va dentro de la conversación, que
-    desplaza, y la regla «sin scroll» no aplica (decisión 15). El atrás del sistema no hace nada,
-    como en el asistente.
+    desplaza, y la regla «sin scroll» no aplica (decisión B-15). El atrás del sistema no hace nada,
+    como en el asistente. El confeti se dibuja bajo la franja del sello.
   - **RF-TEST-9.** Con origen `bienvenida`, «Elegir como principal» y «Decidir después» terminan
     con la despedida y el paso al horario de RF-BIEN-11, en lugar de `Get.offAllNamed('/home')`.
   - **RF-TEST-11.** Con origen `bienvenida`, los textos de la tabla son burbujas de Ulises, y la
@@ -1010,10 +1230,14 @@ lo que cambia RS-BE-38 del backend y `docs/specs/api-contracts.md` («Decisiones
   - **«Textos nuevos» y «Pantallas y archivos».** Suman el origen `bienvenida` y los widgets que
     se dibujan en el compositor.
 - **Splash.** RF-SPL-21 ya tiene su spec. La bienvenida recibe la pose, avisa al pintar su primer
-  cuadro, declara su barra de estado y arranca sin pose (RF-BIEN-2, RF-BIEN-3 y RF-BIEN-17). La
-  decisión 16 de esta spec y la 28 del splash deciden juntas cómo aparece Ulises en `/home`, y la
-  decisión 10 de esta spec y la 29 del splash, qué pasa con la configuración a medias. El paso al
-  horario usa la capa de la intro (RF-SPL-4) y su manera de medir la cabecera (RF-SPL-11).
+  cuadro, declara su barra de estado y arranca sin pose (RF-BIEN-2, RF-BIEN-3 y RF-BIEN-17). Las
+  decisiones B-16 y S-28 deciden juntas cómo aparece Ulises en `/home`, y B-10 y S-29, qué pasa
+  con el alumno que todavía no elige su especialidad. Las tablas «Para el dueño» de las dos
+  specs lo dicen en cada fila. El paso al horario usa la capa del `builder`, que la spec del
+  splash declara como pieza permanente con una entrada para la bienvenida (RF-SPL-4 y decisión
+  B-33), y su manera de medir la cabecera (RF-SPL-11). Por eso `lib/pages/splash/**` está en los
+  targets de esta spec. Las dos specs se publican juntas, en el mismo push a `main`
+  («Verificación» y decisión S-30).
 - **App shell.** La estrella de BR-SHELL-F-04 es el destino del sello en el paso al horario, y la
   pestaña Horario la abre el argumento de BR-SHELL-F-02 enmendado. No cambia nada más.
 - **Récord académico.** RF-REC-6 habla de una sola pantalla de consentimiento. En la
@@ -1021,8 +1245,9 @@ lo que cambia RS-BE-38 del backend y `docs/specs/api-contracts.md` («Decisiones
   «Volver» (RF-BIEN-7). La nota se suma a esa spec cuando el dueño apruebe esta.
 - **Perfil académico.** El alumno nuevo ya no pasa por el asistente de carrera, salvo que cierre la
   app antes de guardar su especialidad. La nota se suma a esa spec cuando el dueño apruebe esta.
-- **Chatbot.** `ChatbotBubble` informa su lugar y espera a Ulises (decisión 16). La nota se suma a
-  esa spec cuando el dueño apruebe esta.
+- **Chatbot.** `ChatbotBubble` informa su lugar y espera a Ulises solo en el paso al horario de
+  la bienvenida (decisión B-16 y RF-BIEN-11). En las demás llegadas a `/home` aparece como hoy. La
+  nota se suma a esa spec cuando el dueño apruebe esta.
 - **Maquetas de `docs/images/UI`.** `InicioSesion.png` queda superada por la bienvenida. `AGENTS.md`
   pide respetar esas maquetas salvo un cambio aprobado, así que la aprobación de esta spec es ese
   cambio. La imagen no se toca.
@@ -1034,7 +1259,11 @@ lo que cambia RS-BE-38 del backend y `docs/specs/api-contracts.md` («Decisiones
 - Endpoints nuevos o cambios en el backend, con las opciones por defecto.
 - Arreglar que `POST /auth/register` distinga por sí mismo si un código tiene cuenta, que es de la
   spec del backend (RF-BIEN-9).
-- Recuperar la contraseña dentro de la conversación, salvo con la alternativa de la decisión 9.
+- Recuperar la contraseña dentro de la conversación, salvo con la alternativa de la decisión B-9.
+- Arreglar que `AuthService.login` guarde el token antes de cargar los catálogos
+  (`auth_service.dart:235-242`). Un fallo de red en ese tramo deja el token sin `currentUser`, y
+  el siguiente arranque en frío restaura esa sesión aunque Ulises haya dicho «No hay conexión.».
+  Es una deuda previa a esta spec, que va en un cambio aparte de auth.
 - Guardar la conversación, retomarla en otro arranque o recordar qué rama eligió el teléfono.
 - Ulises con IA. Sus líneas son textos fijos de esta spec y del contenido del test, y la
   bienvenida no llama al servicio del chatbot.
@@ -1047,53 +1276,77 @@ lo que cambia RS-BE-38 del backend y `docs/specs/api-contracts.md` («Decisiones
 
 ## Decisiones
 
-Ninguna está aprobada. El dueño confirma o cambia cada una al aprobar la spec.
+Ninguna está aprobada. El dueño confirma o cambia cada una al aprobar la spec. Son 35, 23 para el
+dueño y 12 técnicas. Las B-27 a B-35 llegan el 2026-09-25 con la corrección de una revisión, que
+abre como decisión lo que la versión anterior daba por hecho.
 
 ### Pedidos del dueño del 2026-09-25
 
 La spec recoge estos pedidos del dueño. El texto que los describe sigue pendiente de su
-aprobación, igual que el resto.
+aprobación, igual que el resto. Donde una opción por defecto no cumple un pedido entero, el
+pedido lo dice y nombra la decisión que lo abre.
 
 - Tras la intro al azar del splash, la estrella grande con sus «++» queda en el centro, entera y
-  sin nada encima, y Ulises entra volando y aterriza a su lado (RF-BIEN-2).
+  sin nada encima, y Ulises entra volando y aterriza a su lado (RF-BIEN-2). En su iPhone SE con
+  la letra al 100 %, la estrella no se mueve. Con letra más grande, o en una pantalla más baja,
+  sube un poco para que Ulises y su saludo quepan sin taparla (B-28).
 - Ulises saluda con «¿Ya usas ULima++?» y dos botones grandes, «Sí, entrar» y «Soy nuevo», y al
   responder la estrella sube al sello junto a «ULIMA++» y sigue una conversación (RF-BIEN-2,
   RF-BIEN-4 y RF-BIEN-5).
 - El que vuelve inicia sesión dentro de la conversación, con su código, su contraseña, «¿Olvidaste
   tu contraseña?» y «Continuar con Google» con el logo oficial de colores, y va a su horario
-  (RF-BIEN-6 y RF-BIEN-11).
+  (RF-BIEN-6 y RF-BIEN-11). Con las opciones por defecto hay dos excepciones. «¿Olvidaste tu
+  contraseña?» lleva a las pantallas de hoy, fuera de la conversación (B-9). El alumno que tiene
+  cuenta pero todavía no elige su especialidad va al asistente de carrera y no a su horario
+  (B-10, que se decide junto con S-29).
 - El nuevo crea su cuenta dentro de la conversación con el registro que ya existe y, sin cortar la
   conversación, sigue con el test de especialidad con Ulises hasta su horario (RF-BIEN-7,
-  RF-BIEN-8, RF-BIEN-10 y RF-BIEN-11).
+  RF-BIEN-8, RF-BIEN-10 y RF-BIEN-11). Si cierra la app después de crear la cuenta y antes de
+  elegir su especialidad, al volver entra al asistente de carrera (B-10 y B-14).
 - El sello late con cada respuesta y un pulso recorre los rombos mientras se crea la cuenta
-  (RF-BIEN-4).
+  (RF-BIEN-4). Con «reducir movimiento» activado en el teléfono no late ni pulsa, y la píldora
+  «Creando tu cuenta…» dice sola que se espera (RF-BIEN-15).
 - «Soy nuevo» y «Ya tengo cuenta» quedan siempre visibles, para no revelar qué códigos tienen
-  cuenta (RF-BIEN-9).
-- El logo ULima++ con sus «++» no se pierde en ningún momento (RF-BIEN-4).
+  cuenta (RF-BIEN-9). La excepción es el envío del registro, que no se puede abandonar, y después
+  de creada la cuenta ya no hacen falta.
+- El logo ULima++ con sus «++» no se pierde en ningún momento (RF-BIEN-4). Con las opciones por
+  defecto se deja de ver en dos casos. Mientras el alumno cambia su contraseña en las pantallas
+  de «¿Olvidaste tu contraseña?» (B-9), y cuando el alumno que todavía no elige su
+  especialidad entra al asistente de carrera, donde el logo se desvanece (B-10 y S-29). Las
+  alternativas de esas decisiones lo mantienen en el sello.
 
 ### Para el dueño
 
-Cambian lo que ve el alumno. La columna «Qué ve el alumno» describe la opción por defecto.
+Cambian lo que ve el alumno. La columna «Qué ve el alumno» describe la opción por defecto, y las
+dos primeras columnas de texto y la alternativa van en palabras llanas. Los códigos, los archivos
+y los contrastes quedan en «Dónde queda». Una decisión que se decide junto con otra de la spec del
+splash lo dice en su fila.
 
 | # | Decisión | Opción por defecto | Qué ve el alumno | Alternativa | Dónde queda |
 | --- | --- | --- | --- | --- | --- |
-| 1 | Cuándo empieza el test del alumno nuevo | Cuando la cuenta ya está creada, porque el contenido del test exige el token (RS-BE-38 del backend) | Mientras se crea la cuenta ve a Ulises, la píldora y el pulso del sello, cerca de un minuto, y después Ulises le ofrece el test | Como en la maqueta, el test empieza mientras se crea la cuenta, con «Mientras tanto, ¿empezamos…?», «Prefiero esperar» y «Empezar el test». Pide que el backend sirva el contenido sin token, sin `specialtyId`, lo que enmienda RS-BE-38 y el contrato, y que la conversación interrumpa el test si el registro falla, por ejemplo con un código del authenticator vencido, o lo descarte con `NOT_ENROLLED` | RF-BIEN-8 y RF-BIEN-10 |
-| 2 | Cuándo aparecen los dos botones | Como en la maqueta, después de que Ulises aterriza, a los 2,3 s del relevo | Ve el vuelo completo y los botones de 3,5 a 3,7 s después de abrir la app | Los botones aparecen con el relevo, mientras Ulises todavía vuela | RF-BIEN-2 |
-| 3 | «Soy nuevo» en claro | Relleno `#B84A00` con borde y texto blancos, 5,23:1 | Un botón naranja más oscuro que el fondo, que se lee bien | El blanco al 14 % de la maqueta, con 2,59:1, que no llega al 4,5:1 | RF-BIEN-14 |
-| 4 | El nombre en las líneas de Ulises | Sin nombre, porque el backend lo manda como «APELLIDOS NOMBRES» y la app no sabe cuál es el de pila | «¡Craa! Tu cuenta ya está lista.» y «¡Hola de nuevo!» | El nombre de pila supuesto como las palabras después de las dos primeras, que falla con un solo apellido o con apellidos compuestos | RF-BIEN-6 y RF-BIEN-8 |
-| 5 | Enviar el código del authenticator | Con el botón «Crear mi cuenta», como hoy | Escribe los seis dígitos y toca el botón | Se envía solo al completar las seis casillas, como en la maqueta, lo que deja fuera los códigos de 8 dígitos y gasta un intento con cada error de tipeo | RF-BIEN-7 |
-| 6 | Qué pasa tras un login rechazado | Ulises dice el error y vuelve a pedir el código, ya escrito, con la contraseña vacía | Puede corregir el código o la contraseña | Se queda en el turno de la contraseña con el error debajo y la contraseña escrita, como hoy la tarjeta | RF-BIEN-6 y RF-BIEN-12 |
-| 7 | Llegar después de cerrar sesión | El recibimiento corto, con el logo en el centro, el vuelo de Ulises y la pregunta | Tras cerrar sesión, Ulises lo vuelve a recibir, porque el teléfono puede cambiar de manos | La conversación directa, con la pregunta como respuestas rápidas y sin el vuelo | RF-BIEN-3 |
-| 8 | Llegar por sesión expirada o contraseña restablecida | Directo a «¿Cuál es tu código o usuario?», con «Soy nuevo» a la vista | Escribe su código sin volver a responder la pregunta | Igual que tras cerrar sesión | RF-BIEN-3 |
-| 9 | «¿Olvidaste tu contraseña?» | Las pantallas de hoy, encima de la bienvenida | Sale de la conversación mientras restablece su contraseña y el logo deja de verse | Dentro de la conversación, con los textos de hoy, pedir el código, escribirlo, elegir la contraseña nueva y entrar | RF-BIEN-6 |
-| 10 | Alumno con sesión y la configuración a medias | Va a `/setup-carrera`, como hoy, al abrir la app o al entrar con su código | Ve el asistente de carrera y el logo se desvanece, igual que en la decisión 29 del splash | La bienvenida retoma la conversación en T0 y termina en el horario, con el logo en el sello | RF-BIEN-6 y RF-BIEN-13 |
-| 11 | El paso de carrera en la conversación | No aparece, porque hay una sola carrera y sale del usuario | Pasa de la cuenta creada a la invitación al test | Ulises dice la carrera en una burbuja antes de la invitación | RF-BIEN-10 |
-| 12 | Las líneas de bienvenida del contenido del test | No aparecen, porque Ulises ya se presentó | «¿Empezamos tu test de especialidad? Son T preguntas cortas.» | Las líneas `welcome` antes de la invitación, aunque repitan «Soy Ulises» | RF-BIEN-10 |
-| 13 | Las tarjetas del duelo en la conversación | Las compactas de la maqueta, de 56 dp con la baldosa de 40 dp | El duelo cabe en el compositor con la pregunta a la vista | Las de RF-TEST-5, de 104 dp con la baldosa de 80 dp, que obligan a desplazar el compositor | RF-BIEN-10 |
-| 14 | Salir del test a mitad | Sin pausa ni salto dentro de las preguntas | Termina el test o cierra la app, y al volver entra al asistente (decisión 10) | «Saltar y elegir por mi cuenta» también en cada pregunta | RF-BIEN-10 |
-| 15 | El resultado en la conversación | Dentro de la conversación, que desplaza | Ve el resultado debajo de la última respuesta y desplaza para ver todo | Una hoja sobre la conversación, que cumple el «sin scroll» de RF-TEST-8 | RF-BIEN-10 |
-| 16 | Ulises al llegar al horario | Vuela a su burbuja, como en la maqueta, lo que cambia `chatbot_bubble.dart` | Ulises se mueve de la conversación a su esquina | Se desvanece y su burbuja aparece con la página, como la opción por defecto de la decisión 28 del splash | RF-BIEN-11 |
-| 17 | Aviso de no cerrar la app mientras se crea la cuenta | Una segunda burbuja, «No cierres la app mientras tanto.» | Sabe que no debe salir, como hoy en la pantalla del registro | Solo la línea de la maqueta, y el aviso aparece si intenta salir | RF-BIEN-8 |
+| B-1 | Cuándo empieza el test del alumno nuevo | Cuando la cuenta ya está creada, porque el servidor solo entrega el test a quien ya tiene sesión | Mientras se crea la cuenta, hasta un par de minutos, ve a Ulises, la píldora «Creando tu cuenta…» y los rombos del logo que se encienden por turnos. Después Ulises lo invita al test | Como en la maqueta, el test empieza mientras se crea la cuenta, con «Mientras tanto, ¿empezamos…?», «Prefiero esperar» y «Empezar el test». Pide cambiar el servidor para que entregue el test sin sesión, y decidir qué pasa con las respuestas si la cuenta no llega a crearse, por ejemplo por un código del authenticator vencido o porque el portal no muestra matrícula | RF-BIEN-8 y RF-BIEN-10. El contenido exige el token (RS-BE-38 del backend). La alternativa sirve el contenido sin token y sin `specialtyId`, enmienda RS-BE-38 y `docs/specs/api-contracts.md`, y descarta el test con `NOT_ENROLLED`. El envío dura hasta 120 s (B-17) |
+| B-2 | Cuándo aparecen los dos botones | Como en la maqueta, después del aterrizaje de Ulises | Ve el vuelo completo. El que vuelve puede tocar «Sí, entrar» de 3,5 a 3,7 s después de abrir la app, unos 3 s más tarde que hoy la tarjeta del login | Los botones aparecen apenas termina la animación del logo, mientras Ulises todavía vuela, y el que vuelve puede tocar «Sí, entrar» unos 2 s antes | RF-BIEN-2 y S-6. Los botones empiezan a entrar a los 2,32 s del relevo |
+| B-3 | Color de «Soy nuevo» con el teléfono en claro | Un botón naranja oscuro, con el borde y el texto blancos | Un botón naranja más oscuro que el fondo, que se lee bien | El blanco translúcido de la maqueta, que sobre el naranja cuesta leer | RF-BIEN-14. Por defecto `#B84A00`, con 5,23:1. La alternativa da 2,59:1, bajo el 4,5:1 que pide la app |
+| B-4 | El nombre en las frases de Ulises | Sin nombre, porque el servidor manda primero los apellidos y la app no sabe cuál es el nombre de pila | «¡Craa! Tu cuenta ya está lista.» y «¡Hola de nuevo!» | Suponer que el nombre de pila son las palabras después de las dos primeras, lo que falla con un solo apellido o con apellidos compuestos | RF-BIEN-6 y RF-BIEN-8 (`user_model.dart:52-65`) |
+| B-5 | Cómo se envía el código del authenticator | Con el botón «Crear mi cuenta», como hoy | Escribe los seis dígitos y toca el botón | Se envía solo al completar las seis casillas, como en la maqueta, lo que deja fuera los códigos de ocho dígitos y gasta uno de los cinco intentos por hora con cada error de tipeo | RF-BIEN-7 |
+| B-6 | Qué pasa tras un login rechazado | Ulises dice el error y vuelve a pedir el código, ya escrito, con la contraseña vacía | Puede corregir el código o la contraseña | Se queda en el paso de la contraseña, con el error debajo y la contraseña escrita, como hoy la tarjeta | RF-BIEN-6 y RF-BIEN-12 |
+| B-7 | Llegar después de cerrar sesión | Ulises lo vuelve a recibir, con el logo en el centro, el vuelo y la pregunta | Tras cerrar sesión ve el recibimiento completo, porque el teléfono puede cambiar de manos | La conversación directa, con la pregunta como respuestas rápidas y sin el vuelo | RF-BIEN-3 |
+| B-8 | Llegar con la sesión vencida o con la contraseña recién cambiada | Directo a «¿Cuál es tu código o usuario?», con «Soy nuevo» a la vista | Escribe su código sin volver a responder la pregunta | Igual que tras cerrar sesión | RF-BIEN-3 (`motivo: expirada` y `motivo: restablecida`) |
+| B-9 | «¿Olvidaste tu contraseña?» | Las pantallas de hoy, encima de la conversación | Sale de la conversación mientras cambia su contraseña, y el logo deja de verse, contra el pedido de que no se pierda | Dentro de la conversación y con los textos de hoy, Ulises pide el código, el alumno lo escribe, elige la contraseña nueva y entra, con el logo siempre en el sello | RF-BIEN-6 (`/forgot-password`) |
+| B-10 | El alumno con cuenta que todavía no elige su especialidad, al abrir la app o al entrar. Se decide junto con S-29 | Va al asistente de carrera de hoy | Ve el asistente de carrera en lugar de su horario, y el logo se desvanece, contra los dos pedidos | Vuelve a la conversación con Ulises en la invitación al test, sin el paso de la carrera, y termina en su horario con el logo en el sello. Es la misma alternativa de S-29 | RF-BIEN-6 y RF-BIEN-13 (`/setup-carrera` por defecto, T0 con la alternativa) |
+| B-11 | La carrera dentro de la conversación | No se pregunta ni se menciona, porque hay una sola carrera y la app ya la conoce por la cuenta | Pasa de la cuenta creada a la invitación al test | Ulises dice la carrera en una burbuja antes de la invitación | RF-BIEN-10 |
+| B-12 | La presentación de Ulises al empezar el test | No se repite, porque Ulises ya se presentó | «¿Empezamos tu test de especialidad? Son T preguntas cortas.» | Las frases de bienvenida del test antes de la invitación, aunque repitan «Soy Ulises» | RF-BIEN-10 (las líneas `welcome` del contenido) |
+| B-13 | El tamaño de las tarjetas de «esto o aquello» en la conversación | Las compactas de la maqueta | Las dos opciones caben abajo con la pregunta a la vista | Las tarjetas grandes del test en su pantalla propia, casi el doble de altas, que obligan a desplazar la zona de respuesta | RF-BIEN-10. Las compactas miden 56 dp con la baldosa de 40 dp, y las de RF-TEST-5, 104 dp con la de 80 dp |
+| B-14 | Salir del test a mitad | Sin botón de pausa ni de salto dentro de las preguntas | Termina el test o cierra la app, y al volver entra al asistente de carrera (B-10) | «Saltar y elegir por mi cuenta» también en cada pregunta | RF-BIEN-10 |
+| B-15 | El resultado del test | Dentro de la conversación, que se desplaza | Ve el resultado debajo de su última respuesta y desplaza para verlo entero | Una hoja encima de la conversación que muestra el resultado entero sin desplazar, como el test en su pantalla propia | RF-BIEN-10. La alternativa cumple la regla «sin scroll» de RF-TEST-8 |
+| B-16 | Ulises al llegar al horario desde la conversación. Se decide junto con S-28 | Vuela a su burbuja de siempre, como en la maqueta | Ulises se mueve de la conversación a su esquina del inicio | Se desvanece y su burbuja aparece con la página, como la opción por defecto de S-28 | RF-BIEN-11. Cambia `chatbot_bubble.dart` |
+| B-17 | Qué dice Ulises del tiempo que tarda crear la cuenta | «Estoy creando tu cuenta y trayendo tu ciclo.» y, en otra burbuja, la frase de hoy, «Puede tomar un par de minutos: no cierres la app.» | Sabe que puede tardar hasta un par de minutos y que no debe salir, como hoy en la pantalla del registro | La frase de la maqueta, «Tarda cerca de un minuto.», que promete menos de lo que puede durar y todavía no tiene una medición que la respalde. Si tarda más, el alumno puede creer que la app está colgada, cerrarla y quedarse con la cuenta a medias. O una frase que diga el tope, como «Puede tardar hasta dos minutos. No cierres la app.» | RF-BIEN-8. El plazo es de 120 s (`registro_service.dart:28` y BR-REG-F-08), la frase de hoy está en `registro_page.dart:301-302` y el envío real todavía no se mide contra el portal |
+| B-27 | El tamaño de Ulises, la tarjeta y los botones del recibimiento frente a la maqueta | Ulises crece junto con la estrella y guarda su proporción, y la tarjeta y los botones quedan del tamaño de la maqueta, como el resto de la conversación | Ulises junto a la estrella como en la maqueta, y la tarjeta y los botones un poco más chicos frente a ellos. En su iPhone SE, con la letra al 100 %, todo cabe y la estrella se queda en el centro | Todo crece igual que la estrella, también la letra de la tarjeta y los botones. Se ve como la maqueta, pero en el iPhone SE ya no cabe y la estrella tiene que subir unos 4 mm con la letra al 100 % | «Requisitos» y RF-BIEN-2. El dibujo se escala por 1,2 (90 dp frente a 75 px) y la interfaz va en dp iguales a sus px. Ulises mide 62 y 70 dp |
+| B-28 | Qué pasa si Ulises y su saludo no caben junto a la estrella, con letra grande o en una pantalla baja | La estrella sube lo justo antes de que Ulises aterrice y, si hace falta, se achica. Si ni así cabe, Ulises saluda ya en la conversación | En su iPhone SE, con la letra al 100 %, la estrella no se mueve. Con la letra al 130 % puede subir unos milímetros, y al 200 %, cerca de 1,5 cm | La estrella nunca se mueve ni se achica, y cuando no cabe, Ulises saluda ya en la conversación, con el logo en el sello y la pregunta como respuestas rápidas | RF-BIEN-2 y RF-BIEN-16. Sube a lo sumo hasta 24 dp del borde de arriba y se achica hasta R = 60 dp. Unos 15 dp al 130 % y 95 dp al 200 % en 375 × 667 |
+| B-29 | Dónde salen los avisos «Sesión expirada», «Contraseña actualizada» y «Estamos creando tu cuenta» | Abajo en la pantalla, con su texto de hoy, para no tapar el logo | Ve el aviso abajo, sobre la zona de respuesta, y el logo arriba entero | Que los diga Ulises en una burbuja de la conversación en lugar del aviso | RF-BIEN-3, RF-BIEN-4 y RF-BIEN-8. Hoy son `Get.snackbar` arriba (`extension_navigation.dart:434`), en `api_client.dart:159`, `reset_password_controller.dart:162-165` y `registro_page.dart:73-78` |
+| B-30 | Cómo recupera su contraseña quien queda en la duda de si su cuenta existe | Ulises dice que puede recuperarla con «Ya tengo cuenta», y ese enlace está a la vista en ese momento | Toca «Ya tengo cuenta», escribe su código y, en la contraseña, toca «¿Olvidaste tu contraseña?» | El texto de hoy, que dice «desde el login», una pantalla que ya no existe, y el enlace solo aparece después de tocar «Volver a intentar el registro» | RF-BIEN-8, RF-BIEN-9 y BR-REG-F-11 (`registro_controller.dart:321-323`) |
+| B-31 | Lo que dice Ulises cuando la cuenta está lista | Una burbuja con la cuenta lista y cuántos cursos del ciclo trae, como en la maqueta | «¡Craa! Tu cuenta ya está lista. Traje tus 6 cursos del ciclo.» Ya no ve cuántas clases hay en su horario ni cuántos cursos tiene su avance, cifras que hoy muestra la pantalla del registro | Ulises suma otra burbuja con esas dos cifras, con textos nuevos | RF-BIEN-8. Hoy son las filas «Clases en tu horario» y «Cursos de tu avance» (`registro_page.dart:335-337`) |
+| B-32 | Si la conexión se corta mientras se crea la cuenta, también con la app en segundo plano | Como hoy, Ulises dice «No hay conexión…» y vuelve a pedir el código del authenticator | Puede reenviar. Si la cuenta sí existe, el reenvío le dice que ya existe una cuenta con ese código, y entra con «Ya tengo cuenta» | Tratarlo como la duda de cuando vence el plazo, con «No pudimos confirmar si tu cuenta se creó» y la opción de iniciar sesión, porque el pedido pudo llegar al servidor. Un corte antes de enviar también caería en esa duda | RF-BIEN-8 y RF-BIEN-13 (`registro_service.dart:65-71` y `registro_controller.dart:283-285`). La alternativa cambia `RegistroService` |
 
 ### Técnicas (las propone el equipo)
 
@@ -1101,15 +1354,18 @@ No cambian lo que ve el alumno, salvo donde la columna lo dice.
 
 | # | Decisión | Propuesta del equipo | Alternativa | Qué ve el alumno | Dónde queda |
 | --- | --- | --- | --- | --- | --- |
-| 18 | Dónde vive la conversación | Una sola ruta, `/login`, con los tramos del login, del registro y del test dentro | Las rutas `/login`, `/registro` y `/test-especialidad` con un andamio común y sin transición, con el historial pasado como argumento y el envío del registro sobreviviendo al cambio de ruta | Nada distinto | RF-BIEN-1 |
-| 19 | Vida del controlador de la bienvenida | Permanente, como `LoginController`, y reiniciado después del cuadro al volver a entrar | Uno por visita con `lazyPut`, que expone de nuevo el «tipeo fantasma» si dos `/login` conviven | Nada distinto | RF-BIEN-1 |
-| 20 | Vida del controlador del registro | La bienvenida lo crea y lo cierra ella misma, sin `Get.put` | `Get.put` con una etiqueta y `Get.delete` al cerrar, con el riesgo de atarlo a la ruta de un aviso | Nada distinto | RF-BIEN-9 |
-| 21 | Cómo sabe la bienvenida por qué llega | El parámetro `motivo` de `offAllToLogin`, como argumento de ruta | Un campo en un service que la bienvenida lee y borra | Nada distinto | RF-BIEN-1 |
-| 22 | El 401 dentro de la conversación | Comprobar el token guardado tras cada fallo de un turno con sesión | Un aviso desde el interceptor de `ApiClient` a la bienvenida | Nada distinto | RF-BIEN-12 |
-| 23 | La ruta `/registro` | Sale con `RegistroPage` y `RegistroBinding` | Se queda sin enlaces que la abran | Nada distinto | RF-BIEN-1 |
-| 24 | Los colores | Los tokens del test y los nuevos de RF-BIEN-14 | Tokens propios para todo | Nada distinto | RF-BIEN-14 |
-| 25 | Web | La bienvenida también en web, con el botón oficial de GIS configurado con `continueWith`, `es` y el tema del sistema | La tarjeta de hoy en web | En web, la conversación en lugar de la tarjeta. Web no se despliega (`README.md:701`) | RF-BIEN-1 y RF-BIEN-6 |
-| 26 | Dónde va la lógica pura | `lib/domain/bienvenida/`, como la del truco del 67 | Dentro de `lib/pages/bienvenida/` | Nada distinto | «Pantallas y archivos» |
+| B-18 | Dónde vive la conversación | Una sola ruta, `/login`, con los tramos del login, del registro y del test dentro | Las rutas `/login`, `/registro` y `/test-especialidad` con un andamio común y sin transición, con el historial pasado como argumento y el envío del registro sobreviviendo al cambio de ruta | Nada distinto | RF-BIEN-1 |
+| B-19 | Vida del controlador de la bienvenida | Permanente, como `LoginController`, con una visita por cada montaje de su página. El primer cuadro sale de los argumentos de la ruta, el reinicio va después de ese cuadro y el `dispose` de la página vieja no toca la visita nueva | Uno por visita con `lazyPut`, que expone de nuevo el «tipeo fantasma» si dos `/login` conviven | Nada distinto | RF-BIEN-1 |
+| B-20 | Vida del controlador del registro | La bienvenida lo crea y lo cierra ella misma, sin `Get.put`. Al cerrarlo borra los campos enseguida y hace el `dispose` cuando el campo del compositor ya no está en el árbol | `Get.put` con una etiqueta y `Get.delete` al cerrar, con el riesgo de atarlo a la ruta de un aviso | Nada distinto | RF-BIEN-9 |
+| B-21 | Cómo sabe la bienvenida por qué llega | El parámetro `motivo` de `offAllToLogin`, como argumento de ruta | Un campo en un service que la bienvenida lee y borra | Nada distinto | RF-BIEN-1 |
+| B-22 | El 401 dentro de la conversación | Comprobar el token guardado tras cada fallo de un turno con sesión | Un aviso desde el interceptor de `ApiClient` a la bienvenida | Nada distinto | RF-BIEN-12 |
+| B-23 | La ruta `/registro` | Sale con `RegistroPage` y `RegistroBinding` | Se queda sin enlaces que la abran | Nada distinto | RF-BIEN-1 |
+| B-24 | Los colores | Los tokens del test y los nuevos de RF-BIEN-14 | Tokens propios para todo | Nada distinto | RF-BIEN-14 |
+| B-25 | Web | La bienvenida también en web, con el botón oficial de GIS configurado con `continueWith`, `es` y el tema del sistema | La tarjeta de hoy en web | En web, la conversación en lugar de la tarjeta. Web no se despliega (`README.md:701`) | RF-BIEN-1 y RF-BIEN-6 |
+| B-26 | Dónde va la lógica pura | `lib/domain/bienvenida/`, como la del truco del 67 | Dentro de `lib/pages/bienvenida/` | Nada distinto | «Pantallas y archivos» |
+| B-33 | Quién dibuja el paso al horario | La capa del splash, que pasa a ser una pieza permanente del `builder` de `GetMaterialApp`, montada también en web, con una entrada para la bienvenida que cubre lo que se dibuja, la medición de la cabecera y de `ChatbotBubble`, el bloqueo de toques, su semántica «ULIMA++» sin «cargando» y el aviso a `HomePage` para las orientaciones | Una capa propia de la bienvenida en el `builder`, que duplica esa medición, el bloqueo de toques, la semántica y el aviso a `HomePage` | Nada distinto | RF-BIEN-11 y RF-SPL-4. Suma `lib/pages/splash/**` a los targets |
+| B-34 | Vida del controlador del test en la conversación | La bienvenida lo crea al empezar T0 y lo cierra ella misma, sin `Get.put`, y descarta la evaluación o el `PUT` que responde después de cerrarlo | `Get.put` con una etiqueta y `Get.delete` al cerrar, con el riesgo de atarlo a la ruta de un aviso (`main.dart:124-128`) | Nada distinto | RF-BIEN-10 y enmienda propuesta a RF-TEST-1 y RF-TEST-2 |
+| B-35 | Cómo se prueba la configuración del botón de Google en web | Una función pura de `lib/domain/bienvenida/` da los valores, que la VM prueba con `flutter test --no-pub`. La llamada a `renderButton` queda sin prueba automática y la comprueba la revisión manual en Chrome | La prueba del widget de web con `flutter test --platform chrome`, como paso aparte de «Verificación», porque `google_sign_in_button_web.dart` solo compila en web | Nada distinto | RF-BIEN-6 |
 
 ## Pruebas por requisito
 
@@ -1118,21 +1374,21 @@ un `ApiClient` falso y datos inventados, con el alumno de prueba 20230001.
 
 | Requisito | Pruebas | Qué fijan |
 | --- | --- | --- |
-| RF-BIEN-1 | `bienvenida_ruta_test.dart` | `/login` muestra la bienvenida; `LoginController` y la bienvenida permanentes y reiniciados al volver; la navegación en la bienvenida y no en `LoginController`; sin `/registro`; el motivo de cada llegada; la guarda de `session_navigation_guard_test.dart` en verde |
-| RF-BIEN-2 | `bienvenida_recibimiento_test.dart` | El primer cuadro idéntico a la pose recibida, en claro y en oscuro; el aviso a la capa; los tiempos de la tarjeta y de los botones; los toques ignorados antes; nada dentro del margen de la estrella a 375 × 667 con 1,0, 1,3 y 2,0; la subida de la estrella cuando no cabe; el primer grupo con las dos burbujas y la respuesta |
-| RF-BIEN-3 | `bienvenida_recibimiento_test.dart` | El recibimiento corto sin argumentos; directo a E1 con `expirada` y con `restablecida`; «Soy nuevo» a la vista; el sello entero desde el primer cuadro |
-| RF-BIEN-4 | `bienvenida_sello_test.dart` | El sello a 1,22 veces la cabecera; el latido con cada respuesta y al posarse; el pulso solo durante el envío y su fórmula; la vuelta a la opacidad plena con cada desenlace; el encabezado «ULIMA++» |
-| RF-BIEN-5 | `bienvenida_conversacion_test.dart` | Los grupos y las respuestas; el ritmo de 850 y 500 ms; el compositor y sus piezas; el botón de envío inactivo con el campo vacío; el historial sin secretos, borrado al reiniciar y al pasar al horario; el teclado |
-| RF-BIEN-6 | `bienvenida_entrar_test.dart` | E1, E2 y E3 con sus textos; el usuario alfanumérico; el error que vuelve a E1; el fallo de red que no cuelga el botón; Google en Android e iOS con «Continuar con Google» y la cancelación; la configuración de GIS en web; «¿Olvidaste tu contraseña?»; «Soy nuevo» en E1 y E2; el destino según el rol y la configuración |
-| RF-BIEN-7 y RF-BIEN-8 | `bienvenida_registro_test.dart` | N1 a N5 con sus textos; los validadores por turno sin red; la tarjeta del consentimiento literal; «Volver» y el consentimiento que no se repite; el envío solo con el botón; el plazo de 120 s; el `PopScope` y su aviso; cada código de error con su turno de destino y el código del authenticator borrado; `incierto` con sus dos títulos y salidas; el 201 con el conteo y los avisos; el paso al test |
-| RF-BIEN-9 | `bienvenida_credenciales_test.dart` | Los cinco campos fuera de todo `Rx` y del historial; el cierre al tocar «Ya tengo cuenta», al pasar al test, al reiniciar y al retirar `/login`; el controlador creado sin `Get.put` con un aviso abierto; las dos contraseñas nunca a la vez; ningún pedido al backend antes del envío; «Soy nuevo» y «Ya tengo cuenta» fijos, también tras un login rechazado y tras `USER_NOT_FOUND` de Google |
-| RF-BIEN-10 | `bienvenida_test_especialidad_test.dart` | T0 con T del contenido; la carga, el error y el `404`; las líneas de Ulises por pregunta; el duelo y la escala en el compositor; las respuestas del alumno; «Pregunta anterior»; la espera y el desempate; el resultado con sus tres botones; la despedida y el paso al horario; «Rehacer el test»; la selección manual; sin pausa; el docente sin test |
-| RF-BIEN-11 | `bienvenida_horario_test.dart` | `Get.offAll` a `/home` con el argumento de Horario y sin transición; el historial y el registro cerrados antes; Ulises en la burbuja del alumno y desvanecido para el docente; la burbuja oculta hasta el aterrizaje; el fundido cuando algo no se mide; la orientación vertical hasta que la capa se retira |
+| RF-BIEN-1 | `bienvenida_ruta_test.dart` | `/login` muestra la bienvenida; `LoginController` y la bienvenida permanentes; la visita por montaje, con el primer cuadro sacado de los argumentos y sin nada de la visita anterior tras un cierre de sesión que deja la franja con el sello; el restablecimiento con dos `/login` a la vez, sin `setState` durante el build y sin que el `dispose` de la página vieja toque la visita nueva; la navegación en la bienvenida y no en `LoginController`; sin `/registro`; el motivo de cada llegada, también el botón «Volver a iniciar sesión» del Perfil; la guarda de `session_navigation_guard_test.dart` en verde |
+| RF-BIEN-2 | `bienvenida_recibimiento_test.dart` | El primer cuadro idéntico a la pose recibida, en claro y en oscuro; el aviso a la capa; Ulises de 62 y 70 dp y su lugar medido desde la estrella; las medidas de la tarjeta y los botones; los tiempos de la tarjeta y de los botones; los toques ignorados antes de que los botones empiecen a entrar; a 375 × 667, la estrella quieta con 1,0 y nada dentro de su margen ni encima de los botones con 1,0, 1,3 y 2,0; la subida y el achique de la estrella cuando no cabe y el paso directo a la conversación como último recurso; el primer grupo con las dos burbujas y la respuesta |
+| RF-BIEN-3 | `bienvenida_recibimiento_test.dart` | El recibimiento corto sin argumentos; la estrella centrada en la vista en web; directo a E1 con `expirada` y con `restablecida`; «Soy nuevo» a la vista; el sello entero desde el primer cuadro |
+| RF-BIEN-4 | `bienvenida_sello_test.dart` | El sello a 1,22 veces la cabecera; el latido con cada respuesta y al posarse; el pulso solo durante el envío y su fórmula; la vuelta a la opacidad plena con cada desenlace; el encabezado «ULIMA++»; los avisos «Sesión expirada», «Contraseña actualizada» y «Estamos creando tu cuenta» abajo, sin tapar el sello; el confeti bajo la franja |
+| RF-BIEN-5 | `bienvenida_conversacion_test.dart` | Los grupos y las respuestas; el ritmo de 850 y 500 ms; el compositor y sus piezas; el botón de envío inactivo con el campo vacío; el historial sin secretos, borrado al reiniciar, tras el 401, al pasar al horario y al salir hacia `/setup-carrera`; los campos de `LoginController` vacíos en esas salidas; el teclado |
+| RF-BIEN-6 | `bienvenida_entrar_test.dart` | E1, E2 y E3 con sus textos; el usuario alfanumérico; el `AutofillGroup` con el campo de E1 montado durante E2 y `finishAutofillContext` antes de vaciar; el error que vuelve a E1; el fallo de red atrapado en `LoginController`, con `submitting` apagado; Google en Android e iOS con «Continuar con Google» y la cancelación; el resultado de Google en web por el canal observable, con una cuenta falsa; los valores de la configuración de GIS, que salen de la función pura y se prueban en la VM (decisión B-35); «¿Olvidaste tu contraseña?»; «Soy nuevo» en E1 y E2; el destino según el rol y la configuración |
+| RF-BIEN-7 y RF-BIEN-8 | `bienvenida_registro_test.dart` | N1 a N5 con sus textos; los validadores por turno sin red; la tarjeta del consentimiento literal; «Volver» y el consentimiento que no se repite; el envío solo con el botón; las dos burbujas del envío con la frase de hoy; el plazo de 120 s; el `PopScope` y su aviso; cada código de error con su turno de destino y el código del authenticator borrado; el fallo de red durante el envío que vuelve a N5; `incierto` con sus dos títulos, sus salidas, «Ya tengo cuenta» y el texto que lo nombra; el 201 en una burbuja con el conteo, sin frase con 0 cursos o sin `summary`, y los avisos; el paso al test |
+| RF-BIEN-9 | `bienvenida_credenciales_test.dart` | Los cinco campos fuera de todo `Rx` y del historial; el cierre al tocar «Ya tengo cuenta», también desde `incierto`, al pasar al test, al reiniciar, tras el 401 y en el `dispose` de la página, guardado por la visita; los campos borrados enseguida y el `dispose` después de que el campo sale del árbol, sin error de `TextEditingController`; el controlador creado sin `Get.put` con un aviso abierto; las dos contraseñas nunca a la vez; ningún pedido al backend antes del envío; «Soy nuevo» y «Ya tengo cuenta» fijos, también tras un login rechazado y tras `USER_NOT_FOUND` de Google |
+| RF-BIEN-10 | `bienvenida_test_especialidad_test.dart` | El controlador del test creado sin `Get.put` y cerrado al pasar al horario, al reiniciar, tras el 401 y en el `dispose`; la evaluación y el `PUT` que responden después, descartados; T0 con T del contenido; la carga, el error y el `404`; las líneas de Ulises por pregunta; el duelo y la escala en el compositor; las respuestas del alumno; «Pregunta anterior»; la espera y el desempate; el resultado con sus tres botones; la despedida y el paso al horario; «Rehacer el test»; la selección manual; `careerId` nulo sin llamar a `completeSetup`; el confeti bajo la franja; sin pausa; el docente sin test |
+| RF-BIEN-11 | `bienvenida_horario_test.dart` | `Get.offAll` a `/home` con el argumento de Horario y sin transición; la entrada de la capa permanente, que sigue montada tras la navegación; el historial, el registro y el test cerrados antes; Ulises en la burbuja del alumno y desvanecido para el docente; la burbuja oculta hasta el aterrizaje solo en este paso, y visible con la página al llegar desde el splash; el fundido cruzado cuando algo no se mide; los toques bloqueados; la orientación vertical hasta que la capa se retira |
 | RF-BIEN-12 | `bienvenida_errores_test.dart` | Cada fila de la tabla; el 401 en un turno con sesión, con la limpieza local y la vuelta a E1 |
-| RF-BIEN-13 | `bienvenida_atras_test.dart` | Cada fila de la tabla del atrás; el envío que no se abandona; la sesión guardada con la configuración a medias que abre `/setup-carrera` |
+| RF-BIEN-13 | `bienvenida_atras_test.dart` | Cada fila de la tabla del atrás; el envío que no se abandona; el corte de la conexión en segundo plano, que vuelve a N5 y no a `incierto`; la sesión guardada con la configuración a medias que abre `/setup-carrera` |
 | RF-BIEN-14 | `bienvenida_contraste_test.dart` | Cada token en los dos temas; cada par de la tabla de contraste; el recibimiento oscuro |
-| RF-BIEN-15 | `bienvenida_movimiento_test.dart` | Sin vuelo, estela, latido, pulso ni desplazamiento con reducir movimiento; los fundidos y sus tiempos; las pausas del ritmo que se quedan |
-| RF-BIEN-16 | `bienvenida_accesibilidad_test.dart` | El encabezado, los grupos y «Tú, <texto>»; el recibimiento sin espera con lector de pantalla; las burbujas de un turno juntas y el foco en la primera; las regiones vivas; las etiquetas «Enviar», «Mostrar contraseña» y «Ocultar contraseña»; los blancos de 48 dp; el orden de foco con teclado físico; sin desborde con 1,0, 1,3 y 2,0 |
+| RF-BIEN-15 | `bienvenida_movimiento_test.dart` | Sin vuelo, estela, latido, pulso ni desplazamiento con reducir movimiento; los fundidos y sus tiempos; en la subida al sello, en el paso al horario y en «Si no cabe», un logo a opacidad plena en cada cuadro; las pausas del ritmo que se quedan |
+| RF-BIEN-16 | `bienvenida_accesibilidad_test.dart` | El encabezado, los grupos y «Tú, <texto>»; el recibimiento sin espera con lector de pantalla; el nodo «ULIMA++» sin «cargando» durante el paso al horario; las burbujas de un turno juntas y el foco en la primera; las regiones vivas; las etiquetas «Enviar», «Mostrar contraseña» y «Ocultar contraseña»; los blancos de 48 dp; el orden de foco con teclado físico; sin desborde con 1,0, 1,3 y 2,0 |
 | RF-BIEN-17 | `bienvenida_barra_estado_test.dart` | Los íconos claros en los dos temas; la columna de 600 dp en una pantalla ancha |
 | RF-BIEN-18 | Ninguna | La medición manual de «Verificación» |
 | RF-BIEN-19 | Ninguna | Es documentación |
@@ -1154,15 +1410,22 @@ casos 10 a 12 de `test/HU34_jeff/registro_consent_test.dart`, que pasan a montar
   `session_navigation.dart`, `api_client.dart` y `LoginController`, que usan otras
   funcionalidades. Incluye `test/bienvenida`, `test/HU01_jeff`, `test/HU02_jeff`, `test/HU33_jeff`
   y `test/HU34_jeff`.
-- La bienvenida no se publica antes que el splash ni que el test de especialidad, porque recibe la
-  pose del primero (decisión 30 del splash) y dibuja las piezas del segundo, y cada push a `main`
-  publica el APK (`.github/workflows/build-apk.yml`).
+- La bienvenida y el splash se publican juntos, en el mismo push a `main`, porque la bienvenida
+  recibe la pose del splash y usa su capa, y el splash sin sesión termina en la bienvenida
+  (decisión S-30). Tampoco se publica antes que el test de especialidad, cuyas piezas dibuja.
+  Cada push a `main` publica el APK (`.github/workflows/build-apk.yml`).
 - Una revisión manual en un Android 12 a 14 con barra de tres botones, en un Android 15 o superior
   y en el iPhone SE del dueño, en claro y en oscuro, con los recorridos «Sí, entrar» con código y
   con Google, un docente, «Soy nuevo» hasta el horario, un error de cada tramo y el modo avión
   durante el envío. La misma revisión con TalkBack, con VoiceOver, con el texto al 200 %, con un
   teclado físico y con reducir movimiento. Comprueba además que el llavero de iOS y el gestor de
-  contraseñas de Google ofrecen la contraseña guardada en E2, aunque el código vaya en E1.
+  contraseñas de Google ofrecen la contraseña guardada en E2, aunque el código vaya en E1, y que
+  ofrecen guardarlos al entrar. Si no, se aplica la regla de «El autocompletado» (RF-BIEN-6).
+- En el iPhone SE del dueño, con el texto al 100 %, la estrella no se mueve durante el
+  recibimiento, y con el texto al 200 % nada se tapa (RF-BIEN-2).
+- En Chrome, la bienvenida de web dibuja el botón oficial de Google con `continueWith`, `es`, el
+  tema del sistema y el ancho del compositor, y lo vuelve a dibujar al cambiar el tema, porque
+  esa llamada no tiene prueba automática (decisión B-35).
 - Una grabación de pantalla a 60 fps, revisada cuadro a cuadro, comprueba que el logo no salta en
   el relevo del splash, que nada tapa la estrella mientras Ulises aterriza y que el paso al
   horario termina sin cambio al retirarse la capa.

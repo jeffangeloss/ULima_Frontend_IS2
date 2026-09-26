@@ -21,28 +21,44 @@ spec difieren, manda la spec.
 - Las tres intros son las maquetas de `docs/images/UI/splash/`, con las diferencias que lista su
   README, como los 86 dp de la estrella de Código.
 - Con sesión, Ulises aparece en su burbuja con un rebote después de la salida. En la spec del
-  splash aparece con la página, como hoy (decisión 28).
-- La maqueta abre Horario solo para una alumna. La pestaña de cada rol es la decisión 24 del
+  splash aparece con la página, como hoy (decisión S-28, que se decide junto con B-16).
+- La maqueta abre Horario solo para una alumna. La pestaña de cada rol es la decisión S-24 del
   splash.
 
 ## Diferencias con la spec de la bienvenida
 
 Todo lo que pasa después del relevo lo fija la spec de la bienvenida, y en estos puntos manda ella.
+Las decisiones de la bienvenida llevan el prefijo B y las del splash, el prefijo S.
 
 - El test empieza mientras se crea la cuenta, con «Mientras tanto, ¿empezamos tu test de
   especialidad? Son 14 preguntas cortas.», «Prefiero esperar» y «Empezar el test». En la spec
-  empieza con la cuenta ya creada, porque su contenido exige el token (decisión 1).
+  empieza con la cuenta ya creada, porque su contenido exige el token (decisión B-1).
 - El código del authenticator se envía solo al completar las seis casillas. En la spec se envía
-  con el botón «Crear mi cuenta» (decisión 5).
+  con el botón «Crear mi cuenta» (decisión B-5).
 - «Soy nuevo» usa blanco al 14 % sobre el naranja, con 2,59:1. En la spec va sobre `#B84A00`, con
-  5,23:1 (decisión 3). La pista de los campos usa `#8A94A6` y el foco `#FF6600`, que en la spec
+  5,23:1 (decisión B-3). La pista de los campos usa `#8A94A6` y el foco `#FF6600`, que en la spec
   pasan a `testMuted` y a `bienvenidaFoco` (RF-BIEN-14).
-- Ulises llama «Valeria» a la alumna. En la spec va sin nombre (decisión 4).
+- Ulises llama «Valeria» a la alumna. En la spec va sin nombre (decisión B-4).
+- Mientras se crea la cuenta, Ulises dice «Tarda cerca de un minuto.». En la spec dice por
+  defecto la advertencia de hoy, «Puede tomar un par de minutos: no cierres la app.», porque el
+  envío puede durar hasta 120 s y el envío real todavía no tiene una medición (decisión B-17).
+- Con la cuenta creada, la burbuja dice el nombre y los cursos traídos. En la spec va sin el
+  nombre, en una sola burbuja, y sin las cifras de clases del horario ni de cursos del avance que
+  hoy muestra la pantalla del registro (decisiones B-4 y B-31).
+- Ulises mide 52 px al volar y 58 px al posarse, con su centro al 21,6 % del ancho y al 67,8 % del
+  alto, y la tarjeta empieza 11 px después de su borde derecho. En la spec el dibujo se escala por
+  1,2, como la estrella, así que Ulises mide 62 y 70 dp y aterriza medido desde la estrella,
+  mientras la tarjeta y los botones miden en dp lo que la maqueta mide en px y se ven un poco más
+  chicos frente a la estrella. La maqueta no tiene la regla «Si no cabe» (RF-BIEN-2 y decisiones
+  B-27 y B-28).
+- Con «Reducir movimiento», `toSeal` y `toHorario` llevan la opacidad del logo a 0 y después a 1,
+  así que por un momento la pantalla queda sin logo. En la spec son fundidos cruzados, con el
+  logo que llega encima del que se va, y nunca falta un logo (RF-BIEN-15).
 - El turno de la contraseña de «Ya tengo cuenta» no trae «Soy nuevo», y los turnos del registro
   no traen «Volver» ni «Ya tengo cuenta». En la spec están en todos (RF-BIEN-6, RF-BIEN-7 y
   RF-BIEN-9).
 - No hay turnos de error, de `incierto` ni de sesión expirada, que la spec define en RF-BIEN-8 y
-  RF-BIEN-12.
+  RF-BIEN-12. En la spec, `incierto` trae además «Ya tengo cuenta» (decisión B-30).
 - El duelo no trae «Me gustan las dos» ni «Ninguna me llama», y el resultado dice «Elegir Software
   como principal», sin «Rehacer el test», los electivos ni «También te puede interesar». Mandan
   la spec del test y RF-BIEN-10.
