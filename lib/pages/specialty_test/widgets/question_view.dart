@@ -19,10 +19,10 @@ import 'test_buttons.dart';
 import 'ulises_bubble.dart';
 
 /// Los emojis decorativos de la escala, uno por opción y en su orden.
-const List<String> _emojis = <String>['😴', '🙂', '😃', '🤩'];
+const List<String> emojisDeLaEscala = <String>['😴', '🙂', '😃', '🤩'];
 
 /// Si la escala de texto pide la versión apilada (RF-TEST-6 y RF-TEST-13).
-bool _textoGrande(BuildContext context) =>
+bool textoGrande(BuildContext context) =>
     MediaQuery.textScalerOf(context).scale(1) >= 1.3;
 
 class QuestionView extends GetView<SpecialtyTestController> {
@@ -223,7 +223,7 @@ class _PasoState extends State<_Paso> {
           UlisesTurnView(turno: d.turno),
           const SizedBox(height: 12),
           if (esEscala)
-            _Escala(
+            EscalaDelTest(
               pregunta: pregunta,
               opciones: d.contenido.scaleOptions,
               respuesta: d.respuesta,
@@ -237,7 +237,7 @@ class _PasoState extends State<_Paso> {
               foco: _enunciado,
             ),
             const SizedBox(height: 12),
-            _Duelo(
+            DueloDelTest(
               tareas:
                   pregunta?.tasks ??
                   [d.desempate!.tiebreak.top, d.desempate!.tiebreak.bottom],
@@ -247,7 +247,7 @@ class _PasoState extends State<_Paso> {
               onTap: _responder,
             ),
             const SizedBox(height: 14),
-            _LasDosONinguna(
+            LasDosONinguna(
               contenido: d.contenido,
               respuesta: d.respuesta,
               onTap: _responder,
@@ -641,16 +641,18 @@ class _Encabezado extends StatelessWidget {
   }
 }
 
-enum _EstadoTarjeta { neutra, encendida, apagada }
+enum EstadoDeTarjeta { neutra, encendida, apagada }
 
 /// Las dos tarjetas del duelo, neutras hasta el toque (RF-TEST-5).
-class _Duelo extends StatelessWidget {
-  const _Duelo({
+class DueloDelTest extends StatelessWidget {
+  const DueloDelTest({
+    super.key,
     required this.tareas,
     required this.contenido,
     required this.respuesta,
     required this.ayuda,
     required this.onTap,
+    this.compacto = false,
   });
 
   final List<TestTask> tareas;
@@ -659,25 +661,29 @@ class _Duelo extends StatelessWidget {
   final String? ayuda;
   final ValueChanged<String> onTap;
 
-  _EstadoTarjeta _estado(String valor) {
+  /// En el compositor de la conversación, las tarjetas son las compactas de
+  /// la maqueta (B-13).
+  final bool compacto;
+
+  EstadoDeTarjeta _estado(String valor) {
     switch (respuesta) {
       case null:
-        return _EstadoTarjeta.neutra;
+        return EstadoDeTarjeta.neutra;
       case 'both':
-        return _EstadoTarjeta.encendida;
+        return EstadoDeTarjeta.encendida;
       case 'none':
-        return _EstadoTarjeta.apagada;
+        return EstadoDeTarjeta.apagada;
       default:
         return respuesta == valor
-            ? _EstadoTarjeta.encendida
-            : _EstadoTarjeta.apagada;
+            ? EstadoDeTarjeta.encendida
+            : EstadoDeTarjeta.apagada;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final b = Theme.of(context).brightness;
-    Widget tarjeta(TestTask tarea, String valor) => _TarjetaDeTarea(
+    Widget tarjeta(TestTask tarea, String valor) => TarjetaDeTarea(
       key: QuestionView.tarjetaKey(valor),
       tarea: tarea,
       estado: _estado(valor),
@@ -686,6 +692,7 @@ class _Duelo extends StatelessWidget {
           MaterialTheme.testTaskIconInk(b),
       ayuda: ayuda,
       onTap: () => onTap(valor),
+      compacto: compacto,
     );
     return Stack(
       alignment: Alignment.center,
@@ -725,18 +732,23 @@ class _Duelo extends StatelessWidget {
   }
 }
 
-class _TarjetaDeTarea extends StatelessWidget {
-  const _TarjetaDeTarea({
+class TarjetaDeTarea extends StatelessWidget {
+  const TarjetaDeTarea({
     super.key,
     required this.tarea,
     required this.estado,
     required this.color,
     required this.ayuda,
     required this.onTap,
+    this.compacto = false,
   });
 
+  /// En el compositor de la conversación, las tarjetas son las compactas de
+  /// la maqueta (B-13).
+  final bool compacto;
+
   final TestTask tarea;
-  final _EstadoTarjeta estado;
+  final EstadoDeTarjeta estado;
 
   /// El color de su especialidad en el tema, que solo se ve encendida.
   final Color color;
@@ -746,8 +758,8 @@ class _TarjetaDeTarea extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final b = Theme.of(context).brightness;
-    final encendida = estado == _EstadoTarjeta.encendida;
-    final apagada = estado == _EstadoTarjeta.apagada;
+    final encendida = estado == EstadoDeTarjeta.encendida;
+    final apagada = estado == EstadoDeTarjeta.apagada;
     final tarjeta = MaterialTheme.cardBg(b);
     return Semantics(
       button: true,
@@ -761,7 +773,7 @@ class _TarjetaDeTarea extends StatelessWidget {
         children: [
           AnimatedContainer(
             duration: const Duration(milliseconds: 150),
-            constraints: const BoxConstraints(minHeight: 104),
+            constraints: BoxConstraints(minHeight: compacto ? 56 : 104),
             decoration: BoxDecoration(
               color: encendida ? tinte(color, tarjeta, 0.12) : tarjeta,
               borderRadius: BorderRadius.circular(20),
@@ -793,6 +805,9 @@ class _TarjetaDeTarea extends StatelessWidget {
                         icono: tarea.icon,
                         color: encendida ? color : null,
                         apagada: apagada,
+                        width: compacto ? 40 : 80,
+                        height: compacto ? 40 : 80,
+                        iconSize: compacto ? 22 : 40,
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -860,8 +875,9 @@ class _TarjetaDeTarea extends StatelessWidget {
 
 /// «Me gustan las dos» y «Ninguna me llama», con las etiquetas de
 /// `duelOptions`, en dos columnas o, desde 1,3, una debajo de otra.
-class _LasDosONinguna extends StatelessWidget {
-  const _LasDosONinguna({
+class LasDosONinguna extends StatelessWidget {
+  const LasDosONinguna({
+    super.key,
     required this.contenido,
     required this.respuesta,
     required this.onTap,
@@ -873,12 +889,12 @@ class _LasDosONinguna extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget boton(String id) => _BotonAlterno(
+    Widget boton(String id) => BotonAlterno(
       etiqueta: contenido.optionLabel(id)!,
       elegido: respuesta == id,
       onTap: () => onTap(id),
     );
-    if (_textoGrande(context)) {
+    if (textoGrande(context)) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [boton('both'), const SizedBox(height: 8), boton('none')],
@@ -894,8 +910,9 @@ class _LasDosONinguna extends StatelessWidget {
   }
 }
 
-class _BotonAlterno extends StatelessWidget {
-  const _BotonAlterno({
+class BotonAlterno extends StatelessWidget {
+  const BotonAlterno({
+    super.key,
     required this.etiqueta,
     required this.elegido,
     required this.onTap,
@@ -959,8 +976,9 @@ class _BotonAlterno extends StatelessWidget {
 
 /// La escala de gusto (RF-TEST-6). Nunca se enciende con el color de su
 /// especialidad, porque ese color la delataría.
-class _Escala extends StatelessWidget {
-  const _Escala({
+class EscalaDelTest extends StatelessWidget {
+  const EscalaDelTest({
+    super.key,
     required this.pregunta,
     required this.opciones,
     required this.respuesta,
@@ -978,12 +996,12 @@ class _Escala extends StatelessWidget {
   Widget build(BuildContext context) {
     final b = Theme.of(context).brightness;
     final dosPorDos =
-        _textoGrande(context) || MediaQuery.sizeOf(context).width < 340;
+        textoGrande(context) || MediaQuery.sizeOf(context).width < 340;
     final botones = [
       for (var i = 0; i < opciones.length; i++)
-        _OpcionDeEscala(
+        OpcionDeEscala(
           key: QuestionView.opcionKey(opciones[i].id),
-          emoji: _emojis[i],
+          emoji: emojisDeLaEscala[i],
           etiqueta: opciones[i].label,
           elegida: respuesta == opciones[i].id,
           onTap: () => onTap(opciones[i].id),
@@ -1062,12 +1080,12 @@ class _Escala extends StatelessWidget {
               ? Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _FilaDeOpciones(opciones: botones.sublist(0, 2)),
+                    FilaDeOpciones(opciones: botones.sublist(0, 2)),
                     const SizedBox(height: 6),
-                    _FilaDeOpciones(opciones: botones.sublist(2)),
+                    FilaDeOpciones(opciones: botones.sublist(2)),
                   ],
                 )
-              : _FilaDeOpciones(opciones: botones),
+              : FilaDeOpciones(opciones: botones),
         ),
       ],
     );
@@ -1076,8 +1094,8 @@ class _Escala extends StatelessWidget {
 
 /// Una fila de opciones del mismo alto, aunque una etiqueta ocupe dos
 /// líneas.
-class _FilaDeOpciones extends StatelessWidget {
-  const _FilaDeOpciones({required this.opciones});
+class FilaDeOpciones extends StatelessWidget {
+  const FilaDeOpciones({super.key, required this.opciones});
 
   final List<Widget> opciones;
 
@@ -1097,8 +1115,8 @@ class _FilaDeOpciones extends StatelessWidget {
   }
 }
 
-class _OpcionDeEscala extends StatelessWidget {
-  const _OpcionDeEscala({
+class OpcionDeEscala extends StatelessWidget {
+  const OpcionDeEscala({
     super.key,
     required this.emoji,
     required this.etiqueta,

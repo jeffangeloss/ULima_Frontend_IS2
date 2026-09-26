@@ -9,12 +9,18 @@
 // compactas y los turnos del test en la conversación.
 // Archivo probado lib/pages/specialty_test/specialty_test_controller.dart.
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
+import 'package:ulima_plus/configs/themes.dart';
+import 'package:ulima_plus/models/specialty_test_models.dart';
 import 'package:ulima_plus/models/user_model.dart';
 import 'package:ulima_plus/pages/specialty_test/specialty_test_controller.dart';
+import 'package:ulima_plus/pages/specialty_test/widgets/question_view.dart';
+import 'package:ulima_plus/pages/specialty_test/widgets/task_icon.dart';
 import 'package:ulima_plus/services/specialty_test_service.dart';
 
+import '../HU36_jeff/datos_de_prueba.dart';
 import '../HU36_jeff/dobles_de_red.dart';
 import '../HU36_jeff/dobles_del_controlador.dart';
 
@@ -144,5 +150,41 @@ void main() {
         expect(ui.avisos, isEmpty);
       },
     );
+  });
+
+  group('las piezas compactas (B-13)', () {
+    testWidgets('en el compositor, las tarjetas miden 56 dp como mínimo con la '
+        'baldosa de 40 dp y el ícono de 22 dp', (tester) async {
+      final contenido = SpecialtyTestContent.tryParse(contenidoJson())!;
+      final duelo = contenido.questions.firstWhere((q) => q.isDuel);
+      const tema = MaterialTheme(TextTheme());
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: tema.light(),
+          home: Scaffold(
+            body: DueloDelTest(
+              tareas: [duelo.top!, duelo.bottom!],
+              contenido: contenido,
+              respuesta: null,
+              ayuda: null,
+              onTap: (_) {},
+              compacto: true,
+            ),
+          ),
+        ),
+      );
+      final tarjetas = find.byType(TarjetaDeTarea);
+      expect(tarjetas, findsNWidgets(2));
+      final alto = tester.getSize(tarjetas.first).height;
+      expect(alto, greaterThanOrEqualTo(56));
+      expect(alto, lessThan(104));
+      final baldosa = tester.getSize(find.byType(TaskIconTile).first);
+      expect(baldosa, const Size(40, 40));
+    });
+
+    test('los emojis de la escala son públicos y siguen el orden de las '
+        'opciones (RF-TEST-6)', () {
+      expect(emojisDeLaEscala, ['😴', '🙂', '😃', '🤩']);
+    });
   });
 }
