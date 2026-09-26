@@ -17,10 +17,10 @@ targets:
 > Estado: **implementada el 2026-09-08.** Consume `POST /auth/register`, que hoy vive en una rama del backend sin desplegar, así que la pantalla está probada entera contra dobles pero **todavía no contra el portal real**. Es la cara visible de `specs/features/registro/registro.spec.md` del backend (RS-BE-17 y RS-BE-18).
 >
 > Enmienda del 2026-09-25, **aprobada por el dueño el 2026-09-26** junto con la spec de la
-> bienvenida con Ulises (`specs/features/bienvenida/bienvenida.spec.md`) y pendiente de
-> implementar. La bienvenida lleva el registro a la conversación de «Soy nuevo», sin la ruta
+> bienvenida con Ulises (`specs/features/bienvenida/bienvenida.spec.md`) e implementada el
+> 2026-09-26. La bienvenida lleva el registro a la conversación de «Soy nuevo», sin la ruta
 > `/registro`, y conserva sus reglas. El detalle está en «Enmienda de la bienvenida con Ulises»,
-> al final. Hasta que se implemente, el código sigue el texto de arriba.
+> al final. Desde esa fecha, el código sigue la enmienda.
 
 ## Contexto
 
@@ -341,7 +341,7 @@ lista, y el resto de la spec sigue igual. Las referencias `archivo:línea` apunt
   su especialidad, al abrirla Ulises lo retoma en el test y no en el asistente de carrera
   (decisión B-10 y RF-BIEN-21).
 - **Verification.** Los casos de `test/HU33_jeff/registro_page_test.dart` pasan a
-  `test/bienvenida/bienvenida_registro_test.dart` (pendiente), y los casos 10 a 12 de
+  `test/bienvenida/bienvenida_registro_test.dart`, y los casos 10 a 12 de
   `test/HU34_jeff/registro_consent_test.dart` pasan a montar la conversación.
   `registro_controller_test.dart`, `registro_service_test.dart` y `api_client_401_test.dart`
   siguen.

@@ -46,12 +46,12 @@ targets:
 > lleva la marca *(pendiente)* (decisión abierta 21).
 > Los ejemplos usan datos inventados.
 > Enmienda del 2026-09-25 por la bienvenida con Ulises (`specs/features/bienvenida/bienvenida.spec.md`),
-> **aprobada por el dueño el 2026-09-26** junto con esa spec y pendiente de implementar. Suma el
+> **aprobada por el dueño el 2026-09-26** junto con esa spec e implementada el 2026-09-26. Suma el
 > origen `bienvenida`, con el que el alumno que crea su cuenta en la conversación y el alumno con
 > cuenta que todavía no elige su especialidad hacen el test con Ulises, sin la ruta
 > `/test-especialidad` y sin el asistente de carrera. El detalle está en «Enmienda de la
-> bienvenida con Ulises», al final. Sus pruebas se escriben con la implementación y llevan la
-> marca de pendientes hasta entonces. Hasta que se implemente, el código sigue el texto de arriba.
+> bienvenida con Ulises», al final. Sus pruebas están en `test/bienvenida/`, y desde esa fecha
+> el código sigue la enmienda.
 
 ## El problema
 
@@ -1185,5 +1185,5 @@ sus vistas.
   bienvenida también lo tiene en los suyos, porque es ella la que hace estos cambios.
 - **Test Links.** Las pruebas de la enmienda son
   `test/bienvenida/bienvenida_test_especialidad_test.dart` y
-  `test/bienvenida/bienvenida_sin_especialidad_test.dart` (pendientes), y las de
+  `test/bienvenida/bienvenida_sin_especialidad_test.dart`, y las de
   `test/HU36_jeff/` siguen en verde.

@@ -15,7 +15,7 @@ targets:
 > por el test de especialidad» al final). El código de esa rama sigue el texto enmendado.
 >
 > Nota del 2026-09-25 por la bienvenida con Ulises (`specs/features/bienvenida/bienvenida.spec.md`),
-> **aprobada por el dueño el 2026-09-26** junto con esa spec y pendiente de implementar. Desde el
+> **aprobada por el dueño el 2026-09-26** junto con esa spec e implementada el 2026-09-26. Desde el
 > arranque y desde la bienvenida, ningún alumno pasa por el asistente de carrera, que queda sin
 > llegadas y no cambia (ver «Nota de la bienvenida con Ulises» al final).
 

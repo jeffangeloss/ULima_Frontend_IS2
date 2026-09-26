@@ -25,7 +25,7 @@ Pantalla de chat con IA (ULimaBot) accesible mediante un FAB flotante visible en
 > D4, e implementada el 2026-09-25. El resto de esta spec no cambia.
 
 > Nota del 2026-09-25 por la bienvenida con Ulises (`specs/features/bienvenida/bienvenida.spec.md`),
-> **aprobada por el dueño el 2026-09-26** junto con esa spec y pendiente de implementar. En el paso
+> **aprobada por el dueño el 2026-09-26** junto con esa spec e implementada el 2026-09-26. En el paso
 > al horario que cierra la bienvenida, Ulises vuela a la burbuja flotante del home, que lo espera
 > solo en ese paso (ver «Nota de la bienvenida con Ulises» al final). El resto de esta spec no
 > cambia.

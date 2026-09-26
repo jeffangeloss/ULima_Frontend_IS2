@@ -32,7 +32,8 @@ targets:
 
 # Bienvenida con Ulises
 
-> Estado. **Aprobada por el dueño el 2026-09-26 y pendiente de implementar.** Diseñada el
+> Estado. **Aprobada por el dueño el 2026-09-26 e implementada el 2026-09-26.** La revisión
+> manual de «Verificación» queda pendiente. Diseñada el
 > 2026-09-25 y corregida ese mismo día con los hallazgos de una revisión.
 > El dueño aprueba la spec con «aplica» y lo confirma como «Arranque: todas las recomendadas».
 > Aprueba B-1 a B-35 en la opción que la spec toma por defecto, salvo B-9 y B-10, donde elige las
@@ -71,8 +72,7 @@ targets:
 > `e718c29` de `feat/test-especialidad-fe`, el último commit que cambia esa spec, porque los
 > siguientes solo suman su implementación. Las de `google_sign_in_web` apuntan a la versión 0.12.4+4
 > y las de GetX a la 4.7.3, que fija `pubspec.lock`.
-> Los `[@test]` apuntan a pruebas que todavía no existen. Cada uno lleva «(pendiente)» y se
-> escribe con la implementación.
+> Los `[@test]` apuntan a la prueba que fija cada requisito, escrita con la implementación.
 > Donde esta spec y la maqueta difieren, manda la spec, y `docs/images/UI/bienvenida/README.md`
 > lista las diferencias.
 > Enmienda técnica del 2026-09-26 a los targets, que no cambia ningún comportamiento aprobado.
@@ -271,7 +271,7 @@ Los tiempos de la maqueta se cuentan en milisegundos y sus medidas en píxeles d
   en la conversación (decisión B-10 y RF-BIEN-21).
 - **La orientación.** Vertical, como toda ruta fuera de Horario (BR-SHELL-F-00 de app-shell).
 
-`[@test] ../../../test/bienvenida/bienvenida_ruta_test.dart` (pendiente)
+`[@test] ../../../test/bienvenida/bienvenida_ruta_test.dart`
 
 ### RF-BIEN-2. El recibimiento después del splash
 
@@ -353,7 +353,7 @@ ahí (RF-BIEN-21).
   tarde que hoy la tarjeta del login, que aparece apenas terminan Firebase y el almacenamiento
   (decisiones B-2 y S-6).
 
-`[@test] ../../../test/bienvenida/bienvenida_recibimiento_test.dart` (pendiente)
+`[@test] ../../../test/bienvenida/bienvenida_recibimiento_test.dart`
 
 ### RF-BIEN-3. Llegar sin pose
 
@@ -373,7 +373,7 @@ ahí (RF-BIEN-21).
   texto de hoy y salen abajo, no sobre el sello (B-29).
 - En los dos casos, el sello y su logo están enteros desde el primer cuadro.
 
-`[@test] ../../../test/bienvenida/bienvenida_recibimiento_test.dart` (pendiente)
+`[@test] ../../../test/bienvenida/bienvenida_recibimiento_test.dart`
 
 ### RF-BIEN-4. El sello, el latido y el pulso
 
@@ -417,7 +417,7 @@ ahí (RF-BIEN-21).
   conserva su estrella, y en el paso al horario la estrella se achica hasta la altura del texto y
   se disuelve a su izquierda, como en RF-SPL-11.
 
-`[@test] ../../../test/bienvenida/bienvenida_sello_test.dart` (pendiente)
+`[@test] ../../../test/bienvenida/bienvenida_sello_test.dart`
 
 ### RF-BIEN-5. La conversación
 
@@ -473,7 +473,7 @@ ahí (RF-BIEN-21).
   contraseña», y «Listo» o Intro envían. Arrastrar la conversación cierra el teclado, como hoy en
   el login (`login_page.dart:30`).
 
-`[@test] ../../../test/bienvenida/bienvenida_conversacion_test.dart` (pendiente)
+`[@test] ../../../test/bienvenida/bienvenida_conversacion_test.dart`
 
 ### RF-BIEN-6. «Sí, entrar»
 
@@ -543,7 +543,7 @@ de auth, enmendadas («Cambios en otras specs»).
   `postLoginRoute`, que no cambia y sigue dando `/setup-carrera` para ese alumno, sin navegar a
   esa ruta.
 
-`[@test] ../../../test/bienvenida/bienvenida_entrar_test.dart` (pendiente)
+`[@test] ../../../test/bienvenida/bienvenida_entrar_test.dart`
 
 ### RF-BIEN-7. «Soy nuevo», los datos de la cuenta
 
@@ -581,7 +581,7 @@ justo antes del botón que envía.
 - **El paso a `verificar`.** Al aceptar en N3 se llama a `aceptarConsentimiento`, y al enviar en
   N5 se llama a `enviar`, con el código recortado y el consentimiento, como hoy.
 
-`[@test] ../../../test/bienvenida/bienvenida_registro_test.dart` (pendiente)
+`[@test] ../../../test/bienvenida/bienvenida_registro_test.dart`
 
 ### RF-BIEN-8. El envío del registro y sus desenlaces
 
@@ -646,7 +646,7 @@ justo antes del botón que envía.
 - **«Volver a intentar el registro».** Vuelve a N5 con el código del authenticator borrado y la
   contraseña de miUlima intacta.
 
-`[@test] ../../../test/bienvenida/bienvenida_registro_test.dart` (pendiente)
+`[@test] ../../../test/bienvenida/bienvenida_registro_test.dart`
 
 ### RF-BIEN-9. Las credenciales y la enumeración de cuentas
 
@@ -685,7 +685,7 @@ justo antes del botón que envía.
   si un código tiene cuenta, como anota la spec del registro en «Deuda conocida». La bienvenida
   no lo agrava ni lo arregla.
 
-`[@test] ../../../test/bienvenida/bienvenida_credenciales_test.dart` (pendiente)
+`[@test] ../../../test/bienvenida/bienvenida_credenciales_test.dart`
 
 ### RF-BIEN-10. El test dentro de la conversación
 
@@ -780,7 +780,7 @@ la enmienda a esa spec que el dueño aprueba el 2026-09-26 («Cambios en otras s
   contador de preguntas pasa al rótulo del compositor y el historial es la propia conversación.
 - **El docente.** Nunca ve el test, igual que en RF-TEST-1.
 
-`[@test] ../../../test/bienvenida/bienvenida_test_especialidad_test.dart` (pendiente)
+`[@test] ../../../test/bienvenida/bienvenida_test_especialidad_test.dart`
 
 ### RF-BIEN-11. El paso al horario
 
@@ -832,7 +832,7 @@ La maqueta lo muestra en `toHorario` y `flyDock`.
   durante todo el fundido.
 - **Durante el paso.** Ningún toque llega a la página de debajo ni a la conversación.
 
-`[@test] ../../../test/bienvenida/bienvenida_horario_test.dart` (pendiente)
+`[@test] ../../../test/bienvenida/bienvenida_horario_test.dart`
 
 ### RF-BIEN-12. Errores y sin conexión
 
@@ -874,7 +874,7 @@ una burbuja de Ulises (RF-BIEN-5).
   al 401 y vacía los campos de `LoginController` (RF-BIEN-5). Las respuestas del test en memoria
   se pierden, como al cerrar sesión (RF-TEST-2).
 
-`[@test] ../../../test/bienvenida/bienvenida_errores_test.dart` (pendiente)
+`[@test] ../../../test/bienvenida/bienvenida_errores_test.dart`
 
 ### RF-BIEN-13. Volver atrás, segundo plano y cerrar la app a mitad
 
@@ -911,7 +911,7 @@ una burbuja de Ulises (RF-BIEN-5).
 | Con sesión y antes de guardar la especialidad, sea después del 201 o en el test del alumno sin especialidad | La sesión está guardada con la configuración a medias, así que el splash hace el relevo con la sesión y Ulises retoma al alumno en T0, con el test desde cero (decisión B-10, RF-BIEN-21 y RF-TEST-8) |
 | Después del primer corazón o de guardar | La configuración está completa y abre `/home` en Horario |
 
-`[@test] ../../../test/bienvenida/bienvenida_atras_test.dart` (pendiente)
+`[@test] ../../../test/bienvenida/bienvenida_atras_test.dart`
 
 ### RF-BIEN-14. Modo oscuro y contraste
 
@@ -971,7 +971,7 @@ una burbuja de Ulises (RF-BIEN-5).
   `#16161C` de fondo y `#1E1E24` en las burbujas y el compositor.
 - **El test.** Dentro de la conversación rigen los colores y la guarda de contraste de RF-TEST-12.
 
-`[@test] ../../../test/bienvenida/bienvenida_contraste_test.dart` (pendiente)
+`[@test] ../../../test/bienvenida/bienvenida_contraste_test.dart`
 
 ### RF-BIEN-15. Reducir movimiento
 
@@ -1007,7 +1007,7 @@ el que se va sigue entero debajo hasta quedar cubierto, así que ningún cuadro 
 - **La maqueta.** Con «Reducir movimiento», sus funciones `toSeal` y `toHorario` apagan el logo y
   lo vuelven a encender, y en eso manda esta spec (RF-BIEN-19).
 
-`[@test] ../../../test/bienvenida/bienvenida_movimiento_test.dart` (pendiente)
+`[@test] ../../../test/bienvenida/bienvenida_movimiento_test.dart`
 
 ### RF-BIEN-16. Accesibilidad
 
@@ -1051,7 +1051,7 @@ el que se va sigue entero debajo hasta quedar cubierto, así que ningún cuadro 
 - **El color nunca va solo.** Los errores llevan su ícono y su texto, y la respuesta elegida en el
   test lleva los estados de RF-TEST-13.
 
-`[@test] ../../../test/bienvenida/bienvenida_accesibilidad_test.dart` (pendiente)
+`[@test] ../../../test/bienvenida/bienvenida_accesibilidad_test.dart`
 
 ### RF-BIEN-17. Barra de estado, orientación y pantallas anchas
 
@@ -1066,7 +1066,7 @@ el que se va sigue entero debajo hasta quedar cubierto, así que ningún cuadro 
   (RF-SPL-5), salvo en web, donde se centra en la vista (RF-BIEN-3). Ulises aterriza medido desde
   la estrella y la tarjeta llega hasta 12 dp del borde derecho de la columna (RF-BIEN-2).
 
-`[@test] ../../../test/bienvenida/bienvenida_barra_estado_test.dart` (pendiente)
+`[@test] ../../../test/bienvenida/bienvenida_barra_estado_test.dart`
 
 ### RF-BIEN-18. Rendimiento
 
@@ -1188,7 +1188,7 @@ sello del logo ULima++ y sus «++» en su cabecera, para que el logo nunca se pi
   `#FF6600` da 2,94:1, el riesgo conocido del sello y de la cabecera de toda la app (RF-BIEN-14).
 - **Sin textos nuevos.** Las pantallas no suman ningún texto, y el sello dice «ULIMA++».
 
-`[@test] ../../../test/bienvenida/bienvenida_restablecer_test.dart` (pendiente)
+`[@test] ../../../test/bienvenida/bienvenida_restablecer_test.dart`
 
 ### RF-BIEN-21. El alumno con cuenta que todavía no elige su especialidad
 
@@ -1244,7 +1244,7 @@ horario (decisión B-10, junto con S-29 del splash).
   bienvenida llevan a ella. Quitarla, con el origen `asistente` de la spec del test, va en un
   cambio aparte («Qué NO entra»).
 
-`[@test] ../../../test/bienvenida/bienvenida_sin_especialidad_test.dart` (pendiente)
+`[@test] ../../../test/bienvenida/bienvenida_sin_especialidad_test.dart`
 
 ## Textos nuevos
 

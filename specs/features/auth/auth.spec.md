@@ -14,10 +14,10 @@ targets:
 # Auth
 
 > Enmienda del 2026-09-25, **aprobada por el dueño el 2026-09-26** junto con la spec de la
-> bienvenida con Ulises (`specs/features/bienvenida/bienvenida.spec.md`) y pendiente de
-> implementar. La bienvenida reemplaza a la tarjeta del login como pantalla sin sesión y cambia la
+> bienvenida con Ulises (`specs/features/bienvenida/bienvenida.spec.md`) e implementada el
+> 2026-09-26. La bienvenida reemplaza a la tarjeta del login como pantalla sin sesión y cambia la
 > forma, no las reglas, del inicio de sesión. El detalle está en «Enmienda de la bienvenida con
-> Ulises», al final. Hasta que se implemente, el código sigue el texto de arriba.
+> Ulises», al final. Desde esa fecha, el código sigue la enmienda.
 
 ## User Stories
 
@@ -319,6 +319,6 @@ de la spec sigue igual. Las referencias `archivo:línea` apuntan a `4e2a0b2`.
   ya está hecho y no cambia.
 - **Test Links.** Las pruebas de la enmienda son `test/bienvenida/bienvenida_ruta_test.dart`,
   `bienvenida_entrar_test.dart`, `bienvenida_errores_test.dart`,
-  `bienvenida_sin_especialidad_test.dart` y `bienvenida_restablecer_test.dart` (pendientes), y
+  `bienvenida_sin_especialidad_test.dart` y `bienvenida_restablecer_test.dart`, y
   siguen `test/HU01_jeff/login_navigation_paths_test.dart` y `login_relogin_regression_test.dart`,
   ajustadas a la bienvenida.

@@ -26,7 +26,7 @@ targets:
 > `consent: true` a `POST /portal-sync/import` y `POST /auth/register`.
 >
 > Nota del 2026-09-25 por la bienvenida con Ulises (`specs/features/bienvenida/bienvenida.spec.md`),
-> **aprobada por el dueño el 2026-09-26** junto con esa spec y pendiente de implementar. En el
+> **aprobada por el dueño el 2026-09-26** junto con esa spec e implementada el 2026-09-26. En el
 > registro dentro de la conversación, el consentimiento de RF-REC-6 es una tarjeta con los mismos
 > textos (ver «Nota de la bienvenida con Ulises» al final).
 

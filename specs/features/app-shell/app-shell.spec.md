@@ -22,14 +22,14 @@ targets:
 > Ajustada el 2026-09-25 por la spec del splash animado (`specs/features/splash/splash.spec.md`),
 > que suma BR-SHELL-F-04, la estrella del logo junto a «ULIMA++» y los íconos claros de la barra
 > de estado sobre el header. **Aprobado por el dueño el 2026-09-26** junto con esa spec, con la
-> estrella de su decisión S-11, y pendiente de implementar. Ese ajuste no cambia BR-SHELL-F-00 a
+> estrella de su decisión S-11, e implementado el 2026-09-26. Ese ajuste no cambia BR-SHELL-F-00 a
 > BR-SHELL-F-03.
 > Enmendada el mismo 2026-09-25 por la misma spec, porque el dueño pide que quien tiene sesión vea
 > su horario después del splash (RF-SPL-20). BR-SHELL-F-02 suma la pestaña inicial Horario con
 > un argumento de ruta y BR-SHELL-F-00 suma la orientación de Horario mientras la intro cubre la
 > pantalla. **El dueño aprueba las dos enmiendas el 2026-09-26** junto con esa spec, con sus
 > decisiones S-24, S-25, S-26 y S-31 en la opción por defecto, y deja explícita S-24, así que todos
-> los roles abren en Horario. Quedan pendientes de implementar.
+> los roles abren en Horario. Quedan implementadas el 2026-09-26.
 
 ## Scope
 
@@ -94,7 +94,7 @@ targets:
   (decisiones S-24 y S-31 de esa spec). Lo pasan la intro del splash y, según su spec, la
   bienvenida con Ulises, también cuando el alumno sin especialidad termina su test en la
   conversación. Las demás llegadas a `/home` no lo pasan (decisión S-25 de esa spec).
-  `[@test] ../../../test/splash/home_pestana_inicial_test.dart` (pendiente)
+  `[@test] ../../../test/splash/home_pestana_inicial_test.dart`
 - El footer del docente no cambia.
 - Con cinco pestañas o menos, la etiqueta activa del footer va en 14 px y las demás en 12 px.
   Con seis, el footer del delegado, la activa va en 13 px y las demás en 12, para que las
@@ -137,7 +137,7 @@ targets:
   `specs/features/bienvenida/bienvenida.spec.md`).
 - El dueño descarta la alternativa de la decisión S-11 de la spec del splash, así que la estrella
   entra.
-  `[@test] ../../../test/components/header/app_header_test.dart` (pendiente del caso nuevo)
+  `[@test] ../../../test/components/header/app_header_test.dart`
 
 ## Verification
 

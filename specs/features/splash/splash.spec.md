@@ -28,7 +28,8 @@ targets:
 
 # Splash animado
 
-> Estado. **Aprobada por el dueño el 2026-09-26 y pendiente de implementar.** Diseñada el
+> Estado. **Aprobada por el dueño el 2026-09-26 e implementada el 2026-09-26.** La revisión
+> manual de «Verificación» queda pendiente. Diseñada el
 > 2026-09-25, corregida el mismo día con los hallazgos de dos revisiones y enmendada también ese
 > día con dos decisiones del dueño.
 > El dueño aprueba la spec con «aplica» y lo confirma como «Arranque: todas las recomendadas».
@@ -73,8 +74,7 @@ targets:
 > archivos cambia entre los dos commits.
 > Las que nombran un paquete apuntan a la versión que fija `pubspec.lock`, como get 4.7.3, y las
 > del engine o de flutter_tools, al SDK de Flutter 3.47.2 instalado en la Mac del equipo.
-> Los `[@test]` apuntan a pruebas que todavía no existen. Cada uno lleva «(pendiente)», nombra
-> la prueba que fija el requisito y se escribe con la implementación.
+> Los `[@test]` apuntan a la prueba que fija cada requisito, escrita con la implementación.
 > Donde esta spec y las maquetas difieren, manda la spec, y `docs/images/UI/splash/README.md` lo
 > dice junto a ellas. Difieren en el arranque de Ensamble (RF-SPL-7), que ya muestra
 > `ensamble-adaptada.html`, en el tamaño único de la estrella del primer cuadro (RF-SPL-1) y en la
@@ -189,7 +189,7 @@ la intro empieza a moverse (RF-SPL-6).
   (`pubspec.yaml:68-74`), igual que el logo de la tarjeta del login.
 - Los recursos nativos se regeneran con `dart run flutter_native_splash:create`.
 
-`[@test] ../../../test/splash/splash_png_nativo_test.dart` (pendiente)
+`[@test] ../../../test/splash/splash_png_nativo_test.dart`
 
 ### RF-SPL-2. Una sola geometría del logo
 
@@ -206,7 +206,7 @@ la intro empieza a moverse (RF-SPL-6).
   derecha, como en el ícono.
 - Los caminos se construyen una sola vez y no en cada cuadro.
 
-`[@test] ../../../test/splash/splash_geometria_test.dart` (pendiente)
+`[@test] ../../../test/splash/splash_geometria_test.dart`
 
 ### RF-SPL-3. Cómo se genera el PNG del splash
 
@@ -223,7 +223,7 @@ la intro empieza a moverse (RF-SPL-6).
   la Mac del equipo, igual que el resto de la suite.
 - No se agrega ningún paquete ni herramienta fuera del SDK de Flutter.
 
-`[@test] ../../../test/splash/splash_png_nativo_test.dart` (pendiente)
+`[@test] ../../../test/splash/splash_png_nativo_test.dart`
 
 ### RF-SPL-4. `runApp` inmediato y la carga en paralelo
 
@@ -315,7 +315,7 @@ la intro empieza a moverse (RF-SPL-6).
   le toma el test, en lugar del asistente de carrera (RF-SPL-12). Un docente o un alumno con la
   configuración completa nunca ve la bienvenida un instante.
 
-`[@test] ../../../test/splash/splash_arranque_test.dart` (pendiente)
+`[@test] ../../../test/splash/splash_arranque_test.dart`
 
 ### RF-SPL-5. El primer cuadro es idéntico al splash nativo
 
@@ -344,7 +344,7 @@ la intro empieza a moverse (RF-SPL-6).
   detecta que la estrella de uno cambie sin la del otro. La equivalencia real, con el centrado de
   la ventana frente a la vista y el remuestreo por densidad, la comprueba la grabación.
 
-`[@test] ../../../test/splash/splash_primer_cuadro_test.dart` (pendiente)
+`[@test] ../../../test/splash/splash_primer_cuadro_test.dart`
 
 ### RF-SPL-6. Una variante al azar en cada arranque en frío
 
@@ -375,7 +375,7 @@ la intro empieza a moverse (RF-SPL-6).
   en ese momento empieza a correr el tiempo de la intro. Si la lectura falla, la variante sale
   entre las tres y no se guarda.
 
-`[@test] ../../../test/splash/splash_seleccion_test.dart` (pendiente)
+`[@test] ../../../test/splash/splash_seleccion_test.dart`
 
 ### RF-SPL-7. Variante A, «Ensamble»
 
@@ -401,7 +401,7 @@ La salida hacia `/home` dura 530 ms (RF-SPL-11). Si la carga sigue al terminar l
 onda recorre los rombos en sentido horario, con un período de 1100 ms y hasta 20 u hacia afuera
 (RF-SPL-10).
 
-`[@test] ../../../test/splash/splash_ensamble_test.dart` (pendiente)
+`[@test] ../../../test/splash/splash_ensamble_test.dart`
 
 ### RF-SPL-8. Variante B, «Incremento»
 
@@ -421,7 +421,7 @@ con R = 90 dp.
 La salida hacia `/home` dura 620 ms (RF-SPL-11). Si la carga sigue, desde 1400 ms hay un tic de
 45° cada 1300 ms, y la salida absorbe el tic en curso (RF-SPL-10).
 
-`[@test] ../../../test/splash/splash_incremento_test.dart` (pendiente)
+`[@test] ../../../test/splash/splash_incremento_test.dart`
 
 ### RF-SPL-9. Variante C, «Código»
 
@@ -447,7 +447,7 @@ que sus medidas se escalan con R.
 - La salida hacia `/home` dura 420 ms (RF-SPL-11). Si la carga sigue, un cursor parpadea junto a
   los «++» (RF-SPL-10).
 
-`[@test] ../../../test/splash/splash_codigo_test.dart` (pendiente)
+`[@test] ../../../test/splash/splash_codigo_test.dart`
 
 ### RF-SPL-10. La espera en bucle si la carga tarda
 
@@ -474,7 +474,7 @@ que sus medidas se escalan con R.
 - El bucle no tiene tope propio (decisión S-8). Sigue mientras la carga siga, como hoy sigue el
   splash nativo quieto.
 
-`[@test] ../../../test/splash/splash_arranque_test.dart` (pendiente)
+`[@test] ../../../test/splash/splash_arranque_test.dart`
 
 ### RF-SPL-11. La salida hacia `/home`, con cabecera
 
@@ -515,7 +515,7 @@ cabecera es la misma en todas las pestañas (BR-SHELL-F-03 de app-shell).
 - Sin la estrella en la cabecera (alternativa de la decisión S-11), la estrella se achica hasta la
   altura del texto y se disuelve a su izquierda.
 
-`[@test] ../../../test/splash/splash_salida_test.dart` (pendiente)
+`[@test] ../../../test/splash/splash_salida_test.dart`
 
 ### RF-SPL-12. Con sesión y sin especialidad, el relevo a la conversación con Ulises
 
@@ -549,7 +549,7 @@ pierda y que quien tiene sesión vea su horario después del splash.
   sale de los targets, y `/setup-carrera` sigue registrada en `main.dart` sin llegadas desde el
   arranque («Qué NO entra»).
 
-`[@test] ../../../test/splash/splash_traspaso_test.dart` (pendiente)
+`[@test] ../../../test/splash/splash_traspaso_test.dart`
 
 ### RF-SPL-13. Modo oscuro
 
@@ -566,7 +566,7 @@ pierda y que quien tiene sesión vea su horario después del splash.
 - Con la alternativa de la decisión S-2, el nativo y la entrada van sobre fondo oscuro en el tema
   oscuro, con su propia imagen nativa, y esta regla se reescribe antes de implementar.
 
-`[@test] ../../../test/splash/splash_salida_test.dart` (pendiente)
+`[@test] ../../../test/splash/splash_salida_test.dart`
 
 ### RF-SPL-14. Reducir movimiento
 
@@ -582,7 +582,7 @@ pierda y que quien tiene sesión vea su horario después del splash.
   (RF-SPL-21). Lo que sigue con reducir movimiento lo fija la spec de la bienvenida.
 - Nada se mueve, gira ni cambia de escala en ningún momento.
 
-`[@test] ../../../test/splash/splash_reducir_movimiento_test.dart` (pendiente)
+`[@test] ../../../test/splash/splash_reducir_movimiento_test.dart`
 
 ### RF-SPL-15. Accesibilidad
 
@@ -598,7 +598,7 @@ pierda y que quien tiene sesión vea su horario después del splash.
   lector pasa a la página de destino, que sin sesión, o con la sesión de un alumno sin
   especialidad, es la bienvenida.
 
-`[@test] ../../../test/splash/splash_accesibilidad_test.dart` (pendiente)
+`[@test] ../../../test/splash/splash_accesibilidad_test.dart`
 
 ### RF-SPL-16. Háptica
 
@@ -611,7 +611,7 @@ pierda y que quien tiene sesión vea su horario después del splash.
   «+» llega a su lugar, hacia los 650 y 870 ms. En Código es cuando cada «+» aterriza junto a la
   estrella, a los 1160 y 1210 ms.
 
-`[@test] ../../../test/splash/splash_arranque_test.dart` (pendiente)
+`[@test] ../../../test/splash/splash_arranque_test.dart`
 
 ### RF-SPL-17. Rendimiento y tiempo hasta la app lista
 
@@ -674,9 +674,9 @@ pierda y que quien tiene sesión vea su horario después del splash.
 - La animación se ve siempre completa, también cuando la carga ya está lista antes, y ningún
   toque la acorta ni la salta (decisión S-6, que el dueño confirma el 2026-09-26).
 
-`[@test] ../../../test/splash/splash_ensamble_test.dart` (pendiente)
-`[@test] ../../../test/splash/splash_incremento_test.dart` (pendiente)
-`[@test] ../../../test/splash/splash_codigo_test.dart` (pendiente)
+`[@test] ../../../test/splash/splash_ensamble_test.dart`
+`[@test] ../../../test/splash/splash_incremento_test.dart`
+`[@test] ../../../test/splash/splash_codigo_test.dart`
 
 ### RF-SPL-18. Fallos de la carga y tope de tiempo
 
@@ -698,7 +698,7 @@ pierda y que quien tiene sesión vea su horario después del splash.
   si falla tarde, incluso después de que la persona vuelve a entrar. Un tope real de red va en un
   cambio aparte de auth y de platform-runtime («Qué NO entra»).
 
-`[@test] ../../../test/splash/splash_arranque_test.dart` (pendiente)
+`[@test] ../../../test/splash/splash_arranque_test.dart`
 
 ### RF-SPL-19. Las maquetas quedan en el repo
 
@@ -783,7 +783,7 @@ luego de ver el splash dinámico, pueda ver su horario».
   monta `HomePage` sin argumento, así que sigue valiendo con la opción por defecto de las
   decisiones S-25 y S-31.
 
-`[@test] ../../../test/splash/home_pestana_inicial_test.dart` (pendiente)
+`[@test] ../../../test/splash/home_pestana_inicial_test.dart`
 
 ### RF-SPL-21. Sin sesión, el traspaso a la bienvenida con Ulises
 
@@ -833,7 +833,7 @@ aprobación, el mismo relevo lleva también al alumno con sesión y sin especial
   que el dueño confirma el 2026-09-26). La spec de la bienvenida dice lo mismo en su
   «Verificación».
 
-`[@test] ../../../test/splash/splash_traspaso_test.dart` (pendiente)
+`[@test] ../../../test/splash/splash_traspaso_test.dart`
 
 ## Textos nuevos
 
