@@ -403,7 +403,22 @@ class _CapaDeArranqueState extends State<CapaDeArranque>
   @override
   void dispose() {
     _reloj.dispose();
-    if (identical(CapaDeArranque._estado, this)) CapaDeArranque._estado = null;
+    if (identical(CapaDeArranque._estado, this)) {
+      CapaDeArranque._estado = null;
+      // Una capa que sale del árbol ya no cubre nada, así que /home no queda
+      // esperando para pedir sus orientaciones (RF-SPL-20).
+      EstadoDeLaCapa.cubre.value = false;
+    }
+    for (final notificador in <ChangeNotifier>[
+      _fase,
+      _escena,
+      _salida,
+      _corrimientoDeLaPagina,
+      _opacidadDeLaPagina,
+      _opacidad,
+    ]) {
+      notificador.dispose();
+    }
     super.dispose();
   }
 

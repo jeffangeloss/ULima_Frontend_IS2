@@ -223,6 +223,25 @@ void main() {
       );
     });
 
+    testWidgets('si la capa sale del árbol activa, deja de cubrir la pantalla '
+        'y no deja a /home esperando sus orientaciones', (tester) async {
+      telefono(tester);
+      await tester.pumpWidget(
+        appConCapa(
+          intro: IntroDelArranque(
+            carga: CargaFalsa().call,
+            variantes: VariantesFijas(VarianteSplash.ensamble),
+            random: Random(1),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(EstadoDeLaCapa.cubre.value, isTrue);
+      await tester.pumpWidget(const SizedBox.shrink());
+      expect(EstadoDeLaCapa.cubre.value, isFalse);
+      expect(CapaDeArranque.fase, FaseDeLaCapa.inactiva);
+    });
+
     testWidgets('la carga corre en paralelo desde el montaje', (tester) async {
       telefono(tester);
       final carga = CargaFalsa();
