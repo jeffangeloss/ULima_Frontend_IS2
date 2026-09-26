@@ -2,11 +2,14 @@
 //
 // UNITARIA · Recarga desde la ULima (specs/features/recarga-portal/
 // recarga-portal.spec.md), RF-RCG-7, las filas de la calculadora.
-// Archivo probado lib/domain/recarga_ulima/filas_calculadora.dart.
+// Archivos probados lib/domain/recarga_ulima/filas_calculadora.dart y el
+// guardado de lib/pages/calculadora/calculadora_controller.dart.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get/get.dart';
 import 'package:ulima_plus/domain/recarga_ulima/filas_calculadora.dart';
 import 'package:ulima_plus/models/recarga_ulima_models.dart';
+import 'package:ulima_plus/pages/calculadora/calculadora_controller.dart';
 
 import 'recarga_dobles.dart';
 
@@ -236,6 +239,56 @@ void main() {
           reason: 'cambia $campo',
         );
       }
+    });
+  });
+
+  group('UNITARIA · el guardado de la calculadora (RF-RCG-7)', () {
+    setUp(() {
+      Get.testMode = true;
+      Get.reset();
+      loguear(alumna());
+    });
+    tearDown(Get.reset);
+
+    test('las filas que se guardan son solo las simuladas, también las '
+        'ocultas', () async {
+      final api = ApiRecargaFalsa(calcularPromedio: true);
+      final c = CalculadoraController(apiClient: api);
+      c.cursos.add({
+        'id': '81',
+        'nombre': 'TALLER DE PROTOTIPADO',
+        'ciclo': '2026-2',
+        'codigoSeccion': '812',
+        'notas': <Map<String, dynamic>>[_simulada('5011')].obs,
+        claveNotasUlima: notasUlimaDeCurso(
+          _curso([evaluacionJson(assessmentId: 5011, value: 14.5)]),
+        ),
+        '_promedio': 0.0,
+        '_sumaPesos': 0.0,
+      });
+
+      c.agregarNota(0, 'Práctica', 25, 16, '5012');
+      await Future<void>.delayed(Duration.zero);
+
+      final guardado = api.cuerposDe('/grades/me/notes').single;
+      expect(guardado, {
+        'cursos': [
+          {
+            'sectionId': 81,
+            'notas': [
+              {'assessmentId': 5011, 'valor': 16.0},
+              {'assessmentId': 5012, 'valor': 16.0},
+            ],
+          },
+        ],
+      });
+      // El promedio sí cuenta la de la ULima y no la simulada oculta.
+      expect(api.cuerposDe('/grades/me/calculate').last, {
+        'notas': [
+          {'valor': 14.5, 'peso': 15.0},
+          {'valor': 16.0, 'peso': 25.0},
+        ],
+      });
     });
   });
 }
