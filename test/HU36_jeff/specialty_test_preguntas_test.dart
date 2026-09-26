@@ -373,10 +373,13 @@ void _escala() {
         'HapticFeedback.lightImpact, y un paso sin sello no vibra', (
       tester,
     ) async {
-      final c = await _enLaPregunta(tester, indice: 2);
+      // Escucha desde antes del montaje, porque el paso vibra en el primer
+      // cuadro.
       final vibraciones = escucharVibraciones(tester);
-      // La pregunta 3 sigue a un duelo, así que llega sin sello.
+      final c = await _enLaPregunta(tester, indice: 2);
       await tester.pump();
+      // La pregunta 3 sigue a un duelo, así que llega sin sello.
+      expect(find.textContaining('Cierra el bloque'), findsNothing);
       expect(vibraciones, isEmpty);
       await tester.tap(find.text('Bastante'));
       await tester.pump(const Duration(milliseconds: 350));
