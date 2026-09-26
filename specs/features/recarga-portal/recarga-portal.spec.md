@@ -55,16 +55,14 @@ targets:
 > funcionalidad en la fila 22 del índice, porque el test llega primero a `main` con la 21. Las
 > referencias `archivo:línea` siguen citando `19fed1b`.
 > Las pruebas de esta spec existen en `test/HU37_jeff/`, y cada requisito enlaza con `[@test]`
-> los archivos que lo verifican. El merge espera al backend de RS-BE-48 a RS-BE-60 desplegado,
-> con RS-BE-48 incluido y la `0015` aplicada (decisión B1), a la medición de B15 sobre ese
-> despliegue y a la revisión manual de «Verificación». Esa revisión pasa por un iPhone SE en claro
-> y en oscuro, con el texto al 200 % y VoiceOver, y por Android con TalkBack. Un merge anterior
-> rompe dos pantallas, porque el backend de producción no tiene `GET /grades/me/ulima` ni
-> `POST /portal-sync/refresh`. Con ese backend, `/mis-notas` muestra «No se pudieron cargar tus
-> notas oficiales.», ya que deja de leer `GET /official-grades/me`, y el botón del bloque de
-> asistencia sin datos de la ficha abre la hoja en lugar de `/portal-sync` y termina en el aviso
-> genérico. Los ejemplos usan datos inventados (alumno `20230001`, curso TALLER DE PROTOTIPADO,
-> sección `812`), porque el repositorio es público.
+> los archivos que lo verifican. El backend de RS-BE-48 a RS-BE-60 está desplegado desde el
+> 2026-09-26 (`9b5a1f2`, PR #12 del backend), con la `0015` aplicada con su respaldo (decisión
+> B1). La medición de B15 se hizo ese mismo día sobre ese despliegue, con tres recargas de la
+> cuenta del dueño en `iad1` que respondieron 200 en 12,3 s, 11,4 s y 11,4 s, sin ningún `504`.
+> El dueño autorizó publicar la app con esas dos condiciones cumplidas. La revisión manual de
+> «Verificación» (iPhone SE en claro y en oscuro, texto al 200 % y VoiceOver, y Android con
+> TalkBack) queda pendiente y se hace sobre el APK publicado. Los ejemplos usan datos inventados
+> (alumno `20230001`, curso TALLER DE PROTOTIPADO, sección `812`), porque el repositorio es público.
 
 ## User Stories
 
