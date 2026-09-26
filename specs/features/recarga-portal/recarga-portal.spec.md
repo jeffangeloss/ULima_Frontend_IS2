@@ -32,7 +32,7 @@ targets:
 
 # Recarga de notas parciales y asistencia desde la ULima
 
-> Estado. **Aprobada por el dueño el 2026-09-26, pendiente de implementación.** El dueño
+> Estado. **Aprobada por el dueño el 2026-09-26 e implementada en la app el 2026-09-26.** El dueño
 > responde «aplica» a la versión `b8facce` de esta spec y lo confirma como «Recarga: todas las
 > recomendadas», así que aprueba las decisiones B1 a B19 y los puntos D1 a D24 en su opción
 > recomendada, que es la que cada fila de «Decisiones» adopta por defecto. La misma aprobación
@@ -50,10 +50,10 @@ targets:
 > `academic-record.spec.md` (RF-REC-6) y `schedule.spec.md`, con la misma aprobación (ver
 > «Cambios en otras specs»). La rama `feat/recarga-notas-asistencia-fe` parte de `origin/main`
 > en `19fed1b`, y todas las referencias `archivo:línea` citan ese estado.
-> Las pruebas de esta spec todavía no existen. Por la regla de `specs/README.md`, esta spec no
-> lleva enlaces `[@test]` hasta que existan, y «Pruebas previstas» nombra cada archivo y sus
-> casos. Los ejemplos usan datos inventados (alumno `20230001`, curso TALLER DE PROTOTIPADO,
-> sección `812`), porque el repositorio es público.
+> Las pruebas de esta spec existen en `test/HU37_jeff/`, y cada requisito enlaza con `[@test]`
+> los archivos que lo verifican. Falta la revisión manual de «Verificación», y la app se publica
+> solo con las condiciones de B1 y B15. Los ejemplos usan datos inventados (alumno `20230001`,
+> curso TALLER DE PROTOTIPADO, sección `812`), porque el repositorio es público.
 
 ## User Stories
 
@@ -74,9 +74,11 @@ targets:
 | 5 | El 2026-09-26 aprueba esta spec y la del backend con todas las opciones recomendadas («aplica», confirmado como «Recarga: todas las recomendadas»), es decir, B1 a B19 y D1 a D24 en la opción que cada fila adopta por defecto. | «Decisiones» |
 | 6 | En esa misma aprobación, el presupuesto de tiempo del backend tiene un máximo de 65 000 y reserva 3 s para la red, igual en el backend y en la app. La cota de esta spec pasa de 68 000 a 65 000, como la de RS-BE-50. | RF-RCG-1, RF-RCG-3, hueco 5 y D18 |
 
-La maqueta aprobada vive fuera del repositorio, con datos inventados, y es el cambio aprobado
-sobre las maquetas de `docs/images/UI` que pide respetar `AGENTS.md`. Esta spec copia sus
-textos y sus medidas. La maqueta muestra la lista «Qué no cambia», que esta spec copia y amplía
+La maqueta aprobada queda como referencia en
+`docs/images/UI/recarga/calculadora-reorganizada.html`, con su fuente en `reorganizada.html` y
+datos inventados, y es el cambio aprobado sobre las maquetas de `docs/images/UI` que pide
+respetar `AGENTS.md`. Esta spec copia sus textos y sus medidas. La maqueta muestra la lista
+«Qué no cambia», que esta spec copia y amplía
 en «Qué no cambia de la calculadora». La maqueta no dibuja la ficha del curso, la espera de la hoja ni los errores
 distintos del rechazo de la contraseña, así que esas piezas salen de esta spec, que las fija
 como puntos D, y el dueño las aprueba con ellos el 2026-09-26.
@@ -195,6 +197,9 @@ estado.
 - **Nada de datos de terceros.** El contrato no trae la mínima ni la máxima de la clase, y la app
   tampoco las pide ni las calcula.
 
+`[@test] ../../../test/HU37_jeff/recarga_ulima_models_test.dart`
+`[@test] ../../../test/HU37_jeff/recarga_ulima_service_test.dart`
+
 ### RF-RCG-2. La hoja de recarga
 
 Una hoja modal con el formato del modal «Registrar Nota», en
@@ -254,6 +259,8 @@ la cierran la X, «Cancelar» y el botón atrás del sistema. Durante la espera 
 se cierra sola (RF-RCG-3). Cerrarla de cualquier forma, con la X, con «Cancelar», con atrás o al
 terminar, vacía los dos campos.
 
+`[@test] ../../../test/HU37_jeff/hoja_recarga_test.dart`
+
 ### RF-RCG-3. Resultado de la recarga
 
 - **Éxito (`200`).** La hoja se cierra y vacía sus campos. `RecargaUlimaService` aplica `view` y
@@ -284,6 +291,11 @@ terminar, vacía los dos campos.
   lapso recibe `409 PORTAL_REFRESH_IN_PROGRESS`, cuyo aviso ya pide esperar.
 - **`401`.** Es la expiración del JWT y la maneja `ApiClient` como siempre, que cierra la sesión.
   El backend nunca responde `401` por un fallo del portal.
+
+`[@test] ../../../test/HU37_jeff/recarga_ulima_service_test.dart`
+`[@test] ../../../test/HU37_jeff/hoja_recarga_test.dart`
+`[@test] ../../../test/HU37_jeff/mis_notas_ulima_test.dart`
+`[@test] ../../../test/HU37_jeff/asistencia_recarga_test.dart`
 
 ### RF-RCG-4. El aviso rojo persistente
 
@@ -337,6 +349,9 @@ es la que activa el ciclo nuevo, aunque el segundo caso sí gasta una de las rec
 El `409 PORTAL_REFRESH_IN_PROGRESS` llega con otra recarga del mismo alumno en curso y también con
 una importación con contraseña en curso, y su cuerpo vale para las dos.
 
+`[@test] ../../../test/HU37_jeff/recarga_ulima_service_test.dart`
+`[@test] ../../../test/HU37_jeff/mis_notas_ulima_test.dart`
+
 ### RF-RCG-5. La fila «Notas oficiales» en la calculadora (cambio 1)
 
 El `IconButton` del birrete (`calculadora_page.dart:40-44`) sale, y el título queda solo en su
@@ -369,6 +384,8 @@ todo el ancho, en `lib/components/recarga_ulima/fila_notas_oficiales.dart`.
   `school_outlined` de la calculadora deja de ser cierta con este cambio, así que el PR de
   implementación la corrige para nombrar la fila «Notas oficiales», aparte de lo que cambia por
   la decisión B12.
+
+`[@test] ../../../test/HU37_jeff/calculadora_ulima_test.dart`
 
 ### RF-RCG-6. La pantalla «Notas oficiales» (`/mis-notas`, cambio 2)
 
@@ -435,6 +452,8 @@ opción aprobada de la decisión B9.
 
 **Flecha del AppBar y tirón hacia abajo.** Siguen consultando solo a ULima++, ahora con `cargar()`.
 No entran a miUlima.
+
+`[@test] ../../../test/HU37_jeff/mis_notas_ulima_test.dart`
 
 ### RF-RCG-7. Las notas de la ULima en la calculadora (cambio 3)
 
@@ -509,6 +528,10 @@ ULima desde el getter filtrado y pide el promedio de los cursos que cambian. Un 
 `GET /grades/me/ulima` sin vista previa del alumno deja la calculadora como hoy, sin filas de la
 ULima. Con vista previa del mismo alumno, las filas siguen, igual que la hora de RF-RCG-5.
 
+`[@test] ../../../test/HU37_jeff/filas_calculadora_test.dart`
+`[@test] ../../../test/HU37_jeff/calculadora_ulima_test.dart`
+`[@test] ../../../test/HU37_jeff/formato_nota_test.dart`
+
 ### RF-RCG-8. La asistencia en la ficha del curso
 
 **Con datos.** Bajo la fila de horas y anillo del bloque de asistencia (`descrip_cursos.dart:184-303`)
@@ -566,6 +589,8 @@ truncadas a entero como hoy (`seccion_model.dart:72-83`).
 **Alto.** La fila nueva suma unos 52 de alto al bloque. En un iPhone SE vertical, la pestaña
 elegida conserva al menos 200 de alto visible, y la verificación manual lo comprueba.
 
+`[@test] ../../../test/HU37_jeff/asistencia_recarga_test.dart`
+
 ### RF-RCG-9. La hora de la última lectura
 
 Una función pura, `cuandoSeLeyo(DateTime leidoEn, DateTime ahora)`, en
@@ -582,6 +607,8 @@ Una función pura, `cuandoSeLeyo(DateTime leidoEn, DateTime ahora)`, en
 - `HH:mm` va en 24 horas y con ceros a la izquierda.
 - Los textos completos son `Última lectura <cuándo>` en la fila, la franja y el bloque de
   asistencia, y `Se muestran las notas leídas <cuándo>.` en el aviso.
+
+`[@test] ../../../test/HU37_jeff/ultima_lectura_test.dart`
 
 ### RF-RCG-10. Modo oscuro y contraste
 
@@ -624,6 +651,8 @@ campo de contraseña y las casillas llevan su rótulo como etiqueta, y las casil
 `liveRegion`. Con el texto al 200 %, nada se corta y la hoja se desplaza. Ninguna pieza nueva
 anima nada, salvo el indicador de la espera.
 
+`[@test] ../../../test/HU37_jeff/contraste_recarga_test.dart`
+
 ### RF-RCG-11. La importación recarga la calculadora en vez de borrarla
 
 La fila «Notas oficiales» lleva a `/mis-notas` con la calculadora montada debajo, y desde el aviso
@@ -634,6 +663,8 @@ ya no existe. Por eso `_refrescarPantallas` pasa a llamar a un método nuevo,
 `CalculadoraController.recargarTodo()`, que vuelve a pedir el sílabo, los cursos, las notas
 simuladas y la vista de la ULima y recalcula los promedios (D16). El resto de
 `_refrescarPantallas` no cambia.
+
+`[@test] ../../../test/HU37_jeff/portal_sync_refresco_calculadora_test.dart`
 
 ## Qué no cambia de la calculadora
 
@@ -907,8 +938,8 @@ máximo de 65 000 del presupuesto del backend (decisión 6 del dueño).
 
 ## Pruebas previstas
 
-Todas van en `test/HU37_jeff/` (D20), con datos inventados y el alumno `20230001`. Se enlazan con
-`[@test]` junto a su requisito cuando existan.
+Todas están en `test/HU37_jeff/` (D20), con datos inventados y el alumno `20230001`, y cada una
+se enlaza con `[@test]` junto a su requisito. Comparten los dobles de `recarga_dobles.dart`.
 
 - `recarga_ulima_models_test.dart` (unitaria, RF-RCG-1). La vista del ejemplo del contrato se lee
   entera, con `courses` en `vista.cursos` y `assessments` en `evaluaciones`. Un número en texto se
@@ -997,6 +1028,11 @@ Todas van en `test/HU37_jeff/` (D20), con datos inventados y el alumno `20230001
 
 - `flutter analyze` sin avisos nuevos y `flutter test` en verde, con los avisos previos reportados
   aparte.
+- `TZ=UTC flutter test --no-pub test/HU37_jeff/ultima_lectura_test.dart`. La suite corre solo en
+  una máquina local, porque `.github/workflows/build-apk.yml` no corre `flutter test`, y en UTC−5
+  la hora local coincide con la de Lima. Con `TZ=UTC`, las pruebas de RF-RCG-9 detectan una hora
+  o un día calculados con `toLocal()`, y el caso de las 23:59 y las 00:00 cubre el teléfono en
+  otra zona.
 - Revisión manual en un iPhone SE, en claro y en oscuro, con el texto al 200 % y con VoiceOver, de
   la fila, la franja, la hoja con el teclado abierto, el aviso y el bloque de asistencia, y la
   misma revisión en Android con TalkBack.

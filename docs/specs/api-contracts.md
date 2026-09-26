@@ -254,9 +254,9 @@ Notas:
 
 Faltaba en este contrato, aunque `/mis-notas` y la pantalla de calificación del docente ya lo usan. Detalle en `ULima_Backend_IS2/specs/features/official-grades/official-grades.spec.md`.
 
-- `GET /official-grades/me`. **IMPLEMENTADO**. Rol `student|delegate|subdelegate`. Notas del alumno en `student_score` por curso y sección del período activo, y el cliente calcula la nota final. Hoy lo lee `/mis-notas` (`official_grades_service.dart:40-47`).
+- `GET /official-grades/me`. **IMPLEMENTADO**. Rol `student|delegate|subdelegate`. Notas del alumno en `student_score` por curso y sección del período activo, y el cliente calcula la nota final. Desde RF-RCG-6 ninguna pantalla de alumno lo lee (`official_grades_service.dart:40-47`).
   - Response `{ "courses": [ { "sectionId": number, "courseName": string, "sectionCode": string, "assessments": [ { "assessmentId": number, "code": string, "name": string, "weight": number, "value": number|null } ] } ] }`.
-  - *Aprobado el 2026-09-26, pendiente de implementación (decisión B10 de `specs/features/recarga-portal/recarga-portal.spec.md`).* `/mis-notas` deja de leer esta ruta y lee `GET /grades/me/ulima`. La ruta sigue en el backend sin cambios.
+  - *Aprobado el 2026-09-26 e implementado en la app el 2026-09-26 (decisión B10 de `specs/features/recarga-portal/recarga-portal.spec.md`).* `/mis-notas` deja de leer esta ruta y lee `GET /grades/me/ulima`. La ruta sigue en el backend sin cambios.
 - `GET /official-grades/teacher/sections`, `GET /official-grades/teacher/sections/:sectionId/scores` y `PUT /official-grades/teacher/sections/:sectionId/scores`. **IMPLEMENTADO**. Rol `teacher`. Los usa la pantalla de calificación del docente (`official_grades_service.dart:12-35`), que la recarga no toca.
 
 ## Schedule

@@ -18,7 +18,7 @@ targets:
 
 > Estado: **implementada el 2026-09-02**, con el diseño ALTERNATIVO (credenciales), no el original de WebView. Ver §Cambio de diseño.
 
-> **Enmienda del 2026-09-25, aprobada por el dueño el 2026-09-26 y pendiente de implementación**
+> **Enmienda del 2026-09-25, aprobada por el dueño el 2026-09-26 e implementada el 2026-09-26**
 > (`specs/features/recarga-portal/recarga-portal.spec.md`). BR-SYNC-F-06 deja de borrar
 > `CalculadoraController` después de importar y llama a `recargarTodo()` (RF-RCG-11), porque la
 > fila «Notas oficiales» de la calculadora y el aviso de `IMPORT_REQUIRED` abren `/portal-sync`
@@ -31,7 +31,9 @@ targets:
 > el mismo día, suma a la importación el `409 PORTAL_REFRESH_IN_PROGRESS`, cuando hay una
 > recarga del mismo alumno en curso, y `details.kind` en sus dos `429`. Esta pantalla los muestra con el `message` del
 > backend, como hoy muestra el `429` y todo código que no traduce, sin cambio de código.
-> Hasta que se implemente, el código sigue el texto de esta spec.
+
+`[@test] ../../../test/HU37_jeff/portal_sync_refresco_calculadora_test.dart`
+`[@test] ../../../test/HU37_jeff/hoja_recarga_test.dart`
 
 ## User Stories
 

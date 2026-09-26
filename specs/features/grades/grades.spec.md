@@ -10,7 +10,7 @@ targets:
 
 # Grades
 
-> **Enmienda del 2026-09-25, aprobada por el dueño el 2026-09-26 y pendiente de implementación**
+> **Enmienda del 2026-09-25, aprobada por el dueño el 2026-09-26 e implementada el 2026-09-26**
 > (`specs/features/recarga-portal/recarga-portal.spec.md`). La calculadora conserva su diseño y
 > la maqueta aprobada suma tres cambios, dos en la calculadora y uno en `/mis-notas`. El birrete
 > sin texto junto al título pasa a la fila «Notas oficiales», con la hora de la última lectura de
@@ -21,8 +21,11 @@ targets:
 > (RF-RCG-6). Lo que no cambia, y los dos puntos aprobados que tocan la tarjeta del curso más allá
 > de esos tres cambios, están en «Qué no cambia de la calculadora» de esa spec. La misma enmienda anota dos desfases de este texto con el código. Las notas del
 > alumno se guardan en `simulated_grades`, no en `student_score`, y las pruebas de «Verification»
-> viven hoy en `test/HU07_sam/` y `test/HU06_sam/`, no en las carpetas `_aurelio`. Hasta que
-> se implemente, el código sigue el texto de esta spec.
+> viven hoy en `test/HU07_sam/` y `test/HU06_sam/`, no en las carpetas `_aurelio`.
+
+`[@test] ../../../test/HU37_jeff/calculadora_ulima_test.dart`
+`[@test] ../../../test/HU37_jeff/filas_calculadora_test.dart`
+`[@test] ../../../test/HU37_jeff/mis_notas_ulima_test.dart`
 
 ## Requirements
 

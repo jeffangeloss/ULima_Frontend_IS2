@@ -18,7 +18,7 @@ targets:
 > spec del chat. La fase 1 del chat ya implementa este ajuste. Las pestañas y los contratos de
 > esta spec no cambian.
 
-> **Enmienda del 2026-09-25, aprobada por el dueño el 2026-09-26 y pendiente de implementación**
+> **Enmienda del 2026-09-25, aprobada por el dueño el 2026-09-26 e implementada el 2026-09-26**
 > (`specs/features/recarga-portal/recarga-portal.spec.md`, RF-RCG-8). Hoy esta spec no describe
 > el bloque de asistencia. La enmienda le suma, bajo las horas y el anillo, la hora de la última
 > lectura, tomada de `asistenciaLeidaEn`, y el botón «Actualizar», que abre la hoja de recarga
@@ -28,7 +28,8 @@ targets:
 > el botón «Actualizar desde miUlima» pasa a decir «Actualizar desde la ULima» y abre la misma
 > hoja en vez de `/portal-sync`, y el bloque muestra el aviso de error y la línea de lectura
 > parcial encima del botón. Sin `RecargaUlimaService` registrado, el bloque queda como hoy.
-> Hasta que se implemente, el código sigue el texto de esta spec.
+
+`[@test] ../../../test/HU37_jeff/asistencia_recarga_test.dart`
 
 ## Requirements
 
