@@ -187,23 +187,63 @@ MedidasDelRecibimiento medirElRecibimiento({
   final exceso = fondo(uy) - (botones.top - 16);
   if (exceso > 0) uy -= exceso;
 
-  var sy = estrella.dy;
+  final tarjeta = Rect.fromLTRB(
+    ux + ladoDeUlises / 2 + 11,
+    uy - 22,
+    columna.right - 12,
+    uy - 22 + altoDeLaTarjeta,
+  );
+
+  // Lo más abajo que puede quedar el centro de una estrella de radio [r] sin
+  // que la tarjeta ni Ulises, recortado en círculo, entren en el margen libre
+  // de 12 dp alrededor de su círculo. Nunca baja de su pose.
+  double centroQueCabe(double r) {
+    final libre = r + 12;
+    final dxDeLaTarjeta = math.max(
+      0.0,
+      math.max(tarjeta.left - estrella.dx, estrella.dx - tarjeta.right),
+    );
+    final porLaTarjeta = dxDeLaTarjeta >= libre
+        ? double.infinity
+        : tarjeta.top -
+              math.sqrt(libre * libre - dxDeLaTarjeta * dxDeLaTarjeta);
+    final libreDeUlises = libre + ladoDeUlises / 2;
+    final dxDeUlises = (ux - estrella.dx).abs();
+    final porUlises = dxDeUlises >= libreDeUlises
+        ? double.infinity
+        : uy -
+              math.sqrt(
+                libreDeUlises * libreDeUlises - dxDeUlises * dxDeUlises,
+              );
+    return math.min(estrella.dy, math.min(porLaTarjeta, porUlises));
+  }
+
+  // La estrella sube lo justo, sin acercarse a menos de 24 dp del área
+  // segura de arriba, y si no alcanza, se achica hasta 60 dp. Si ni así
+  // cabe, Ulises saluda ya en la conversación y la estrella no se mueve.
+  final tope = areaSeguraArriba + 24;
   var r = radio;
+  var sy = centroQueCabe(r);
   var enConversacion = false;
-  final arriba = uy - ladoDeUlises / 2;
-  if (arriba < sy + r + 12) {
-    // La estrella sube lo justo, sin acercarse a menos de 24 dp del área
-    // segura de arriba, y si no alcanza, se achica hasta 60 dp.
-    final techo = areaSeguraArriba + 24;
-    sy = arriba - r - 12;
-    if (sy - r < techo) {
-      r = (arriba - 12 - techo) / 2;
-      sy = techo + r;
-      if (r < 60) {
-        enConversacion = true;
-        r = radio;
-        sy = estrella.dy;
+  if (sy - r < tope) {
+    if (centroQueCabe(60) - 60 < tope) {
+      enConversacion = true;
+      sy = estrella.dy;
+    } else {
+      // El mayor radio con el que cabe, que es donde su borde de arriba
+      // toca el tope.
+      var cabe = 60.0;
+      var noCabe = radio;
+      for (var i = 0; i < 60; i++) {
+        final medio = (cabe + noCabe) / 2;
+        if (centroQueCabe(medio) - medio >= tope) {
+          cabe = medio;
+        } else {
+          noCabe = medio;
+        }
       }
+      r = cabe;
+      sy = centroQueCabe(r);
     }
   }
 
@@ -216,12 +256,7 @@ MedidasDelRecibimiento medirElRecibimiento({
     estrella: Offset(estrella.dx, sy),
     radio: r,
     ulises: ulises,
-    tarjeta: Rect.fromLTRB(
-      ulises.right + 11,
-      uy - 22,
-      columna.right - 12,
-      uy - 22 + altoDeLaTarjeta,
-    ),
+    tarjeta: tarjeta,
     botones: botones,
     enConversacion: enConversacion,
   );

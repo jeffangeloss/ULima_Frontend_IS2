@@ -164,9 +164,24 @@ void main() {
         'estrella sube antes de que entren en su margen', () {
       final m = enElSe(tarjeta: 99.5);
       expect(m.botones.top - m.tarjeta.bottom, closeTo(16, 0.01));
-      expect(m.ulises.top, closeTo(m.estrella.dy + 90 + 12, 0.01));
-      expect(m.estrella.dy, closeTo(300.5, 0.01));
+      // Manda el margen de 12 dp alrededor del círculo de la estrella, y la
+      // pieza que queda bajo su centro es la tarjeta (RF-BIEN-2).
+      expect(m.tarjeta.top, closeTo(m.estrella.dy + 90 + 12, 0.01));
+      expect(m.estrella.dy, closeTo(313.5, 0.01));
       expect(m.radio, 90);
+      // Ulises, recortado en círculo, tampoco entra en el margen.
+      expect(
+        (m.ulises.center - m.estrella).distance,
+        greaterThanOrEqualTo(90 + 12 + 35),
+      );
+    });
+
+    test('con el texto al 130 % y al 200 % la estrella sube unos 15 dp y unos '
+        '95 dp, como estima la spec', () {
+      // La tarjeta con «¿Ya usas ULima++?» en dos líneas al 130 %, y con las
+      // dos líneas en dos renglones cada una al 200 %.
+      expect(333.5 - enElSe(tarjeta: 98.1).estrella.dy, closeTo(15, 5));
+      expect(333.5 - enElSe(tarjeta: 173.2).estrella.dy, closeTo(95, 5));
     });
 
     test('si no alcanza, la estrella se achica hasta 60 dp sin acercarse a '
@@ -175,7 +190,7 @@ void main() {
       expect(m.radio, lessThan(90));
       expect(m.radio, greaterThanOrEqualTo(60));
       expect(m.estrella.dy - m.radio, closeTo(20 + 24, 0.01));
-      expect(m.ulises.top, closeTo(m.estrella.dy + m.radio + 12, 0.01));
+      expect(m.tarjeta.top, closeTo(m.estrella.dy + m.radio + 12, 0.01));
     });
 
     test('si ni así cabe, Ulises saluda ya en la conversación', () {
