@@ -55,9 +55,16 @@ targets:
 > funcionalidad en la fila 22 del índice, porque el test llega primero a `main` con la 21. Las
 > referencias `archivo:línea` siguen citando `19fed1b`.
 > Las pruebas de esta spec existen en `test/HU37_jeff/`, y cada requisito enlaza con `[@test]`
-> los archivos que lo verifican. Falta la revisión manual de «Verificación», y la app se publica
-> solo con las condiciones de B1 y B15. Los ejemplos usan datos inventados (alumno `20230001`,
-> curso TALLER DE PROTOTIPADO, sección `812`), porque el repositorio es público.
+> los archivos que lo verifican. El merge espera al backend de RS-BE-48 a RS-BE-60 desplegado,
+> con RS-BE-48 incluido y la `0015` aplicada (decisión B1), a la medición de B15 sobre ese
+> despliegue y a la revisión manual de «Verificación». Esa revisión pasa por un iPhone SE en claro
+> y en oscuro, con el texto al 200 % y VoiceOver, y por Android con TalkBack. Un merge anterior
+> rompe dos pantallas, porque el backend de producción no tiene `GET /grades/me/ulima` ni
+> `POST /portal-sync/refresh`. Con ese backend, `/mis-notas` muestra «No se pudieron cargar tus
+> notas oficiales.», ya que deja de leer `GET /official-grades/me`, y el botón del bloque de
+> asistencia sin datos de la ficha abre la hoja en lugar de `/portal-sync` y termina en el aviso
+> genérico. Los ejemplos usan datos inventados (alumno `20230001`, curso TALLER DE PROTOTIPADO,
+> sección `812`), porque el repositorio es público.
 
 ## User Stories
 
