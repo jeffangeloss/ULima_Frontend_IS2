@@ -365,6 +365,8 @@ void main() {
       final c = b.controlador;
       expect(c.test, isNotNull);
       expect(Get.isRegistered<SpecialtyTestController>(), isFalse);
+      // Un Get.put sobre el campo anulable lo registraría con ese tipo.
+      expect(Get.isRegistered<SpecialtyTestController?>(), isFalse);
       expect(
         ultimaDeUlises(b),
         '¿Empezamos tu test de especialidad? Son 5 preguntas cortas.',
@@ -396,6 +398,13 @@ void main() {
       expect(b.delAlumno.last, tareaDeArriba);
       expect(b.deUlises, contains('Reacción propia de la pregunta uno.'));
       expect(c.latidos.value, greaterThanOrEqualTo(2));
+      // La tercera es una escala: el emoji con la etiqueta.
+      c
+        ..responderAlTest('both', conLector: true)
+        ..siguiente()
+        ..responderAlTest('bastante', conLector: true)
+        ..siguiente();
+      expect(b.delAlumno.last, '😃 Bastante');
     });
 
     test('«Pregunta anterior» repite el paso previo, y desde la pregunta 1 '
@@ -451,8 +460,30 @@ void main() {
       expect(b.deUlises.last, kLoading);
       await pumpEventQueue();
       expect(c.confeti.value, 1);
+      expect(
+        b.deUlises.last,
+        'Lo tuyo apunta a Desarrollo de Videojuegos, con 75 % de afinidad.',
+        reason: 'el titular del resultado',
+      );
       expect(c.entradas.whereType<ResultadoDelTest>(), hasLength(1));
       expect(c.turno.value, TurnoDeLaBienvenida.resultado);
+    });
+
+    test('«Decidir después» guarda, responde y se despide hacia el '
+        'horario', () async {
+      final b = await enT0();
+      final c = b.controlador..empezarElTest();
+      for (final v in respuestasEnOrden) {
+        c
+          ..responderAlTest(v, conLector: true)
+          ..siguiente();
+      }
+      await pumpEventQueue();
+      await c.decidirDespues();
+      expect(b.auth.guardados, hasLength(1));
+      expect(b.delAlumno.last, TextosDeLaBienvenida.decidirDespues);
+      expect(b.deUlises.last, TextosDeLaBienvenida.listoAlHorario);
+      expect(c.turno.value, TurnoDeLaBienvenida.pasoAlHorario);
     });
 
     test('«Elegir como principal» guarda, responde y se despide hacia el '
@@ -511,6 +542,15 @@ void main() {
       expect(b.auth.guardados.single.intereses, [7]);
       expect(b.delAlumno.last, TextosDeLaBienvenida.finalizar);
       expect(c.turno.value, TurnoDeLaBienvenida.pasoAlHorario);
+
+      // Sin marcar nada, la respuesta es «Saltar por ahora».
+      final otra = await enT0();
+      final d = otra.controlador..saltarElTest();
+      await d.terminarLaSeleccion();
+      expect(otra.auth.guardados.single.principal, isNull);
+      expect(otra.auth.guardados.single.intereses, isEmpty);
+      expect(otra.delAlumno.last, TextosDeLaBienvenida.saltarPorAhora);
+      expect(d.turno.value, TurnoDeLaBienvenida.pasoAlHorario);
     });
 
     test('un 404 pasa a la selección manual sin aviso, y el atrás no hace '
@@ -562,12 +602,13 @@ void main() {
   group('el compositor del test (RF-BIEN-10 y B-13)', () {
     /// Entra con la configuración a medias desde E1, así que la
     /// conversación sigue con el test (RF-BIEN-6 y B-10).
-    Future<Bienvenida> enT0(WidgetTester tester) async {
+    Future<Bienvenida> enT0(WidgetTester tester, {ApiFalsaDelTest? api}) async {
       final b = Bienvenida(
         auth: AuthDeLaBienvenida(
           alEntrar: alumnaDePrueba(setupComplete: false),
         ),
         token: 'jwt-de-prueba',
+        apiDelTest: api,
       );
       await montarLaBienvenida(
         tester,
@@ -593,6 +634,83 @@ void main() {
       expect(find.text(TextosDeLaBienvenida.empezarElTest), findsOneWidget);
     });
 
+    testWidgets('si el contenido no carga, T0 ofrece «Reintentar» en lugar '
+        'de «Empezar el test» (RF-BIEN-12)', (tester) async {
+      final b = await enT0(
+        tester,
+        api: ApiFalsaDelTest(
+          contenido: <Object>[
+            const SpecialtyTestFailure(SpecialtyTestFailureKind.offline),
+            contenidoJson(),
+          ],
+        ),
+      );
+      final compositor = find.byType(MarcoDelCompositor);
+      expect(
+        find.descendant(
+          of: compositor,
+          matching: find.text(TextosDeLaBienvenida.reintentar),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text(TextosDeLaBienvenida.empezarElTest), findsNothing);
+      expect(find.text(TextosDeLaBienvenida.saltar), findsOneWidget);
+      await tester.tap(
+        find.descendant(
+          of: compositor,
+          matching: find.text(TextosDeLaBienvenida.reintentar),
+        ),
+      );
+      await avanzar(tester, 3500);
+      expect(b.controlador.turno.value, TurnoDeLaBienvenida.t0Invitacion);
+      expect(find.text(TextosDeLaBienvenida.empezarElTest), findsOneWidget);
+    });
+
+    testWidgets('la espera con un error ofrece «Reintentar» y «Pregunta '
+        'anterior», y el resultado entra con su tarjeta y sus tres botones', (
+      tester,
+    ) async {
+      final b = await enT0(
+        tester,
+        api: ApiFalsaDelTest(
+          evaluaciones: <Object>[
+            const SpecialtyTestFailure(SpecialtyTestFailureKind.offline),
+            resultadoJson(),
+          ],
+        ),
+      );
+      final c = b.controlador..empezarElTest();
+      for (final v in respuestasEnOrden) {
+        c
+          ..responderAlTest(v, conLector: true)
+          ..siguiente();
+      }
+      await avanzar(tester, 16000);
+      expect(c.turno.value, TurnoDeLaBienvenida.espera);
+      final compositor = find.byType(MarcoDelCompositor);
+      Finder enElCompositor(String texto) =>
+          find.descendant(of: compositor, matching: find.text(texto));
+      expect(
+        enElCompositor(TextosDeLaBienvenida.preguntaAnterior),
+        findsOneWidget,
+      );
+      await tester.tap(enElCompositor(TextosDeLaBienvenida.reintentar));
+      await avanzar(tester, 6000);
+      expect(c.turno.value, TurnoDeLaBienvenida.resultado);
+      expect(find.byType(TarjetaGanadora, skipOffstage: false), findsOneWidget);
+      for (final boton in <String>[
+        TextosDeLaBienvenida.elegirComoPrincipal,
+        TextosDeLaBienvenida.decidirDespues,
+        TextosDeLaBienvenida.rehacerElTest,
+      ]) {
+        expect(enElCompositor(boton), findsOneWidget, reason: boton);
+      }
+      expect(
+        enElCompositor(TextosDeLaBienvenida.preguntaAnterior),
+        findsNothing,
+      );
+    });
+
     testWidgets('el duelo va en el compositor con el rótulo, las tarjetas '
         'compactas y las dos opciones de abajo', (tester) async {
       final b = await enT0(tester);
@@ -602,6 +720,11 @@ void main() {
       expect(find.text('ESTO O AQUELLO · 1 DE 5'), findsOneWidget);
       final duelo = tester.widget<DueloDelTest>(find.byType(DueloDelTest));
       expect(duelo.compacto, isTrue);
+      expect(
+        find.text(TextosDeLaBienvenida.preguntaAnterior),
+        findsNothing,
+        reason: 'la pregunta 1 no la ofrece',
+      );
       expect(find.text('Me gustan las dos'), findsOneWidget);
       expect(find.text('Ninguna me llama'), findsOneWidget);
       final tarea = b.controlador.test!.preguntaActual!.top!.text;
