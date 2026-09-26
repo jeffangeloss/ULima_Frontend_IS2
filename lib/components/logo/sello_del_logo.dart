@@ -98,7 +98,9 @@ class SelloDelLogo extends StatelessWidget {
         textDirection: TextDirection.ltr,
         textScaler: s,
       )..layout();
-      return p.width;
+      final ancho = p.width;
+      p.dispose();
+      return ancho;
     }
 
     final libre = ancho - tamanoDeEstrella - separacion;
@@ -166,45 +168,51 @@ class _LosMas extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Se mide una vez y se desecha, y el pintor recibe solo las medidas.
     final glifos = TextPainter(
       text: TextSpan(text: '++', style: estilo),
       textDirection: TextDirection.ltr,
       textScaler: escala,
     )..layout();
+    final tamano = Size(glifos.width, glifos.height);
+    final base = glifos.computeDistanceToActualBaseline(
+      TextBaseline.alphabetic,
+    );
+    glifos.dispose();
     return CustomPaint(
-      size: Size(glifos.width, glifos.height),
-      painter: _PintorDeLosMas(glifos: glifos, estilo: estilo, escala: escala),
+      size: tamano,
+      painter: _PintorDeLosMas(
+        base: base,
+        em: escala.scale(estilo.fontSize ?? 20),
+        color: estilo.color ?? Colors.white,
+      ),
     );
   }
 }
 
 class _PintorDeLosMas extends CustomPainter {
-  _PintorDeLosMas({
-    required this.glifos,
-    required this.estilo,
-    required this.escala,
-  });
+  _PintorDeLosMas({required this.base, required this.em, required this.color});
 
-  final TextPainter glifos;
-  final TextStyle estilo;
-  final TextScaler escala;
+  /// La línea base de los glifos «++», desde arriba.
+  final double base;
+  final double em;
+  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final em = escala.scale(estilo.fontSize ?? 20);
-    final base = glifos.computeDistanceToActualBaseline(
-      TextBaseline.alphabetic,
-    );
     final y = base - 0.34 * em;
     final largo = 0.5 * em;
     final pintura = Paint()
       ..isAntiAlias = true
-      ..color = estilo.color ?? Colors.white;
+      ..color = color;
     final (h, v) = LogoGeometria.barrasDeCruz();
     for (var i = 0; i < 2; i++) {
       canvas.save();
       canvas.translate(size.width * (0.25 + 0.5 * i), y);
-      canvas.rotate(SelloDelLogo.inclinacionDeLosMas);
+      // Un sesgo horizontal, como el skewX de la maqueta y la salida del
+      // splash, y no un giro. Con −12° la punta de arriba de la barra vertical
+      // cae hacia la derecha, como la cursiva de «ULIMA».
+      canvas.skew(math.tan(SelloDelLogo.inclinacionDeLosMas), 0);
       canvas.scale(largo / LogoGeometria.largoDeCruz);
       canvas.drawRect(h, pintura);
       canvas.drawRect(v, pintura);
@@ -214,7 +222,9 @@ class _PintorDeLosMas extends CustomPainter {
 
   @override
   bool shouldRepaint(_PintorDeLosMas oldDelegate) =>
-      oldDelegate.estilo != estilo || oldDelegate.escala != escala;
+      oldDelegate.base != base ||
+      oldDelegate.em != em ||
+      oldDelegate.color != color;
 }
 
 /// La franja o la cabecera con el sello. Mide lo mismo que la cabecera de
@@ -250,7 +260,9 @@ class CabeceraConSello extends StatelessWidget {
       textDirection: TextDirection.ltr,
       textScaler: MediaQuery.textScalerOf(context),
     )..layout();
-    return math.max(30, math.max(AppHeader.tamanoDeEstrella, texto.height));
+    final alto = texto.height;
+    texto.dispose();
+    return math.max(30, math.max(AppHeader.tamanoDeEstrella, alto));
   }
 
   static double alto(BuildContext context) =>

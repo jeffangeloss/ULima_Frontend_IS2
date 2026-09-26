@@ -8,6 +8,8 @@
 // Archivo probado lib/components/logo/sello_del_logo.dart.
 
 import 'dart:io';
+import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -93,6 +95,61 @@ void main() {
   tearDown(Get.reset);
 
   group('el sello quieto (RF-BIEN-4)', () {
+    testWidgets('los «++» son cruces del logo sesgadas hacia la derecha como '
+        'la cursiva de «ULIMA», hasta −12°, y no giradas', (tester) async {
+      await _montar(tester, const CabeceraConSello(color: Colors.orange));
+      // El último CustomPaint del sello dibuja los «++».
+      final mas = find
+          .descendant(
+            of: find.byType(SelloDelLogo),
+            matching: find.byType(CustomPaint),
+          )
+          .last;
+      final pintor = tester.widget<CustomPaint>(mas).painter!;
+      final tamano = tester.getSize(mas);
+      const escala = 8.0;
+      final ancho = (tamano.width * escala).ceil();
+      final alto = (tamano.height * escala).ceil();
+      final grabadora = ui.PictureRecorder();
+      final lienzo = Canvas(grabadora)..scale(escala);
+      pintor.paint(lienzo, tamano);
+      final bytes = (await tester.runAsync(() async {
+        final imagen = await grabadora.endRecording().toImage(ancho, alto);
+        return imagen.toByteData(format: ui.ImageByteFormat.rawRgba);
+      }))!;
+      bool pintado(int x, int y) =>
+          bytes.getUint8(4 * (y * ancho + x) + 3) > 127;
+      // El centro de la fila [y] dentro de la mitad izquierda, la del
+      // primer «+».
+      double centroDeFila(int y) {
+        final xs = <int>[
+          for (var x = 0; x < ancho ~/ 2; x++)
+            if (pintado(x, y)) x,
+        ];
+        expect(xs, isNotEmpty, reason: 'fila $y');
+        return xs.reduce((a, b) => a + b) / xs.length;
+      }
+
+      final filas = <int>[
+        for (var y = 0; y < alto; y++)
+          if (<int>[
+            for (var x = 0; x < ancho ~/ 2; x++)
+              if (pintado(x, y)) x,
+          ].isNotEmpty)
+            y,
+      ];
+      expect(filas, isNotEmpty);
+      // Lejos de la barra horizontal, la punta de arriba de la barra
+      // vertical queda a la derecha de la de abajo.
+      final arriba = filas.first + 2;
+      final abajo = filas.last - 2;
+      final corrimiento = centroDeFila(arriba) - centroDeFila(abajo);
+      expect(
+        corrimiento,
+        closeTo((abajo - arriba) * math.tan(12 * math.pi / 180), 2),
+      );
+    });
+
     testWidgets('la estrella y «ULIMA» miden 1,22 veces los de la cabecera', (
       tester,
     ) async {
