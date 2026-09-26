@@ -41,6 +41,32 @@ void main() {
     );
   });
 
+  testWidgets('si la vista llega en 0 × 0, la estrella se centra en cuanto '
+      'llegan sus medidas, antes de que la intro empiece (RF-SPL-5)', (
+    tester,
+  ) async {
+    // En Android en release, las métricas de la ventana pueden llegar
+    // después de runApp, que ahora va antes de Firebase.
+    tester.view.physicalSize = Size.zero;
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      appConCapa(
+        intro: IntroDelArranque(
+          carga: CargaFalsa().call,
+          variantes: VariantesFijas(VarianteSplash.ensamble, enseguida: false),
+          random: Random(1),
+        ),
+      ),
+    );
+    telefono(tester);
+    await tester.pump();
+    final escena = CapaDeArranque.escenaActual!;
+    expect(escena.centro, const Offset(187.5, 333.5));
+    expect(escena.radio, 90);
+    expect(escena.cruces, isEmpty);
+  });
+
   testWidgets('en Android 12 a 14 con tres botones la estrella se centra en '
       'la pantalla física y no en la vista (S-21)', (tester) async {
     telefono(tester, alto: 627, altoFisico: 667);

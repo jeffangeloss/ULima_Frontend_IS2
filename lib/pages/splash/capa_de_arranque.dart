@@ -179,17 +179,27 @@ class _CapaDeArranqueState extends State<CapaDeArranque>
   void didChangeDependencies() {
     super.didChangeDependencies();
     _medir();
-    if (_preparada || widget.intro == null) return;
+    if (widget.intro == null) return;
+    if (_preparada) {
+      // Las medidas de la ventana pueden llegar después del primer cuadro,
+      // y la estrella quieta se vuelve a centrar hasta que la intro empieza.
+      if (_fase.value == FaseDeLaCapa.eligiendo) _pintarElNativo();
+      return;
+    }
     _preparada = true;
     _sinMovimiento = MediaQuery.disableAnimationsOf(context);
-    // El primer cuadro es el nativo, sin «++» y sin giro (RF-SPL-5).
+    _pintarElNativo();
+    _empezarLaCarga();
+    unawaited(_elegirVariante());
+  }
+
+  /// El primer cuadro es el nativo, sin «++» y sin giro (RF-SPL-5).
+  void _pintarElNativo() {
     _escena.value = EscenaDelLogo.reposo(
       centro: _centro,
       radio: radioDelNativo,
       conCruces: false,
     );
-    _empezarLaCarga();
-    unawaited(_elegirVariante());
   }
 
   void _medir() {
