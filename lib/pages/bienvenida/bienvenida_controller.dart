@@ -17,9 +17,13 @@ import '../../services/post_login_route.dart';
 import '../../services/session_navigation.dart';
 import '../../services/storage_service.dart';
 import '../login/login_controller.dart';
+import '../password_reset/password_reset_validators.dart';
 import '../registro/registro_controller.dart';
 import '../specialty_test/specialty_test_controller.dart';
 import 'conversacion.dart';
+
+/// La píldora bajo la franja mientras se crea la cuenta (RF-BIEN-8).
+enum EstadoDeLaPildora { creando, creada }
 
 typedef TextosB = TextosDeLaBienvenida;
 typedef TurnoB = TurnoDeLaBienvenida;
@@ -32,13 +36,21 @@ class BienvenidaController extends GetxController {
     Future<String?> Function()? tokenGuardado,
     void Function(String ruta)? abrirRuta,
     void Function()? terminarAutocompletado,
+    void Function(String titulo, String texto)? avisar,
   }) : _authInyectado = auth,
        _loginInyectado = login,
        _crearRegistro = crearRegistro ?? RegistroController.new,
        _tokenGuardado = tokenGuardado ?? (() => StorageService.to.savedToken),
        _abrirRuta = abrirRuta ?? ((ruta) => Get.toNamed<void>(ruta)),
        _terminarAutocompletado =
-           terminarAutocompletado ?? (() => TextInput.finishAutofillContext());
+           terminarAutocompletado ?? (() => TextInput.finishAutofillContext()),
+       _avisar =
+           avisar ??
+           ((titulo, texto) => Get.snackbar(
+             titulo,
+             texto,
+             snackPosition: SnackPosition.BOTTOM,
+           ));
 
   final AuthService? _authInyectado;
   final LoginController? _loginInyectado;
@@ -50,6 +62,12 @@ class BienvenidaController extends GetxController {
   /// guardar el código y la contraseña (RF-BIEN-6). Las pruebas lo cambian
   /// por un registro, porque en la VM no hay plataforma que lo reciba.
   final void Function() _terminarAutocompletado;
+  final void Function(String titulo, String texto) _avisar;
+
+  final pildora = Rxn<EstadoDeLaPildora>();
+
+  /// Mientras se envía el registro, el pulso recorre los rombos (RF-BIEN-4).
+  final enviando = false.obs;
 
   AuthService get _auth => _authInyectado ?? AuthService.to;
   LoginController get _login => _loginInyectado ?? Get.find<LoginController>();
@@ -201,6 +219,8 @@ class BienvenidaController extends GetxController {
     esperando.value = false;
     errorLocal.value = null;
     _conSesion = false;
+    pildora.value = null;
+    enviando.value = false;
     _login.vaciarCampos();
   }
 
@@ -342,12 +362,225 @@ class BienvenidaController extends GetxController {
     _abrir(TurnoB.e1Codigo);
   }
 
-  // ── Registro (Tarea 24) ──────────────────────────────────────────────────
+  // ── Registro (RF-BIEN-7 a RF-BIEN-9) ─────────────────────────────────────
 
   void _abrirN1({Duration primera = Ritmo.trasLaRespuesta}) {
     registro ??= _crearRegistro();
     _decir(<String>[TextosB.n1a, TextosB.n1b], primera: primera);
     _abrir(TurnoB.n1Codigo);
+  }
+
+  /// Cada turno valida lo suyo en local, con los validadores de hoy, antes
+  /// de cerrar el compositor y sin llamar a la red (BR-REG-F-03).
+  bool _valida(String? error) {
+    errorLocal.value = error;
+    return error == null;
+  }
+
+  void enviarCodigoDeAlumno() {
+    final r = registro;
+    if (r == null || turno.value != TurnoB.n1Codigo) return;
+    if (!_valida(validarCodigo(r.codigoCtrl.text))) return;
+    // El código es la excepción, porque su burbuja lo muestra (RF-BIEN-9).
+    _responder(r.codigoCtrl.text.trim());
+    _decir(<String>[TextosB.n2]);
+    _abrir(TurnoB.n2Contrasena);
+  }
+
+  void enviarContrasenas() {
+    final r = registro;
+    if (r == null || turno.value != TurnoB.n2Contrasena) return;
+    final error =
+        validateNewPassword(r.passwordCtrl.text) ??
+        validatePasswordConfirmation(
+          r.passwordCtrl.text,
+          r.confirmacionCtrl.text,
+        );
+    if (!_valida(error)) return;
+    _responder(TextosB.contrasenaUlimaLista, secreta: true);
+    // Aceptado una vez, el consentimiento dura lo que dura la rama.
+    if (r.consentimientoAceptado.value) {
+      _abrirN4();
+    } else {
+      _decir(<String>[TextosB.n3]);
+      entradas.add(
+        BurbujaDeUlises(
+          id: _id(),
+          texto: '',
+          tipo: TipoDeBurbuja.consentimiento,
+          pausa: Ritmo.entreBurbujas,
+        ),
+      );
+      _abrir(TurnoB.n3Consentimiento);
+    }
+  }
+
+  void aceptarConsentimiento() {
+    final r = registro;
+    if (r == null || turno.value != TurnoB.n3Consentimiento) return;
+    r.aceptarConsentimiento();
+    _responder(TextosB.acepto);
+    _abrirN4();
+  }
+
+  void _abrirN4() {
+    _decir(<String>[TextosB.n4]);
+    _abrir(TurnoB.n4Portal);
+  }
+
+  void enviarPortal() {
+    final r = registro;
+    if (r == null || turno.value != TurnoB.n4Portal) return;
+    if (!_valida(validarPortalPassword(r.portalPasswordCtrl.text))) return;
+    _responder(TextosB.contrasenaMiUlimaLista, secreta: true);
+    _abrirN5();
+  }
+
+  void _abrirN5() {
+    _decir(<String>[TextosB.n5]);
+    _abrir(TurnoB.n5Authenticator);
+  }
+
+  /// «Crear mi cuenta». El envío es un botón y no sale solo al completar las
+  /// seis casillas (B-5).
+  Future<void> crearCuenta() async {
+    final r = registro;
+    if (r == null || turno.value != TurnoB.n5Authenticator) return;
+    if (!_valida(validarPasscode(r.passcodeCtrl.text))) return;
+    _responder(TextosB.authenticatorListo, secreta: true);
+    _decir(<String>[TextosB.creando, TextosB.advertencia]);
+    ultimoTurno.value = TurnoB.envio;
+    pildora.value = EstadoDeLaPildora.creando;
+    enviando.value = true;
+    await r.enviar();
+    if (!identical(registro, r)) return;
+    enviando.value = false;
+    switch (r.paso.value) {
+      case RegistroPaso.listo:
+        _alCrearLaCuenta(r);
+      case RegistroPaso.incierto:
+        pildora.value = null;
+        _decirLaDuda(r);
+      case RegistroPaso.datos:
+        pildora.value = null;
+        _decirError(r.errorMessage.value ?? TextosB.sinConexion);
+        _abrir(TurnoB.n1Codigo);
+      case RegistroPaso.verificar:
+      case RegistroPaso.consentimiento:
+      case RegistroPaso.enviando:
+        pildora.value = null;
+        _decirError(r.errorMessage.value ?? TextosB.sinConexion);
+        _abrir(TurnoB.n5Authenticator);
+    }
+  }
+
+  void _alCrearLaCuenta(RegistroController r) {
+    pildora.value = EstadoDeLaPildora.creada;
+    final resultado = r.resultado.value;
+    _decir(<String>[
+      textoDeCuentaLista(resultado?.summary.cursos ?? 0),
+    ], primera: Duration.zero);
+    final avisos = resultado?.warnings ?? const [];
+    if (avisos.isNotEmpty) {
+      entradas.add(
+        BurbujaDeUlises(
+          id: _id(),
+          texto: '',
+          tipo: TipoDeBurbuja.avisos,
+          titulo: TextosB.avisosDelRegistro,
+          lineas: <String>[for (final a in avisos) a.message],
+          pausa: Ritmo.entreBurbujas,
+        ),
+      );
+    }
+    _cerrarRegistro();
+    _conSesion = true;
+    _empezarElTest();
+  }
+
+  /// Los títulos de hoy con un punto final, y con SIN_TOKEN el mensaje si no
+  /// repite el título (`registro_page.dart:405-433`).
+  void _decirLaDuda(RegistroController r) {
+    final confirmada = r.cuentaConfirmada.value;
+    final lineas = confirmada
+        ? <String>[TextosB.creadaTitulo, TextosB.creadaTexto]
+        : <String>[TextosB.inciertoTitulo, TextosB.inciertoTexto];
+    final mensaje = r.errorMessage.value;
+    String normal(String s) =>
+        s.replaceAll(RegExp(r'[.…]'), '').trim().toLowerCase();
+    if (mensaje != null && normal(mensaje) != normal(lineas.first)) {
+      lineas.add(mensaje);
+    }
+    _decir(lineas, primera: Duration.zero);
+    _abrir(TurnoB.incierto);
+  }
+
+  Future<void> iniciarSesionDesdeIncierto() async {
+    final r = registro;
+    if (r == null || turno.value != TurnoB.incierto || esperando.value) return;
+    esperando.value = true;
+    final entro = await r.intentarIniciarSesion();
+    esperando.value = false;
+    if (!identical(registro, r)) return;
+    if (!entro) {
+      _decirError(r.errorMessage.value ?? TextosB.sinConexion);
+      return;
+    }
+    _responder(TextosB.iniciarSesion);
+    _cerrarRegistro();
+    _conSesion = true;
+    final usuario = _auth.currentUser;
+    if (usuario != null && postLoginRoute(usuario) == '/home') {
+      _decir(<String>[TextosB.e3]);
+      _abrir(TurnoB.pasoAlHorario);
+      return;
+    }
+    _empezarElTest();
+  }
+
+  void volverAIntentarElRegistro() {
+    final r = registro;
+    if (r == null || turno.value != TurnoB.incierto) return;
+    r.volverAVerificar();
+    _responder(TextosB.volverAIntentar);
+    _abrirN5();
+  }
+
+  /// «Ya tengo cuenta», en todos los turnos del registro antes del envío y
+  /// en incierto (RF-BIEN-9).
+  void yaTengoCuenta() {
+    const conEnlace = <TurnoDeLaBienvenida>{
+      TurnoB.n1Codigo,
+      TurnoB.n2Contrasena,
+      TurnoB.n3Consentimiento,
+      TurnoB.n4Portal,
+      TurnoB.n5Authenticator,
+      TurnoB.incierto,
+    };
+    if (!conEnlace.contains(turno.value)) return;
+    _responder(TextosB.yaTengoCuenta);
+    _cerrarRegistro();
+    _abrirE1();
+  }
+
+  /// «Volver» reabre el turno anterior con lo escrito, y Ulises repite su
+  /// pregunta (BR-REG-F-05).
+  void volver() {
+    final anterior = switch (turno.value) {
+      TurnoB.n2Contrasena => TurnoB.n1Codigo,
+      TurnoB.n3Consentimiento || TurnoB.n4Portal => TurnoB.n2Contrasena,
+      TurnoB.n5Authenticator => TurnoB.n4Portal,
+      _ => null,
+    };
+    if (anterior == null) return;
+    _responder(TextosB.volver);
+    final pregunta = switch (anterior) {
+      TurnoB.n1Codigo => TextosB.n1b,
+      TurnoB.n2Contrasena => TextosB.n2,
+      _ => TextosB.n4,
+    };
+    _decir(<String>[pregunta]);
+    _abrir(anterior);
   }
 
   // ── Test (Tarea 25) ──────────────────────────────────────────────────────
@@ -368,9 +601,13 @@ class BienvenidaController extends GetxController {
       case AccionDelAtras.volverAE1:
         volverAE1();
       case AccionDelAtras.yaTengoCuenta:
+        yaTengoCuenta();
       case AccionDelAtras.volver:
+        volver();
       case AccionDelAtras.avisarQueSeEnvia:
+        _avisar(TextosB.avisoEnvioTitulo, TextosB.avisoEnvioTexto);
       case AccionDelAtras.volverAIntentar:
+        volverAIntentarElRegistro();
       case AccionDelAtras.preguntaAnterior:
       case AccionDelAtras.irAT0:
       case AccionDelAtras.salirDeLaApp:

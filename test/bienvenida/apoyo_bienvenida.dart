@@ -3,12 +3,18 @@
 // Apoyo de las pruebas de la bienvenida. No termina en _test.dart, así que
 // `flutter test` no lo corre como suite. Todo dato es inventado.
 
+import 'dart:async';
+
 import 'package:get/get.dart';
+import 'package:ulima_plus/models/portal_sync_models.dart';
+import 'package:ulima_plus/models/registro_models.dart';
 import 'package:ulima_plus/models/user_model.dart';
 import 'package:ulima_plus/pages/bienvenida/bienvenida_controller.dart';
 import 'package:ulima_plus/pages/bienvenida/conversacion.dart';
 import 'package:ulima_plus/pages/login/login_controller.dart';
+import 'package:ulima_plus/pages/registro/registro_controller.dart';
 import 'package:ulima_plus/services/auth_service.dart';
+import 'package:ulima_plus/services/registro_service.dart';
 import 'package:ulima_plus/services/session_navigation.dart';
 
 UserModel alumnaDePrueba({bool setupComplete = true, int? careerId = 1}) =>
@@ -86,10 +92,66 @@ class AuthDeLaBienvenida extends AuthService {
   }
 }
 
+/// Un RegistroService sin red. Responde con [resultado], lanza [fallo] o
+/// espera a [pendiente], y cuenta las llamadas.
+class RegistroFalso implements RegistroService {
+  RegistroFalso({this.resultado, this.fallo, this.pendiente});
+
+  RegistroResult? resultado;
+  RegistroFailure? fallo;
+  Completer<RegistroResult>? pendiente;
+  int llamadas = 0;
+
+  @override
+  Future<RegistroResult> registrar({
+    required String code,
+    required String portalPassword,
+    required String passcode,
+    required String password,
+    required bool consent,
+  }) async {
+    llamadas++;
+    if (pendiente != null) return pendiente!.future;
+    if (fallo != null) throw fallo!;
+    return resultado!;
+  }
+}
+
+RegistroResult resultadoDelRegistro({
+  int cursos = 5,
+  List<String> avisos = const <String>[],
+}) => RegistroResult(
+  token: 'jwt-de-prueba',
+  user: alumnaDePrueba(setupComplete: false),
+  summary: PortalSyncSummary(
+    coursesCreated: 0,
+    sectionsCreated: 0,
+    sectionsUpdated: 0,
+    sessionsUpserted: 12,
+    enrollmentsUpserted: cursos,
+    enrollmentsWithdrawn: 0,
+    progressUpserted: 40,
+    syllabiUpserted: 0,
+  ),
+  warnings: <PortalSyncWarning>[
+    for (final a in avisos)
+      PortalSyncWarning.fromJson(<String, dynamic>{
+        'code': 'AVISO',
+        'message': a,
+      }),
+  ],
+);
+
 /// El controlador de la bienvenida con sus dobles, fuera de GetX.
 class Bienvenida {
-  Bienvenida({AuthDeLaBienvenida? auth, this.token})
-    : auth = auth ?? AuthDeLaBienvenida() {
+  Bienvenida({
+    AuthDeLaBienvenida? auth,
+    this.token,
+    RegistroFalso? registro,
+    this.adoptarFalla = false,
+  }) : auth = auth ?? AuthDeLaBienvenida(),
+       servicioDeRegistro =
+           registro ?? RegistroFalso(resultado: resultadoDelRegistro()) {
     Get.testMode = true;
     Get.put<AuthService>(this.auth);
     login = LoginController();
@@ -102,10 +164,25 @@ class Bienvenida {
         codigo: login.codeController.text,
         contrasena: login.passwordController.text,
       )),
+      crearRegistro: () => RegistroController(
+        service: servicioDeRegistro,
+        adoptarSesion: ({required token, required user}) async {
+          if (adoptarFalla) throw StateError('sin catálogos');
+          this.auth.usuario = user;
+        },
+        iniciarSesion: ({required code, required password}) =>
+            this.auth.login(code: code, password: password),
+      ),
+      avisar: (titulo, texto) => avisos.add(titulo),
     )..onStart();
   }
 
   final AuthDeLaBienvenida auth;
+  final RegistroFalso servicioDeRegistro;
+  final bool adoptarFalla;
+
+  /// Los títulos de los avisos que salen abajo (B-29).
+  final List<String> avisos = <String>[];
   String? token;
   final List<String> rutas = <String>[];
 

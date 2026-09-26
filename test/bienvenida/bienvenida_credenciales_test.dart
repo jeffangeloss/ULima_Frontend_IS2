@@ -12,11 +12,15 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get/get.dart';
 import 'package:ulima_plus/models/portal_sync_models.dart';
 import 'package:ulima_plus/models/registro_models.dart';
 import 'package:ulima_plus/models/user_model.dart';
+import 'package:ulima_plus/pages/bienvenida/conversacion.dart';
 import 'package:ulima_plus/pages/registro/registro_controller.dart';
 import 'package:ulima_plus/services/registro_service.dart';
+
+import 'apoyo_bienvenida.dart';
 
 /// Un servicio del registro cuya respuesta llega cuando la prueba lo pide.
 class _ServicioEnVuelo extends RegistroService {
@@ -183,5 +187,60 @@ void main() {
         'sí se creó y puedes recuperar la contraseña con “Ya tengo cuenta”.',
       );
     });
+  });
+
+  group('las credenciales en la conversación (RF-BIEN-9)', () {
+    tearDown(Get.reset);
+
+    test('el historial guarda los rótulos y nunca las contraseñas ni el código '
+        'del authenticator', () async {
+      final b = Bienvenida();
+      await b.visitar();
+      final c = b.controlador..responderAlSaludo(yaUsa: false);
+      c.registro!.codigoCtrl.text = '20230001';
+      c.enviarCodigoDeAlumno();
+      c.registro!
+        ..passwordCtrl.text = 'Secreta-Ulima-1'
+        ..confirmacionCtrl.text = 'Secreta-Ulima-1';
+      c.enviarContrasenas();
+      c.aceptarConsentimiento();
+      c.registro!.portalPasswordCtrl.text = 'Secreta-Portal-1';
+      c.enviarPortal();
+      c.registro!.passcodeCtrl.text = '482913';
+      await c.crearCuenta();
+      final textos = <String>[
+        for (final e in c.entradas)
+          if (e is BurbujaDeUlises) ...[
+            e.texto,
+            ...e.lineas,
+          ] else if (e is RespuestaDelAlumno)
+            e.texto,
+      ].join('|');
+      expect(textos, isNot(contains('Secreta-Ulima-1')));
+      expect(textos, isNot(contains('Secreta-Portal-1')));
+      expect(textos, isNot(contains('482913')));
+      expect(textos, contains('20230001'), reason: 'el código sí se muestra');
+    });
+
+    test('el controlador del registro se crea sin Get.put', () async {
+      final b = Bienvenida();
+      await b.visitar();
+      b.controlador.responderAlSaludo(yaUsa: false);
+      expect(b.controlador.registro, isNotNull);
+      expect(Get.isRegistered<RegistroController>(), isFalse);
+    });
+
+    test(
+      'se cierra al reiniciar la bienvenida y en el dispose de su visita',
+      () async {
+        final b = Bienvenida();
+        final visita = b.controlador.nuevaVisita();
+        await b.controlador.empezarVisita(visita);
+        b.controlador.responderAlSaludo(yaUsa: false);
+        final registro = b.controlador.registro!;
+        b.controlador.terminarVisita(visita);
+        expect(registro.cerrado, isTrue);
+      },
+    );
   });
 }
