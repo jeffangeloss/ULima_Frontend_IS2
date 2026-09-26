@@ -307,6 +307,7 @@ class PasswordResetOtpField extends StatefulWidget {
     this.boxFill,
     this.idleBorderColor = Colors.transparent,
     this.readOnly = false,
+    this.autofocus = false,
   });
 
   final TextEditingController controller;
@@ -325,6 +326,9 @@ class PasswordResetOtpField extends StatefulWidget {
 
   /// Durante la espera de la recarga, las casillas no se enfocan ni se editan.
   final bool readOnly;
+
+  /// Toma el foco al montarse, como los campos de la bienvenida (RF-BIEN-5).
+  final bool autofocus;
 
   @override
   State<PasswordResetOtpField> createState() => _PasswordResetOtpFieldState();
@@ -424,6 +428,7 @@ class _PasswordResetOtpFieldState extends State<PasswordResetOtpField> {
           child: TextField(
             controller: widget.controller,
             focusNode: _focusNode,
+            autofocus: widget.autofocus && !widget.readOnly,
             readOnly: widget.readOnly,
             canRequestFocus: !widget.readOnly,
             keyboardType: TextInputType.number,

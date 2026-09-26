@@ -118,8 +118,13 @@ class CampoDelCompositor extends StatelessWidget {
           hintText: pista,
           hintStyle: TextStyle(color: MaterialTheme.testMuted(b), fontSize: 15),
           filled: true,
-          fillColor: MaterialTheme.testChipBg(b),
-          focusColor: MaterialTheme.cardBg(b),
+          // Con foco, fondo cardBg (RF-BIEN-5). InputDecorator resuelve el
+          // relleno con el estado del foco, y focusColor no lo cambia.
+          fillColor: WidgetStateColor.resolveWith(
+            (estados) => estados.contains(WidgetState.focused)
+                ? MaterialTheme.cardBg(b)
+                : MaterialTheme.testChipBg(b),
+          ),
           suffixIcon: sufijo,
           border: borde,
           enabledBorder: borde,
@@ -510,8 +515,6 @@ class _CampoConEnvio extends StatelessWidget {
   );
 }
 
-/// El compositor de cada turno. Null en los turnos sin compositor.
-
 /// El campo con el texto que el botón de envío escucha.
 class _AlEscribir extends StatelessWidget {
   const _AlEscribir({required this.controlador, required this.builder});
@@ -587,8 +590,11 @@ class _E2 extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final login = c.login;
-    return Obx(
-      () => Column(
+    return Obx(() {
+      // Se lee aquí, en el alcance del Obx, y no dentro del builder del
+      // botón, que se construye aparte.
+      final esperando = c.esperando.value;
+      return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -623,7 +629,7 @@ class _E2 extends StatelessWidget {
             controlador: login.passwordController,
             builder: (context, vacio) => BotonPrincipal(
               texto: _Textos.entrar,
-              esperando: c.esperando.value,
+              esperando: esperando,
               alTocar: vacio ? null : c.entrar,
             ),
           ),
@@ -634,11 +640,12 @@ class _E2 extends StatelessWidget {
           ),
           EnlaceSecundario(texto: _Textos.soyNuevo, alTocar: c.soyNuevo),
         ],
-      ),
-    );
+      );
+    });
   }
 }
 
+/// El compositor de cada turno. Null en los turnos sin compositor.
 Widget? compositorDelTurno(
   BuildContext context,
   BienvenidaController c,
@@ -683,11 +690,20 @@ class _EnlacesDelRegistro extends StatelessWidget {
   );
 }
 
+/// Un turno con campo. El error local de la validación va bajo el campo, y
+/// después los botones y los enlaces (RF-BIEN-5).
 class _ConError extends StatelessWidget {
-  const _ConError({required this.c, required this.children});
+  const _ConError({
+    required this.c,
+    required this.campo,
+    this.despues = const <Widget>[],
+  });
 
   final BienvenidaController c;
-  final List<Widget> children;
+
+  /// El rótulo y el campo, hasta el que lleva el error debajo.
+  final List<Widget> campo;
+  final List<Widget> despues;
 
   @override
   Widget build(BuildContext context) => Obx(
@@ -695,8 +711,9 @@ class _ConError extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        ...children,
+        ...campo,
         if (c.errorLocal.value != null) ErrorLocal(c.errorLocal.value!),
+        ...despues,
       ],
     ),
   );
@@ -712,7 +729,7 @@ class _N1 extends StatelessWidget {
     final r = c.registro!;
     return _ConError(
       c: c,
-      children: [
+      campo: [
         const RotuloDelCampo(_Textos.rotuloCodigoDeAlumno),
         _AlEscribir(
           controlador: r.codigoCtrl,
@@ -726,33 +743,53 @@ class _N1 extends StatelessWidget {
             alEnviar: vacio ? null : c.enviarCodigoDeAlumno,
           ),
         ),
-        _EnlacesDelRegistro(c: c, conVolver: false),
       ],
+      despues: [_EnlacesDelRegistro(c: c, conVolver: false)],
     );
   }
 }
 
-class _N2 extends StatelessWidget {
+class _N2 extends StatefulWidget {
   const _N2({required this.c});
 
   final BienvenidaController c;
 
   @override
+  State<_N2> createState() => _N2State();
+}
+
+class _N2State extends State<_N2> {
+  /// «Siguiente» del teclado pasa de «Contraseña» a «Repetir contraseña»
+  /// (RF-BIEN-5).
+  final FocusNode _repetir = FocusNode(debugLabel: 'repetir');
+
+  @override
+  void dispose() {
+    _repetir.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final c = widget.c;
     final r = c.registro!;
-    return Obx(
-      () => _ConError(
+    return Obx(() {
+      // Se lee aquí, en el alcance del Obx, y no dentro del builder del
+      // campo, que se construye aparte.
+      final visible = r.passwordVisible.value;
+      return _ConError(
         c: c,
-        children: [
+        campo: [
           const RotuloDelCampo(_Textos.rotuloContrasena),
           CampoDelCompositor(
             controlador: r.passwordCtrl,
             pista: _Textos.pistaNueva,
-            oculto: !r.passwordVisible.value,
+            oculto: !visible,
             accion: TextInputAction.next,
             pistasDeAutocompletado: const [AutofillHints.newPassword],
+            alEnviar: (_) => _repetir.requestFocus(),
             sufijo: OjoDeLaContrasena(
-              visible: r.passwordVisible.value,
+              visible: visible,
               alTocar: r.passwordVisible.toggle,
             ),
           ),
@@ -764,17 +801,18 @@ class _N2 extends StatelessWidget {
               campo: CampoDelCompositor(
                 controlador: r.confirmacionCtrl,
                 pista: _Textos.pistaRepetir,
-                oculto: !r.passwordVisible.value,
+                oculto: !visible,
                 autofocus: false,
+                focusNode: _repetir,
                 alEnviar: (_) => c.enviarContrasenas(),
               ),
               alEnviar: vacio ? null : c.enviarContrasenas,
             ),
           ),
-          _EnlacesDelRegistro(c: c),
         ],
-      ),
-    );
+        despues: [_EnlacesDelRegistro(c: c)],
+      );
+    });
   }
 }
 
@@ -817,7 +855,7 @@ class _N4 extends StatelessWidget {
       final visible = r.portalPasswordVisible.value;
       return _ConError(
         c: c,
-        children: [
+        campo: [
           const RotuloDelCampo(_Textos.rotuloPortal),
           _AlEscribir(
             controlador: r.portalPasswordCtrl,
@@ -835,8 +873,8 @@ class _N4 extends StatelessWidget {
               alEnviar: vacio ? null : c.enviarPortal,
             ),
           ),
-          _EnlacesDelRegistro(c: c),
         ],
+        despues: [_EnlacesDelRegistro(c: c)],
       );
     });
   }
@@ -853,13 +891,18 @@ class _N5 extends StatelessWidget {
     final b = Theme.brightnessOf(context);
     return _ConError(
       c: c,
-      children: [
+      campo: [
         const RotuloDelCampo(_Textos.rotuloAuthenticator),
-        // El campo de seis casillas de hoy (RF-BIEN-7).
+        // El campo de seis casillas de hoy (RF-BIEN-7), que toma el foco como
+        // todo campo del compositor, salvo con lector (RF-BIEN-5 y
+        // RF-BIEN-16), con los colores de la conversación (RF-BIEN-14).
         PasswordResetOtpField(
           controller: r.passcodeCtrl,
-          palette: PasswordResetPalette.from(context),
+          palette: _paletaDeLasCasillas(context),
+          autofocus: !MediaQuery.accessibleNavigationOf(context),
         ),
+      ],
+      despues: [
         const SizedBox(height: 6),
         Text(
           _Textos.notaAuthenticator,
@@ -877,6 +920,33 @@ class _N5 extends StatelessWidget {
       ],
     );
   }
+}
+
+/// La paleta de las casillas de N5, con el relleno, el texto y el borde de
+/// foco de los campos del compositor (RF-BIEN-5 y RF-BIEN-14). Lo demás es lo
+/// de las pantallas de la contraseña, que las casillas no usan.
+PasswordResetPalette _paletaDeLasCasillas(BuildContext context) {
+  final b = Theme.brightnessOf(context);
+  final base = PasswordResetPalette.from(context);
+  return PasswordResetPalette(
+    background: base.background,
+    card: base.card,
+    cardBorder: base.cardBorder,
+    cardShadow: base.cardShadow,
+    fieldText: MaterialTheme.textPrimary(b),
+    fieldHint: MaterialTheme.testMuted(b),
+    fieldFill: MaterialTheme.testChipBg(b),
+    fieldLine: base.fieldLine,
+    focusedFieldLine: MaterialTheme.bienvenidaFoco(b),
+    cursor: MaterialTheme.bienvenidaFoco(b),
+    error: base.error,
+    buttonBackground: base.buttonBackground,
+    buttonForeground: base.buttonForeground,
+    disabledButtonBackground: base.disabledButtonBackground,
+    disabledButtonForeground: base.disabledButtonForeground,
+    buttonSide: base.buttonSide,
+    backIcon: base.backIcon,
+  );
 }
 
 class _Incierto extends StatelessWidget {

@@ -182,6 +182,34 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('el campo va en testChipBg y con el foco pasa a cardBg '
+      '(RF-BIEN-5)', (tester) async {
+    final b = Bienvenida();
+    await montarLaBienvenida(tester, b, argumentos: _expirada);
+    await avanzar(tester, 1500);
+    Color? fondo(Set<WidgetState> estados) {
+      final decorador = tester.widget<InputDecorator>(
+        find.byType(InputDecorator).first,
+      );
+      return WidgetStateProperty.resolveAs<Color?>(
+        decorador.decoration.fillColor,
+        estados,
+      );
+    }
+
+    expect(fondo(<WidgetState>{}), MaterialTheme.testChipBg(Brightness.light));
+    expect(
+      fondo(<WidgetState>{WidgetState.focused}),
+      MaterialTheme.cardBg(Brightness.light),
+    );
+    expect(
+      tester
+          .widget<InputDecorator>(find.byType(InputDecorator).first)
+          .isFocused,
+      isTrue,
+    );
+  });
+
   testWidgets('las burbujas de Ulises van en cardBg y las respuestas en '
       'bienvenidaPropia', (tester) async {
     final b = Bienvenida();

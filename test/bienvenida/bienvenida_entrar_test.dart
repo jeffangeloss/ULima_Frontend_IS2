@@ -533,6 +533,54 @@ void main() {
     );
   });
 
+  group('«Entrar» mientras espera (RF-BIEN-6 y BR-AUTH-F-08)', () {
+    setUp(() {
+      Get.testMode = true;
+      Get.reset();
+    });
+    tearDown(Get.reset);
+
+    testWidgets('el botón muestra su indicador mientras espera y lo quita al '
+        'responder', (tester) async {
+      final espera = Completer<void>();
+      final b = Bienvenida(
+        auth: AuthDeLaBienvenida(
+          errorDeLogin: 'Código o contraseña incorrectos.',
+        )..esperas.add(espera),
+      );
+      await montarLaBienvenida(
+        tester,
+        b,
+        argumentos: const {argumentoDeMotivo: MotivoDeLlegada.expirada},
+      );
+      await avanzar(tester, 1500);
+      await tester.enterText(find.byType(TextField).first, '20230001');
+      await tester.pump();
+      await tester.tap(find.byType(BotonDeEnvio));
+      await avanzar(tester, 2000);
+      await tester.enterText(
+        find.byWidgetPredicate(
+          (w) => w is TextField && w.controller == b.login.passwordController,
+        ),
+        'secreta-de-prueba',
+      );
+      await tester.pump();
+      await tester.tap(find.text(TextosDeLaBienvenida.entrar));
+      await tester.pump();
+      final boton = tester.widget<BotonPrincipal>(find.byType(BotonPrincipal));
+      expect(boton.esperando, isTrue);
+      expect(
+        find.descendant(
+          of: find.byType(BotonPrincipal),
+          matching: find.byType(CircularProgressIndicator),
+        ),
+        findsOneWidget,
+      );
+      espera.complete();
+      await avanzar(tester, 3000);
+    });
+  });
+
   group('el autocompletado (RF-BIEN-6)', () {
     setUp(() {
       Get.testMode = true;

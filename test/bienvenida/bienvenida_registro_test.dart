@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:ulima_plus/components/portal_consent/portal_consent_view.dart';
+import 'package:ulima_plus/configs/themes.dart';
 import 'package:ulima_plus/domain/bienvenida/bienvenida_turnos.dart';
 import 'package:ulima_plus/models/registro_models.dart';
 import 'package:ulima_plus/pages/bienvenida/bienvenida_controller.dart';
@@ -361,6 +362,105 @@ void main() {
       expect(find.text(TextosDeLaBienvenida.pistaNueva), findsNothing);
       expect(find.text(TextosDeLaBienvenida.yaTengoCuenta), findsOneWidget);
       expect(find.text(TextosDeLaBienvenida.volver), findsOneWidget);
+    });
+
+    /// Llega a N2 con un código válido.
+    Future<Bienvenida> enN2(WidgetTester tester) async {
+      final b = await enN1(tester);
+      await escribir(tester, 0, '20230001');
+      await tester.tap(find.byType(BotonDeEnvio));
+      await avanzar(tester, 2500);
+      return b;
+    }
+
+    /// Llega a N5 desde N2, aceptando el consentimiento.
+    Future<Bienvenida> enN5(WidgetTester tester) async {
+      final b = await enN2(tester);
+      await escribir(tester, 0, 'Contrasena1');
+      await escribir(tester, 1, 'Contrasena1');
+      await tester.tap(find.byType(BotonDeEnvio));
+      await avanzar(tester, 3000);
+      await tester.tap(find.text(TextosDeLaBienvenida.acepto));
+      await avanzar(tester, 2500);
+      await escribir(tester, 0, 'clave-de-prueba');
+      await tester.tap(find.byType(BotonDeEnvio));
+      await avanzar(tester, 2500);
+      expect(b.controlador.turno.value, _T.n5Authenticator);
+      return b;
+    }
+
+    FocusNode focoDe(WidgetTester tester, TextEditingController c) => tester
+        .widget<EditableText>(
+          find.byWidgetPredicate((w) => w is EditableText && w.controller == c),
+        )
+        .focusNode;
+
+    testWidgets('en N2, «Siguiente» del teclado pasa de «Contraseña» a '
+        '«Repetir contraseña» (RF-BIEN-5)', (tester) async {
+      final b = await enN2(tester);
+      final r = b.controlador.registro!;
+      expect(focoDe(tester, r.passwordCtrl).hasFocus, isTrue);
+      await tester.testTextInput.receiveAction(TextInputAction.next);
+      await tester.pump();
+      expect(focoDe(tester, r.confirmacionCtrl).hasFocus, isTrue);
+    });
+
+    testWidgets('N5 toma el foco, y sus casillas usan testChipBg, el texto en '
+        'textPrimary y el borde de foco en bienvenidaFoco (RF-BIEN-5 y '
+        'RF-BIEN-14)', (tester) async {
+      final b = await enN5(tester);
+      expect(
+        focoDe(tester, b.controlador.registro!.passcodeCtrl).hasFocus,
+        isTrue,
+      );
+      await tester.pump(const Duration(milliseconds: 200));
+      final casillas = tester
+          .widgetList<AnimatedContainer>(
+            find.descendant(
+              of: find.byType(PasswordResetOtpField),
+              matching: find.byType(AnimatedContainer),
+            ),
+          )
+          .map((c) => c.decoration! as BoxDecoration)
+          .toList();
+      expect(casillas, hasLength(6));
+      for (final c in casillas) {
+        expect(c.color, MaterialTheme.testChipBg(Brightness.light));
+      }
+      expect(
+        (casillas.first.border! as Border).top.color,
+        MaterialTheme.bienvenidaFoco(Brightness.light),
+        reason: 'la casilla activa',
+      );
+      b.controlador.registro!.passcodeCtrl.text = '4';
+      await tester.pump();
+      expect(
+        tester
+            .widget<Text>(
+              find.descendant(
+                of: find.byType(AnimatedContainer),
+                matching: find.text('4'),
+              ),
+            )
+            .style!
+            .color,
+        MaterialTheme.textPrimary(Brightness.light),
+      );
+    });
+
+    testWidgets('el error local va bajo el campo, antes de los enlaces '
+        '(RF-BIEN-5)', (tester) async {
+      await enN1(tester);
+      await escribir(tester, 0, '12ab');
+      await tester.tap(find.byType(BotonDeEnvio));
+      await tester.pump();
+      final error = tester.getRect(find.byType(ErrorLocal));
+      final campo = tester.getRect(find.byType(CampoDelCompositor));
+      final enlace = tester.getRect(
+        find.text(TextosDeLaBienvenida.yaTengoCuenta),
+      );
+      expect(error.top, greaterThanOrEqualTo(campo.bottom));
+      expect(error.bottom, lessThanOrEqualTo(enlace.top));
     });
 
     testWidgets('N5 trae las seis casillas y solo envía con «Crear mi '
