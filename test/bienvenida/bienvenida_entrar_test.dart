@@ -132,8 +132,23 @@ void main() {
       expect((await bien.entrarConGoogle()).tipo, TipoDeDesenlace.sesionPuesta);
     });
 
-    test('vaciarCampos borra el código y la contraseña', () {
-      final c = _controlador(_AuthDePrueba())..vaciarCampos();
+    test(
+      'cancelar Google con un usuario viejo en memoria no pone la sesión',
+      () async {
+        // Tras un 401 el usuario queda en memoria sin token (RF-BIEN-21), y
+        // cancelar el selector no hace nada (RF-BIEN-6).
+        final auth = _AuthDePrueba(google: 'cancelar').._usuario = _alumna();
+        final c = _controlador(auth);
+        expect((await c.entrarConGoogle()).tipo, TipoDeDesenlace.cancelado);
+      },
+    );
+
+    test('vaciarCampos borra el código, la contraseña y un desenlace de Google '
+        'en web sin atender', () {
+      final c = _controlador(_AuthDePrueba())
+        ..desenlaceDeGoogleEnWeb.value = const DesenlaceDelLogin.sesionPuesta()
+        ..vaciarCampos();
+      expect(c.desenlaceDeGoogleEnWeb.value, isNull);
       expect(c.codeController.text, '');
       expect(c.passwordController.text, '');
       expect(c.passwordVisible.value, isFalse);
@@ -325,6 +340,21 @@ void main() {
           const DesenlaceDelLogin.sesionPuesta();
       expect(b.controlador.turno.value, TurnoDeLaBienvenida.pasoAlHorario);
       expect(b.login.desenlaceDeGoogleEnWeb.value, isNull);
+    });
+
+    test('un desenlace de Google en web fuera de E1 se descarta, y el '
+        'siguiente, aunque sea igual, llega en E1', () async {
+      final b = Bienvenida();
+      await b.visitar();
+      b.login.desenlaceDeGoogleEnWeb.value =
+          const DesenlaceDelLogin.sesionPuesta();
+      expect(b.login.desenlaceDeGoogleEnWeb.value, isNull);
+      expect(b.controlador.turno.value, TurnoDeLaBienvenida.recibimiento);
+      b.controlador.responderAlSaludo(yaUsa: true);
+      b.auth.usuario = alumnaDePrueba();
+      b.login.desenlaceDeGoogleEnWeb.value =
+          const DesenlaceDelLogin.sesionPuesta();
+      expect(b.controlador.turno.value, TurnoDeLaBienvenida.pasoAlHorario);
     });
 
     test(

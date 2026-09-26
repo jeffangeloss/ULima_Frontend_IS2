@@ -83,8 +83,11 @@ class BienvenidaController extends GetxController {
   void onInit() {
     super.onInit();
     _googleEnWeb = ever<DesenlaceDelLogin?>(_login.desenlaceDeGoogleEnWeb, (d) {
-      if (d == null || turno.value != TurnoB.e1Codigo) return;
+      if (d == null) return;
+      // Se consume siempre, así un desenlace igual al anterior vuelve a
+      // llegar. Solo cuenta mientras E1 está abierto (RF-BIEN-6).
       _login.desenlaceDeGoogleEnWeb.value = null;
+      if (turno.value != TurnoB.e1Codigo) return;
       _trasGoogle(d);
     });
   }

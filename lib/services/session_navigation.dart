@@ -74,7 +74,10 @@ bool offAllSinTransicion(String ruta, {Object? arguments}) {
 /// mostrar «Sesión expirada», y la intro navega una sola vez (decisión S-20).
 ///
 /// Desde la intro navega sin transición y con la [pose] del logo como
-/// argumento (RF-SPL-4 y RF-SPL-21). Los demás llamadores no cambian, y
+/// argumento (RF-SPL-4 y RF-SPL-21). El [motivo] viaja como argumento de
+/// ruta, y lo pasan el 401 del ApiClient (`expirada`) y el restablecimiento
+/// de contraseña (`restablecida`) (RF-BIEN-1 y B-21). El cierre de sesión y
+/// «Volver a iniciar sesión» del Perfil no pasan ninguno, y
 /// `onPressed: offAllToLogin` sigue compilando porque los parámetros son
 /// nombrados y opcionales.
 bool offAllToLogin({

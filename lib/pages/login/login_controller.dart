@@ -94,6 +94,8 @@ class LoginController extends GetxController {
     passwordController.clear();
     errorMessage.value = null;
     passwordVisible.value = false;
+    // Un desenlace de Google en web sin atender no llega a la visita nueva.
+    desenlaceDeGoogleEnWeb.value = null;
   }
 
   /// Entra con código o usuario y contraseña, sin navegar.
@@ -128,6 +130,9 @@ class LoginController extends GetxController {
   Future<DesenlaceDelLogin> entrarConGoogle() async {
     errorMessage.value = null;
     submitting.value = true;
+    // Tras un 401 el usuario viejo sigue en memoria sin token, así que la
+    // sesión solo queda puesta si entra un usuario nuevo (RF-BIEN-21).
+    final antes = _auth.currentUser;
     try {
       final error = await _auth.loginWithGoogle();
       if (error != null) {
@@ -135,7 +140,8 @@ class LoginController extends GetxController {
         return DesenlaceDelLogin.error(error);
       }
       // `loginWithGoogle` devuelve null también cuando la persona cancela.
-      return _auth.currentUser == null
+      final despues = _auth.currentUser;
+      return despues == null || identical(despues, antes)
           ? const DesenlaceDelLogin.cancelado()
           : const DesenlaceDelLogin.sesionPuesta();
     } catch (_) {
