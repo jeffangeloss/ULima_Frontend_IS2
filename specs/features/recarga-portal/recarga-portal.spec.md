@@ -38,9 +38,9 @@ targets:
 > opción que la spec adopta por defecto, y esa opción tampoco cuenta como aprobada.
 > Contraparte del backend. `ULima_Backend_IS2/specs/features/recarga-portal/recarga-portal.spec.md`
 > (RS-BE-48 a RS-BE-60), también en borrador, en la rama `feat/recarga-notas-asistencia`
-> (commit `77ed7a3`). Esta spec consume las rutas que ese borrador propone y no inventa ningún
-> campo. Lo que al contrato le falta para la maqueta, y el máximo de presupuesto que la app le
-> pide bajar, está en «Contrato que se consume», en «Huecos del contrato».
+> (commit `c0c918c`). Esta spec consume las rutas que ese borrador propone y no inventa ningún
+> campo. Lo que al contrato le falta para la maqueta, o no garantiza, está en «Contrato que se
+> consume», en «Huecos del contrato».
 > Enmienda, también como propuesta, `grades.spec.md`, `course-detail.spec.md`,
 > `portal-sync.spec.md`, `academic-record.spec.md` (RF-REC-6) y `schedule.spec.md` (ver
 > «Cambios en otras specs»). La rama `feat/recarga-notas-asistencia-fe` parte de `origin/main`
@@ -104,7 +104,7 @@ Diagnóstico sobre `19fed1b`.
   vez.
 - **Importación.** `/portal-sync` pide consentimiento en cada visita (RF-REC-6), contraseña y
   código, y gasta 1 de 5 cupos por hora. Su duración con las fases de delegados y de asistencia
-  no se ha medido frente al plazo de 90 s de la app. Las únicas mediciones, de 40,7 s y 47,7 s
+  sigue sin medirse frente al plazo de 90 s de la app. Las únicas mediciones, de 40,7 s y 47,7 s
   (2026-09-02, con el backend en Lima), son anteriores a esas dos fases. Al terminar borra
   `CalculadoraController` con `Get.delete(force: true)` (`portal_sync_controller.dart:140-145`).
 - **Estilos que la maqueta reutiliza.** La hoja «Selecciona un Curso» usa `primary` al 10 % de
@@ -140,8 +140,9 @@ estado.
 - **`recargar({password, passcode})`** hace `POST /portal-sync/refresh` con el cuerpo exacto
   `{ "credentials": { "password": …, "passcode": … }, "consent": true }`. No manda `cookies`, ni el
   código del alumno, ni ninguna otra clave, porque el backend valida en modo estricto. El plazo de
-  la app es de 90 s, el mismo de la importación (D18), y solo alcanza si el peor caso del backend
-  queda por debajo, lo que exige bajar el máximo de su presupuesto (hueco 5). Con `200` aplica
+  la app es de 90 s, el mismo de la importación (D18). El borrador del backend acota su peor caso
+  a esos 90 s, contados desde que recibe la petición, así que el tiempo de la red del teléfono
+  queda fuera de esa cota (hueco 5). Con `200` aplica
   `view` a `vista` y guarda los estados por curso del último resultado. Con error deja un
   `AvisoRecarga` (título, cuerpo y acción, RF-RCG-4) en `ultimoAviso`.
 - **Plazo vencido o fallo de red** (D23). El backend puede terminar y escribir después de que la
@@ -263,11 +264,13 @@ terminar, vacía los dos campos.
   asistencia leídas antes siguen a la vista.
 - **Plazo vencido o fallo de red.** Antes de cerrar la hoja, `recargar()` vuelve a pedir la vista
   (RF-RCG-1, D23). Si esa vista muestra que la recarga sí se guardó, la hoja sigue el camino del
-  éxito, sin línea de lectura parcial. Si no, sigue el del error. Con el máximo de presupuesto del
-  hueco 5, el backend ya terminó cuando vence el plazo de la app, así que un «Reintentar»
-  inmediato no choca con `409 PORTAL_REFRESH_IN_PROGRESS`. Tras un fallo de red el backend puede
-  seguir trabajando hasta su peor caso, y un reintento en ese lapso recibe ese `409`, cuyo aviso
-  ya pide esperar.
+  éxito, sin línea de lectura parcial. Si no, sigue el del error. Con el presupuesto por defecto
+  del backend, de 60 000, su peor caso es de 82 s desde que recibe la petición, así que el backend
+  ya terminó cuando vence el plazo de la app, salvo que la ida y la vuelta por la red del teléfono
+  sumen más de 8 s. Con un presupuesto mayor, hasta el máximo de 68 000, ese margen se achica hasta
+  desaparecer (hueco 5). En ese caso, y tras un fallo de red, el backend puede seguir trabajando
+  hasta su peor caso, y un «Reintentar» en ese lapso recibe `409 PORTAL_REFRESH_IN_PROGRESS`, cuyo
+  aviso ya pide esperar.
 - **`401`.** Es la expiración del JWT y la maneja `ApiClient` como siempre, que cierra la sesión.
   El backend nunca responde `401` por un fallo del portal.
 
@@ -314,6 +317,14 @@ acción, porque el aviso reemplaza a la franja y sin acción el alumno no tendr�
 abrir la hoja. `Reintentar` abre otra vez la hoja, vacía, también tras un `429` o un `403`, en
 los que el backend vuelve a responder lo mismo mientras dure la causa. El aviso sigue a la vista
 mientras la hoja está abierta y se borra al enviar.
+
+Dos filas cubren más de un caso del backend, y la app no las distingue porque nunca lee el
+`message`. El `409 IMPORT_REQUIRED` llega antes de tocar el portal, sin período activo o sin
+matrícula activa, y también después de iniciar sesión, cuando la ULima ya muestra otro ciclo
+(decisión B19). El mismo cuerpo y «Cargar mis datos» sirven para los dos, porque la importación
+es la que activa el ciclo nuevo, aunque el segundo caso sí gasta una de las recargas de la hora.
+El `409 PORTAL_REFRESH_IN_PROGRESS` llega con otra recarga del mismo alumno en curso y también con
+una importación con contraseña en curso, y su cuerpo vale para las dos.
 
 ### RF-RCG-5. La fila «Notas oficiales» en la calculadora (cambio 1)
 
@@ -694,9 +705,15 @@ Detalle en `docs/specs/api-contracts.md`, secciones Grades, Official Grades, Sch
 Detail y Portal Sync.
 
 - `POST /portal-sync/refresh` (propuesto, RS-BE-49 a RS-BE-56). Cuerpo, errores, `details.kind` y
-  `details.retryAfterMinutes` del `429`, estados por curso y `view`. Sus dos fases leen los menús
-  de Asistencia y de Nota con `parseAulas`, así que sin RS-BE-48 toda recarga termina en
-  `502 PORTAL_UNREADABLE` (decisión B1).
+  `details.retryAfterMinutes` del `429`, estados por curso y `view`, con el `409 IMPORT_REQUIRED`
+  por cambio de ciclo (decisión B19) y la cota del presupuesto de RS-BE-50 (hueco 5). Sus dos
+  fases leen los menús de Asistencia y de Nota con `parseAulas`, así que sin RS-BE-48 toda
+  recarga termina en `502 PORTAL_UNREADABLE` (decisión B1).
+- `POST /portal-sync/import`, que el borrador del backend amplía de forma aditiva con el
+  `409 PORTAL_REFRESH_IN_PROGRESS`, cuando hay una recarga del mismo alumno en curso, y con
+  `details.kind` en sus dos `429` (RS-BE-50). `/portal-sync` los muestra con el `message` del
+  backend, igual que hoy muestra el `429` y todo código que no traduce
+  (`portal_sync_service.dart:111-118`), así que la app no cambia por ellos.
 - `GET /grades/me/ulima` (propuesto, RS-BE-57).
 - `asistenciaLeidaEn` en `secciones` de `GET /schedule/me/sessions` y de
   `GET /course-detail/sections` y `GET /course-detail/sections/:sectionId` (propuesto, RS-BE-58).
@@ -710,8 +727,7 @@ Detail y Portal Sync.
 ### Huecos del contrato
 
 Lo que la maqueta o la app piden y el contrato propuesto no trae o no garantiza. La spec no
-inventa campos y resuelve cada uno con lo que ya existe, como opción por defecto, salvo el hueco
-5, que pide un cambio al borrador del backend.
+inventa campos y resuelve cada uno con lo que ya existe, como opción por defecto.
 
 1. `GET /grades/me/ulima` no trae la sigla de la evaluación del sílabo, y la fila de `/mis-notas`
    la muestra como prefijo, como hoy. Por defecto la app la toma de `syllabi` en
@@ -725,15 +741,18 @@ inventa campos y resuelve cada uno con lo que ya existe, como opción por defect
 4. El contrato no dice si la ULima redondea el promedio final, y de eso depende cuál sería el
    umbral único si el dueño elige una de las dos alternativas de la decisión B9. La opción por
    defecto de la app conserva los dos umbrales de hoy y no depende de ese dato.
-5. El presupuesto del backend no garantiza el plazo de 90 s de la app (D18). RS-BE-50 valida
-   `PORTAL_REFRESH_BUDGET_MS` entre 20 000 y 80 000, y su peor caso es el presupuesto, más la
-   última petición en vuelo (`PORTAL_TIMEOUT_MS`, 8 s por defecto), la transacción y el cierre de
-   sesión (otros 8 s). Con los 60 000 por defecto queda en unos 76 s más la transacción, pero con
-   80 000 pasa de 96 s y la app dejaría de esperar antes de que el backend termine y escriba. Por
-   defecto, la app pide al backend bajar el máximo de esa validación a 65 000, con lo que el peor
-   caso queda en unos 81 s más la transacción y deja margen para la red del teléfono.
-   Alternativa, dejar el máximo en 80 000 y subir el plazo de la app a 105 s (D18). En los dos
-   casos, D23 cubre la escritura que llega después del plazo.
+5. La cota del presupuesto del backend no cuenta la red del teléfono (D18). RS-BE-50 valida
+   `PORTAL_REFRESH_BUDGET_MS` entre 20 000 y 68 000, con 60 000 por defecto, y usa el menor
+   entre ese valor y 90 000 − 2 · `PORTAL_TIMEOUT_MS` − 6 000. El presupuesto cubre también el
+   inicio de sesión, y el peor caso suma el presupuesto, una petición en vuelo
+   (`PORTAL_TIMEOUT_MS`, 8 s por defecto), 6 s de transacción y respuesta y el cierre de sesión
+   (otros 8 s). Con los valores por defecto son 82 s, y con el máximo llegan a 90 s, siempre
+   contados desde que el backend recibe la petición. Con el valor por defecto quedan unos 8 s
+   para la ida y la vuelta por la red, y con el máximo no queda ninguno, así que la app puede
+   dejar de esperar justo antes de que el backend responda. Por defecto, la app adopta esa cota
+   sin pedir otro cambio al backend, y D23 cubre la escritura que llega después del plazo.
+   Alternativas, pedir que la fórmula reserve además un margen para la red, por ejemplo 5 s, con
+   un máximo de 63 000, o subir el plazo de la app (D18).
 
 ## Cambios en otras specs
 
@@ -748,14 +767,18 @@ Todos son propuesta y siguen el estado de esta spec.
 - `specs/features/portal-sync/portal-sync.spec.md`. BR-SYNC-F-06 recarga la calculadora en vez de
   borrarla (RF-RCG-11), la hoja reutiliza `PasswordResetOtpField` con cuatro parámetros
   opcionales que `/portal-sync` no usa (RF-RCG-2) y el aviso de `IMPORT_REQUIRED` es una entrada
-  nueva a `/portal-sync`.
+  nueva a `/portal-sync`. Anota también que la pantalla muestra con el `message` del backend el
+  `409 PORTAL_REFRESH_IN_PROGRESS` y el `429` con `details.kind` que la importación suma en el
+  borrador del backend, sin cambio de código.
 - `specs/features/academic-record/academic-record.spec.md`. RF-REC-6 sigue rigiendo la
   importación. La recarga no pasa por `PortalConsentView` y lleva su propio aviso (decisión B4).
 - `specs/features/schedule/schedule.spec.md`. `HorarioController.reload()` también corre una vez
   después de una recarga, desde `RecargaUlimaService`, y las secciones traen `asistenciaLeidaEn`.
 - `docs/specs/api-contracts.md`. Las dos rutas nuevas, el campo nuevo, la sección Official Grades,
   que faltaba, las correcciones de la importación que ya recoge el contrato del backend
-  (representantes, asistencia y `400 INVALID_REQUEST_BODY`) y el hueco 5 del presupuesto.
+  (representantes, asistencia y `400 INVALID_REQUEST_BODY`), lo que la importación comparte con
+  la recarga (tope de rechazos, guarda de un inicio de sesión a la vez y `details.kind`), el
+  `409 IMPORT_REQUIRED` por cambio de ciclo y la cota del presupuesto (hueco 5).
 - `docs/specs/feature-index.md`. La fila 21.
 - `README.md:102`, siempre, en la frase que nombra la entrada a `/mis-notas` (RF-RCG-5). La misma
   línea cambia además la fuente de `/mis-notas` con la decisión B10 y la frase «Nunca se
@@ -782,7 +805,7 @@ Todos son propuesta y siguen el estado de esta spec.
 Ninguna está aprobada. La numeración no cambia aunque se resuelvan, porque la citan los
 requisitos.
 
-### Decisiones del backend que cambian la app (B1 a B18)
+### Decisiones del backend que cambian la app (B1 a B19)
 
 Llevan el número de «Decisiones abiertas» de la spec del backend, y su opción por defecto es la de
 allá, salvo B9. La opción por defecto del backend para B9 cambia la calculadora aprobada, así que
@@ -793,7 +816,7 @@ alternativas.
 | --- | --- | --- | --- |
 | B1 | RS-BE-48 como corrección aparte | Sí. La app no cambia, pero ningún botón funciona sin RS-BE-48 en producción. Los menús de Asistencia y de Nota llegan con el mismo formato de lista, RS-BE-51 y RS-BE-52 leen los dos con `parseAulas` y, sin RS-BE-48, toda recarga termina en `502 PORTAL_UNREADABLE`, que la app muestra con su aviso. Por eso la app se publica solo con RS-BE-48 desplegado («Verificación»). | Publicarlo junto con la recarga, con la misma condición de publicación. |
 | B2 | Endpoint propio o importación completa | `POST /portal-sync/refresh` y la hoja de RF-RCG-2. | Los botones abren `/portal-sync` con el consentimiento de RF-REC-6 en cada toque, y `/mis-notas` necesita además B13. |
-| B3 | Cupo y tope de rechazos | 5 por hora y 3 rechazos cada 15 minutos. La app muestra los textos de RF-RCG-4 sin citar números. | Otros números, que no cambian la app. |
+| B3 | Cupo, tope de rechazos y guarda de inicio de sesión | 5 por hora y 3 rechazos cada 15 minutos, contados junto con los de la importación con contraseña, que además comparte con la recarga la guarda de un solo inicio de sesión a la vez. La app muestra los textos de RF-RCG-4 sin citar números. | Otros números o una guarda solo entre recargas, que no cambian la app. |
 | B4 | Consentimiento en cada recarga | El aviso de la hoja aprobada y `consent: true` en cada recarga, sin tocar `PortalConsentView`. | Una casilla sin marcar, `Acepto que ULima++ lea en miUlima mis notas parciales y mi asistencia.`, que enciende «Actualizar» junto con los dos campos. |
 | B5 | Tabla, hora de lectura y migración `0015` | La app depende solo de la forma del contrato. | Otro guardado con la misma forma no cambia la app. |
 | B6 | Nota simulada cuando la ULima publica la misma evaluación | Se ve la de la ULima, la simulada no se borra y vuelve si la ULima la retira (RF-RCG-7). | Borrar la simulada al guardar la de la ULima. |
@@ -809,6 +832,7 @@ alternativas.
 | B16 | Quién carga las evaluaciones del sílabo en ciclos futuros | La carga manual del dueño. Sin ella, todas las notas de la ULima quedan sin pareja y solo se ven en `/mis-notas`. | Una spec aparte para un cargador. |
 | B17 | Sondeos de solo lectura | Autorizados para V1 a V4 del backend. | Implementar sin sondear. |
 | B18 | Mostrar el «Promedio» de la ULima | No se muestra. | Mostrarlo en la tarjeta de `/mis-notas` cuando valga más que 0, con su campo en el contrato. |
+| B19 | Cambio de ciclo durante la recarga | El backend lee el ciclo de la ULima tras iniciar sesión y, si difiere del período activo, responde `409 IMPORT_REQUIRED` sin escribir nada y sin devolver el cupo. La app muestra el aviso de `IMPORT_REQUIRED` con «Cargar mis datos» (RF-RCG-4). Si el ciclo nuevo todavía no empieza, la importación no lo activa y la recarga sigue en ese `409` hasta la fecha de inicio, así que en ese lapso «Cargar mis datos» no lo resuelve. | Un código propio para ese caso, con su propio aviso en la app, que no lleve a `/portal-sync` a un alumno cuyo ciclo todavía no empieza. |
 
 Texto propuesto para B12, en el PR de implementación. En `AGENTS.md` y `KNOWLEDGE.md`, la regla
 pasa a decir `Las notas que el alumno registra en la calculadora son personales y no oficiales (simulated_grades). La calculadora muestra además, fijas y con la marca «ULima», las notas parciales que publica la ULima (GET /grades/me/ulima).`
@@ -843,7 +867,7 @@ de los tres aprobados, como anota «Qué no cambia de la calculadora».
 | D15 | Aviso de sílabo que no coincide | La línea al final de la tarjeta del curso, que es un cambio a la `CursoCard` más allá de los tres aprobados | Sin aviso, o un aviso en la fila «Notas oficiales» | RF-RCG-7 |
 | D16 | Refresco de la calculadora tras importar | `recargarTodo()` en vez de `Get.delete` | Dejar el borrado y cerrar `/mis-notas` antes de abrir `/portal-sync` | RF-RCG-11 |
 | D17 | Vida del aviso rojo | En memoria, hasta el siguiente envío, «Cargar mis datos», el cierre de sesión o el cierre de la app | Guardarlo para mostrarlo al volver a abrir la app | RF-RCG-4 |
-| D18 | Plazo de la app | 90 s, como la importación, siempre que el backend baje el máximo de `PORTAL_REFRESH_BUDGET_MS` a 65 000, con lo que su peor caso queda en unos 81 s más la transacción (hueco 5) | Dejar el máximo del backend en 80 000 y subir el plazo de la app a 105 s, más que el de la importación | RF-RCG-1 |
+| D18 | Plazo de la app | 90 s, como la importación, con la cota del presupuesto de RS-BE-50, cuyo peor caso es de 82 s con los valores por defecto y de 90 s con el máximo de 68 000, contados desde que el backend recibe la petición (hueco 5) | Pedir al backend que su fórmula reserve un margen para la red, o subir el plazo de la app a unos 100 s, más que el de la importación | RF-RCG-1 y RF-RCG-3 |
 | D19 | Aviso de éxito | Ninguno, la hora nueva ya lo dice | Un `SnackBar` con `Notas y asistencia actualizadas.` | RF-RCG-3 |
 | D20 | Carpeta de pruebas | `test/HU37_jeff/`, la misma historia del backend | Otra carpeta | «Pruebas previstas» |
 | D21 | Dónde vive el código | `RecargaUlimaService` como `GetxService` permanente, piezas en `lib/components/recarga_ulima/` y funciones puras en `lib/domain/recarga_ulima/` | Sumar la recarga a `PortalSyncService`, que no es un servicio compartido | RF-RCG-1 |
@@ -863,9 +887,10 @@ Todas van en `test/HU37_jeff/` (D20), con datos inventados y el alumno `20230001
 - `recarga_ulima_service_test.dart` (unitaria con `ApiClient` simulado, RF-RCG-1, RF-RCG-3 y
   RF-RCG-4). El cuerpo tiene exactamente `credentials` y `consent: true`, sin `cookies` ni código
   de alumno. Cada fila de la tabla de RF-RCG-4 da su título, su cuerpo y su acción, con `1 minuto`
-  y `N minutos`. El plazo de 90 s y un fallo de red dan su aviso. Un `200` aplica `view`, guarda
-  los estados y llama una sola vez a `HorarioController.reload()`, con un doble espía registrado,
-  cuyo `Future` queda en `recargaHorario`. Un error no toca la vista ni llama a `reload()`. Una
+  y `N minutos`. Un `409 IMPORT_REQUIRED` con el mensaje del cambio de ciclo da el mismo aviso
+  que el de la condición previa (B19). El plazo de 90 s y un fallo de red dan su aviso. Un `200`
+  aplica `view`, guarda los estados y llama una sola vez a `HorarioController.reload()`, con un
+  doble espía registrado, cuyo `Future` queda en `recargaHorario`. Un error no toca la vista ni llama a `reload()`. Una
   segunda llamada durante `enviando` no sale. `clear()` vacía todo. Con el servicio registrado,
   `AuthService.logout()` llama a `clear()`, y sin él no falla. Con un registrador espía, ningún
   mensaje contiene la contraseña ni el código. Casos del dueño de los datos (RF-RCG-1), cada uno
@@ -944,6 +969,6 @@ Todas van en `test/HU37_jeff/` (D20), con datos inventados y el alumno `20230001
   la fila, la franja, la hoja con el teclado abierto, el aviso y el bloque de asistencia, y la
   misma revisión en Android con TalkBack.
 - La app se publica solo con el backend de RS-BE-48 a RS-BE-60 desplegado, incluido RS-BE-48,
-  sin el cual ningún botón funciona (decisión B1), con un máximo de `PORTAL_REFRESH_BUDGET_MS`
-  compatible con el plazo de D18 (65 000 o menos con el plazo de 90 s, hueco 5), la migración
-  `0015` aplicada con su aprobación de BD y la medición de B15 hecha.
+  sin el cual ningún botón funciona (decisión B1), con `PORTAL_REFRESH_BUDGET_MS` dentro de la
+  cota de RS-BE-50, que lo hace compatible con el plazo de D18 (hueco 5), la migración `0015`
+  aplicada con su aprobación de BD y la medición de B15 hecha.

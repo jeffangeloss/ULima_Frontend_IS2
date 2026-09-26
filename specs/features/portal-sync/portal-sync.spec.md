@@ -27,8 +27,11 @@ targets:
 > cuatro parámetros opcionales (alto de casilla, relleno, borde en reposo y solo lectura) cuyo
 > valor por defecto deja esta pantalla como está, y su propio servicio,
 > `RecargaUlimaService`, contra `POST /portal-sync/refresh`. El aviso de `IMPORT_REQUIRED` de esa
-> hoja es una entrada más a `/portal-sync`, que espera su resultado. Mientras la enmienda no se
-> apruebe, rige el texto de esta spec.
+> hoja es una entrada más a `/portal-sync`, que espera su resultado. El borrador del backend suma
+> a la importación el `409 PORTAL_REFRESH_IN_PROGRESS`, cuando hay una recarga del mismo alumno
+> en curso, y `details.kind` en sus dos `429`. Esta pantalla los muestra con el `message` del
+> backend, como hoy muestra el `429` y todo código que no traduce, sin cambio de código. Mientras
+> la enmienda no se apruebe, rige el texto de esta spec.
 
 ## User Stories
 
