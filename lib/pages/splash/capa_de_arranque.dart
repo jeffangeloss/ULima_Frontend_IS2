@@ -15,11 +15,15 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 
 import '../../components/logo/escena_del_logo.dart';
 import '../../components/logo/pintor_del_logo.dart';
+import '../../services/session_navigation.dart';
 import '../../services/splash_variante_service.dart';
+import '../home/home_page.dart' show abrirEnHorario;
 import 'estado_de_la_capa.dart';
+import 'puntos_de_aterrizaje.dart';
 import 'salidas.dart';
 import 'variantes/variantes.dart';
 
@@ -97,6 +101,12 @@ class CapaDeArranque extends StatefulWidget {
       _estado?._alPintarLaBienvenida();
 
   @visibleForTesting
+  static EscenaDeSalida? get salidaActual => _estado?._salida.value;
+
+  /// La opacidad de lo que pinta la capa, que solo baja en un fundido.
+  static double get opacidad => _estado?._opacidad.value ?? 1;
+
+  @visibleForTesting
   static void reiniciar() => _estado = null;
 
   @override
@@ -128,6 +138,24 @@ class _CapaDeArranqueState extends State<CapaDeArranque>
   bool _preparada = false;
   Offset _centro = Offset.zero;
   Size _vista = Size.zero;
+  final ValueNotifier<EscenaDeSalida?> _salida = ValueNotifier<EscenaDeSalida?>(
+    null,
+  );
+  bool _sinMovimiento = false;
+
+  /// Los ms de la intro en que terminó la carga, y la ruta que devolvió.
+  double? _cargaLista;
+  String? _destino;
+
+  Duration _inicioDeFase = Duration.zero;
+  int _cuadrosEsperando = 0;
+  double _msInicioDeSalida = 0;
+  DestinoDeLaSalida? _destinoDeLaSalida;
+  double _duracionDelFundido = 300;
+
+  bool get _haciaHome => _destino == '/home';
+
+  double get _msDeFase => (_ahora - _inicioDeFase).inMicroseconds / 1000;
 
   /// Los ms de la intro, contados desde que la variante está elegida.
   double get _ms => _inicioDeLaIntro == null
@@ -153,6 +181,7 @@ class _CapaDeArranqueState extends State<CapaDeArranque>
     _medir();
     if (_preparada || widget.intro == null) return;
     _preparada = true;
+    _sinMovimiento = MediaQuery.disableAnimationsOf(context);
     // El primer cuadro es el nativo, sin «++» y sin giro (RF-SPL-5).
     _escena.value = EscenaDelLogo.reposo(
       centro: _centro,
@@ -172,13 +201,33 @@ class _CapaDeArranqueState extends State<CapaDeArranque>
     );
   }
 
-  /// La carga corre en paralelo con la intro desde el montaje. La Tarea 13
-  /// le suma lo que pasa al terminar.
+  /// La carga corre en paralelo con la intro desde el montaje (RF-SPL-4).
   void _empezarLaCarga() {
-    unawaited(widget.intro!.carga().then((_) {}, onError: (Object _) {}));
+    unawaited(widget.intro!.carga().then(_alCargar, onError: _alFallarLaCarga));
+  }
+
+  void _alCargar(String ruta) {
+    if (!mounted) return;
+    _destino = ruta;
+    _cargaLista = _ms;
+  }
+
+  /// Antes de registrar los servicios no hay ruta segura y la intro sigue en
+  /// su bucle, como hoy queda quieto el nativo. Después, la intro hace el
+  /// relevo a la bienvenida sin borrar nada (RF-SPL-18).
+  void _alFallarLaCarga(Object error, StackTrace pila) {
+    debugPrint('Arranque. La carga falló con $error');
+    if (error is FalloAntesDeLosServicios) return;
+    _alCargar('/login');
   }
 
   Future<void> _elegirVariante() async {
+    if (_sinMovimiento) {
+      // Sin variante, y sin leer ni escribir la preferencia (RF-SPL-14).
+      _inicioDeLaIntro = _ahora;
+      _fase.value = FaseDeLaCapa.intro;
+      return;
+    }
     final intro = widget.intro!;
     final tipo = await intro.variantes.elegir(intro.random);
     if (!mounted || _fase.value != FaseDeLaCapa.eligiendo) return;
@@ -189,16 +238,157 @@ class _CapaDeArranqueState extends State<CapaDeArranque>
 
   void _alTic(Duration transcurrido) {
     _ahora = transcurrido;
-    if (_fase.value == FaseDeLaCapa.intro) {
-      _escena.value = _variante!.escena(
-        _ms,
-        centro: _centro,
-        radio: radioDelNativo,
-      );
+    switch (_fase.value) {
+      case FaseDeLaCapa.intro:
+        _avanzarLaIntro();
+      case FaseDeLaCapa.esperandoCabecera:
+        _esperarLaCabecera();
+      case FaseDeLaCapa.salida:
+        _avanzarLaSalida();
+      case FaseDeLaCapa.fundido:
+        _avanzarElFundido();
+      case FaseDeLaCapa.relevo:
+        // Si la bienvenida no avisa en 500 ms, la capa se retira igual.
+        if (_msDeFase > 500) _retirar();
+      case FaseDeLaCapa.inactiva:
+      case FaseDeLaCapa.eligiendo:
+      case FaseDeLaCapa.pasoAlHorario:
+        break;
     }
   }
 
-  void _alPintarLaBienvenida() {}
+  void _avanzarLaIntro() {
+    final ms = _ms;
+    if (_sinMovimiento) {
+      // La estrella fija y los «++» con un fundido de 200 ms (RF-SPL-14).
+      _escena.value = EscenaDelLogo(
+        centro: _centro,
+        radio: radioDelNativo,
+        cruces: <CruzEnEscena>[
+          for (final c in EscenaDelLogo.crucesEnReposo())
+            c.copyWith(opacidad: (ms / 200).clamp(0.0, 1.0).toDouble()),
+        ],
+      );
+      if (_destino != null && ms >= 200) _terminarLaIntro();
+      return;
+    }
+    final v = _variante!;
+    // Hacia /home el bucle sigue hasta que empieza la salida. Hacia la
+    // bienvenida la variante vuelve al reposo desde la carga (S-34).
+    _escena.value = v.escena(
+      ms,
+      centro: _centro,
+      radio: radioDelNativo,
+      cargaLista: _haciaHome ? null : _cargaLista,
+    );
+    if (_destino == null) return;
+    final lista = _haciaHome
+        ? ms >= v.finDeLaEntrada
+        : ms >= v.finDelReposo(_cargaLista);
+    if (lista) _terminarLaIntro();
+  }
+
+  void _terminarLaIntro() {
+    if (_haciaHome) {
+      PuntosDeAterrizaje.cabecera.value = null;
+      if (!offAllSinTransicion('/home', arguments: abrirEnHorario)) {
+        _retirar();
+        return;
+      }
+      if (_sinMovimiento) {
+        _empezarElFundido(250);
+        return;
+      }
+      _cuadrosEsperando = 0;
+      _fase.value = FaseDeLaCapa.esperandoCabecera;
+      return;
+    }
+    // Sin sesión, o con la de un alumno sin especialidad, no hay salida y
+    // la bienvenida toma el relevo con la pose (RF-SPL-12 y RF-SPL-21).
+    unawaited(
+      precacheImage(
+        const AssetImage('assets/images/ulises_chatbot.png'),
+        context,
+      ).catchError((Object _) {}),
+    );
+    final pose = _escena.value!.pose;
+    _inicioDeFase = _ahora;
+    _fase.value = FaseDeLaCapa.relevo;
+    if (!offAllToLogin(pose: pose, desdeLaIntro: true)) _retirar();
+  }
+
+  /// Espera el primer cuadro de /home y la medida de su cabecera, a lo sumo
+  /// tres cuadros (decisión 5 del plan). La variante sigue su bucle.
+  void _esperarLaCabecera() {
+    _escena.value = _variante!.escena(
+      _ms,
+      centro: _centro,
+      radio: radioDelNativo,
+    );
+    final medida = PuntosDeAterrizaje.cabecera.value;
+    if (medida != null && Get.currentRoute == '/home') {
+      _destinoDeLaSalida = DestinoDeLaSalida.desdeMedida(medida, _vista);
+      _msInicioDeSalida = _ms;
+      _inicioDeFase = _ahora;
+      _fase.value = FaseDeLaCapa.salida;
+      _avanzarLaSalida();
+      return;
+    }
+    _cuadrosEsperando++;
+    if (_cuadrosEsperando > 3) _empezarElFundido(300);
+  }
+
+  void _avanzarLaSalida() {
+    final v = _variante!;
+    if (Get.currentRoute != '/home') {
+      // La ruta de debajo cambió, por ejemplo por un 401 (RF-SPL-4).
+      _empezarElFundido(300);
+      return;
+    }
+    final ms = _msDeFase;
+    final s = salidaHaciaHome(
+      variante: v,
+      msInicio: _msInicioDeSalida,
+      msEnSalida: ms,
+      centroDelMarco: _centro,
+      radioDelMarco: radioDelNativo,
+      destino: _destinoDeLaSalida!,
+    );
+    _salida.value = s;
+    _corrimientoDeLaPagina.value = Offset(0, s.paginaDy);
+    _opacidadDeLaPagina.value = s.paginaOpacidad;
+    if (ms >= v.duracionDeLaSalida) _retirar();
+  }
+
+  void _empezarElFundido(double duracion) {
+    _duracionDelFundido = duracion;
+    _inicioDeFase = _ahora;
+    _corrimientoDeLaPagina.value = Offset.zero;
+    _opacidadDeLaPagina.value = 1;
+    _fase.value = FaseDeLaCapa.fundido;
+  }
+
+  void _avanzarElFundido() {
+    final ms = _msDeFase;
+    _opacidad.value = (1 - ms / _duracionDelFundido).clamp(0.0, 1.0).toDouble();
+    if (ms >= _duracionDelFundido) _retirar();
+  }
+
+  void _alPintarLaBienvenida() {
+    if (_fase.value == FaseDeLaCapa.relevo) _retirar();
+  }
+
+  /// La capa queda inactiva, sin pintar, sin bloquear toques y fuera de la
+  /// semántica, pero montada (RF-SPL-4).
+  void _retirar() {
+    _reloj.stop();
+    _salida.value = null;
+    _opacidad.value = 1;
+    _corrimientoDeLaPagina.value = Offset.zero;
+    _opacidadDeLaPagina.value = 1;
+    _fase.value = FaseDeLaCapa.inactiva;
+    EstadoDeLaCapa.cubre.value = false;
+  }
 
   @override
   void dispose() {
@@ -286,6 +476,7 @@ class _PintorDeLaCapa extends CustomPainter {
           capa._fase,
           capa._escena,
           capa._opacidad,
+          capa._salida,
         ]),
       );
 
@@ -295,15 +486,22 @@ class _PintorDeLaCapa extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final opacidad = capa._opacidad.value;
     if (opacidad <= 0) return;
-    final escena = capa._escena.value;
     if (opacidad < 1) {
       canvas.saveLayer(
         null,
         Paint()..color = Color.fromRGBO(0, 0, 0, opacidad),
       );
     }
-    canvas.drawRect(Offset.zero & size, Paint()..color = naranjaDelSplash);
-    if (escena != null) pintarEscena(canvas, escena);
+    final salida = capa._salida.value;
+    final destino = capa._destinoDeLaSalida;
+    if (salida != null && destino != null) {
+      // La salida, o su fundido si la ruta cambió en medio.
+      pintarSalida(canvas, salida, destino);
+    } else {
+      canvas.drawRect(Offset.zero & size, Paint()..color = naranjaDelSplash);
+      final escena = capa._escena.value;
+      if (escena != null) pintarEscena(canvas, escena);
+    }
     if (opacidad < 1) canvas.restore();
   }
 

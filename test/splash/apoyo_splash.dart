@@ -171,3 +171,76 @@ void reiniciarArranque() {
   toquesEnLaPagina = 0;
   BienvenidaDePrueba.argumentos = null;
 }
+
+/// Una página /home que informa su cabecera después de su primer cuadro,
+/// como AppHeader (RF-SPL-11), o que no la informa.
+class HomeDePrueba extends StatefulWidget {
+  const HomeDePrueba({super.key, this.informa = true});
+
+  final bool informa;
+
+  @override
+  State<HomeDePrueba> createState() => _HomeDePruebaState();
+}
+
+class _HomeDePruebaState extends State<HomeDePrueba> {
+  @override
+  void initState() {
+    super.initState();
+    if (!widget.informa) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final oscuro = Theme.of(context).brightness == Brightness.dark;
+      PuntosDeAterrizaje.cabecera.value = MedidaDeCabecera(
+        cabecera: const Rect.fromLTWH(0, 0, 375, 102),
+        estrella: const Rect.fromLTWH(20, 52, 26, 26),
+        texto: const Rect.fromLTWH(56, 55, 90, 20),
+        estilo: const TextStyle(
+          fontSize: 20,
+          fontStyle: FontStyle.italic,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
+        escalaDeTexto: TextScaler.noScaling,
+        color: oscuro
+            ? const Color.fromARGB(255, 30, 30, 36)
+            : const Color(0xFFFF6600),
+        colorDelBorde: Theme.of(context).colorScheme.primaryContainer,
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => const PaginaDePrueba('home');
+}
+
+/// Avanza [ms] en cuadros de 16 ms, como una pantalla de 60 Hz.
+Future<void> avanzar(WidgetTester tester, int ms) async {
+  for (var t = 0; t < ms; t += 16) {
+    await tester.pump(const Duration(milliseconds: 16));
+  }
+}
+
+/// Avanza en cuadros de 16 ms hasta que [condicion] se cumple o pasan
+/// [tope] ms, y devuelve los ms que pasaron.
+Future<int> avanzarHasta(
+  WidgetTester tester,
+  bool Function() condicion, {
+  int tope = 10000,
+}) async {
+  var t = 0;
+  while (!condicion() && t < tope) {
+    await tester.pump(const Duration(milliseconds: 16));
+    t += 16;
+  }
+  return t;
+}
+
+/// Cuenta las rutas que entran con cada nombre.
+class ObservadorDeRutas extends NavigatorObserver {
+  final List<String?> nombres = <String?>[];
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) =>
+      nombres.add(route.settings.name);
+}

@@ -9,18 +9,24 @@
 // lib/pages/splash/capa_de_arranque.dart.
 
 import 'dart:math' as math;
+import 'dart:math';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get/get.dart';
 import 'package:ulima_plus/components/logo/escena_del_logo.dart';
 import 'package:ulima_plus/configs/themes.dart';
+import 'package:ulima_plus/pages/splash/capa_de_arranque.dart';
 import 'package:ulima_plus/pages/splash/puntos_de_aterrizaje.dart';
 import 'package:ulima_plus/pages/splash/salidas.dart';
 import 'package:ulima_plus/pages/splash/variantes/codigo.dart';
 import 'package:ulima_plus/pages/splash/variantes/ensamble.dart';
 import 'package:ulima_plus/pages/splash/variantes/incremento.dart';
 import 'package:ulima_plus/pages/splash/variantes/variante_de_intro.dart';
+import 'package:ulima_plus/services/splash_variante_service.dart';
+
+import 'apoyo_splash.dart';
 
 const _pantalla = Size(375, 667);
 const _centro = Offset(187.5, 333.5);
@@ -349,5 +355,63 @@ void main() {
       expect(centroDeColumna(28), closeTo(60, 0.75));
       expect(centroDeColumna(92), closeTo(60, 0.75));
     });
+  });
+
+  group('la salida en la capa (RF-SPL-11 y RF-SPL-13)', () {
+    setUp(reiniciarArranque);
+    tearDown(reiniciarArranque);
+
+    for (final modo in [ThemeMode.light, ThemeMode.dark]) {
+      testWidgets('la página sube y aparece como un todo sobre el fondo del '
+          'tema, y el panel termina en el headerColor (${modo.name})', (
+        tester,
+      ) async {
+        telefono(tester);
+        final carga = CargaFalsa();
+        await tester.pumpWidget(
+          appConCapa(
+            intro: IntroDelArranque(
+              carga: carga.call,
+              variantes: VariantesFijas(VarianteSplash.ensamble),
+              random: Random(1),
+            ),
+            home: (_) => const HomeDePrueba(),
+            modo: modo,
+          ),
+        );
+        carga.terminar('/home');
+        await avanzarHasta(
+          tester,
+          () => CapaDeArranque.fase == FaseDeLaCapa.salida,
+        );
+        await avanzar(tester, 265);
+        final medio = CapaDeArranque.salidaActual!;
+        expect(medio.paginaDy, inExclusiveRange(0, 20));
+        final corrida = tester.widget<Transform>(
+          find
+              .ancestor(of: find.text('home'), matching: find.byType(Transform))
+              .last,
+        );
+        expect(
+          corrida.transform.getTranslation().y,
+          closeTo(medio.paginaDy, 1e-6),
+        );
+        await avanzar(tester, 250);
+        final ultimo = CapaDeArranque.salidaActual;
+        final esperado = modo == ThemeMode.dark
+            ? const Color.fromARGB(255, 30, 30, 36)
+            : const Color(0xFFFF6600);
+        if (ultimo != null) {
+          expect(ultimo.colorDelPanel.r, closeTo(esperado.r, 0.02));
+          expect(ultimo.colorDelPanel.g, closeTo(esperado.g, 0.02));
+          expect(ultimo.colorDelPanel.b, closeTo(esperado.b, 0.02));
+        }
+        await avanzarHasta(
+          tester,
+          () => CapaDeArranque.fase == FaseDeLaCapa.inactiva,
+        );
+        expect(Get.currentRoute, '/home');
+      });
+    }
   });
 }

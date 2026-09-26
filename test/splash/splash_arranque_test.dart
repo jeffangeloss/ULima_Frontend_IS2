@@ -18,6 +18,7 @@ import 'package:get/get.dart';
 import 'package:ulima_plus/components/logo/escena_del_logo.dart';
 import 'package:ulima_plus/pages/splash/capa_de_arranque.dart';
 import 'package:ulima_plus/pages/splash/estado_de_la_capa.dart';
+import 'package:ulima_plus/pages/splash/variantes/variantes.dart';
 import 'package:ulima_plus/services/session_navigation.dart';
 import 'package:ulima_plus/services/splash_variante_service.dart';
 
@@ -227,4 +228,200 @@ void main() {
       expect(carga.llamadas, 1);
     });
   });
+
+  group(
+    'el final de la intro (RF-SPL-4, RF-SPL-10, RF-SPL-17 y RF-SPL-18)',
+    () {
+      final hapticas = <String>[];
+
+      setUp(() {
+        reiniciarArranque();
+        hapticas.clear();
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(SystemChannels.platform, (llamada) async {
+              if (llamada.method.startsWith('HapticFeedback')) {
+                hapticas.add(llamada.method);
+              }
+              return null;
+            });
+      });
+
+      tearDown(() {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(SystemChannels.platform, null);
+        reiniciarArranque();
+      });
+
+      Future<CargaFalsa> montar(
+        WidgetTester tester,
+        VarianteSplash variante, {
+        WidgetBuilder? home,
+        List<NavigatorObserver> observadores = const [],
+      }) async {
+        telefono(tester);
+        final carga = CargaFalsa();
+        await tester.pumpWidget(
+          appConCapa(
+            intro: IntroDelArranque(
+              carga: carga.call,
+              variantes: VariantesFijas(variante),
+              random: Random(1),
+            ),
+            home: home ?? (_) => const HomeDePrueba(),
+            observadores: observadores,
+          ),
+        );
+        return carga;
+      }
+
+      for (final tipo in VarianteSplash.values) {
+        testWidgets('${tipo.name}: con la carga lista antes, la entrada se ve '
+            'completa y la salida deja /home en Horario en 1,8 s o menos', (
+          tester,
+        ) async {
+          final carga = await montar(tester, tipo);
+          carga.terminar('/home');
+          final v = varianteDe(tipo);
+          final hasta = await avanzarHasta(
+            tester,
+            () => CapaDeArranque.fase == FaseDeLaCapa.inactiva,
+          );
+          expect(Get.currentRoute, '/home');
+          expect(
+            ModalRoute.of(
+              tester.element(find.text('home')),
+            )!.settings.arguments,
+            const {'pestana': 'horario'},
+          );
+          expect(
+            hasta,
+            greaterThanOrEqualTo(v.finDeLaEntrada + v.duracionDeLaSalida),
+          );
+          // Más el primer cuadro de /home y su medida (RF-SPL-17).
+          expect(hasta, lessThanOrEqualTo(1780 + 64));
+          expect(EstadoDeLaCapa.cubre.value, isFalse);
+          expect(hapticas, isEmpty, reason: 'sin háptica (S-14)');
+        });
+      }
+
+      testWidgets('con la carga más larga, Incremento repite sus tics y la '
+          'salida empieza al terminar la carga', (tester) async {
+        final carga = await montar(tester, VarianteSplash.incremento);
+        await avanzar(tester, 2100);
+        expect(CapaDeArranque.fase, FaseDeLaCapa.intro);
+        expect(CapaDeArranque.escenaActual!.giro, greaterThan(80 * grado));
+        carga.terminar('/home');
+        await avanzar(tester, 64);
+        expect(
+          CapaDeArranque.fase,
+          anyOf(FaseDeLaCapa.esperandoCabecera, FaseDeLaCapa.salida),
+        );
+        await avanzar(tester, 700);
+        expect(CapaDeArranque.fase, FaseDeLaCapa.inactiva);
+      });
+
+      testWidgets(
+        'un 401 durante la carga no navega ni avisa, y la intro llega '
+        'una sola vez a la bienvenida (S-20)',
+        (tester) async {
+          final rutas = ObservadorDeRutas();
+          telefono(tester);
+          await tester.pumpWidget(
+            appConCapa(
+              intro: IntroDelArranque(
+                carga: () async {
+                  await Future<void>.delayed(const Duration(milliseconds: 100));
+                  // Lo que hace el interceptor de ApiClient con un 401 durante
+                  // la carga, con /arranque como ruta actual.
+                  expect(offAllToLogin(), isFalse);
+                  return '/login';
+                },
+                variantes: VariantesFijas(VarianteSplash.ensamble),
+                random: Random(1),
+              ),
+              observadores: [rutas],
+            ),
+          );
+          await avanzarHasta(
+            tester,
+            () => CapaDeArranque.fase == FaseDeLaCapa.inactiva,
+          );
+          expect(rutas.nombres.where((n) => n == '/login'), hasLength(1));
+          expect(Get.isSnackbarOpen, isFalse);
+        },
+      );
+
+      testWidgets(
+        'un fallo antes de registrar los servicios deja la intro en su '
+        'bucle y lo registra (RF-SPL-18)',
+        (tester) async {
+          final registro = <String>[];
+          final anterior = debugPrint;
+          debugPrint = (String? m, {int? wrapWidth}) => registro.add(m ?? '');
+          // Flutter exige devolver debugPrint antes de terminar la prueba.
+          try {
+            final carga = await montar(tester, VarianteSplash.ensamble);
+            carga.fallar(const FalloAntesDeLosServicios('sin Firebase'));
+            await avanzar(tester, 5000);
+          } finally {
+            debugPrint = anterior;
+          }
+          expect(CapaDeArranque.fase, FaseDeLaCapa.intro);
+          expect(EstadoDeLaCapa.cubre.value, isTrue);
+          expect(registro.join(), contains('sin Firebase'));
+        },
+      );
+
+      testWidgets('un fallo después de registrarlos hace el relevo a la '
+          'bienvenida', (tester) async {
+        final carga = await montar(tester, VarianteSplash.codigo);
+        carga.fallar(StateError('almacén de claves'));
+        await avanzarHasta(
+          tester,
+          () => CapaDeArranque.fase == FaseDeLaCapa.inactiva,
+        );
+        expect(Get.currentRoute, '/login');
+      });
+
+      testWidgets(
+        'si la cabecera no se mide, la salida es un fundido de 300 ms',
+        (tester) async {
+          final carga = await montar(
+            tester,
+            VarianteSplash.ensamble,
+            home: (_) => const HomeDePrueba(informa: false),
+          );
+          carga.terminar('/home');
+          await avanzarHasta(
+            tester,
+            () => CapaDeArranque.fase == FaseDeLaCapa.fundido,
+          );
+          final desde = await avanzarHasta(
+            tester,
+            () => CapaDeArranque.fase == FaseDeLaCapa.inactiva,
+          );
+          expect(desde, inInclusiveRange(290, 340));
+        },
+      );
+
+      testWidgets(
+        'si la ruta de debajo cambia durante la salida, termina con el '
+        'fundido de 300 ms',
+        (tester) async {
+          final carga = await montar(tester, VarianteSplash.incremento);
+          carga.terminar('/home');
+          await avanzarHasta(
+            tester,
+            () => CapaDeArranque.fase == FaseDeLaCapa.salida,
+          );
+          await avanzar(tester, 100);
+          expect(offAllToLogin(), isTrue);
+          await avanzar(tester, 32);
+          expect(CapaDeArranque.fase, FaseDeLaCapa.fundido);
+          await avanzar(tester, 400);
+          expect(CapaDeArranque.fase, FaseDeLaCapa.inactiva);
+        },
+      );
+    },
+  );
 }
