@@ -2,6 +2,7 @@
 // La espera de la evaluación y su error (RF-TEST-7 y RF-TEST-11).
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import '../../../configs/themes.dart';
@@ -31,7 +32,14 @@ class _WaitingViewState extends State<WaitingView> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _burbuja.requestFocus();
+      if (!mounted) return;
+      _burbuja.requestFocus();
+      // Si la última pregunta cierra un bloque, su sello cae aquí, con la
+      // misma vibración leve que en la pregunta (RF-TEST-6).
+      final c = _c.contenido.value;
+      if (c == null) return;
+      final turno = turnoDeEspera(c, trasDesempate: _c.esperaTrasDesempate);
+      if (turno.sello != null) HapticFeedback.lightImpact();
     });
   }
 

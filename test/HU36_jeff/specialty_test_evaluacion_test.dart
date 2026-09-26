@@ -329,6 +329,38 @@ void _pantalla() {
       await tester.pump();
     });
 
+    testWidgets('caso 9b: el sello de la espera cae con '
+        'HapticFeedback.lightImpact', (tester) async {
+      final vibraciones = escucharVibraciones(tester);
+      final pendiente = Completer<Map<String, dynamic>>();
+      await _enLaEspera(tester, [pendiente]);
+      await tester.pump();
+      expect(find.text('Cierra el bloque 2 de 2'), findsOneWidget);
+      expect(vibraciones, ['HapticFeedbackType.lightImpact']);
+      pendiente.complete(resultadoJson());
+      await tester.pump();
+    });
+
+    testWidgets('caso 9c: tras un desempate la espera no trae sello y no '
+        'vibra', (tester) async {
+      final pendiente = Completer<Map<String, dynamic>>();
+      prepararTest(ApiFalsaDelTest(evaluaciones: [desempateJson(), pendiente]));
+      final c = ponerControlador();
+      await tester.pump();
+      c.empezar();
+      responderPasos(c, respuestasEnOrden);
+      await tester.pump();
+      responderPasos(c, ['top']);
+      expect(c.esperaTrasDesempate, isTrue);
+      final vibraciones = escucharVibraciones(tester);
+      await montarPantalla(tester, const WaitingView());
+      await tester.pump();
+      expect(find.textContaining('Cierra el bloque'), findsNothing);
+      expect(vibraciones, isEmpty);
+      pendiente.complete(resultadoJson());
+      await tester.pump();
+    });
+
     testWidgets('caso 10: tras un desempate va solo la línea de espera', (
       tester,
     ) async {

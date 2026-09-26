@@ -101,3 +101,21 @@ Future<void> cargarRoboto() async {
   }
   await cargador.load();
 }
+
+/// Anota cada vibración que pide la pantalla hasta el final de la prueba,
+/// con el tipo tal como viaja por el canal, por ejemplo
+/// `HapticFeedbackType.lightImpact`.
+List<String> escucharVibraciones(WidgetTester tester) {
+  final vibraciones = <String>[];
+  final mensajero = tester.binding.defaultBinaryMessenger;
+  mensajero.setMockMethodCallHandler(SystemChannels.platform, (llamada) async {
+    if (llamada.method == 'HapticFeedback.vibrate') {
+      vibraciones.add(llamada.arguments as String);
+    }
+    return null;
+  });
+  addTearDown(
+    () => mensajero.setMockMethodCallHandler(SystemChannels.platform, null),
+  );
+  return vibraciones;
+}

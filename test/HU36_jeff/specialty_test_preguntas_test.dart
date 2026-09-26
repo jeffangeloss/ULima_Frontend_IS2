@@ -132,6 +132,16 @@ void _duelo() {
       await tester.pump(const Duration(milliseconds: 250));
     });
 
+    testWidgets('caso 2b: el toque en una tarjeta suena con '
+        'HapticFeedback.selectionClick', (tester) async {
+      await _enLaPregunta(tester);
+      final vibraciones = escucharVibraciones(tester);
+      await tester.tap(find.byKey(QuestionView.tarjetaKey('bottom')));
+      await tester.pump();
+      expect(vibraciones, ['HapticFeedbackType.selectionClick']);
+      await tester.pump(const Duration(milliseconds: 550));
+    });
+
     testWidgets('caso 3: en oscuro se enciende con color.dark', (tester) async {
       await _enLaPregunta(tester, brillo: Brightness.dark);
       await tester.tap(find.byKey(QuestionView.tarjetaKey('top')));
@@ -323,6 +333,37 @@ void _escala() {
       );
       expect(c.respuestas['q03'], 'bastante');
       await tester.pump(const Duration(milliseconds: 250));
+    });
+
+    testWidgets('caso 11b: la opción elegida suena con '
+        'HapticFeedback.selectionClick', (tester) async {
+      await _enLaPregunta(tester, indice: 2);
+      final vibraciones = escucharVibraciones(tester);
+      await tester.tap(find.text('Un poco'));
+      await tester.pump();
+      expect(vibraciones, ['HapticFeedbackType.selectionClick']);
+      await tester.pump(const Duration(milliseconds: 550));
+    });
+
+    testWidgets('caso 12: el sello del bloque cae con '
+        'HapticFeedback.lightImpact, y un paso sin sello no vibra', (
+      tester,
+    ) async {
+      final c = await _enLaPregunta(tester, indice: 2);
+      final vibraciones = escucharVibraciones(tester);
+      // La pregunta 3 sigue a un duelo, así que llega sin sello.
+      await tester.pump();
+      expect(vibraciones, isEmpty);
+      await tester.tap(find.text('Bastante'));
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pump();
+      expect(c.paso.value, 3);
+      expect(find.text('Cierra el bloque 1 de 2'), findsOneWidget);
+      expect(vibraciones, [
+        'HapticFeedbackType.selectionClick',
+        'HapticFeedbackType.lightImpact',
+      ]);
+      await tester.pump(const Duration(milliseconds: 200));
     });
   });
 }
