@@ -5,6 +5,7 @@
 // test/HU36_jeff/specialty_test_contraste_test.dart).
 
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../models/specialty_test_models.dart';
 
@@ -76,3 +77,75 @@ Color colorQueSeLee(
   final minimo = esTexto ? kContrasteTexto : kContrasteIcono;
   return razonDeContraste(color, fondo) >= minimo ? color : respaldo;
 }
+
+// ── Íconos de las tareas y de las especialidades (RF-TEST-5, decisión 8) ────
+
+/// El ícono de un nombre fuera del mapa o ausente. No es de ninguna
+/// especialidad ni de ninguna tarea, así que no delata nada.
+const IconData kIconoNeutro = LucideIcons.sparkles;
+
+/// Mapa cerrado de los 52 nombres de Lucide de la versión 2026-09-25.4 a sus
+/// constantes de `lucide_icons_flutter` 3.1.15, cada una con el camelCase de
+/// su nombre. La app nunca arma un `IconData` con un punto de código que
+/// llegue del servidor, porque el build de release recorta la fuente a las
+/// constantes que nombra el código. Un nombre nuevo sale neutro hasta el
+/// siguiente APK.
+const Map<String, IconData> kIconosDelTest = <String, IconData>{
+  // Las cuatro especialidades.
+  'code-xml': LucideIcons.codeXml,
+  'server-cog': LucideIcons.serverCog,
+  'chart-column-big': LucideIcons.chartColumnBig,
+  'gamepad-2': LucideIcons.gamepad2,
+  // Las 48 tareas, 24 de las preguntas y 24 de los desempates.
+  'shopping-cart': LucideIcons.shoppingCart,
+  'shelving-unit': LucideIcons.shelvingUnit,
+  'refrigerator': LucideIcons.refrigerator,
+  'mountain': LucideIcons.mountain,
+  'eye': LucideIcons.eye,
+  'store': LucideIcons.store,
+  'drumstick': LucideIcons.drumstick,
+  'rabbit': LucideIcons.rabbit,
+  'camera': LucideIcons.camera,
+  'folder-search': LucideIcons.folderSearch,
+  'school': LucideIcons.school,
+  'drafting-compass': LucideIcons.draftingCompass,
+  'rocket': LucideIcons.rocket,
+  'smartphone': LucideIcons.smartphone,
+  'hand-coins': LucideIcons.handCoins,
+  'clipboard-pen-line': LucideIcons.clipboardPenLine,
+  'ticket': LucideIcons.ticket,
+  'clock-arrow-up': LucideIcons.clockArrowUp,
+  'route': LucideIcons.route,
+  'messages-square': LucideIcons.messagesSquare,
+  'user-minus': LucideIcons.userMinus,
+  'pencil': LucideIcons.pencil,
+  'footprints': LucideIcons.footprints,
+  'bus': LucideIcons.bus,
+  'calendar-clock': LucideIcons.calendarClock,
+  'hospital': LucideIcons.hospital,
+  'key-round': LucideIcons.keyRound,
+  'receipt': LucideIcons.receipt,
+  'blocks': LucideIcons.blocks,
+  'goal': LucideIcons.goal,
+  'database': LucideIcons.database,
+  'rocking-chair': LucideIcons.rockingChair,
+  'land-plot': LucideIcons.landPlot,
+  'dices': LucideIcons.dices,
+  'ghost': LucideIcons.ghost,
+  'headphones': LucideIcons.headphones,
+  'siren': LucideIcons.siren,
+  'badge-percent': LucideIcons.badgePercent,
+  'stamp': LucideIcons.stamp,
+  'graduation-cap': LucideIcons.graduationCap,
+  'house-wifi': LucideIcons.houseWifi,
+  'drama': LucideIcons.drama,
+  'droplet': LucideIcons.droplet,
+  'radio-tower': LucideIcons.radioTower,
+  'soup': LucideIcons.soup,
+  'map-pinned': LucideIcons.mapPinned,
+  'split': LucideIcons.split,
+  'pill-bottle': LucideIcons.pillBottle,
+};
+
+/// El ícono de [nombre], o [kIconoNeutro] si no está en el mapa o es null.
+IconData iconoDelTest(String? nombre) => kIconosDelTest[nombre] ?? kIconoNeutro;
