@@ -193,7 +193,10 @@ void main() {
     await montarLaBienvenida(tester, Bienvenida(), argumentos: _conPose());
     await avanzar(tester, 140);
     expect(_ulises(), findsNothing, reason: 'nada se mueve en 160 ms');
-    await avanzar(tester, 60);
+    // A los 168 ms ya vuela.
+    await tester.pump(const Duration(milliseconds: 24));
+    expect(_ulises(), findsOneWidget);
+    await avanzar(tester, 32);
     expect(tester.getSize(_ulises()).width, closeTo(62, 1));
     await avanzar(tester, 1700);
     final ulises = tester.getRect(_ulises());
@@ -210,7 +213,18 @@ void main() {
   testWidgets('el fondo pasa en 1100 ms de #E77330 al color de la franja '
       'mientras Ulises vuela', (tester) async {
     await montarLaBienvenida(tester, Bienvenida(), argumentos: _conPose());
-    await avanzar(tester, 700);
+    // A los 380 ms va un 20 % del tiempo, y con la curva seno un 9,5 % del
+    // color. Lineal, o en 900 ms, iría bastante más.
+    await tester.pump(const Duration(milliseconds: 380));
+    final esperado = Color.lerp(
+      const Color(0xFFE77330),
+      const Color(0xFFFF6600),
+      curvaSeno(220 / 1100),
+    )!;
+    final pronto = Recibimiento.cuadroActual(tester.element(_fondo())).fondo!;
+    expect(pronto.b, closeTo(esperado.b, 1.5 / 255));
+    expect(pronto.r, closeTo(esperado.r, 1.5 / 255));
+    await avanzar(tester, 320);
     final medio = Recibimiento.cuadroActual(tester.element(_fondo())).fondo;
     expect(medio, isNot(const Color(0xFFE77330)));
     expect(medio, isNot(const Color(0xFFFF6600)));
@@ -231,7 +245,10 @@ void main() {
     await tester.tapAt(const Offset(187.5, 556));
     await tester.pump();
     expect(b.delAlumno, isEmpty);
-    await avanzar(tester, 300);
+    // A los 2,29 s todavía no hay botones.
+    await avanzar(tester, 176);
+    expect(find.text(TextosDeLaBienvenida.siEntrar), findsNothing);
+    await avanzar(tester, 124);
     await tester.tap(find.text(TextosDeLaBienvenida.siEntrar));
     await tester.pump();
     expect(b.delAlumno, [TextosDeLaBienvenida.siEntrar]);
@@ -394,7 +411,10 @@ void main() {
     expect(find.text(TextosDeLaBienvenida.pregunta), findsOneWidget);
     expect(find.text(TextosDeLaBienvenida.ulises), findsOneWidget);
     expect(find.text(TextosDeLaBienvenida.e1), findsNothing);
-    await avanzar(tester, 700);
+    // Ulises se posa a los 1030 ms del toque, así que E1 entra a los 1680.
+    await avanzar(tester, 500);
+    expect(find.text(TextosDeLaBienvenida.e1), findsNothing);
+    await avanzar(tester, 200);
     expect(find.text(TextosDeLaBienvenida.e1), findsOneWidget);
     expect(b.controlador.latidos.value, 1);
     await avanzar(tester, 1000);
@@ -419,11 +439,21 @@ void main() {
         )
         .opacity;
     var latioAlPosarse = false;
+    var reveladoMaximo = 0.0;
     while (find.byType(Recibimiento).evaluate().isNotEmpty) {
       final cuadro = Recibimiento.cuadroActual(tester.element(_fondo()));
       final dibujado = cuadro.estrella != null;
       final real = opacidadDelSello() == 1 && cuadro.fondo == null;
       expect(dibujado || real, isTrue, reason: 'nunca un cuadro sin logo');
+      if (dibujado) {
+        // Los «++» nunca se pierden: van con la estrella o viajan solos.
+        expect(
+          cuadro.estrella!.cruces.length + cuadro.crucesDeLaSubida,
+          greaterThanOrEqualTo(2),
+          reason: 'nunca un logo sin sus «++»',
+        );
+        reveladoMaximo = math.max(reveladoMaximo, cuadro.reveladoDeUlima);
+      }
       if (real) {
         final sello = tester.widget<SelloDelLogo>(find.byType(SelloDelLogo));
         latioAlPosarse |= sello.latido!.value > 0 && sello.latido!.value < 1;
@@ -432,6 +462,7 @@ void main() {
     }
     expect(opacidadDelSello(), 1);
     expect(latioAlPosarse, isTrue);
+    expect(reveladoMaximo, greaterThan(0.95), reason: '«ULIMA» se revela');
   });
 
   testWidgets('sin argumentos, el recibimiento corto arranca con el logo en su '

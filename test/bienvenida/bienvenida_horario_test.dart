@@ -293,6 +293,9 @@ void main() {
       expect(b.login.passwordController.text, '');
       expect(PuntosDeAterrizaje.ulisesEnVuelo.value, isTrue);
       expect(_burbujaOculta(), findsOneWidget);
+      // Ulises vuela en la capa, a la vista.
+      expect(find.byKey(CapaDeArranque.claveDeUlisesDelPaso), findsOneWidget);
+      expect(_opacidadDeUlisesEnLaCapa(tester), 1);
       // El lector solo ve «ULIMA++», sin «cargando» (RF-BIEN-16).
       expect(find.bySemanticsLabel('ULIMA++'), findsOneWidget);
       expect(find.bySemanticsLabel(etiquetaDeLaIntro), findsNothing);

@@ -131,7 +131,10 @@ void main() {
       expect(find.text(TextosDeLaBienvenida.ulises), findsOneWidget);
       expect(b.delAlumno, isEmpty);
       expect(find.text(TextosDeLaBienvenida.invitacionAlTest(5)), findsNothing);
-      await avanzar(tester, 600);
+      // Ulises se posa a los 2,97 s y T0 entra 650 ms después.
+      await avanzar(tester, 350);
+      expect(find.text(TextosDeLaBienvenida.invitacionAlTest(5)), findsNothing);
+      await avanzar(tester, 150);
       expect(
         find.text(TextosDeLaBienvenida.invitacionAlTest(5)),
         findsOneWidget,

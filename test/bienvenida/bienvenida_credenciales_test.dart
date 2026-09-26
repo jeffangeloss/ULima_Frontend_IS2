@@ -259,6 +259,18 @@ void main() {
         expect(b.controlador.registro, isNull);
       },
     );
+
+    test('el paso al horario cierra el registro que estuviera abierto '
+        '(RF-BIEN-11)', () async {
+      final b = Bienvenida();
+      await b.visitar();
+      b.controlador.responderAlSaludo(yaUsa: false);
+      final registro = b.controlador.registro!;
+      b.controlador.pasoHecho();
+      expect(registro.cerrado, isTrue);
+      expect(b.controlador.registro, isNull);
+      expect(b.controlador.test, isNull);
+    });
   });
 
   group('en pantalla (RF-BIEN-9)', () {

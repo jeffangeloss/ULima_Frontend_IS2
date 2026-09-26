@@ -47,6 +47,8 @@ double _opacidadDeUlises(WidgetTester tester) => tester
   EscenaDelLogo? estrellaDebajo,
   double opacidadDeLaEstrella,
   int puntos,
+  int crucesDeLaSubida,
+  double reveladoDeUlima,
 })
 _cuadro(WidgetTester tester) => Recibimiento.cuadroActual(
   tester.element(find.byKey(Recibimiento.claveDelFondo)),

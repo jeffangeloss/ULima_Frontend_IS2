@@ -662,7 +662,7 @@ void main() {
       return b;
     }
 
-    testWidgets('mientras se envía, el atrás no sale y avisa abajo (caso 3)', (
+    testWidgets('mientras se envía, el atrás no sale y avisa (caso 3)', (
       tester,
     ) async {
       final pendiente = Completer<RegistroResult>();

@@ -79,8 +79,9 @@ class Recibimiento extends StatefulWidget {
   static const Key claveDeLosBotones = Key('recibimiento-botones');
 
   /// El fondo y el área que cubre, la estrella, la de debajo con reducir
-  /// movimiento y los puntos de la sombra, la estela y las partículas del
-  /// cuadro actual, para las pruebas. [context] es el de una pieza del
+  /// movimiento, los puntos de la sombra, la estela y las partículas, los
+  /// «++» que viajan en la subida y cuánto se ve de «ULIMA» del cuadro
+  /// actual, para las pruebas. [context] es el de una pieza del
   /// recibimiento.
   @visibleForTesting
   static ({
@@ -90,6 +91,8 @@ class Recibimiento extends StatefulWidget {
     EscenaDelLogo? estrellaDebajo,
     double opacidadDeLaEstrella,
     int puntos,
+    int crucesDeLaSubida,
+    double reveladoDeUlima,
   })
   cuadroActual(BuildContext context) {
     final estado = context.findAncestorStateOfType<_RecibimientoState>()!;
@@ -102,6 +105,10 @@ class Recibimiento extends StatefulWidget {
       opacidadDeLaEstrella: p.opacidadDeLaEstrella,
       puntos:
           p.estela.length + p.particulas.length + (p.sombra == null ? 0 : 1),
+      crucesDeLaSubida: p.cruces.length,
+      reveladoDeUlima: p.ulima == null || p.origenDeUlima == null
+          ? 0
+          : p.revelado,
     );
   }
 
