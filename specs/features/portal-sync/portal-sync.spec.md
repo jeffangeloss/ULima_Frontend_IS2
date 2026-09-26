@@ -24,7 +24,8 @@ targets:
 > fila «Notas oficiales» de la calculadora y el aviso de `IMPORT_REQUIRED` abren `/portal-sync`
 > con la calculadora montada debajo. La recarga de notas parciales y asistencia no usa esta
 > pantalla ni `PortalSyncService`. Tiene su propia hoja, que reutiliza `PasswordResetOtpField` con
-> un borde en reposo opcional que esta pantalla no usa, y su propio servicio,
+> cuatro parámetros opcionales (alto de casilla, relleno, borde en reposo y solo lectura) cuyo
+> valor por defecto deja esta pantalla como está, y su propio servicio,
 > `RecargaUlimaService`, contra `POST /portal-sync/refresh`. El aviso de `IMPORT_REQUIRED` de esa
 > hoja es una entrada más a `/portal-sync`, que espera su resultado. Mientras la enmienda no se
 > apruebe, rige el texto de esta spec.

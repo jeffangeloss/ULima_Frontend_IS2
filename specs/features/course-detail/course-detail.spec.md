@@ -23,9 +23,11 @@ targets:
 > el bloque de asistencia. La enmienda le suma, bajo las horas y el anillo, la hora de la última
 > lectura, tomada de `asistenciaLeidaEn`, y el botón «Actualizar», que abre la hoja de recarga
 > desde la ULima. Tras una recarga exitosa, la ficha vuelve a leer solo su sección con
-> `DescripCursosController.recargarSeccion` y conserva la pestaña elegida. En el estado sin datos,
+> `DescripCursosController.recargarSeccion`, que prefiere `GET /course-detail/sections/:sectionId`
+> y no repite `HorarioController.reload()`, y conserva la pestaña elegida. En el estado sin datos,
 > el botón «Actualizar desde miUlima» pasa a decir «Actualizar desde la ULima» y abre la misma
-> hoja en vez de `/portal-sync`. Mientras la enmienda no se apruebe, rige el texto de esta spec.
+> hoja en vez de `/portal-sync`, y el bloque muestra el aviso de error y la línea de lectura
+> parcial encima del botón. Sin `RecargaUlimaService` registrado, el bloque queda como hoy. Mientras la enmienda no se apruebe, rige el texto de esta spec.
 
 ## Requirements
 
