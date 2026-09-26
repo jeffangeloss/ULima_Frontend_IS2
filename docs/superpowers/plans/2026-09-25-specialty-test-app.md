@@ -24,7 +24,7 @@
 - Colores desde `MaterialTheme` o desde el contenido. Los únicos hex de las vistas nuevas son los que la spec fija iguales en los dos temas (héroe, pastilla dorada, punto verde y confeti).
 - Contraste de 4,5:1 para el texto y de 3:1 para el ícono que informa, en los dos temas. La única excepción es la cabecera del asistente en claro (decisión 9).
 - Hora de Lima en UTC−5 todo el año, con la función propia `fechaEnLima`.
-- Textos visibles, los de «Textos nuevos» de la spec. Los dos que el plan deriva en singular están en «Decisiones del plan».
+- Textos visibles, los de «Textos nuevos» de la spec, que ya traen los dos derivados menores de la decisión 5 con su nota.
 - Pruebas con dobles escritos a mano (`extends ApiClient`, `extends AuthService`, `extends StorageService` e `implements SpecialtyTestUi`), sin mockito ni mocktail.
 - Dentro de `testWidgets` el reloj es falso, así que ahí no se usa `pumpEventQueue()` sino `tester.pump()`. Mientras haya animaciones que se repiten (el vaivén de la bienvenida, el brillo de la pluma o un `SkeletonPulse`) tampoco se usa `pumpAndSettle()`.
 - `flutter analyze` no suma issues a la línea base y `dart format` corre sobre los archivos de cada tarea.
@@ -45,19 +45,21 @@ Si `.dart_tool` no existe en el worktree, `"${FLUTTER:?}" pub get` va primero. L
 - `"${FLUTTER:?}" analyze --no-pub` da `6 issues found.`, todos `info` y previos. Son `avoid_print` en `lib/main.dart:95`, dos `deprecated_member_use` en `lib/services/attendance_risk_service.dart:55`, `unnecessary_import` en `test/HU20_jeff/otp_field_ime_test.dart:32` y dos `depend_on_referenced_packages` en `test/HU26_sam/export_csv_cajanegra_test.dart:20-21`. El número de línea del `avoid_print` sube cuando la Tarea 7 y las siguientes agregan líneas a `main.dart`, y eso no cuenta como issue nuevo.
 - `"${FLUTTER:?}" test --no-pub` da `+1122: All tests passed!`.
 
+Después del plan, la rama trae `main` en `19fed1b`, con el truco del 67, en un merge cuyo único conflicto es la fila 20 del índice, que conserva las dos filas. Con ese merge, `analyze` sigue en los mismos `6 issues found.`, en las mismas líneas, y `test` da `+1223: All tests passed!`, 101 pruebas más, que son las de `test/six_seven/`. La suite completa de la copia en `757a9af` no tiene esas 101 pruebas, así que el Paso 7 de las Tareas 7 y 18 y el Paso 1 de la Tarea 19 esperan la cifra de esa copia más 101, como dice cada «Esperado». Las corridas de un archivo o de una carpeta no cambian, porque `main` no suma pruebas fuera de `test/six_seven/`.
+
 ## Cómo se midieron las cifras
 
 Cada «Esperado» sale de aplicar este plan tal como está escrito, tarea por tarea y paso por paso, en una copia descartable del worktree en `757a9af` (fuera del repo y sin git), con Flutter 3.47.2, y de correr ahí cada comando. Los rojos son los que da esa corrida. Al final, cada archivo de la copia quedó igual al código de referencia del que salen los bloques de este plan, la suite completa dio `+1363: All tests passed!` y `test/HU36_jeff/` dio `+241` con `TZ=UTC`. Si una corrida real da otra cifra, se compara prueba por prueba antes de seguir, y nunca se ajusta una prueba para que cuadre.
 
 ## Decisiones del plan
 
-La spec las deja abiertas o no las nombra. Ninguna cambia un requisito, y el dueño revisa antes del merge las dos que suman un texto (la 5).
+La spec las deja abiertas o no las nombra. Ninguna cambia un requisito, y el dueño revisa antes del merge los dos textos que suma la 5.
 
 1. **`widgets/test_buttons.dart`.** Un archivo más dentro de `lib/pages/specialty_test/**`, con `TestPrimaryButton`, `TestSecondaryButton` y `TestErrorMessage`. Los usan las cuatro vistas, la tarjeta del Perfil, el Perfil y el asistente, cuyo botón inferior pasa al estilo del botón principal del test (RF-TEST-1). La Tarea 19 lo suma a «Se crean» de la spec.
 2. **`AuthService({ApiClient? apiClient})` y `officialSpecialtyIds`.** El constructor gana un parámetro opcional para que las pruebas del plazo de `completeSetup`, de los catálogos y del Perfil corran sin red, y `isOfficialSpecialty` se apoya en un getter `officialSpecialtyIds`, que también usan el Perfil y el asistente. `officialSpecialtyIds` cuenta solo los elementos con `is_active == true`, la misma defensa que ya aplican el asistente y el Perfil.
 3. **Un puerto de pantalla.** `SpecialtyTestController` no llama a `Get.back`, `Get.snackbar` ni `Get.dialog`. Pide cerrar, ir al home, avisar o preguntar a un `SpecialtyTestUi`. La ruta usa `UiDelTestConGet`, que cierra con `Get.key.currentState?.pop`, porque `Get.back()` de get 4.7.3 cierra el aviso abierto en lugar de la ruta.
 4. **La pausa sale de `onClose`.** Cualquier cierre de la ruta con respuestas en memoria deja el test en pausa (el botón de pausa, el atrás del sistema en la bienvenida y «Ahora no»). Saltar, un `404` y un resultado ya borran las respuestas, así que no dejan nada.
-5. **Dos singulares.** Con una sola respuesta, la etiqueta de la pastilla para el lector de pantalla dice «Ver tu respuesta anterior», el singular de «Ver tus N respuestas anteriores», igual que la spec ya da «1 respuesta anterior» para la pastilla. Es lo que oye quien usa VoiceOver o TalkBack en la pregunta 2. La fila de electivos con uno solo dice «1 electivo», que con el contenido `2026-09-25.4`, de siete electivos por diploma, no aparece.
+5. **Dos singulares.** Con una sola respuesta, la etiqueta de la pastilla para el lector de pantalla dice «Ver tu respuesta anterior», el singular de «Ver tus N respuestas anteriores», igual que la spec ya da «1 respuesta anterior» para la pastilla. Es lo que oye quien usa VoiceOver o TalkBack en la pregunta 2. La fila de electivos con uno solo dice «1 electivo», que con el contenido `2026-09-25.4`, de siete electivos por diploma, no aparece. La spec ya suma los dos textos a «Textos nuevos», con una nota que los marca como derivados menores, así que la Tarea 19 no los agrega.
 6. **Error de la espera sin mensaje.** Un fallo sin respuesta y una respuesta que no se puede leer muestran «No pudimos conectarnos. Revisa tu conexión e inténtalo de nuevo.», el texto de la fila de sin conexión.
 7. **Desempate que no coincide.** Al repetir sin desempates, el paso vuelve a la última pregunta, para que un atrás desde el error no apunte a un desempate que ya no existe.
 8. **Precarga con `404`.** Si la precarga del asistente termina en `404 SPECIALTY_TEST_NOT_AVAILABLE`, la bienvenida no pide el contenido otra vez, porque daría lo mismo, y pasa a la selección manual.
@@ -197,16 +199,30 @@ UserModel alumno({String code = '20230001', int? principal,
 
 Este paso va antes de tocar nada. La spec ya está aprobada y sus `targets` cubren todos los archivos del plan, así que no hace falta otro paso de aprobación.
 
+Desde `757a9af`, la línea principal de la rama puede traer uno o más commits antes de la Tarea 1, siempre que cada uno toque solo el plan o la spec del test o sea un merge que trae `main`, como el de `19fed1b`. El bucle revisa cada commit de esa línea y avisa con `PARAR` si uno toca otro archivo o si un merge trae algo que no está en `origin/main`.
+
 ```bash
 cd "${REPO:?}"
 test "$(git branch --show-current)" = feat/test-especialidad-fe || echo 'PARAR: rama equivocada'
 git status --short
-git log --oneline -2
+git merge-base --is-ancestor 757a9af HEAD || echo 'PARAR: la rama no parte de 757a9af'
+git rev-list --first-parent 757a9af..HEAD | while read -r c; do
+  if git rev-parse -q --verify "$c^2" >/dev/null; then
+    git merge-base --is-ancestor "$c^2" origin/main \
+      || echo "PARAR: el merge $c no trae main"
+  else
+    git diff-tree --no-commit-id --name-only -r "$c" \
+      | grep -vx -e docs/superpowers/plans/2026-09-25-specialty-test-app.md \
+        -e specs/features/specialty-test/specialty-test.spec.md \
+      && echo "PARAR: $c toca algo más que el plan y la spec"
+  fi
+done
+git log --oneline --first-parent 757a9af..HEAD
 test -d .dart_tool || "${FLUTTER:?}" pub get
 "${FLUTTER:?}" analyze --no-pub
 ```
 
-Esperado: ningún `PARAR`, `git status --short` vacío, el último commit es el de este plan y el anterior es `757a9af`, y `6 issues found.`, la lista de «Línea base».
+Esperado: ningún `PARAR`, `git status --short` vacío, un `git log` cuyo commit más antiguo es el de este plan, `cabfb43`, con encima solo commits del plan o de la spec y merges de `main`, y `6 issues found.`, la lista de «Línea base».
 
 - [ ] **Paso 2: Escribir los datos de prueba y la prueba que falla**
 
@@ -5366,7 +5382,7 @@ cd "${REPO:?}"
 "${FLUTTER:?}" test --no-pub
 ```
 
-Esperado: PASS, `+1196: All tests passed!`.
+Esperado: PASS, `+1297: All tests passed!`, las `+1196` de la copia en `757a9af` más las 101 de `test/six_seven/` que trae `main` (ver «Línea base»).
 
 - [ ] **Paso 8: Commit**
 
@@ -17015,7 +17031,7 @@ cd "${REPO:?}"
 "${FLUTTER:?}" test --no-pub
 ```
 
-Esperado: PASS, `+1363: All tests passed!`.
+Esperado: PASS, `+1464: All tests passed!`, las `+1363` de la copia en `757a9af` más las 101 de `test/six_seven/` que trae `main` (ver «Línea base»).
 
 - [ ] **Paso 8: Commit**
 
@@ -17085,7 +17101,7 @@ cd "${REPO:?}"
 "${FLUTTER:?}" test --no-pub
 ```
 
-Esperado: PASS, `+1363: All tests passed!`.
+Esperado: PASS, `+1464: All tests passed!`, las `+1363` de la copia en `757a9af` más las 101 de `test/six_seven/` que trae `main` (ver «Línea base»).
 
 ```bash
 cd "${REPO:?}"
@@ -17096,7 +17112,7 @@ Esperado: PASS, `+241: All tests passed!`.
 
 - [ ] **Paso 2: Poner la spec al día**
 
-Sale la marca *(pendiente)* de los 18 `[@test]`, porque las pruebas ya existen (decisión abierta 21), y la spec suma los archivos que el plan agrega dentro de sus `targets`.
+Sale la marca *(pendiente)* de los 18 `[@test]`, porque las pruebas ya existen (decisión abierta 21), y la spec suma los archivos que el plan agrega dentro de sus `targets`. Los dos textos de la decisión 5 no se suman aquí, porque «Textos nuevos» ya los trae con su nota de derivados menores.
 
 En `specs/features/specialty-test/specialty-test.spec.md`, cambia este bloque, que aparece una sola vez,
 
@@ -17247,15 +17263,16 @@ por este otro.
 
 - [ ] **Paso 4: Revisar que los documentos no se contradicen**
 
-Ninguna prueba nueva y ningún código. Solo dos búsquedas que deben salir vacías.
+Ninguna prueba nueva y ningún código. Son tres búsquedas, dos que deben salir vacías y una que confirma que la spec ya trae los dos textos de la decisión 5, para no sumarlos otra vez.
 
 ```bash
 cd "${REPO:?}"
 grep -n '(pendiente)\*' specs/features/specialty-test/specialty-test.spec.md | grep '@test'
 grep -n 'Pendiente de implementar' specs/features/specialty-test/specialty-test.spec.md
+grep -o '«Ver tu respuesta anterior»\|«1 electivo»' specs/features/specialty-test/specialty-test.spec.md | sort -u
 ```
 
-Esperado: las dos búsquedas no imprimen nada.
+Esperado: las dos primeras búsquedas no imprimen nada, y la tercera imprime «1 electivo» y «Ver tu respuesta anterior», una vez cada uno.
 
 - [ ] **Paso 5: Commit**
 
@@ -17283,5 +17300,5 @@ Estos pasos de «Verificación» de la spec no los puede hacer un agente y queda
 1. Desplegar el backend de la rama `feat/test-especialidad` con sus tres rutas y aplicar la `0014` en producción, con el respaldo y su permiso explícito en ese momento, como con la `0012` y la `0013`.
 2. Recorrer la app contra el backend desplegado con una cuenta de prueba. Un test termina sin desempate y otro con dos, se elige una principal, se marca un corazón, se rehace el test desde el Perfil y ahí se ve el último resultado.
 3. Revisar en un iPhone SE, en claro y en oscuro, el asistente, las 14 preguntas, un desempate, el resultado y la tarjeta del Perfil, y repetir con VoiceOver, con el texto más grande y con reducir movimiento.
-4. Leer los dos textos de la decisión 5 del plan.
+4. Leer los dos textos de la decisión 5 del plan, que la spec lista en «Textos nuevos» como derivados menores.
 5. Hacer el merge a `main`, que publica el APK.

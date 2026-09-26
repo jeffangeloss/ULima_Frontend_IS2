@@ -796,22 +796,31 @@ Los textos propios de la app son estos.
   pudimos cargar el test.».
 - **Conversación.** «Pregunta N de T», «Desempate 1», «Desempate 2», «Pregunta anterior»,
   «Pausar el test y seguir luego», «N respuestas anteriores», «1 respuesta anterior», «Ver tus N
-  respuestas anteriores», «Ocultar tus respuestas anteriores», «Cierra el bloque k de B», «Esto o
-  aquello», «Escala de gusto», «Desempate», «o» y «Siguiente».
+  respuestas anteriores», «Ver tu respuesta anterior», «Ocultar tus respuestas anteriores»,
+  «Cierra el bloque k de B», «Esto o aquello», «Escala de gusto», «Desempate», «o» y «Siguiente».
 - **Espera.** «No pudimos conectarnos. Revisa tu conexión e inténtalo de nuevo.» y «Reintentar».
 - **Resultado.** «Tu n.º 1», «Empate», «N % afinidad», «Tu n.º 1, <nombre>, N % de afinidad»,
   «Empate, <nombre> y <nombre>, N % de afinidad», «IA», «Motivo redactado con IA», «Leer
-  más», «Leer menos», «N electivos», «Electivos de las dos», «Ver», «Electivos de <nombre>»,
-  «<código> · N créditos», «También te puede interesar», «guárdala», «Puesto N, <nombre>, N % de
-  afinidad», «Marcar <nombre> como interés», «Quitar <nombre> de tus intereses», «Tu principal»,
-  «Elegir como principal», «Ya es tu principal», «¿Cuál eliges como principal?», «Cancelar»,
-  «Decidir después», «Rehacer el test», «No se pudo guardar. Revisa tu conexión e inténtalo de
-  nuevo.» y «No se pudo confirmar el guardado. Revisa tu conexión e inténtalo de nuevo.».
+  más», «Leer menos», «N electivos», «1 electivo», «Electivos de las dos», «Ver», «Electivos
+  de <nombre>», «<código> · N créditos», «También te puede interesar», «guárdala», «Puesto N,
+  <nombre>, N % de afinidad», «Marcar <nombre> como interés», «Quitar <nombre> de tus
+  intereses», «Tu principal», «Elegir como principal», «Ya es tu principal», «¿Cuál eliges como
+  principal?», «Cancelar», «Decidir después», «Rehacer el test», «No se pudo guardar. Revisa tu
+  conexión e inténtalo de nuevo.» y «No se pudo confirmar el guardado. Revisa tu conexión e
+  inténtalo de nuevo.».
 - **Perfil.** «Test de especialidad», «Hecho el dd/mm/aaaa», «El test cambió desde que lo
   hiciste.», «Todavía no hiciste el test.», «Hacer el test», «Tienes un test a medias, N de T.»,
   «Seguir el test», «No se pudo cargar tu último test.», «No se pudieron cargar tus
   especialidades.» y «Reintentar».
 - **Asistente.** «No pudimos cargar tu carrera.» y «No pudimos cargar las especialidades.».
+
+El plan de la app (decisión 5 de `docs/superpowers/plans/2026-09-25-specialty-test-app.md`) suma
+a esta lista «Ver tu respuesta anterior» y «1 electivo», dos derivados menores de textos ya
+aprobados que no cambian ningún requisito. El primero es la etiqueta del lector de pantalla para
+la pastilla del historial con una sola respuesta, el singular de «Ver tus N respuestas
+anteriores», como «1 respuesta anterior» lo es de la pastilla. El segundo es el singular de «N
+electivos», que con el contenido `2026-09-25.4`, de siete electivos por diploma, no aparece. El
+dueño los lee antes del merge.
 
 Salen los textos del paso «Decisión», que son «Especialización», «Opcional. Puedes elegirla
 ahora, explorarla o decidirlo luego desde tu perfil.», «Sí, quiero elegir ahora», «Todavía no
