@@ -308,6 +308,23 @@ void main() {
         'clave-de-prueba',
       );
     });
+
+    test('«Ya tengo cuenta» desde incierto cierra el registro y abre E1 '
+        '(RF-BIEN-9)', () async {
+      final b = await _enN5(
+        registro: RegistroFalso(
+          fallo: const RegistroFailure('x', code: 'TIEMPO_AGOTADO'),
+        ),
+      );
+      await b.controlador.crearCuenta();
+      expect(b.controlador.turno.value, _T.incierto);
+      final registro = b.controlador.registro!;
+      b.controlador.yaTengoCuenta();
+      expect(b.delAlumno.last, TextosDeLaBienvenida.yaTengoCuenta);
+      expect(registro.cerrado, isTrue);
+      expect(b.controlador.registro, isNull);
+      expect(b.controlador.turno.value, _T.e1Codigo);
+    });
   });
 
   group('el compositor del registro (RF-BIEN-7 y RF-BIEN-9)', () {
@@ -322,6 +339,21 @@ void main() {
       await tester.tap(find.text(TextosDeLaBienvenida.soyNuevo));
       await avanzar(tester, 3000);
       return b;
+    }
+
+    /// «Ya tengo cuenta» y «Volver» en el compositor (RF-BIEN-9).
+    void enlacesDelRegistro() {
+      final compositor = find.byType(MarcoDelCompositor);
+      for (final enlace in <String>[
+        TextosDeLaBienvenida.yaTengoCuenta,
+        TextosDeLaBienvenida.volver,
+      ]) {
+        expect(
+          find.descendant(of: compositor, matching: find.text(enlace)),
+          findsOneWidget,
+          reason: enlace,
+        );
+      }
     }
 
     Future<void> escribir(WidgetTester tester, int campo, String texto) async {
@@ -350,19 +382,28 @@ void main() {
       await avanzar(tester, 2500);
       expect(find.text(TextosDeLaBienvenida.pistaNueva), findsOneWidget);
       expect(find.text(TextosDeLaBienvenida.pistaPortal), findsNothing);
+      enlacesDelRegistro();
       await escribir(tester, 0, 'Contrasena1');
       await escribir(tester, 1, 'Contrasena1');
       await tester.tap(find.byType(BotonDeEnvio));
       await avanzar(tester, 3000);
       // N3, la tarjeta del consentimiento con sus textos literales.
-      expect(find.text(PortalConsentView.titulo), findsOneWidget);
+      for (final texto in <String>[
+        PortalConsentView.titulo,
+        PortalConsentView.introduccion,
+        for (final dato in PortalConsentView.datosImportados) '· $dato',
+        PortalConsentView.finalidad,
+        PortalConsentView.contrasena,
+      ]) {
+        expect(find.text(texto), findsOneWidget, reason: texto);
+      }
       expect(find.text(TextosDeLaBienvenida.acepto), findsOneWidget);
+      enlacesDelRegistro();
       await tester.tap(find.text(TextosDeLaBienvenida.acepto));
       await avanzar(tester, 2500);
       expect(find.text(TextosDeLaBienvenida.pistaPortal), findsOneWidget);
       expect(find.text(TextosDeLaBienvenida.pistaNueva), findsNothing);
-      expect(find.text(TextosDeLaBienvenida.yaTengoCuenta), findsOneWidget);
-      expect(find.text(TextosDeLaBienvenida.volver), findsOneWidget);
+      enlacesDelRegistro();
     });
 
     /// Llega a N2 con un código válido.
@@ -404,6 +445,52 @@ void main() {
       await tester.testTextInput.receiveAction(TextInputAction.next);
       await tester.pump();
       expect(focoDe(tester, r.confirmacionCtrl).hasFocus, isTrue);
+    });
+
+    testWidgets('N5 trae «Ya tengo cuenta» y «Volver» (RF-BIEN-9)', (
+      tester,
+    ) async {
+      await enN5(tester);
+      enlacesDelRegistro();
+    });
+
+    testWidgets('el atrás durante el envío avisa abajo con el Get.snackbar '
+        'de la bienvenida (BR-REG-F-09)', (tester) async {
+      final pendiente = Completer<RegistroResult>();
+      final b = Bienvenida(
+        registro: RegistroFalso(pendiente: pendiente),
+        avisosDeGetX: true,
+      );
+      await montarLaBienvenida(
+        tester,
+        b,
+        argumentos: const {argumentoDeMotivo: MotivoDeLlegada.expirada},
+      );
+      await avanzar(tester, 1500);
+      final c = b.controlador..soyNuevo();
+      c.registro!.codigoCtrl.text = '20230001';
+      c.enviarCodigoDeAlumno();
+      c.registro!
+        ..passwordCtrl.text = 'Contrasena1'
+        ..confirmacionCtrl.text = 'Contrasena1';
+      c.enviarContrasenas();
+      c.aceptarConsentimiento();
+      c.registro!.portalPasswordCtrl.text = 'clave-de-prueba';
+      c.enviarPortal();
+      c.registro!.passcodeCtrl.text = '123456';
+      unawaited(c.crearCuenta());
+      await tester.pump();
+      expect(c.enviando.value, isTrue);
+      c.atras();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      final aviso = tester.widget<GetSnackBar>(find.byType(GetSnackBar));
+      expect(aviso.snackPosition, SnackPosition.BOTTOM);
+      expect(find.text(TextosDeLaBienvenida.avisoEnvioTitulo), findsOneWidget);
+      expect(b.avisos, isEmpty);
+      pendiente.complete(resultadoDelRegistro());
+      await avanzar(tester, 6000);
+      await tester.pumpAndSettle();
     });
 
     testWidgets('N5 toma el foco, y sus casillas usan testChipBg, el texto en '

@@ -21,6 +21,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:ulima_plus/components/logo/sello_del_logo.dart';
 import 'package:ulima_plus/configs/themes.dart';
 import 'package:ulima_plus/domain/bienvenida/bienvenida_turnos.dart';
 import 'package:ulima_plus/models/specialty_test_models.dart';
@@ -695,6 +696,18 @@ void main() {
         findsOneWidget,
       );
       await tester.tap(enElCompositor(TextosDeLaBienvenida.reintentar));
+      await avanzar(tester, 200);
+      // El confeti cae bajo la franja, nunca sobre el sello (RF-BIEN-10).
+      final confeti = find.byWidgetPredicate(
+        (w) => w is CustomPaint && w.painter is PintorDelConfeti,
+      );
+      expect(confeti, findsOneWidget);
+      expect(
+        tester.getRect(confeti).top,
+        greaterThanOrEqualTo(
+          tester.getRect(find.byType(CabeceraConSello)).bottom - 0.5,
+        ),
+      );
       await avanzar(tester, 6000);
       expect(c.turno.value, TurnoDeLaBienvenida.resultado);
       expect(find.byType(TarjetaGanadora, skipOffstage: false), findsOneWidget);

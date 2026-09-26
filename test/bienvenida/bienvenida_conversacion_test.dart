@@ -73,6 +73,10 @@ void main() {
     final compositor = tester.getRect(find.byType(MarcoDelCompositor));
     expect(sello.top, lessThan(100));
     expect(compositor.bottom, closeTo(667, 0.5));
+    expect(
+      tester.widget<CabeceraConSello>(find.byType(CabeceraConSello)).color,
+      MaterialTheme.bienvenidaFranja(Brightness.light),
+    );
     expect(find.text(TextosDeLaBienvenida.saludo), findsOneWidget);
     expect(find.text(TextosDeLaBienvenida.e1), findsOneWidget);
   });
@@ -89,9 +93,13 @@ void main() {
     await tester.pump(const Duration(milliseconds: 20));
     expect(find.text(TextosDeLaBienvenida.e1), findsOneWidget);
     expect(find.byType(MarcoDelCompositor), findsNothing);
-    await tester.pump(const Duration(milliseconds: 510));
-    await tester.pump(const Duration(milliseconds: 400));
+    // E1 entró a los 850 ms, así que el compositor entra a los 1350.
+    await tester.pump(const Duration(milliseconds: 480));
+    expect(find.byType(MarcoDelCompositor), findsNothing);
+    await tester.pump(const Duration(milliseconds: 20));
+    await tester.pump(const Duration(milliseconds: 20));
     expect(find.byType(MarcoDelCompositor), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 400));
   });
 
   testWidgets('el primer grupo lleva el nombre «Ulises» y los siguientes no, '
@@ -257,6 +265,26 @@ void main() {
     expect(
       (caja.decoration as BoxDecoration).color,
       MaterialTheme.cardBg(Brightness.light),
+    );
+    // La respuesta del alumno, en bienvenidaPropia.
+    await tester.enterText(find.byType(TextField).first, '20230001');
+    await tester.pump();
+    await tester.tap(find.byType(BotonDeEnvio));
+    await avanzar(tester, 1000);
+    final respuesta = tester.widget<DecoratedBox>(
+      find
+          .ancestor(
+            of: find.descendant(
+              of: find.byType(ListView),
+              matching: find.text('20230001'),
+            ),
+            matching: find.byType(DecoratedBox),
+          )
+          .first,
+    );
+    expect(
+      (respuesta.decoration as BoxDecoration).color,
+      MaterialTheme.bienvenidaPropia(Brightness.light),
     );
   });
 }

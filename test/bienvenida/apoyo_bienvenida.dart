@@ -230,6 +230,7 @@ class Bienvenida {
     this.token,
     RegistroFalso? registro,
     this.adoptarFalla = false,
+    bool avisosDeGetX = false,
     ApiFalsaDelTest? apiDelTest,
     Future<String?> Function()? tokenGuardado,
     RegistroController Function()? crearRegistro,
@@ -262,7 +263,8 @@ class Bienvenida {
             iniciarSesion: ({required code, required password}) =>
                 this.auth.login(code: code, password: password),
           ),
-      avisar: (titulo, texto) => avisos.add(titulo),
+      // Con avisosDeGetX, el Get.snackbar de la bienvenida.
+      avisar: avisosDeGetX ? null : (titulo, texto) => avisos.add(titulo),
     )..onStart();
   }
 
