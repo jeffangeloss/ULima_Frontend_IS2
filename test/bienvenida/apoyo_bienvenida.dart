@@ -13,9 +13,13 @@ import 'package:ulima_plus/pages/bienvenida/bienvenida_controller.dart';
 import 'package:ulima_plus/pages/bienvenida/conversacion.dart';
 import 'package:ulima_plus/pages/login/login_controller.dart';
 import 'package:ulima_plus/pages/registro/registro_controller.dart';
+import 'package:ulima_plus/pages/specialty_test/specialty_test_logic.dart';
 import 'package:ulima_plus/services/auth_service.dart';
 import 'package:ulima_plus/services/registro_service.dart';
 import 'package:ulima_plus/services/session_navigation.dart';
+import 'package:ulima_plus/services/specialty_test_service.dart';
+
+import '../HU36_jeff/dobles_de_red.dart';
 
 UserModel alumnaDePrueba({bool setupComplete = true, int? careerId = 1}) =>
     UserModel(
@@ -90,6 +94,59 @@ class AuthDeLaBienvenida extends AuthService {
     logouts++;
     usuario = null;
   }
+
+  final List<SeleccionDeEspecialidades> guardados =
+      <SeleccionDeEspecialidades>[];
+  Object? falloAlGuardar;
+  bool catalogoFalla = false;
+
+  @override
+  Future<void> completeSetup({
+    required int careerId,
+    int? especialidadPrincipal,
+    required List<int> especialidadesInteres,
+    Duration? timeout,
+  }) async {
+    if (falloAlGuardar != null) throw falloAlGuardar!;
+    guardados.add(
+      SeleccionDeEspecialidades(
+        principal: especialidadPrincipal,
+        intereses: List<int>.of(especialidadesInteres),
+      ),
+    );
+    usuario?.setupComplete = true;
+  }
+
+  @override
+  List<Map<String, dynamic>> get especialidades => catalogoFalla
+      ? const <Map<String, dynamic>>[]
+      : <Map<String, dynamic>>[
+          for (final (id, nombre, orden) in const [
+            (1, 'Ingeniería de Software', 1),
+            (5, 'Tecnologías de Información', 2),
+            (6, 'Sistemas Inteligentes', 3),
+            (7, 'Videojuegos', 4),
+          ])
+            <String, dynamic>{
+              'id': id,
+              'carrera_id': 1,
+              'name': nombre,
+              'display_order': orden,
+              'is_active': true,
+            },
+        ];
+
+  @override
+  Set<int> get officialSpecialtyIds => catalogoFalla ? <int>{} : {1, 5, 6, 7};
+
+  @override
+  bool get catalogsFailed => catalogoFalla;
+
+  @override
+  Future<bool> reloadCatalogs() async {
+    catalogoFalla = false;
+    return true;
+  }
 }
 
 /// Un RegistroService sin red. Responde con [resultado], lanza [fallo] o
@@ -149,11 +206,15 @@ class Bienvenida {
     this.token,
     RegistroFalso? registro,
     this.adoptarFalla = false,
+    ApiFalsaDelTest? apiDelTest,
   }) : auth = auth ?? AuthDeLaBienvenida(),
        servicioDeRegistro =
            registro ?? RegistroFalso(resultado: resultadoDelRegistro()) {
     Get.testMode = true;
     Get.put<AuthService>(this.auth);
+    Get.put<SpecialtyTestService>(
+      SpecialtyTestService(apiClient: apiDelTest ?? ApiFalsaDelTest()),
+    );
     login = LoginController();
     controlador = BienvenidaController(
       auth: this.auth,
@@ -193,9 +254,11 @@ class Bienvenida {
   late final LoginController login;
   late final BienvenidaController controlador;
 
+  /// Lo que dice Ulises. Las burbujas sin texto, como la de carga o la
+  /// tarjeta del consentimiento, no cuentan.
   List<String> get deUlises => <String>[
     for (final e in controlador.entradas)
-      if (e is BurbujaDeUlises) e.texto,
+      if (e is BurbujaDeUlises && e.texto.isNotEmpty) e.texto,
   ];
 
   List<String> get delAlumno => <String>[

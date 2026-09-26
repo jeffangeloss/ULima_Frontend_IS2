@@ -13,8 +13,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:ulima_plus/configs/themes.dart';
+import 'package:ulima_plus/domain/bienvenida/bienvenida_turnos.dart';
 import 'package:ulima_plus/models/specialty_test_models.dart';
 import 'package:ulima_plus/models/user_model.dart';
+import 'package:ulima_plus/pages/bienvenida/conversacion.dart';
 import 'package:ulima_plus/pages/specialty_test/specialty_test_controller.dart';
 import 'package:ulima_plus/pages/specialty_test/widgets/question_view.dart';
 import 'package:ulima_plus/pages/specialty_test/widgets/task_icon.dart';
@@ -23,6 +25,7 @@ import 'package:ulima_plus/services/specialty_test_service.dart';
 import '../HU36_jeff/datos_de_prueba.dart';
 import '../HU36_jeff/dobles_de_red.dart';
 import '../HU36_jeff/dobles_del_controlador.dart';
+import 'apoyo_bienvenida.dart';
 
 /// El controlador como lo crea la bienvenida, sin Get.put.
 Future<SpecialtyTestController> _enLaBienvenida(UiFalsa ui) async {
@@ -186,5 +189,205 @@ void main() {
         'opciones (RF-TEST-6)', () {
       expect(emojisDeLaEscala, ['😴', '🙂', '😃', '🤩']);
     });
+  });
+
+  group('el test en la conversación (RF-BIEN-10)', () {
+    TestWidgetsFlutterBinding.ensureInitialized();
+
+    /// Una alumna recién registrada, con la conversación en T0.
+    Future<Bienvenida> enT0({ApiFalsaDelTest? api, int? careerId = 1}) async {
+      final b = Bienvenida(
+        auth: AuthDeLaBienvenida(
+          usuario: alumnaDePrueba(setupComplete: false, careerId: careerId),
+          alEntrar: alumnaDePrueba(setupComplete: false, careerId: careerId),
+        ),
+        token: 'jwt-de-prueba',
+        apiDelTest: api,
+      );
+      await b.visitar();
+      b.controlador.ulisesAterrizoConSesion();
+      await pumpEventQueue();
+      return b;
+    }
+
+    String? ultimaDeUlises(Bienvenida b) =>
+        b.deUlises.isEmpty ? null : b.deUlises.last;
+
+    test('mientras llega el contenido Ulises muestra la burbuja de carga, y '
+        'después la invitación con T preguntas (B-11 y B-12)', () async {
+      final b = await enT0();
+      final c = b.controlador;
+      expect(c.test, isNotNull);
+      expect(Get.isRegistered<SpecialtyTestController>(), isFalse);
+      expect(
+        ultimaDeUlises(b),
+        '¿Empezamos tu test de especialidad? Son 5 preguntas cortas.',
+      );
+      expect(
+        c.entradas.whereType<BurbujaDeUlises>().any(
+          (e) => e.tipo == TipoDeBurbuja.cargando,
+        ),
+        isFalse,
+        reason: 'la burbuja de carga se reemplaza',
+      );
+      expect(c.turno.value, TurnoDeLaBienvenida.t0Invitacion);
+    });
+
+    test('cada pregunta es un turno con sus líneas y el prompt, y la respuesta '
+        'es el texto de la tarea o el emoji con la etiqueta', () async {
+      final b = await enT0();
+      final c = b.controlador..empezarElTest();
+      expect(b.delAlumno.last, TextosDeLaBienvenida.empezarElTest);
+      expect(
+        b.deUlises,
+        containsAllInOrder([kDuelHelp, '¿Cuál harías con más ganas?']),
+      );
+      expect(c.turno.value, TurnoDeLaBienvenida.pregunta);
+      final tareaDeArriba = c.test!.preguntaActual!.top!.text;
+      c
+        ..responderAlTest('top', conLector: true)
+        ..siguiente();
+      expect(b.delAlumno.last, tareaDeArriba);
+      expect(b.deUlises, contains('Reacción propia de la pregunta uno.'));
+      expect(c.latidos.value, greaterThanOrEqualTo(2));
+    });
+
+    test('«Pregunta anterior» repite el paso previo, y desde la pregunta 1 '
+        'lleva a T0', () async {
+      final b = await enT0();
+      final c = b.controlador..empezarElTest();
+      c
+        ..responderAlTest('top', conLector: true)
+        ..siguiente()
+        ..preguntaAnterior();
+      expect(b.delAlumno.last, TextosDeLaBienvenida.preguntaAnterior);
+      expect(c.test!.paso.value, 0);
+      expect(c.turno.value, TurnoDeLaBienvenida.pregunta);
+      c.preguntaAnterior();
+      expect(c.turno.value, TurnoDeLaBienvenida.t0Invitacion);
+    });
+
+    test('la espera dice la línea de carga, y el resultado entra con el '
+        'confeti y sus tres botones', () async {
+      final b = await enT0();
+      final c = b.controlador..empezarElTest();
+      for (final v in respuestasEnOrden) {
+        c
+          ..responderAlTest(v, conLector: true)
+          ..siguiente();
+      }
+      expect(
+        c.entradas.whereType<BurbujaDeUlises>().last.tipo,
+        TipoDeBurbuja.esperando,
+      );
+      expect(b.deUlises.last, kLoading);
+      await pumpEventQueue();
+      expect(c.confeti.value, 1);
+      expect(c.entradas.whereType<ResultadoDelTest>(), hasLength(1));
+      expect(c.turno.value, TurnoDeLaBienvenida.resultado);
+    });
+
+    test('«Elegir como principal» guarda, responde y se despide hacia el '
+        'horario', () async {
+      final b = await enT0();
+      final c = b.controlador..empezarElTest();
+      for (final v in respuestasEnOrden) {
+        c
+          ..responderAlTest(v, conLector: true)
+          ..siguiente();
+      }
+      await pumpEventQueue();
+      final primera = c.test!.resultado.value!.ranking.first.specialtyId;
+      await c.elegirComoPrincipal(primera);
+      expect(b.auth.guardados.single.principal, primera);
+      expect(b.delAlumno.last, 'Elegir como principal');
+      expect(b.deUlises.last, TextosDeLaBienvenida.listoAlHorario);
+      expect(c.turno.value, TurnoDeLaBienvenida.pasoAlHorario);
+    });
+
+    test('«Rehacer el test» vuelve a la pregunta 1 sin pasar por T0', () async {
+      final b = await enT0();
+      final c = b.controlador..empezarElTest();
+      for (final v in respuestasEnOrden) {
+        c
+          ..responderAlTest(v, conLector: true)
+          ..siguiente();
+      }
+      await pumpEventQueue();
+      c.rehacerElTest();
+      expect(b.delAlumno.last, 'Rehacer el test');
+      expect(c.turno.value, TurnoDeLaBienvenida.pregunta);
+      expect(c.test!.paso.value, 0);
+    });
+
+    test('«Saltar y elegir por mi cuenta» pasa a la selección manual con la '
+        'lista oficial, y el atrás vuelve a T0', () async {
+      final b = await enT0();
+      final c = b.controlador..saltarElTest();
+      expect(b.deUlises.last, TextosDeLaBienvenida.eligeMencion);
+      expect(c.turno.value, TurnoDeLaBienvenida.seleccionManual);
+      expect(c.especialidadesOficiales.map((e) => e['id']), [1, 5, 6, 7]);
+      c.atras();
+      expect(c.turno.value, TurnoDeLaBienvenida.t0Invitacion);
+    });
+
+    test('la selección manual guarda con «Finalizar configuración» o «Saltar '
+        'por ahora»', () async {
+      final b = await enT0();
+      final c = b.controlador
+        ..saltarElTest()
+        ..marcarPrincipal(5)
+        ..alternarInteres(7);
+      await c.terminarLaSeleccion();
+      expect(b.auth.guardados.single.principal, 5);
+      expect(b.auth.guardados.single.intereses, [7]);
+      expect(b.delAlumno.last, TextosDeLaBienvenida.finalizar);
+      expect(c.turno.value, TurnoDeLaBienvenida.pasoAlHorario);
+    });
+
+    test('un 404 pasa a la selección manual sin aviso, y el atrás no hace '
+        'nada', () async {
+      final b = await enT0(
+        api: ApiFalsaDelTest(
+          contenido: <Object>[
+            const SpecialtyTestFailure(
+              SpecialtyTestFailureKind.notAvailable,
+              message: 'No disponible.',
+            ),
+          ],
+        ),
+      );
+      final c = b.controlador;
+      expect(c.turno.value, TurnoDeLaBienvenida.seleccionManual);
+      expect(b.deUlises, isNot(contains('No disponible.')));
+      c.atras();
+      expect(c.turno.value, TurnoDeLaBienvenida.seleccionManual);
+    });
+
+    test(
+      'sin carrera no guarda y dice el texto de hoy del asistente',
+      () async {
+        final b = await enT0(careerId: null);
+        final c = b.controlador
+          ..saltarElTest()
+          ..marcarPrincipal(5);
+        await c.terminarLaSeleccion();
+        expect(b.auth.guardados, isEmpty);
+        expect(b.deUlises.last, TextosDeLaBienvenida.sinCarrera);
+      },
+    );
+
+    test(
+      'si el catálogo no carga, dice que no pudo y ofrece reintentar',
+      () async {
+        final b = await enT0();
+        b.auth.catalogoFalla = true;
+        final c = b.controlador..saltarElTest();
+        expect(b.deUlises.last, TextosDeLaBienvenida.noCargaronEspecialidades);
+        expect(c.catalogoFallido.value, isTrue);
+        await c.reintentarElCatalogo();
+        expect(c.catalogoFallido.value, isFalse);
+      },
+    );
   });
 }

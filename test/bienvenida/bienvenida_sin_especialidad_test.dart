@@ -66,4 +66,24 @@ void main() {
       expect(conMotivo.controlador.turno.value, TurnoDeLaBienvenida.e1Codigo);
     });
   });
+
+  group('hasta el horario (RF-BIEN-21)', () {
+    test('la llegada con sesión sigue en T0 y termina en el paso al horario, '
+        'nunca en /setup-carrera', () async {
+      final b = Bienvenida(
+        auth: AuthDeLaBienvenida(usuario: alumnaDePrueba(setupComplete: false)),
+        token: 'jwt-de-prueba',
+      );
+      await b.visitar();
+      final c = b.controlador..ulisesAterrizoConSesion();
+      await pumpEventQueue();
+      expect(c.turno.value, TurnoDeLaBienvenida.t0Invitacion);
+      c
+        ..saltarElTest()
+        ..marcarPrincipal(1);
+      await c.terminarLaSeleccion();
+      expect(c.turno.value, TurnoDeLaBienvenida.pasoAlHorario);
+      expect(b.rutas, isEmpty);
+    });
+  });
 }

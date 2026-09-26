@@ -405,6 +405,11 @@ abstract final class TextosDeLaBienvenida {
   static const String empezarElTest = 'Empezar el test';
   static const String noCargoElTest = 'No pudimos cargar el test.';
   static const String reintentar = 'Reintentar';
+  static const String empezarDeNuevo = 'Empezar de nuevo';
+  static const String elegirComoPrincipal = 'Elegir como principal';
+  static const String decidirDespues = 'Decidir después';
+  static const String rehacerElTest = 'Rehacer el test';
+  static const String siguiente = 'Siguiente';
   static String rotuloDelDuelo(int n, int total) =>
       'Esto o aquello · $n de $total';
   static String rotuloDeLaEscala(int n, int total) =>

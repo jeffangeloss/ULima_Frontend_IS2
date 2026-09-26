@@ -10,6 +10,7 @@ import 'package:get/get.dart';
 import 'package:ulima_plus/domain/bienvenida/bienvenida_turnos.dart';
 import 'package:ulima_plus/models/registro_models.dart';
 
+import '../HU36_jeff/dobles_de_red.dart';
 import 'apoyo_bienvenida.dart';
 
 typedef _T = TurnoDeLaBienvenida;
@@ -54,6 +55,30 @@ void main() {
       expect(c.turno.value, _T.incierto);
       c.atras();
       expect(c.turno.value, _T.n5Authenticator);
+    });
+  });
+
+  group('el atrás en el test (RF-BIEN-13)', () {
+    test('T0 y el resultado no hacen nada, las preguntas son «Pregunta '
+        'anterior»', () async {
+      final b = Bienvenida(
+        auth: AuthDeLaBienvenida(usuario: alumnaDePrueba(setupComplete: false)),
+        token: 'jwt-de-prueba',
+        apiDelTest: ApiFalsaDelTest(),
+      );
+      await b.visitar();
+      final c = b.controlador..ulisesAterrizoConSesion();
+      await pumpEventQueue();
+      c.atras();
+      expect(c.turno.value, _T.t0Invitacion);
+      expect(c.atrasSaleDeLaApp, isFalse);
+      c.empezarElTest();
+      c
+        ..responderAlTest('top', conLector: true)
+        ..siguiente()
+        ..atras();
+      expect(c.test!.paso.value, 0);
+      expect(b.delAlumno.last, 'Pregunta anterior');
     });
   });
 }

@@ -12,14 +12,18 @@ import 'package:flutter/services.dart' show TextInput;
 import 'package:get/get.dart';
 
 import '../../domain/bienvenida/bienvenida_turnos.dart';
+import '../../models/specialty_test_models.dart';
 import '../../services/auth_service.dart';
 import '../../services/post_login_route.dart';
 import '../../services/session_navigation.dart';
+import '../../services/specialty_test_service.dart';
 import '../../services/storage_service.dart';
 import '../login/login_controller.dart';
 import '../password_reset/password_reset_validators.dart';
 import '../registro/registro_controller.dart';
 import '../specialty_test/specialty_test_controller.dart';
+import '../specialty_test/specialty_test_logic.dart';
+import '../specialty_test/widgets/question_view.dart' show emojisDeLaEscala;
 import 'conversacion.dart';
 
 /// La píldora bajo la franja mientras se crea la cuenta (RF-BIEN-8).
@@ -33,6 +37,7 @@ class BienvenidaController extends GetxController {
     AuthService? auth,
     LoginController? login,
     RegistroController Function()? crearRegistro,
+    SpecialtyTestController Function(SpecialtyTestUi ui)? crearTest,
     Future<String?> Function()? tokenGuardado,
     void Function(String ruta)? abrirRuta,
     void Function()? terminarAutocompletado,
@@ -40,6 +45,12 @@ class BienvenidaController extends GetxController {
   }) : _authInyectado = auth,
        _loginInyectado = login,
        _crearRegistro = crearRegistro ?? RegistroController.new,
+       _crearTest =
+           crearTest ??
+           ((ui) => SpecialtyTestController(
+             origen: OrigenDelTest.bienvenida,
+             ui: ui,
+           )),
        _tokenGuardado = tokenGuardado ?? (() => StorageService.to.savedToken),
        _abrirRuta = abrirRuta ?? ((ruta) => Get.toNamed<void>(ruta)),
        _terminarAutocompletado =
@@ -55,6 +66,7 @@ class BienvenidaController extends GetxController {
   final AuthService? _authInyectado;
   final LoginController? _loginInyectado;
   final RegistroController Function() _crearRegistro;
+  final SpecialtyTestController Function(SpecialtyTestUi ui) _crearTest;
   final Future<String?> Function() _tokenGuardado;
   final void Function(String ruta) _abrirRuta;
 
@@ -68,6 +80,26 @@ class BienvenidaController extends GetxController {
 
   /// Mientras se envía el registro, el pulso recorre los rombos (RF-BIEN-4).
   final enviando = false.obs;
+
+  /// Sube con cada resultado, y la página dibuja el confeti una vez bajo la
+  /// franja (RF-BIEN-10).
+  final confeti = 0.obs;
+  final principalManual = RxnInt();
+  final interesesManuales = <int>{}.obs;
+  final catalogoFallido = false.obs;
+
+  /// El test pidió empezar de nuevo, y el compositor lo ofrece.
+  final pideReinicio = false.obs;
+
+  final List<Worker> _trabajosDelTest = <Worker>[];
+  int? _idDeLaCarga;
+  FaseDelTest? _faseMostrada;
+  int _pasoMostrado = -1;
+  bool _volviendo = false;
+  bool _saltando = false;
+  bool _testDisponible = true;
+  String? _botonQueGuarda;
+  Completer<void>? _reinicio;
 
   AuthService get _auth => _authInyectado ?? AuthService.to;
   LoginController get _login => _loginInyectado ?? Get.find<LoginController>();
@@ -221,6 +253,9 @@ class BienvenidaController extends GetxController {
     _conSesion = false;
     pildora.value = null;
     enviando.value = false;
+    principalManual.value = null;
+    interesesManuales.clear();
+    catalogoFallido.value = false;
     _login.vaciarCampos();
   }
 
@@ -235,8 +270,18 @@ class BienvenidaController extends GetxController {
   }
 
   void _cerrarTest() {
+    for (final w in _trabajosDelTest) {
+      w.dispose();
+    }
+    _trabajosDelTest.clear();
     test?.onDelete();
     test = null;
+    _idDeLaCarga = null;
+    _faseMostrada = null;
+    _pasoMostrado = -1;
+    pideReinicio.value = false;
+    _reinicio?.complete();
+    _reinicio = null;
   }
 
   // ── Recibimiento (RF-BIEN-2 y RF-BIEN-21) ────────────────────────────────
@@ -495,7 +540,8 @@ class BienvenidaController extends GetxController {
     }
     _cerrarRegistro();
     _conSesion = true;
-    _empezarElTest();
+    // Sigue a otra burbuja de Ulises.
+    _empezarElTest(primera: Ritmo.entreBurbujas);
   }
 
   /// Los títulos de hoy con un punto final, y con SIN_TOKEN el mensaje si no
@@ -583,16 +629,485 @@ class BienvenidaController extends GetxController {
     _abrir(anterior);
   }
 
-  // ── Test (Tarea 25) ──────────────────────────────────────────────────────
+  // ── Test (RF-BIEN-10 y RF-BIEN-21) ───────────────────────────────────────
 
-  void _empezarElTest() {
+  /// T0. La bienvenida crea el controlador del test ella misma, sin
+  /// Get.put, y pide el contenido una vez (B-34 y enmienda a RF-TEST-2).
+  void _empezarElTest({Duration primera = Ritmo.trasLaRespuesta}) {
+    _cerrarTest();
+    _testDisponible = true;
+    ultimoTurno.value = TurnoB.t0Invitacion;
+    final t = test = _crearTest(_UiDeLaBienvenida(this));
+    _idDeLaCarga = _id();
+    entradas.add(
+      BurbujaDeUlises(
+        id: _idDeLaCarga!,
+        texto: '',
+        tipo: TipoDeBurbuja.cargando,
+        pausa: primera,
+      ),
+    );
+    _trabajosDelTest.addAll(<Worker>[
+      ever<EstadoDeCarga>(t.carga, (_) => _alCambiarLaCarga()),
+      ever<FaseDelTest>(t.fase, _alCambiarLaFase),
+      ever<int>(t.paso, _alCambiarElPaso),
+      ever<SpecialtyTestFailure?>(t.errorDeEspera, _alFallarLaEspera),
+    ]);
+    t.onStart();
+    _alCambiarLaCarga();
+  }
+
+  void _reemplazarLaCarga(
+    String texto, {
+    TipoDeBurbuja tipo = TipoDeBurbuja.texto,
+  }) {
+    final id = _idDeLaCarga;
+    _idDeLaCarga = null;
+    final i = id == null ? -1 : entradas.indexWhere((e) => e.id == id);
+    final burbuja = BurbujaDeUlises(
+      id: i >= 0 ? id! : _id(),
+      texto: texto,
+      tipo: tipo,
+      pausa: i >= 0 ? entradas[i].pausa : Duration.zero,
+    );
+    if (i >= 0) {
+      entradas[i] = burbuja;
+    } else {
+      entradas.add(burbuja);
+    }
+  }
+
+  void _alCambiarLaCarga() {
+    final t = test;
+    if (t == null || _idDeLaCarga == null) return;
+    switch (t.carga.value) {
+      case EstadoDeCarga.cargando:
+        break;
+      case EstadoDeCarga.lista:
+        if (t.fase.value != FaseDelTest.bienvenida) return;
+        _reemplazarLaCarga(
+          TextosB.invitacionAlTest(t.contenido.value!.totalQuestions),
+        );
+        _faseMostrada = FaseDelTest.bienvenida;
+        _pasoMostrado = t.paso.value;
+        _abrir(TurnoB.t0Invitacion);
+      case EstadoDeCarga.error:
+        _reemplazarLaCarga(TextosB.noCargoElTest, tipo: TipoDeBurbuja.error);
+        _abrir(TurnoB.t0Invitacion);
+        unawaited(_trasUnFalloConSesion());
+    }
+  }
+
+  void empezarElTest() {
+    final t = test;
+    if (t == null || turno.value != TurnoB.t0Invitacion) return;
+    if (t.carga.value != EstadoDeCarga.lista) return;
+    _responder(TextosB.empezarElTest);
+    t.empezar();
+  }
+
+  void saltarElTest() {
+    final t = test;
+    if (t == null || turno.value != TurnoB.t0Invitacion) return;
+    _responder(TextosB.saltar);
+    _saltando = true;
+    t.saltar();
+    _saltando = false;
+  }
+
+  void reintentarElContenido() {
+    final t = test;
+    if (t == null || t.carga.value != EstadoDeCarga.error) return;
+    _responder(TextosB.reintentar);
+    _idDeLaCarga = _id();
+    entradas.add(
+      BurbujaDeUlises(
+        id: _idDeLaCarga!,
+        texto: '',
+        tipo: TipoDeBurbuja.cargando,
+        pausa: Ritmo.trasLaRespuesta,
+      ),
+    );
+    t.reintentarCarga();
+  }
+
+  /// Con [conLector], la pregunta no avanza sola y espera «Siguiente»
+  /// (RF-TEST-5 y RF-TEST-13).
+  void responderAlTest(String valor, {bool conLector = false}) {
+    if (turno.value != TurnoB.pregunta && turno.value != TurnoB.desempate) {
+      return;
+    }
+    test?.responder(valor, avanceSolo: !conLector);
+  }
+
+  void siguiente() => test?.avanzar();
+
+  void preguntaAnterior() {
+    final t = test;
+    if (t == null) return;
+    const conEnlace = <TurnoDeLaBienvenida>{
+      TurnoB.pregunta,
+      TurnoB.desempate,
+      TurnoB.espera,
+    };
+    if (!conEnlace.contains(ultimoTurno.value)) return;
+    _responder(TextosB.preguntaAnterior);
+    _volviendo = true;
+    t.atras();
+  }
+
+  void reintentarLaEvaluacion() {
+    final t = test;
+    if (t == null || t.errorDeEspera.value == null) return;
+    _responder(TextosB.reintentar);
+    t.reintentarEvaluacion();
+    _decir(<String>[
+      ?t.contenido.value?.ulises.loading,
+    ], tipo: TipoDeBurbuja.esperando);
+  }
+
+  void empezarDeNuevo() {
+    if (!pideReinicio.value) return;
+    pideReinicio.value = false;
+    _responder(TextosB.empezarDeNuevo);
+    _volviendo = true;
+    _reinicio?.complete();
+    _reinicio = null;
+  }
+
+  Future<void> elegirComoPrincipal(int especialidad) async {
+    _botonQueGuarda = TextosB.elegirComoPrincipal;
+    await test?.elegirPrincipal(especialidad);
+  }
+
+  Future<void> decidirDespues() async {
+    _botonQueGuarda = TextosB.decidirDespues;
+    await test?.decidirDespues();
+  }
+
+  void rehacerElTest() {
+    final t = test;
+    if (t == null || t.resultado.value == null) return;
+    _responder(TextosB.rehacerElTest);
+    _volviendo = true;
+    t.rehacer();
+  }
+
+  void alternarCorazon(int especialidad) => test?.alternarCorazon(especialidad);
+
+  /// La fase del test cambió. Cada cambio de fase es un turno nuevo, y al
+  /// pasar de una pregunta a la espera entra la respuesta a esa pregunta.
+  /// Los cambios de paso dentro de una fase que no es la de preguntas, como
+  /// el paso 0 de «Rehacer el test» con el resultado todavía a la vista, no
+  /// dicen nada.
+  void _alCambiarLaFase(FaseDelTest fase) {
+    final t = test;
+    final c = t?.contenido.value;
+    if (t == null || c == null || fase == _faseMostrada) return;
+    final venia = _faseMostrada;
+    _faseMostrada = fase;
+    switch (fase) {
+      case FaseDelTest.bienvenida:
+        _decir(<String>[TextosB.invitacionAlTest(c.totalQuestions)]);
+        _abrir(TurnoB.t0Invitacion);
+      case FaseDelTest.pregunta:
+        _decirElPaso(t, c, t.paso.value);
+      case FaseDelTest.espera:
+        if (venia == FaseDelTest.pregunta && !_volviendo) {
+          _responder(_textoDeLaRespuesta(t, c, _pasoMostrado));
+        }
+        final lineas = turnoDeEspera(c, trasDesempate: t.esperaTrasDesempate);
+        _decirConSello(lineas.lineas, lineas.sello, ultimaEsperando: true);
+        _abrir(TurnoB.espera);
+      case FaseDelTest.resultado:
+        _decirElResultado(t);
+    }
+    _volviendo = false;
+    _pasoMostrado = t.paso.value;
+  }
+
+  /// El paso cambió dentro de las preguntas. Si el alumno avanzó, entra su
+  /// respuesta al paso que deja, y Ulises dice el paso nuevo. Con «Pregunta
+  /// anterior» no entra ninguna respuesta más.
+  void _alCambiarElPaso(int paso) {
+    final t = test;
+    final c = t?.contenido.value;
+    if (t == null || c == null) return;
+    if (t.fase.value != FaseDelTest.pregunta ||
+        _faseMostrada != FaseDelTest.pregunta ||
+        paso == _pasoMostrado) {
+      return;
+    }
+    if (paso > _pasoMostrado && !_volviendo) {
+      _responder(_textoDeLaRespuesta(t, c, _pasoMostrado));
+    }
+    _volviendo = false;
+    _pasoMostrado = paso;
+    _decirElPaso(t, c, paso);
+  }
+
+  /// Ulises dice [lineas], con el sello junto a la primera, que es el
+  /// `blockClose` (RF-TEST-4).
+  void _decirConSello(
+    List<String> lineas,
+    SelloDeBloque? sello, {
+    bool ultimaEsperando = false,
+  }) {
+    for (var i = 0; i < lineas.length; i++) {
+      final ultima = i == lineas.length - 1;
+      entradas.add(
+        BurbujaDeUlises(
+          id: _id(),
+          texto: lineas[i],
+          sello: i == 0 ? sello : null,
+          tipo: ultima && ultimaEsperando
+              ? TipoDeBurbuja.esperando
+              : TipoDeBurbuja.texto,
+          pausa: i == 0 ? Ritmo.trasLaRespuesta : Ritmo.entreBurbujas,
+        ),
+      );
+    }
+  }
+
+  void _decirElPaso(
+    SpecialtyTestController t,
+    SpecialtyTestContent c,
+    int paso,
+  ) {
+    if (paso < c.totalQuestions) {
+      final previo = turnoAntesDePregunta(
+        c,
+        paso,
+        Map<String, String>.of(t.respuestas),
+      );
+      final q = c.questions[paso];
+      _decirConSello(previo.lineas, previo.sello);
+      // En una escala, la tarea en negrita y debajo el prompt.
+      entradas.add(
+        BurbujaDeUlises(
+          id: _id(),
+          texto: q.prompt,
+          titulo: q.isDuel ? null : q.task?.text,
+          pausa: previo.lineas.isEmpty
+              ? Ritmo.trasLaRespuesta
+              : Ritmo.entreBurbujas,
+        ),
+      );
+      _abrir(TurnoB.pregunta);
+      return;
+    }
+    final d = t.desempateActual!;
+    final previo = turnoAntesDeDesempate(d);
+    _decirConSello(previo.lineas, null);
+    entradas.add(
+      BurbujaDeUlises(
+        id: _id(),
+        texto: d.tiebreak.prompt,
+        pausa: previo.lineas.isEmpty
+            ? Ritmo.trasLaRespuesta
+            : Ritmo.entreBurbujas,
+      ),
+    );
+    _abrir(TurnoB.desempate);
+  }
+
+  String _textoDeLaRespuesta(
+    SpecialtyTestController t,
+    SpecialtyTestContent c,
+    int paso,
+  ) {
+    if (paso < 0) return '';
+    if (paso < c.totalQuestions) {
+      final q = c.questions[paso];
+      final valor = t.respuestas[q.id] ?? '';
+      if (!q.isDuel) {
+        final i = c.scaleOptions.indexWhere((o) => o.id == valor);
+        final etiqueta = c.optionLabel(valor) ?? valor;
+        return i >= 0 ? '${emojisDeLaEscala[i]} $etiqueta' : etiqueta;
+      }
+      return textoDeRespuesta(c, tareas: [q.top!, q.bottom!], respuesta: valor);
+    }
+    final i = paso - c.totalQuestions;
+    if (i >= t.desempates.length) return '';
+    final d = t.desempates[i];
+    return textoDeRespuesta(
+      c,
+      tareas: [d.tiebreak.top, d.tiebreak.bottom],
+      respuesta: d.answer ?? '',
+    );
+  }
+
+  void _decirElResultado(SpecialtyTestController t) {
+    final r = t.resultado.value;
+    if (r == null) return;
+    confeti.value++;
+    _decir(<String>[?r.headline, ?r.tiebreakOutcome]);
+    entradas.add(ResultadoDelTest(id: _id(), pausa: Ritmo.entreBurbujas));
+    _abrir(TurnoB.resultado);
+  }
+
+  void _alFallarLaEspera(SpecialtyTestFailure? fallo) {
+    final t = test;
+    if (t == null || fallo == null) return;
+    _decirError(t.textoDelErrorDeEspera);
+    _abrir(TurnoB.espera);
+    unawaited(_trasUnFalloConSesion());
+  }
+
+  void _volverAT0() {
+    final t = test;
+    final c = t?.contenido.value;
+    if (t == null || c == null || !_testDisponible) return;
+    _decir(<String>[TextosB.invitacionAlTest(c.totalQuestions)]);
     _abrir(TurnoB.t0Invitacion);
+  }
+
+  // Lo que el controlador del test le pide a la conversación.
+
+  void _aLaSeleccionManual() {
+    // Sin el toque de «Saltar», la salida viene de un 404 y el test no está
+    // disponible (RF-TEST-1).
+    if (!_saltando) {
+      _testDisponible = false;
+      // La burbuja de carga no llega a su invitación.
+      final id = _idDeLaCarga;
+      if (id != null) entradas.removeWhere((e) => e.id == id);
+      _cerrarTest();
+    }
+    principalManual.value = _auth.currentUser?.especialidadPrincipal;
+    interesesManuales.assignAll(
+      _auth.currentUser?.especialidadesInteres ?? const <int>[],
+    );
+    _decir(<String>[TextosB.eligeMencion]);
+    catalogoFallido.value =
+        _auth.catalogsFailed || especialidadesOficiales.isEmpty;
+    if (catalogoFallido.value) {
+      _decirError(TextosB.noCargaronEspecialidades);
+    }
+    _abrir(TurnoB.seleccionManual);
+  }
+
+  void _despedirseDelTest() {
+    _responder(_botonQueGuarda ?? TextosB.elegirComoPrincipal);
+    _botonQueGuarda = null;
+    _decir(<String>[TextosB.listoAlHorario]);
+    _abrir(TurnoB.pasoAlHorario);
+  }
+
+  void _avisoDelTest(AvisoDelTest aviso) {
+    _decirError(aviso.mensaje);
+    unawaited(_trasUnFalloConSesion());
+  }
+
+  Future<void> _pedirReinicio(String mensaje) {
+    _decirError(mensaje);
+    pideReinicio.value = true;
+    _abrir(TurnoB.espera);
+    final reinicio = _reinicio = Completer<void>();
+    return reinicio.future;
+  }
+
+  // ── Selección manual (RF-TEST-1 y RF-TEST-14) ────────────────────────────
+
+  /// Solo las oficiales de la carrera, en su orden (RF-TEST-14).
+  List<Map<String, dynamic>> get especialidadesOficiales {
+    final carrera = _auth.currentUser?.careerId;
+    if (carrera == null) return const <Map<String, dynamic>>[];
+    final oficiales = _auth.officialSpecialtyIds;
+    final lista = _auth.especialidades
+        .where(
+          (e) =>
+              e['carrera_id'] == carrera &&
+              oficiales.contains(int.tryParse('${e['id']}')),
+        )
+        .toList();
+    lista.sort(
+      (a, b) => ((a['display_order'] as num?) ?? 999).compareTo(
+        (b['display_order'] as num?) ?? 999,
+      ),
+    );
+    return lista;
+  }
+
+  void marcarPrincipal(int especialidad) {
+    if (principalManual.value == especialidad) {
+      principalManual.value = null;
+    } else {
+      principalManual.value = especialidad;
+      interesesManuales.remove(especialidad);
+    }
+  }
+
+  void alternarInteres(int especialidad) {
+    if (principalManual.value == especialidad) return;
+    if (!interesesManuales.remove(especialidad)) {
+      interesesManuales.add(especialidad);
+    }
+  }
+
+  Future<void> terminarLaSeleccion() async {
+    if (turno.value != TurnoB.seleccionManual || esperando.value) return;
+    final carrera = _auth.currentUser?.careerId;
+    if (carrera == null) {
+      _decirError(TextosB.sinCarrera);
+      return;
+    }
+    final seleccion = seleccionOficial(
+      principal: principalManual.value,
+      intereses: interesesManuales,
+      oficiales: _auth.officialSpecialtyIds,
+    );
+    esperando.value = true;
+    try {
+      await _auth.completeSetup(
+        careerId: carrera,
+        especialidadPrincipal: seleccion.principal,
+        especialidadesInteres: seleccion.intereses,
+      );
+    } catch (_) {
+      esperando.value = false;
+      // La spec no fija este texto (decisión 8 del plan).
+      _decirError(TextosDelTest.noSeGuardo);
+      unawaited(_trasUnFalloConSesion());
+      return;
+    }
+    esperando.value = false;
+    _botonQueGuarda = seleccion.principal == null && seleccion.intereses.isEmpty
+        ? TextosB.saltarPorAhora
+        : TextosB.finalizar;
+    _despedirseDelTest();
+  }
+
+  Future<void> reintentarElCatalogo() async {
+    if (turno.value != TurnoB.seleccionManual) return;
+    esperando.value = true;
+    final cargo = await _auth.reloadCatalogs();
+    esperando.value = false;
+    catalogoFallido.value = !cargo || especialidadesOficiales.isEmpty;
+    if (catalogoFallido.value) _decirError(TextosB.noCargaronEspecialidades);
+  }
+
+  // ── El 401 dentro de la conversación (RF-BIEN-12 y B-22) ─────────────────
+
+  /// En /login el interceptor del 401 borra la sesión y no navega, así que
+  /// tras cada fallo de un turno con sesión se mira si el token sigue.
+  Future<void> _trasUnFalloConSesion() async {
+    if (!_conSesion) return;
+    final token = await _tokenGuardado();
+    if (token != null && token.isNotEmpty) return;
+    // La misma limpieza local que logout, sin red porque no hay token.
+    await _auth.logout();
+    _reiniciar();
+    _decirError(TextosB.sesionCaducada);
+    _abrirE1(primera: Ritmo.entreBurbujas);
   }
 
   // ── Atrás (RF-BIEN-13) ───────────────────────────────────────────────────
 
-  AccionDelAtras get _accionDelAtras =>
-      accionDelAtras(ultimoTurno.value ?? TurnoB.recibimiento);
+  AccionDelAtras get _accionDelAtras => accionDelAtras(
+    ultimoTurno.value ?? TurnoB.recibimiento,
+    testDisponible: _testDisponible,
+  );
 
   bool get atrasSaleDeLaApp => _accionDelAtras == AccionDelAtras.salirDeLaApp;
 
@@ -609,7 +1124,9 @@ class BienvenidaController extends GetxController {
       case AccionDelAtras.volverAIntentar:
         volverAIntentarElRegistro();
       case AccionDelAtras.preguntaAnterior:
+        preguntaAnterior();
       case AccionDelAtras.irAT0:
+        _volverAT0();
       case AccionDelAtras.salirDeLaApp:
       case AccionDelAtras.nada:
         break;
@@ -621,4 +1138,28 @@ class BienvenidaController extends GetxController {
   /// La página entregó el paso a la capa y navegó a /home. Se cierran los
   /// tramos, se borra el historial y se vacían los campos.
   void pasoHecho() => _reiniciar();
+}
+
+/// La pantalla del test dentro de la conversación (B-34).
+class _UiDeLaBienvenida implements SpecialtyTestUi {
+  _UiDeLaBienvenida(this._bienvenida);
+
+  final BienvenidaController _bienvenida;
+
+  @override
+  void cerrar([SalidaDelTest? salida]) {
+    if (salida == SalidaDelTest.seleccionManual) {
+      _bienvenida._aLaSeleccionManual();
+    }
+  }
+
+  @override
+  void irAlHome() => _bienvenida._despedirseDelTest();
+
+  @override
+  void avisar(AvisoDelTest aviso) => _bienvenida._avisoDelTest(aviso);
+
+  @override
+  Future<void> pedirReinicio(String mensaje) =>
+      _bienvenida._pedirReinicio(mensaje);
 }
