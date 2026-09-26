@@ -18,10 +18,28 @@ import 'package:ulima_plus/components/recarga_ulima/hoja_recarga_ulima.dart';
 import 'package:ulima_plus/configs/themes.dart';
 import 'package:ulima_plus/pages/password_reset/password_reset_ui.dart';
 import 'package:ulima_plus/services/recarga_ulima_service.dart';
+import 'package:ulima_plus/services/session_navigation.dart';
 
 import 'recarga_dobles.dart';
 
 const String _refresh = 'POST /portal-sync/refresh';
+
+/// La recarga con el JWT vencido. Hace lo mismo que ApiClient._send ante un
+/// 401, que primero manda al login con offAllToLogin() y después lanza.
+class _ApiSesionVencida extends ApiRecargaFalsa {
+  @override
+  Future<Map<String, dynamic>> postJson(
+    String path, {
+    required Map<String, dynamic> body,
+    String? token,
+  }) async {
+    if (path != '/portal-sync/refresh') {
+      return super.postJson(path, body: body, token: token);
+    }
+    offAllToLogin();
+    throw errorApi(401, 'UNAUTHORIZED');
+  }
+}
 
 ThemeData _tema(Brightness brillo) {
   const tema = MaterialTheme(TextTheme());
@@ -368,6 +386,55 @@ void main() {
       expect(_resultado, isFalse);
       expect(codigo.text, isEmpty);
       expect(RecargaUlimaService.to.ultimoAviso, isNotNull);
+    });
+
+    // RF-RCG-3. ApiClient retira la hoja con offAllToLogin() antes de que
+    // recargar() devuelva, y la hoja sigue montada hasta el frame siguiente,
+    // así que un pop sin guarda sacaría /login y dejaría el navegador vacío.
+    testWidgets('un 401 deja a la vista el login de ApiClient, sin la hoja ni '
+        'aviso', (tester) async {
+      _pantallaAlta(tester);
+      loguear(alumna());
+      Get.put<RecargaUlimaService>(
+        RecargaUlimaService(apiClient: _ApiSesionVencida()),
+      );
+      await tester.pumpWidget(
+        GetMaterialApp(
+          theme: _tema(Brightness.light),
+          initialRoute: '/',
+          getPages: [
+            GetPage(
+              name: '/',
+              page: () => Scaffold(
+                body: Builder(
+                  builder: (context) => Center(
+                    child: ElevatedButton(
+                      onPressed: () => abrirHojaRecargaUlima(context),
+                      child: const Text('ABRIR'),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            GetPage(
+              name: '/login',
+              page: () => const Scaffold(body: Center(child: Text('LOGIN'))),
+            ),
+          ],
+        ),
+      );
+      await tester.tap(find.text('ABRIR'));
+      await _asentar(tester);
+      await _llenar(tester);
+
+      await tester.tap(find.text('Actualizar'));
+      await _asentar(tester);
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('LOGIN'), findsOneWidget);
+      expect(find.byType(HojaRecargaUlima), findsNothing);
+      expect(Get.currentRoute, '/login');
+      expect(RecargaUlimaService.to.ultimoAviso, isNull);
     });
 
     testWidgets('las etiquetas de Semantics', (tester) async {

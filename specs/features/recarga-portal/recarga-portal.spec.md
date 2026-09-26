@@ -952,8 +952,8 @@ Todas van en `test/HU37_jeff/` (D20), con datos inventados y el alumno `20230001
   relleno y llevan el borde en reposo de D13. La espera muestra su texto, deja las casillas de
   solo lectura, apaga la X y «Cancelar» y no deja cerrar con atrás. Cerrar con la X, con
   «Cancelar» y con atrás vacía los dos campos, y al reabrir la hoja llegan vacíos. El éxito y el
-  error cierran la hoja y vacían los dos campos. Las etiquetas de `Semantics`. En claro y en
-  oscuro.
+  error cierran la hoja y vacían los dos campos. Un `401` deja a la vista el login que pone
+  `ApiClient`, sin la hoja ni aviso. Las etiquetas de `Semantics`. En claro y en oscuro.
 - `mis_notas_ulima_test.dart` (de widget, RF-RCG-4 y RF-RCG-6). Cada fila de la tabla de estados.
   La franja con y sin lectura, y la etiqueta de su `Semantics`. Una fila `graded`, una `pending`
   con `Sin nota`, una `np` con `NP` y una sin semana. La sigla solo con pareja, y ninguna sigla si

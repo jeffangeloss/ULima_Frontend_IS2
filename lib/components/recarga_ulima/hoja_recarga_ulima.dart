@@ -93,7 +93,12 @@ class _HojaRecargaUlimaState extends State<HojaRecargaUlima> {
       passcode: _passcode.text.trim(),
     );
     _vaciar();
-    if (mounted) Navigator.of(context).pop(guardada);
+    // Con un 401, offAllToLogin() (api_client.dart) retira la hoja antes de
+    // que recargar() devuelva. La hoja sigue montada hasta el frame siguiente,
+    // y un pop sin esta guarda sacaría /login (RF-RCG-3).
+    if (mounted && (ModalRoute.of(context)?.isCurrent ?? false)) {
+      Navigator.of(context).pop(guardada);
+    }
   }
 
   @override
