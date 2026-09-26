@@ -208,11 +208,11 @@ La spec las deja abiertas o no las nombra. Ninguna cambia un requisito.
     entrada a los 1330 ms, y RF-SPL-17 y RF-SPL-21 fijan en 1330 ms la salida hacia `/home` y el
     relevo a la bienvenida, con el logo completo y quieto. Si el rebote empezara a los 1210 ms,
     terminaría a los 1360 ms, dentro de la salida o del primer cuadro de la bienvenida. El segundo
-    «+» empieza su rebote a los 1180 ms, 30 ms antes del fin de su vuelo, cuando ya cubre el
-    99,8 % de su curva y está a menos de medio dp de su lugar, así que conserva sus 150 ms y su
-    12 % y termina con la entrada. El primero no choca con nada y rebota de 1160 a 1310 ms, como
-    en la maqueta. La salida y el relevo empiezan a los 1330 ms con el logo quieto, y el informe
-    de la Tarea 9 lo anota para el dueño.
+    «+» empieza su rebote a los 1180 ms, 30 ms antes del fin de su vuelo, cuando
+    `Curves.easeInOutCubic` ya cubre el 99,5 % de su curva y el «+» está a menos de 1 dp de su
+    lugar, así que conserva sus 150 ms y su 12 % y termina con la entrada. El primero no choca con
+    nada y rebota de 1160 a 1310 ms, como en la maqueta. La salida y el relevo empiezan a los
+    1330 ms con el logo quieto, y el informe de la Tarea 9 lo anota para el dueño.
 12. **Los detalles del vuelo que la spec no fija.** RF-BIEN-2 da la estela, las partículas y la
     sombra por su tamaño, su cantidad y su tiempo. La estela deja un punto cada 1300/30 ms sobre la
     misma curva de Ulises, las seis partículas salen de sus pies en abanico hacia arriba hasta
@@ -277,13 +277,14 @@ La spec las deja abiertas o no las nombra. Ninguna cambia un requisito.
 | `lib/pages/bienvenida/widgets/franja_con_sello.dart` | crear | La franja, el sello, el latido, el pulso y la píldora | 26, 28 y 31 |
 | `lib/pages/bienvenida/widgets/compositor.dart` | crear | El compositor y sus piezas | 26 a 29, 31 y 32 |
 | `lib/pages/bienvenida/widgets/compositor_del_test.dart` | crear | El test y la selección manual dentro del compositor | 27 |
+| `lib/pages/bienvenida/widgets/anillo_de_foco.dart` | crear | El anillo de 2 dp en `bienvenidaFoco` de los botones, las píldoras y los enlaces con el foco del teclado | 31 |
 | `lib/pages/bienvenida/widgets/vuelo_de_ulises.dart` | crear | La curva, la estela, las partículas y el salto de Ulises | 28 |
 | `lib/pages/bienvenida/widgets/recibimiento.dart` | crear | El recibimiento, la tarjeta, los dos botones y la subida al sello | 28 y 31 |
 | `lib/pages/login/login_binding.dart` | modificar | Registra también el controlador de la bienvenida | 29 |
 | `lib/pages/login/login_page.dart`, `lib/pages/registro/registro_page.dart`, `registro_binding.dart` y `test/HU33_jeff/registro_page_test.dart` | borrar | La bienvenida los reemplaza (B-23) | 29 |
 | `lib/pages/splash/paso_al_horario.dart` | crear | El dibujo del paso al horario | 30 |
 | `lib/components/chatbot_bubble.dart` | modificar | Informa su lugar y espera a Ulises solo en el paso al horario | 30 |
-| `lib/components/google_sign_in_button.dart`, `google_sign_in_button_stub.dart` y `google_sign_in_button_web.dart` | modificar | El botón de GIS configurado y dibujado otra vez al cambiar el tema | 32 |
+| `lib/components/google_sign_in_button.dart`, `google_sign_in_button_stub.dart` y `google_sign_in_button_web.dart` | modificar | El botón de GIS configurado y dibujado otra vez al cambiar el tema. Los dos primeros entran a los targets por la enmienda técnica del 2026-09-26 | 32 |
 | `lib/components/portal_consent/portal_consent_view.dart` y `lib/services/auth_service.dart` | modificar | Solo los comentarios que nombran `/registro` | 29 |
 | `README.md` | modificar | «El arranque», el login, el registro y la ruta post-login | 14 y 33 |
 | `test/splash/apoyo_splash.dart` | crear | Teléfonos, escenas, carga falsa, `Random` fijo y montaje de la capa | 4 y 12 |
@@ -292,7 +293,7 @@ La spec las deja abiertas o no las nombra. Ninguna cambia un requisito.
 | `test/bienvenida/apoyo_bienvenida.dart` | crear | Dobles de `AuthService`, `LoginController`, `RegistroService`, `StorageService` y del test, y el montaje de `/login`, con la capa si hace falta | 23 a 26, 29 y 30 |
 | `test/bienvenida/*_test.dart` | crear | Las pruebas de «Pruebas por requisito» de la bienvenida y la de sus reglas puras | 15 a 32 |
 | `test/HU01_jeff/**`, `test/HU33_jeff/registro_page_test.dart` y `test/HU34_jeff/registro_consent_test.dart` | modificar o borrar | Pasan a la bienvenida | 29 |
-| Specs, enmiendas, maquetas e índice | modificar | Estado, `[@test]` y notas | 33 |
+| Specs, enmiendas, maquetas e índice | modificar | Estado, `[@test]` y notas, también de la enmienda del test y de las notas de Perfil académico, Chatbot y Récord académico | 33 |
 
 Los archivos de apoyo de `test/splash/` y `test/bienvenida/` no terminan en `_test.dart`, así que
 `flutter test` no los corre como suites.
@@ -320,7 +321,7 @@ el splash, las 15 a 19 son piezas de la bienvenida que no usan el test de especi
 | RF-SPL-19 | 33 | Documentación |
 | RF-SPL-20 y BR-SHELL-F-02 | 6 | `home_pestana_inicial_test.dart` |
 | BR-SHELL-F-04 | 5 | `app_header_test.dart` |
-| RF-BIEN-1 | 15, 23 y 29 | `bienvenida_ruta_test.dart` |
+| RF-BIEN-1 | 15, 23, 26 y 29 | `bienvenida_ruta_test.dart` |
 | RF-BIEN-2 y RF-BIEN-3 | 16 y 28 | `bienvenida_recibimiento_test.dart` |
 | RF-BIEN-4 | 16, 17, 26 y 28 | `bienvenida_sello_test.dart` |
 | RF-BIEN-5 | 23 y 26 | `bienvenida_conversacion_test.dart` |
@@ -329,7 +330,7 @@ el splash, las 15 a 19 son piezas de la bienvenida que no usan el test de especi
 | RF-BIEN-9 | 19 y 24 | `bienvenida_credenciales_test.dart` |
 | RF-BIEN-10 | 21, 22, 25 y 27 | `bienvenida_test_especialidad_test.dart` |
 | RF-BIEN-11 | 30 | `bienvenida_horario_test.dart` |
-| RF-BIEN-12 | 23 a 25 | `bienvenida_errores_test.dart` |
+| RF-BIEN-12 | 23 a 25 y 30 | `bienvenida_errores_test.dart` y, para el paso al horario, `bienvenida_horario_test.dart` |
 | RF-BIEN-13 | 16 y 23 a 25 | `bienvenida_atras_test.dart` |
 | RF-BIEN-14 | 20 | `bienvenida_contraste_test.dart` |
 | RF-BIEN-15 y RF-BIEN-16 | 26, 30 y 31 | `bienvenida_movimiento_test.dart`, `bienvenida_accesibilidad_test.dart` y `bienvenida_horario_test.dart` |
@@ -2138,7 +2139,7 @@ import 'package:ulima_plus/pages/splash/puntos_de_aterrizaje.dart';
         expect(estrella.height, 26);
         expect(texto.left - estrella.right, closeTo(10, 0.01));
         expect(estrella.center.dy, closeTo(texto.center.dy, 0.5));
-        // El alto no cambia: 50 + 30 + 20 y el borde de 2.
+        // El alto no cambia, con 50 + 30 + 20 y el borde de 2.
         expect(tester.getSize(find.byType(AppHeader)).height, 102);
       });
     }
@@ -4155,13 +4156,14 @@ void main() {
     });
 
     test('el segundo «+» rebota de 1180 a 1330 ms, cuando ya está a menos de '
-        'medio dp de su lugar, y termina con la entrada (decisión 11 del plan)',
+        '1 dp de su lugar, y termina con la entrada (decisión 11 del plan)',
         () {
       final llegando = _en(1180).cruces[1];
-      final medioDp = 0.5 * _r / 90;
+      // Un dp en u, con R = 90 dp.
+      const unDp = _r / 90;
       expect(
         (llegando.centro - LogoGeometria.centrosDeCruz[1]).distance,
-        lessThan(medioDp),
+        lessThan(unDp),
       );
       expect(_en(1180 + 75).cruces[1].escala, closeTo(1.12, 1e-6));
       expect(_en(1330).cruces[1].escala, closeTo(1, 1e-6));
@@ -4286,9 +4288,9 @@ class Codigo extends VarianteDeIntro {
 
   /// Cuándo empieza el rebote de 150 ms de cada «+». El primero rebota al
   /// llegar, a los 1160 ms. El segundo empieza 30 ms antes del fin de su
-  /// vuelo, cuando ya cubre el 99,8 % de su curva y está a menos de medio dp
-  /// de su lugar, así que termina a los 1330 ms, con la entrada (decisión 11
-  /// del plan).
+  /// vuelo, cuando ya cubre el 99,5 % de su curva y está a menos de 1 dp de
+  /// su lugar, así que termina a los 1330 ms, con la entrada (decisión 11 del
+  /// plan).
   static const List<double> inicioDelRebote = <double>[1160, 1180];
 
   static const double _r = LogoGeometria.radioNominal;
@@ -9952,7 +9954,7 @@ class DesenlaceDelLogin {
     final code = codeController.text.trim();
     final password = passwordController.text;
     if (code.isEmpty || password.isEmpty) {
-      // Defensa: la bienvenida no deja enviar un campo vacío.
+      // Es solo defensa, porque la bienvenida no deja enviar un campo vacío.
       const mensaje = 'Ingresa tu código y contraseña.';
       errorMessage.value = mensaje;
       return const DesenlaceDelLogin.error(mensaje);
@@ -10850,8 +10852,9 @@ git log -1 --format='%an <%ae>'
 **Requisitos.** De RF-BIEN-1, «Los controladores», «Cada montaje es una visita» y «La navegación
 queda en la bienvenida» (decisión B-19). De RF-BIEN-2, lo que pasa «Al responder». RF-BIEN-3 en
 su parte de datos, RF-BIEN-5 en su parte de datos (los grupos, las respuestas, el historial en
-memoria y los campos vacíos al salir), RF-BIEN-6 completo en su parte de datos (decisión B-6), la
-llegada con sesión de RF-BIEN-21 y el atrás de RF-BIEN-13 en los turnos de «Sí, entrar».
+memoria y los campos vacíos al salir), RF-BIEN-6 completo en su parte de datos (decisión B-6), con
+el cierre del autocompletado de «El autocompletado» antes de vaciar los campos, la llegada con
+sesión de RF-BIEN-21 y el atrás de RF-BIEN-13 en los turnos de «Sí, entrar».
 
 **Archivos.**
 - Crear `lib/pages/bienvenida/conversacion.dart`.
@@ -10883,7 +10886,8 @@ class BienvenidaController extends GetxController {
   BienvenidaController({AuthService? auth, LoginController? login,
     RegistroController Function()? crearRegistro,
     SpecialtyTestController Function(SpecialtyTestUi ui)? crearTest,
-    Future<String?> Function()? tokenGuardado, void Function(String ruta)? abrirRuta});
+    Future<String?> Function()? tokenGuardado, void Function(String ruta)? abrirRuta,
+    void Function()? terminarAutocompletado});
   final RxList<EntradaDeLaConversacion> entradas;
   final Rxn<TurnoDeLaBienvenida> turno;       // el compositor abierto, o null
   final Rxn<TurnoDeLaBienvenida> ultimoTurno;  // para el atrás
@@ -10998,12 +11002,21 @@ class Bienvenida {
       login: login,
       tokenGuardado: () async => token,
       abrirRuta: rutas.add,
+      terminarAutocompletado: () => autocompletados.add((
+        codigo: login.codeController.text,
+        contrasena: login.passwordController.text,
+      )),
     )..onStart();
   }
 
   final AuthDeLaBienvenida auth;
   String? token;
   final List<String> rutas = <String>[];
+
+  /// Cada cierre del autocompletado, con lo que tenían los campos en ese
+  /// momento (RF-BIEN-6).
+  final List<({String codigo, String contrasena})> autocompletados =
+      <({String codigo, String contrasena})>[];
   late final LoginController login;
   late final BienvenidaController controlador;
 
@@ -11098,6 +11111,27 @@ import 'apoyo_bienvenida.dart';
       expect(b.deUlises.last, TextosDeLaBienvenida.e3);
       expect(b.controlador.turno.value, TurnoDeLaBienvenida.pasoAlHorario);
       expect(b.rutas, isEmpty, reason: 'la bienvenida no navega a /setup-carrera');
+    });
+
+    test('con la sesión puesta cierra el autocompletado con el código y la '
+        'contraseña todavía escritos, y un login rechazado no lo cierra '
+        '(RF-BIEN-6)', () async {
+      final rechazado = await enE2(
+        auth: AuthDeLaBienvenida(errorDeLogin: 'Código o contraseña incorrectos.'),
+      );
+      await rechazado.controlador.entrar();
+      expect(rechazado.autocompletados, isEmpty);
+      Get.reset();
+      final b = await enE2();
+      await b.controlador.entrar();
+      expect(b.autocompletados, [
+        (codigo: '  20230001 ', contrasena: 'secreta-de-prueba'),
+      ]);
+      // Los campos se vacían después, al pasar al horario.
+      b.controlador.pasoHecho();
+      expect(b.login.codeController.text, '');
+      expect(b.login.passwordController.text, '');
+      expect(b.autocompletados, hasLength(1));
     });
 
     test('un docente también va al paso al horario', () async {
@@ -11445,6 +11479,7 @@ class ResultadoDelTest extends EntradaDeLaConversacion {
 
 import 'dart:async';
 
+import 'package:flutter/services.dart' show TextInput;
 import 'package:get/get.dart';
 
 import '../../domain/bienvenida/bienvenida_turnos.dart';
@@ -11468,6 +11503,7 @@ class BienvenidaController extends GetxController {
     SpecialtyTestController Function(SpecialtyTestUi ui)? crearTest,
     Future<String?> Function()? tokenGuardado,
     void Function(String ruta)? abrirRuta,
+    void Function()? terminarAutocompletado,
   }) : _authInyectado = auth,
        _loginInyectado = login,
        _crearRegistro = crearRegistro ?? RegistroController.new,
@@ -11479,7 +11515,9 @@ class BienvenidaController extends GetxController {
            )),
        _tokenGuardado =
            tokenGuardado ?? (() => StorageService.to.savedToken),
-       _abrirRuta = abrirRuta ?? ((ruta) => Get.toNamed<void>(ruta));
+       _abrirRuta = abrirRuta ?? ((ruta) => Get.toNamed<void>(ruta)),
+       _terminarAutocompletado =
+           terminarAutocompletado ?? (() => TextInput.finishAutofillContext());
 
   final AuthService? _authInyectado;
   final LoginController? _loginInyectado;
@@ -11487,6 +11525,11 @@ class BienvenidaController extends GetxController {
   final SpecialtyTestController Function(SpecialtyTestUi ui) _crearTest;
   final Future<String?> Function() _tokenGuardado;
   final void Function(String ruta) _abrirRuta;
+
+  /// Cierra el contexto del autocompletado para que el sistema ofrezca
+  /// guardar el código y la contraseña (RF-BIEN-6). Las pruebas lo cambian
+  /// por un registro, porque en la VM no hay plataforma que lo reciba.
+  final void Function() _terminarAutocompletado;
 
   AuthService get _auth => _authInyectado ?? AuthService.to;
   LoginController get _login => _loginInyectado ?? Get.find<LoginController>();
@@ -11695,6 +11738,10 @@ class BienvenidaController extends GetxController {
     esperando.value = false;
     switch (d.tipo) {
       case TipoDeDesenlace.sesionPuesta:
+        // Con los dos campos todavía escritos y montados, el sistema empareja
+        // el usuario con la contraseña y ofrece guardarlos. Los campos se
+        // vacían después, al pasar al horario o al reiniciar (RF-BIEN-6).
+        _terminarAutocompletado();
         _responder(TextosB.contrasenaLista, secreta: true);
         _trasEntrar();
       case TipoDeDesenlace.error:
@@ -12986,21 +13033,62 @@ import 'apoyo_bienvenida.dart';
 // test/bienvenida/bienvenida_errores_test.dart
 //
 // UNITARIA · Bienvenida con Ulises (specs/features/bienvenida/bienvenida.spec.md).
-// RF-BIEN-12. Cada error del backend o de la red es una burbuja de Ulises. El
-// login, Google y el envío tienen sus filas en bienvenida_entrar_test.dart y
-// bienvenida_registro_test.dart. Aquí van T0, el test y el 401 en un turno con
-// sesión, con la limpieza local y la vuelta a E1 (B-22).
+// RF-BIEN-12. Cada error del backend o de la red es una burbuja de Ulises.
+// Recorre cada fila de la tabla, del recibimiento y los turnos sin envío a
+// E2, Google, la validación local, el envío y lo que sigue al 201, T0, el test
+// y el 401 en un turno con sesión, con la limpieza local y la vuelta a E1
+// (B-22). Las dos filas del paso al horario necesitan la capa del arranque y
+// van en bienvenida_horario_test.dart.
 // Archivo probado lib/pages/bienvenida/bienvenida_controller.dart.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:ulima_plus/domain/bienvenida/bienvenida_turnos.dart';
+import 'package:ulima_plus/models/registro_models.dart';
 import 'package:ulima_plus/pages/bienvenida/conversacion.dart';
+import 'package:ulima_plus/services/auth_service.dart';
 import 'package:ulima_plus/services/specialty_test_service.dart';
 
 import '../HU36_jeff/datos_de_prueba.dart';
 import '../HU36_jeff/dobles_de_red.dart';
 import 'apoyo_bienvenida.dart';
+
+typedef _T = TurnoDeLaBienvenida;
+
+/// Llega a E2 con el código de prueba y una contraseña inventada.
+Future<Bienvenida> _enE2(AuthDeLaBienvenida auth) async {
+  final b = Bienvenida(auth: auth);
+  await b.visitar();
+  b.controlador.responderAlSaludo(yaUsa: true);
+  b.login.codeController.text = '20230001';
+  b.controlador.enviarCodigo();
+  b.login.passwordController.text = 'secreta-de-prueba';
+  return b;
+}
+
+/// Llega hasta N5 con datos válidos inventados.
+Future<Bienvenida> _enN5({RegistroFalso? registro, bool adoptarFalla = false}) async {
+  final b = Bienvenida(registro: registro, adoptarFalla: adoptarFalla);
+  await b.visitar();
+  final c = b.controlador..responderAlSaludo(yaUsa: false);
+  c.registro!.codigoCtrl.text = '20230001';
+  c.enviarCodigoDeAlumno();
+  c.registro!
+    ..passwordCtrl.text = 'Contrasena1'
+    ..confirmacionCtrl.text = 'Contrasena1';
+  c.enviarContrasenas();
+  c.aceptarConsentimiento();
+  c.registro!.portalPasswordCtrl.text = 'clave-de-prueba';
+  c.enviarPortal();
+  c.registro!.passcodeCtrl.text = '123456';
+  return b;
+}
+
+/// Las burbujas de error de Ulises.
+List<BurbujaDeUlises> _errores(Bienvenida b) => <BurbujaDeUlises>[
+  for (final e in b.controlador.entradas)
+    if (e is BurbujaDeUlises && e.tipo == TipoDeBurbuja.error) e,
+];
 
 Future<Bienvenida> _conSesion(ApiFalsaDelTest api) async {
   final b = Bienvenida(
@@ -13017,6 +13105,135 @@ Future<Bienvenida> _conSesion(ApiFalsaDelTest api) async {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   tearDown(Get.reset);
+
+  group('cada fila de la tabla, antes del test (RF-BIEN-12)', () {
+    test('el recibimiento y los turnos sin envío no usan la red, así que sin '
+        'conexión no se ve nada', () async {
+      final b = await _enE2(AuthDeLaBienvenida(redCaida: true));
+      expect(_errores(b), isEmpty);
+      expect(b.controlador.turno.value, _T.e2Contrasena);
+    });
+
+    test('en E2, cada error del login dice el mensaje de AuthService y vuelve '
+        'a E1 con el código y la contraseña vacía (B-6)', () async {
+      // Los mensajes de la tabla salen de loginErrorMessage.
+      const invalido = AuthService.invalidCredentialsMessage;
+      expect(AuthService.loginErrorMessage('USER_NOT_FOUND', 'x'), invalido);
+      expect(AuthService.loginErrorMessage('INVALID_PASSWORD', 'x'), invalido);
+      expect(
+        AuthService.loginErrorMessage('NOT_ENROLLED', 'x'),
+        'No tienes una matrícula activa.',
+      );
+      expect(
+        AuthService.loginErrorMessage('OTRO_ERROR', 'Mensaje del backend de prueba.'),
+        'Mensaje del backend de prueba.',
+      );
+      for (final mensaje in <String>[
+        invalido,
+        'No tienes una matrícula activa.',
+        'Mensaje del backend de prueba.',
+      ]) {
+        final b = await _enE2(AuthDeLaBienvenida(errorDeLogin: mensaje));
+        await b.controlador.entrar();
+        expect(_errores(b).single.texto, mensaje);
+        expect(b.controlador.turno.value, _T.e1Codigo);
+        expect(b.login.codeController.text, '20230001');
+        expect(b.login.passwordController.text, '');
+        Get.reset();
+      }
+    });
+
+    test('en E2, sin conexión, E2 sigue abierto con la contraseña escrita',
+        () async {
+      final b = await _enE2(AuthDeLaBienvenida(redCaida: true));
+      await b.controlador.entrar();
+      expect(_errores(b).single.texto, TextosDeLaBienvenida.sinConexion);
+      expect(b.controlador.turno.value, _T.e2Contrasena);
+      expect(b.login.passwordController.text, 'secreta-de-prueba');
+    });
+
+    test('en E1, Google cancelado no dice nada, y INVALID_DOMAIN, '
+        'USER_NOT_FOUND, la falta de idToken y otro fallo son una burbuja con '
+        'E1 abierto, sin ofrecer crear la cuenta', () async {
+      final b = Bienvenida(auth: AuthDeLaBienvenida(google: 'cancelar'));
+      await b.visitar();
+      b.controlador.responderAlSaludo(yaUsa: true);
+      final antes = b.controlador.entradas.length;
+      await b.controlador.entrarConGoogle();
+      expect(b.controlador.entradas, hasLength(antes));
+      for (final mensaje in <String>[
+        'Debes usar tu correo @aloe.ulima.edu.pe o @ulima.edu.pe.',
+        'Tu correo no está registrado en el sistema.',
+        'No se obtuvo información de Google.',
+        'No se pudo iniciar sesión con Google.',
+      ]) {
+        b.auth.google = mensaje;
+        final respuestas = b.delAlumno.length;
+        await b.controlador.entrarConGoogle();
+        expect(b.deUlises.last, mensaje);
+        expect(_errores(b).last.texto, mensaje);
+        expect(b.delAlumno, hasLength(respuestas), reason: 'ninguna oferta');
+        expect(b.controlador.turno.value, _T.e1Codigo);
+      }
+    });
+
+    test('de N1 a N5, la validación local va bajo el campo y no es burbuja',
+        () async {
+      final b = Bienvenida();
+      await b.visitar();
+      final c = b.controlador..responderAlSaludo(yaUsa: false);
+      c.registro!.codigoCtrl.text = '12ab';
+      c.enviarCodigoDeAlumno();
+      expect(c.errorLocal.value, isNotNull);
+      expect(_errores(b), isEmpty);
+      expect(c.turno.value, _T.n1Codigo);
+    });
+
+    test('el envío sin conexión vuelve a N5, el plazo vencido y el 201 sin '
+        'sesión quedan en incierto, y un «Iniciar sesión» que no entra lo dice '
+        '(B-30 y B-32)', () async {
+      final sinRed = await _enN5(
+        registro: RegistroFalso(
+          fallo: const RegistroFailure(
+            'No hay conexión. Revisa tu internet e inténtalo de nuevo.',
+            code: 'SIN_CONEXION',
+          ),
+        ),
+      );
+      await sinRed.controlador.crearCuenta();
+      expect(sinRed.deUlises.last, TextosDeLaBienvenida.sinConexion);
+      expect(sinRed.controlador.turno.value, _T.n5Authenticator);
+      Get.reset();
+
+      final plazo = await _enN5(
+        registro: RegistroFalso(
+          fallo: const RegistroFailure('x', code: 'TIEMPO_AGOTADO'),
+        ),
+      );
+      await plazo.controlador.crearCuenta();
+      expect(plazo.controlador.turno.value, _T.incierto);
+      plazo.auth.errorDeLogin = 'Código o contraseña incorrectos.';
+      await plazo.controlador.iniciarSesionDesdeIncierto();
+      expect(plazo.deUlises.last, startsWith('Seguimos sin poder confirmarlo.'));
+      expect(plazo.controlador.turno.value, _T.incierto);
+      Get.reset();
+
+      final sinSesion = await _enN5(adoptarFalla: true);
+      await sinSesion.controlador.crearCuenta();
+      expect(sinSesion.deUlises, contains(TextosDeLaBienvenida.creadaTitulo));
+      expect(sinSesion.controlador.turno.value, _T.incierto);
+    });
+
+    test('después del 201, los catálogos que fallan no se notan y sigue el '
+        'test (BR-REG-F-10)', () async {
+      final b = await _enN5();
+      b.auth.catalogoFalla = true;
+      await b.controlador.crearCuenta();
+      await pumpEventQueue();
+      expect(_errores(b), isEmpty);
+      expect(b.controlador.ultimoTurno.value, _T.t0Invitacion);
+    });
+  });
 
   group('los errores del test (RF-BIEN-12)', () {
     test('en T0, el contenido que no llega dice «No pudimos cargar el test.» '
@@ -13778,8 +13995,9 @@ git log -1 --format='%an <%ae>'
 **Requisitos.** De RF-BIEN-1, que el primer cuadro sale solo de los argumentos y que la página
 no lee el estado de la visita anterior. RF-BIEN-3 en su primer cuadro, RF-BIEN-4 en la franja, el
 latido y el pulso, RF-BIEN-5 completo en pantalla, RF-BIEN-6 en el compositor de E1 y E2 con
-«Continuar con Google» en Android e iOS, la píldora de RF-BIEN-8, el aviso a la capa de RF-SPL-21
-y RF-BIEN-17 completo.
+«Continuar con Google» en Android e iOS y con «El autocompletado» (un solo `AutofillGroup` y el
+campo de E1 montado durante E2), la píldora de RF-BIEN-8, el aviso a la capa de RF-SPL-21 y
+RF-BIEN-17 completo.
 
 **Archivos.**
 - Crear `lib/pages/bienvenida/bienvenida_page.dart`.
@@ -13791,6 +14009,8 @@ y RF-BIEN-17 completo.
 - Modificar `test/bienvenida/apoyo_bienvenida.dart` (`montarLaBienvenida`).
 - Crear `test/bienvenida/bienvenida_conversacion_test.dart`.
 - Crear `test/bienvenida/bienvenida_barra_estado_test.dart`.
+- Modificar `test/bienvenida/bienvenida_entrar_test.dart` (grupo `el autocompletado`).
+- Modificar `test/bienvenida/bienvenida_ruta_test.dart` (grupo `la página y sus visitas`).
 
 **Interfaces.**
 - Consume el controlador de las Tareas 23 a 25, `CabeceraConSello` y `SelloDelLogo` (Tarea 17),
@@ -13808,7 +14028,7 @@ class BienvenidaPage extends StatefulWidget { const BienvenidaPage(); }
 class Revelador extends ChangeNotifier { int get visibles; bool get compositorVisible;
   bool retenido; void actualizar({required List<EntradaDeLaConversacion> entradas,
   required bool hayCompositor, required bool conLector, Duration pausaDelCompositor});
-  void mostrarYa(int cuantas); void soltar(); }
+  void mostrarYa(int cuantas); }
 // widgets/burbujas.dart
 class EntradaView extends StatelessWidget { const EntradaView({required EntradaDeLaConversacion
   entrada, required EntradaDeLaConversacion? anterior, required bool primerGrupo,
@@ -14127,14 +14347,198 @@ void main() {
 }
 ```
 
+  En `test/bienvenida/bienvenida_entrar_test.dart`, suma estos imports y este grupo, que fija «El
+  autocompletado» de RF-BIEN-6 en pantalla. El cierre del contexto antes de vaciar los campos ya
+  lo fija el grupo de la Tarea 23.
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:ulima_plus/pages/bienvenida/widgets/compositor.dart';
+import 'package:ulima_plus/services/session_navigation.dart';
+```
+
+```dart
+  group('el autocompletado (RF-BIEN-6)', () {
+    setUp(() {
+      Get.testMode = true;
+      Get.reset();
+    });
+    tearDown(Get.reset);
+
+    testWidgets('E1 y E2 van en un mismo AutofillGroup, en E2 el campo del '
+        'código sigue montado, invisible y fuera del foco, y la sesión puesta '
+        'cierra el contexto con los dos campos escritos', (tester) async {
+      final b = Bienvenida();
+      await montarLaBienvenida(
+        tester,
+        b,
+        argumentos: const {argumentoDeMotivo: MotivoDeLlegada.expirada},
+      );
+      await avanzar(tester, 1500);
+      final grupo = find.byType(AutofillGroup);
+      expect(grupo, findsOneWidget);
+      final grupoDeE1 = tester.element(grupo);
+      Finder campoDe(TextEditingController c, {bool soloVisibles = true}) =>
+          find.descendant(
+            of: grupo,
+            matching: find.byWidgetPredicate(
+              (w) => w is TextField && w.controller == c,
+              skipOffstage: soloVisibles,
+            ),
+            skipOffstage: soloVisibles,
+          );
+      expect(campoDe(b.login.codeController), findsOneWidget);
+      expect(
+        tester.widget<TextField>(campoDe(b.login.codeController)).autofillHints,
+        [AutofillHints.username],
+      );
+
+      await tester.enterText(campoDe(b.login.codeController), '20230001');
+      await tester.tap(find.byType(BotonDeEnvio));
+      await avanzar(tester, 2000);
+      expect(tester.element(grupo), same(grupoDeE1), reason: 'el mismo grupo');
+      expect(campoDe(b.login.passwordController), findsOneWidget);
+      expect(
+        tester.widget<TextField>(campoDe(b.login.passwordController)).autofillHints,
+        [AutofillHints.password],
+      );
+      // El campo del código no se ve, pero sigue montado en el grupo.
+      expect(campoDe(b.login.codeController), findsNothing);
+      final oculto = campoDe(b.login.codeController, soloVisibles: false);
+      expect(oculto, findsOneWidget);
+      expect(
+        tester.widget<TextField>(oculto).autofillHints,
+        [AutofillHints.username],
+      );
+      final offstage = tester.widget<Offstage>(
+        find.ancestor(of: oculto, matching: find.byType(Offstage)).first,
+      );
+      expect(offstage.offstage, isTrue, reason: 'fuera de la vista y de la semántica');
+      expect(
+        find.ancestor(of: oculto, matching: find.byType(ExcludeFocus)),
+        findsWidgets,
+        reason: 'fuera del foco',
+      );
+
+      await tester.enterText(
+        campoDe(b.login.passwordController),
+        'secreta-de-prueba',
+      );
+      await tester.pump();
+      await tester.tap(find.text(TextosDeLaBienvenida.entrar));
+      await tester.pump();
+      expect(b.autocompletados, [
+        (codigo: '20230001', contrasena: 'secreta-de-prueba'),
+      ]);
+      await avanzar(tester, 3000);
+    });
+  });
+```
+
+  En `test/bienvenida/bienvenida_ruta_test.dart`, suma estos imports y este grupo, que fija en
+  pantalla las dos reglas de «Cada montaje es una visita» de RF-BIEN-1. El controlador ya las
+  cumple desde la Tarea 23, y aquí se ve que la página tampoco pinta ni toca la visita que no es
+  la suya.
+
+```dart
+import 'package:ulima_plus/pages/bienvenida/bienvenida_page.dart';
+import 'package:ulima_plus/pages/bienvenida/widgets/compositor.dart';
+import 'package:ulima_plus/pages/splash/salidas.dart' show naranjaDelSplash;
+```
+
+```dart
+  group('la página y sus visitas (RF-BIEN-1)', () {
+    setUp(() {
+      Get.testMode = true;
+      Get.reset();
+    });
+    tearDown(Get.reset);
+
+    testWidgets('tras un cierre de sesión que deja la franja con el sello, el '
+        'primer cuadro sale solo de los argumentos y no muestra nada de la '
+        'visita anterior', (tester) async {
+      final b = Bienvenida();
+      await montarLaBienvenida(
+        tester,
+        b,
+        argumentos: const {argumentoDeMotivo: MotivoDeLlegada.expirada},
+      );
+      await avanzar(tester, 1500);
+      expect(find.text(TextosDeLaBienvenida.e1), findsOneWidget);
+      // Va al home y cierra sesión, que llega a /login sin argumentos.
+      Get.offAllNamed<void>('/home');
+      await avanzar(tester, 600);
+      expect(offAllToLogin(), isTrue);
+      await tester.pump();
+      expect(tester.takeException(), isNull, reason: 'sin setState en el build');
+      final nueva = find.byType(BienvenidaPage).last;
+      // El primer cuadro es el naranja del splash con el logo en reposo, y
+      // la conversación de la visita anterior no se pinta.
+      expect(
+        find.descendant(
+          of: nueva,
+          matching: find.byWidgetPredicate(
+            (w) => w is ColoredBox && w.color == naranjaDelSplash,
+          ),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: nueva, matching: find.text(TextosDeLaBienvenida.e1)),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: nueva, matching: find.byType(MarcoDelCompositor)),
+        findsNothing,
+      );
+      // Después del primer cuadro, la visita nueva empieza de cero.
+      await tester.pump();
+      expect(b.controlador.turno.value, TurnoDeLaBienvenida.recibimiento);
+      await avanzar(tester, 4000);
+    });
+
+    testWidgets('en el restablecimiento conviven dos /login, sin setState '
+        'durante el build, y el dispose de la página vieja no toca la visita '
+        'nueva', (tester) async {
+      final b = Bienvenida();
+      await montarLaBienvenida(
+        tester,
+        b,
+        argumentos: const {argumentoDeMotivo: MotivoDeLlegada.expirada},
+      );
+      await avanzar(tester, 1500);
+      // «¿Olvidaste tu contraseña?» abre /forgot-password encima, y el
+      // restablecimiento navega a /login con la vieja todavía en la pila.
+      Get.toNamed<void>('/forgot-password');
+      await avanzar(tester, 600);
+      expect(offAllToLogin(motivo: MotivoDeLlegada.restablecida), isTrue);
+      await tester.pump();
+      expect(tester.takeException(), isNull, reason: 'sin setState en el build');
+      // La visita nueva empieza en E1 por el motivo, y abre un tramo que el
+      // dispose de la vieja cerraría si no estuviera guardado por la visita.
+      await tester.pump();
+      expect(b.controlador.turno.value, TurnoDeLaBienvenida.e1Codigo);
+      b.controlador.soyNuevo();
+      expect(b.controlador.registro, isNotNull);
+      await avanzar(tester, 1500);
+      expect(find.byType(BienvenidaPage, skipOffstage: false), findsOneWidget);
+      expect(b.controlador.registro, isNotNull, reason: 'la vieja no la toca');
+      expect(b.controlador.turno.value, TurnoDeLaBienvenida.n1Codigo);
+      expect(tester.takeException(), isNull);
+    });
+  });
+```
+
 - [ ] **Paso 3. Corre las pruebas y confirma que fallan.**
 
 ```bash
 cd "${REPO:?}"
-"${FLUTTER:?}" test --no-pub test/bienvenida/bienvenida_conversacion_test.dart test/bienvenida/bienvenida_barra_estado_test.dart
+"${FLUTTER:?}" test --no-pub test/bienvenida/bienvenida_conversacion_test.dart test/bienvenida/bienvenida_barra_estado_test.dart test/bienvenida/bienvenida_entrar_test.dart test/bienvenida/bienvenida_ruta_test.dart
 ```
 
-Esperado. Falla la compilación, porque la página y sus widgets no existen.
+Esperado. Falla la compilación, porque la página y sus widgets no existen. Sin el grupo en la
+página y sin el campo oculto de E2, el grupo `el autocompletado` falla en el `AutofillGroup` y en
+el campo del código montado.
 
 - [ ] **Paso 4. Suma la visita atendida al controlador.** En
   `lib/pages/bienvenida/bienvenida_controller.dart`, suma el campo y márcalo al final de cada
@@ -15290,6 +15694,20 @@ class _E2 extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
+          // El campo de E1 sigue montado en el grupo del autocompletado,
+          // invisible y fuera de la semántica y del foco, para que el llavero
+          // de iOS y el gestor de contraseñas de Google emparejen el usuario
+          // con la contraseña (RF-BIEN-6).
+          ExcludeFocus(
+            child: Offstage(
+              child: CampoDelCompositor(
+                controlador: login.codeController,
+                pista: _Textos.pistaCodigo,
+                pistasDeAutocompletado: const [AutofillHints.username],
+                autofocus: false,
+              ),
+            ),
+          ),
           const RotuloDelCampo(_Textos.rotuloContrasena),
           CampoDelCompositor(
             controlador: login.passwordController,
@@ -15562,7 +15980,15 @@ class _BienvenidaPageState extends State<BienvenidaPage>
           child: Scaffold(
             backgroundColor: MaterialTheme.pageBg(b),
             resizeToAvoidBottomInset: true,
-            body: _cuerpo(context),
+            // Un solo grupo del autocompletado para todos los turnos, que
+            // vive lo que vive la página, así que E1 y E2 comparten el mismo
+            // aunque el compositor cambie. Al salir no guarda nada, porque
+            // solo la sesión puesta cierra el contexto con
+            // finishAutofillContext (RF-BIEN-6).
+            body: AutofillGroup(
+              onDisposeAction: AutofillContextAction.cancel,
+              child: _cuerpo(context),
+            ),
           ),
         ),
       ),
@@ -18705,13 +19131,14 @@ Future<void> llegarAE2(WidgetTester tester, {String codigo = '20230001'}) async 
   /registro ya no existe.».
 
 ```dart
-import 'package:ulima_plus/domain/bienvenida/bienvenida_turnos.dart';
 import 'package:ulima_plus/main.dart';
 import 'package:ulima_plus/pages/bienvenida/bienvenida_controller.dart';
-import 'package:ulima_plus/pages/bienvenida/bienvenida_page.dart';
 import 'package:ulima_plus/pages/login/login_binding.dart';
 import 'package:ulima_plus/pages/login/login_controller.dart';
 ```
+
+  `bienvenida_turnos.dart` y `bienvenida_page.dart` ya están importados desde las Tareas 23 y 26,
+  así que no se repiten.
 
 ```dart
   group('la ruta /login con la bienvenida (RF-BIEN-1, B-19, B-23 y B-25)', () {
@@ -19146,7 +19573,8 @@ void main() {
       await llegarAE1(tester);
       await llegarAE2(tester);
 
-      // En E2 el compositor trae solo el campo de la contraseña.
+      // En E2 el compositor muestra solo el campo de la contraseña. El del
+      // código sigue montado fuera de la vista, para el autocompletado.
       final controller = Get.find<LoginController>();
       final passwordField = find.byType(TextField).first;
       await tester.enterText(passwordField, 'secreta');
@@ -19240,9 +19668,9 @@ void main() {
 
       // El usuario teclea su código y el texto se ve sin quitar el foco.
       await llegarAE1(tester);
-      await tester.enterText(find.byType(TextField).first, '20235218');
+      await tester.enterText(find.byType(TextField).first, '20230001');
       await tester.pump();
-      expect(find.text('20235218'), findsOneWidget);
+      expect(find.text('20230001'), findsOneWidget);
     },
   );
 
@@ -19555,12 +19983,14 @@ cd "${REPO:?}"
 "${DART:?}" format lib/main.dart lib/pages/login lib/pages/registro lib/pages/bienvenida lib/components/portal_consent lib/services test/bienvenida test/HU01_jeff test/HU34_jeff
 "${FLUTTER:?}" test --no-pub test/bienvenida test/HU01_jeff test/HU02_jeff test/HU33_jeff test/HU34_jeff test/splash
 "${FLUTTER:?}" analyze --no-pub
-grep -rn "LoginPage\|RegistroPage\|RegistroBinding\|'/registro'" lib test || echo "sin restos"
+grep -rn "LoginPage\|RegistroPage\|RegistroBinding\|'/registro'" lib test | grep -v "Get.currentRoute == '/LoginPage'" || echo "sin restos"
 ```
 
-Esperado. `All tests passed!`, los avisos de la base y `sin restos`. La guarda de
-`session_navigation_guard_test.dart` sigue en verde, porque nada nuevo navega a `/login` fuera de
-`session_navigation.dart`.
+Esperado. `All tests passed!`, los avisos de la base y `sin restos`. La búsqueda deja fuera la
+guarda `Get.currentRoute == '/LoginPage'` de `session_navigation.dart`, que se conserva, porque
+GetX le da ese nombre a una ruta anónima y la Tarea 33 la da por buena. Esta tarea no la borra. La
+guarda de `session_navigation_guard_test.dart` sigue en verde, porque nada nuevo navega a `/login`
+fuera de `session_navigation.dart`.
 
 - [ ] **Paso 11. Suite completa y commit.** Corre la suite completa en segundo plano, con el
   comando de «Variables de los comandos». Esperado, `All tests passed!`.
@@ -19657,11 +20087,17 @@ import 'package:ulima_plus/pages/splash/capa_de_arranque.dart';
 // RF-BIEN-11. El paso al horario como función pura del instante, y la capa
 // del arranque que lo dibuja mientras /home se monta debajo, con Ulises que
 // vuela a su burbuja, el fundido si la cabecera no se mide y el fundido de
-// 220 ms con reducir movimiento (RF-BIEN-15). Todo dato es inventado.
+// 220 ms con reducir movimiento (RF-BIEN-15). Durante el paso ningún toque
+// llega a /home, que se monta con la capa encima y así sigue en vertical, y
+// al llegar desde el splash la burbuja aparece con la página. Todo dato es
+// inventado.
 // Archivos probados lib/pages/splash/paso_al_horario.dart,
 // lib/pages/splash/capa_de_arranque.dart y lib/components/chatbot_bubble.dart.
 
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:ulima_plus/components/chatbot_bubble.dart';
@@ -19674,8 +20110,17 @@ import 'package:ulima_plus/pages/splash/paso_al_horario.dart';
 import 'package:ulima_plus/pages/splash/puntos_de_aterrizaje.dart';
 import 'package:ulima_plus/pages/splash/salidas.dart';
 import 'package:ulima_plus/services/session_navigation.dart';
+import 'package:ulima_plus/services/splash_variante_service.dart';
 
-import '../splash/apoyo_splash.dart' show HomeDePrueba, reiniciarArranque;
+import '../splash/apoyo_splash.dart'
+    show
+        CargaFalsa,
+        HomeDePrueba,
+        VariantesFijas,
+        appConCapa,
+        reiniciarArranque,
+        telefono,
+        toquesEnLaPagina;
 import 'apoyo_bienvenida.dart';
 
 const _pantalla = Size(375, 667);
@@ -19732,21 +20177,29 @@ EscenaDelPaso _en(double ms, {Rect? burbuja = _burbuja, Rect? avatar = _avatar})
       pantalla: _pantalla,
     );
 
-/// Una /home con la cabecera que se informa y la burbuja de Ulises.
+/// Una /home con la cabecera que se informa y la burbuja de Ulises. Su botón
+/// «home» cuenta los toques en `toquesEnLaPagina`.
 class _HomeConBurbuja extends StatelessWidget {
   const _HomeConBurbuja({this.informa = true});
 
   final bool informa;
 
+  /// Si la capa cubría la pantalla cuando /home se construyó por primera
+  /// vez, que es cuando HomePage decide sus orientaciones (Tarea 6).
+  static bool? cubiertaAlMontarse;
+
   @override
-  Widget build(BuildContext context) => Scaffold(
-    body: Stack(
-      children: [
-        HomeDePrueba(informa: informa),
-        const Positioned.fill(child: ChatbotBubble()),
-      ],
-    ),
-  );
+  Widget build(BuildContext context) {
+    cubiertaAlMontarse ??= EstadoDeLaCapa.cubre.value;
+    return Scaffold(
+      body: Stack(
+        children: [
+          HomeDePrueba(informa: informa),
+          const Positioned.fill(child: ChatbotBubble()),
+        ],
+      ),
+    );
+  }
 }
 
 /// Entra con «Sí, entrar» desde E1, con la capa del arranque en el builder,
@@ -19789,6 +20242,7 @@ Finder _burbujaOculta() => find.descendant(
 
 void main() {
   setUp(reiniciarArranque);
+  setUp(() => _HomeConBurbuja.cubiertaAlMontarse = null);
   tearDown(reiniciarArranque);
 
   group('el paso, en funciones puras (RF-BIEN-11)', () {
@@ -19899,6 +20353,68 @@ void main() {
       expect(PuntosDeAterrizaje.ulisesEnVuelo.value, isFalse);
       expect(_burbujaOculta(), findsNothing);
       semantica.dispose();
+    });
+
+    testWidgets('durante el paso ningún toque llega a /home, que se monta con '
+        'la capa encima y así sigue en vertical, y al retirarse la capa los '
+        'toques vuelven (S-26)', (tester) async {
+      final orientaciones = <Object?>[];
+      final mensajero = tester.binding.defaultBinaryMessenger;
+      mensajero.setMockMethodCallHandler(SystemChannels.platform, (llamada) async {
+        if (llamada.method == 'SystemChrome.setPreferredOrientations') {
+          orientaciones.add(llamada.arguments);
+        }
+        return null;
+      });
+      addTearDown(
+        () => mensajero.setMockMethodCallHandler(SystemChannels.platform, null),
+      );
+      await _hastaElPaso(tester);
+      await avanzar(tester, 150);
+      expect(CapaDeArranque.fase, FaseDeLaCapa.pasoAlHorario);
+      expect(_HomeConBurbuja.cubiertaAlMontarse, isTrue);
+      await tester.tap(find.text('home'), warnIfMissed: false);
+      await tester.pump();
+      expect(toquesEnLaPagina, 0, reason: 'los toques quedan en la capa');
+      expect(orientaciones, isEmpty, reason: 'nada pide girar bajo la capa');
+      await avanzar(tester, 1700);
+      expect(CapaDeArranque.fase, FaseDeLaCapa.inactiva);
+      await tester.tap(find.text('home'));
+      await tester.pump();
+      expect(toquesEnLaPagina, 1);
+    });
+
+    testWidgets('al llegar a /home desde el splash, la burbuja aparece con la '
+        'página y no espera a nadie (S-28)', (tester) async {
+      telefono(tester);
+      final carga = CargaFalsa();
+      await tester.pumpWidget(
+        appConCapa(
+          intro: IntroDelArranque(
+            carga: carga.call,
+            variantes: VariantesFijas(VarianteSplash.ensamble),
+            random: Random(1),
+          ),
+          home: (_) => const _HomeConBurbuja(),
+        ),
+      );
+      carga.terminar('/home');
+      var enLaSalida = false;
+      for (var t = 0;
+          t < 4000 &&
+              (!enLaSalida || CapaDeArranque.fase != FaseDeLaCapa.inactiva);
+          t += 16) {
+        await tester.pump(const Duration(milliseconds: 16));
+        if (CapaDeArranque.fase == FaseDeLaCapa.salida) {
+          enLaSalida = true;
+          expect(find.byType(ChatbotBubble), findsOneWidget);
+          expect(_burbujaOculta(), findsNothing);
+          expect(PuntosDeAterrizaje.ulisesEnVuelo.value, isFalse);
+        }
+      }
+      expect(enLaSalida, isTrue);
+      expect(CapaDeArranque.fase, FaseDeLaCapa.inactiva);
+      expect(_burbujaOculta(), findsNothing);
     });
 
     testWidgets('si la cabecera no se mide, el paso es un fundido de 300 ms y '
@@ -20820,14 +21336,17 @@ git log -1 --format='%an <%ae>'
 **Requisitos.** RF-BIEN-15 en el recibimiento, «Si no cabe», la subida al sello, el sello, la
 píldora, el cursor y la llegada con sesión (el paso al horario ya lo cubre la Tarea 30), y
 RF-BIEN-16 en el recibimiento, la llegada con sesión, cada turno, los controles, los blancos
-táctiles, el teclado físico y el tamaño de texto.
+táctiles, el teclado físico, con el orden de foco y el anillo de 2 dp en `bienvenidaFoco` de los
+botones, las píldoras y los enlaces, y el tamaño de texto con 1,0, 1,3 y 2,0.
 
 **Archivos.**
 - Modificar `lib/pages/bienvenida/widgets/recibimiento.dart`.
 - Modificar `lib/pages/bienvenida/bienvenida_page.dart`.
 - Modificar `lib/pages/bienvenida/widgets/burbujas.dart` (el foco del lector).
 - Modificar `lib/pages/bienvenida/widgets/franja_con_sello.dart` (la píldora quieta).
-- Modificar `lib/pages/bienvenida/widgets/compositor.dart` (la acción de toque de cada control).
+- Modificar `lib/pages/bienvenida/widgets/compositor.dart` (la acción de toque y el anillo de foco
+  de cada control).
+- Crear `lib/pages/bienvenida/widgets/anillo_de_foco.dart`.
 - Crear `test/bienvenida/bienvenida_movimiento_test.dart`.
 - Crear `test/bienvenida/bienvenida_accesibilidad_test.dart`.
 
@@ -20845,6 +21364,9 @@ static ({Color fondo, EscenaDelLogo? estrella, EscenaDelLogo? estrellaDebajo,
   double opacidadDeLaEstrella, int puntos}) Recibimiento.cuadroActual(BuildContext context);
 // burbujas.dart
 EntradaView({..., bool enfocar = false});
+// anillo_de_foco.dart
+class AnilloDeFoco extends StatefulWidget { const AnilloDeFoco({required BorderRadius radio,
+  required Widget child}); }
 ```
 
 - [ ] **Paso 1. Escribe las pruebas que fallan.** Crea
@@ -21079,8 +21601,11 @@ void main() {
 // RF-BIEN-16. Con lector de pantalla, la tarjeta y los botones aparecen con
 // el relevo y el foco pasa a la tarjeta, la llegada con sesión empieza con el
 // relevo, las burbujas de un turno entran juntas y el foco pasa a la primera
-// nueva de Ulises. Los controles son botones con su texto, miden al menos
-// 48 dp, Intro envía y nada desborda con el texto al 200 %.
+// nueva de Ulises. Los controles son botones con su texto y miden al menos
+// 48 dp. Con teclado físico, el foco va del campo al botón de envío y después
+// a los enlaces, con el anillo de 2 dp en bienvenidaFoco en los botones, las
+// píldoras y los enlaces. Intro envía y nada desborda con el texto al 100, 130
+// y 200 %.
 // Archivos probados lib/pages/bienvenida/widgets/recibimiento.dart,
 // lib/pages/bienvenida/widgets/burbujas.dart y
 // lib/pages/bienvenida/bienvenida_page.dart.
@@ -21090,7 +21615,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:ulima_plus/components/logo/escena_del_logo.dart';
+import 'package:ulima_plus/configs/themes.dart';
 import 'package:ulima_plus/domain/bienvenida/bienvenida_turnos.dart';
+import 'package:ulima_plus/pages/bienvenida/widgets/anillo_de_foco.dart';
 import 'package:ulima_plus/pages/bienvenida/widgets/compositor.dart';
 import 'package:ulima_plus/pages/bienvenida/widgets/recibimiento.dart';
 import 'package:ulima_plus/services/session_navigation.dart';
@@ -21105,6 +21632,63 @@ Map<String, Object> _conPose() => <String, Object>{
 };
 
 const _expirada = <String, Object>{argumentoDeMotivo: MotivoDeLlegada.expirada};
+
+/// El anillo de 2 dp que rodea un control con el foco del teclado.
+final _anilloEncendido = Border.all(
+  color: MaterialTheme.bienvenidaFoco(Brightness.light),
+  width: 2,
+);
+
+/// Muestra el foco como con teclado físico, también después de un toque, y
+/// deja el modo de siempre al terminar la prueba.
+void _conTecladoFisico() {
+  FocusManager.instance.highlightStrategy =
+      FocusHighlightStrategy.alwaysTraditional;
+  addTearDown(
+    () => FocusManager.instance.highlightStrategy =
+        FocusHighlightStrategy.automatic,
+  );
+}
+
+Future<void> _tab(WidgetTester tester) async {
+  await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+  await tester.pump();
+}
+
+/// Si el foco del teclado está dentro de [control].
+bool _enfocado(Finder control) {
+  final contexto = FocusManager.instance.primaryFocus?.context;
+  if (contexto == null) return false;
+  return find
+      .descendant(
+        of: control,
+        matching: find.byElementPredicate((e) => identical(e, contexto)),
+      )
+      .evaluate()
+      .isNotEmpty;
+}
+
+/// El borde del anillo de foco que envuelve el texto [texto], o null si no
+/// se ve.
+Border? _anilloSobre(WidgetTester tester, String texto) => _borde(
+  tester,
+  find
+      .ancestor(of: find.text(texto), matching: find.byType(AnilloDeFoco))
+      .first,
+);
+
+/// El borde del anillo de foco dentro de [control], o null si no se ve.
+Border? _anilloDe(WidgetTester tester, Finder control) => _borde(
+  tester,
+  find.descendant(of: control, matching: find.byType(AnilloDeFoco)).first,
+);
+
+Border? _borde(WidgetTester tester, Finder anillo) {
+  final caja = tester.widget<DecoratedBox>(
+    find.descendant(of: anillo, matching: find.byType(DecoratedBox)).first,
+  );
+  return (caja.decoration as BoxDecoration).border as Border?;
+}
 
 /// Guarda lo que la app le manda al lector por el canal de accesibilidad.
 List<Map<Object?, Object?>> _escucharAlLector(WidgetTester tester) {
@@ -21263,20 +21847,119 @@ void main() {
     await avanzar(tester, 2000);
   });
 
-  testWidgets('con el texto al 200 % en 375 × 667, E1 y E2 no desbordan', (
-    tester,
-  ) async {
-    await montarLaBienvenida(
-      tester,
-      Bienvenida(),
-      argumentos: _expirada,
-      escala: 2,
-    );
+  testWidgets('con teclado físico, el foco va del campo al botón de envío y '
+      'después a los enlaces, y el anillo de 2 dp en bienvenidaFoco sigue al '
+      'foco en E1 y en E2', (tester) async {
+    _conTecladoFisico();
+    final b = Bienvenida();
+    await montarLaBienvenida(tester, b, argumentos: _expirada);
     await avanzar(tester, 1500);
-    expect(tester.takeException(), isNull);
-    await llegarAE2(tester);
-    expect(tester.takeException(), isNull);
+    final soyNuevo = find.widgetWithText(
+      EnlaceSecundario,
+      TextosDeLaBienvenida.soyNuevo,
+    );
+
+    // E1. El campo, el botón de envío, «Continuar con Google» y «Soy nuevo».
+    await tester.enterText(find.byType(TextField).first, '20230001');
+    await tester.pump();
+    expect(_enfocado(find.byType(CampoDelCompositor)), isTrue);
+    await _tab(tester);
+    expect(_enfocado(find.byType(BotonDeEnvio)), isTrue);
+    expect(_anilloDe(tester, find.byType(BotonDeEnvio)), _anilloEncendido);
+    await _tab(tester);
+    expect(_enfocado(find.byType(BotonDeGoogle)), isTrue);
+    expect(_anilloDe(tester, find.byType(BotonDeEnvio)), isNull);
+    expect(_anilloDe(tester, find.byType(BotonDeGoogle)), _anilloEncendido);
+    await _tab(tester);
+    expect(_enfocado(soyNuevo), isTrue);
+    expect(_anilloDe(tester, soyNuevo), _anilloEncendido);
+
+    // E2. El campo con su ojo, «Entrar», «¿Olvidaste tu contraseña?» y «Soy
+    // nuevo». El campo del código que sigue montado no toma el foco.
+    await tester.tap(find.byType(BotonDeEnvio));
+    await avanzar(tester, 2000);
+    await tester.enterText(find.byType(TextField).first, 'secreta-de-prueba');
+    await tester.pump();
+    await _tab(tester);
+    expect(_enfocado(find.byType(OjoDeLaContrasena)), isTrue);
+    expect(_anilloDe(tester, find.byType(OjoDeLaContrasena)), _anilloEncendido);
+    await _tab(tester);
+    expect(_enfocado(find.byType(BotonPrincipal)), isTrue);
+    expect(_anilloDe(tester, find.byType(BotonPrincipal)), _anilloEncendido);
+    await _tab(tester);
+    final olvidaste = find.widgetWithText(
+      EnlaceSecundario,
+      TextosDeLaBienvenida.olvidaste,
+    );
+    expect(_enfocado(olvidaste), isTrue);
+    expect(_anilloDe(tester, olvidaste), _anilloEncendido);
+    await _tab(tester);
+    expect(_enfocado(soyNuevo), isTrue);
   });
+
+  testWidgets('el anillo de foco rodea también los dos botones del '
+      'recibimiento y las píldoras, y un toque no lo enciende', (tester) async {
+    _conTecladoFisico();
+    await montarLaBienvenida(tester, Bienvenida(), argumentos: _conPose());
+    await avanzar(tester, 3000);
+    expect(_anilloSobre(tester, TextosDeLaBienvenida.siEntrar), isNull);
+    await _tab(tester);
+    expect(_anilloSobre(tester, TextosDeLaBienvenida.siEntrar), _anilloEncendido);
+    await _tab(tester);
+    expect(_anilloSobre(tester, TextosDeLaBienvenida.siEntrar), isNull);
+    expect(_anilloSobre(tester, TextosDeLaBienvenida.soyNuevo), _anilloEncendido);
+
+    const tema = MaterialTheme(TextTheme());
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: tema.light(),
+        home: Scaffold(
+          body: Center(
+            child: RespuestasRapidas(
+              respuestas: [
+                RespuestaRapida(
+                  texto: TextosDeLaBienvenida.volver,
+                  alTocar: () {},
+                ),
+                RespuestaRapida(
+                  texto: TextosDeLaBienvenida.acepto,
+                  alTocar: () {},
+                  principal: true,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await _tab(tester);
+    expect(_anilloSobre(tester, TextosDeLaBienvenida.volver), _anilloEncendido);
+    await _tab(tester);
+    expect(_anilloSobre(tester, TextosDeLaBienvenida.volver), isNull);
+    expect(_anilloSobre(tester, TextosDeLaBienvenida.acepto), _anilloEncendido);
+
+    // Con el tacto, el foco no se ve (FocusHighlightMode.touch).
+    FocusManager.instance.highlightStrategy =
+        FocusHighlightStrategy.alwaysTouch;
+    await tester.pump();
+    expect(_anilloSobre(tester, TextosDeLaBienvenida.acepto), isNull);
+  });
+
+  for (final escala in <double>[1.0, 1.3, 2.0]) {
+    testWidgets('con el texto al ${(escala * 100).round()} % en 375 × 667, E1 '
+        'y E2 no desbordan', (tester) async {
+      await montarLaBienvenida(
+        tester,
+        Bienvenida(),
+        argumentos: _expirada,
+        escala: escala,
+      );
+      await avanzar(tester, 1500);
+      expect(tester.takeException(), isNull);
+      await llegarAE2(tester);
+      expect(tester.takeException(), isNull);
+    });
+  }
 }
 ```
 
@@ -21287,9 +21970,10 @@ cd "${REPO:?}"
 "${FLUTTER:?}" test --no-pub test/bienvenida/bienvenida_movimiento_test.dart test/bienvenida/bienvenida_accesibilidad_test.dart
 ```
 
-Esperado. Falla la compilación, porque `cuadroActual` no trae `estrellaDebajo` ni `puntos`. Sin
-eso, fallan las de movimiento, porque Ulises vuela, y las del lector, porque la tarjeta espera
-el aterrizaje y nadie mueve el foco.
+Esperado. Falla la compilación, porque `cuadroActual` no trae `estrellaDebajo` ni `puntos` y
+`anillo_de_foco.dart` no existe. Sin eso, fallan las de movimiento, porque Ulises vuela, las del
+lector, porque la tarjeta espera el aterrizaje y nadie mueve el foco, y las del teclado físico,
+porque ningún control dibuja el anillo.
 
 - [ ] **Paso 3. Reducir movimiento y el lector en el recibimiento.** En
   `lib/pages/bienvenida/widgets/recibimiento.dart`, haz estos cambios.
@@ -21739,7 +22423,9 @@ class _TarjetaState extends State<_Tarjeta> {
 
   12. En `_Boton`, el `Semantics` suma `onTap: alTocar`. Con `excludeSemantics`, la acción de
       toque del `InkWell` no llega al lector, así que sin ella el botón no se puede activar con
-      doble toque (RF-BIEN-16).
+      doble toque (RF-BIEN-16). Ese `Semantics` va además dentro de
+      `AnilloDeFoco(radio: BorderRadius.circular(16), child: …)`, con el import de
+      `anillo_de_foco.dart`, para que el foco del teclado se vea en los dos botones.
 
 - [ ] **Paso 4. La subida sin movimiento y el foco en la página.** En
   `lib/pages/bienvenida/bienvenida_page.dart`, haz estos cambios.
@@ -21958,17 +22644,97 @@ class _EnfocableState extends State<_Enfocable> {
                 ),
 ```
 
-  En `compositor.dart`, cada control que usa `Semantics(excludeSemantics: true)` suma la acción
-  de toque en ese `Semantics`, por la misma razón que `_Boton`.
+  Crea `lib/pages/bienvenida/widgets/anillo_de_foco.dart`.
 
-| Control | Suma |
-| --- | --- |
-| `BotonDeEnvio` | `onTap: alTocar` |
-| `OjoDeLaContrasena` | `onTap: alTocar` |
-| `RespuestaRapida` | `onTap: esperando ? null : alTocar` |
-| `BotonPrincipal` | `onTap: activo ? alTocar : null` |
-| `EnlaceSecundario` | `onTap: alTocar` |
-| `BotonDeGoogle` | `onTap: alTocar` |
+```dart
+// lib/pages/bienvenida/widgets/anillo_de_foco.dart
+// El anillo de foco de la bienvenida (RF-BIEN-16). Con el foco del teclado
+// físico en un botón, una píldora o un enlace, un anillo de 2 dp en
+// bienvenidaFoco lo rodea con la forma del control. Con el tacto no se ve,
+// porque sigue el modo de resaltado de Flutter.
+
+import 'package:flutter/material.dart';
+
+import '../../../configs/themes.dart';
+
+class AnilloDeFoco extends StatefulWidget {
+  const AnilloDeFoco({super.key, required this.radio, required this.child});
+
+  /// El radio de las esquinas del control, para que el anillo siga su forma.
+  final BorderRadius radio;
+  final Widget child;
+
+  @override
+  State<AnilloDeFoco> createState() => _AnilloDeFocoState();
+}
+
+class _AnilloDeFocoState extends State<AnilloDeFoco> {
+  bool _conFoco = false;
+  bool _conTeclado =
+      FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
+
+  @override
+  void initState() {
+    super.initState();
+    FocusManager.instance.addHighlightModeListener(_alCambiarElModo);
+  }
+
+  @override
+  void dispose() {
+    FocusManager.instance.removeHighlightModeListener(_alCambiarElModo);
+    super.dispose();
+  }
+
+  void _alCambiarElModo(FocusHighlightMode modo) {
+    final conTeclado = modo == FocusHighlightMode.traditional;
+    if (mounted && conTeclado != _conTeclado) {
+      setState(() => _conTeclado = conTeclado);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = MaterialTheme.bienvenidaFoco(Theme.brightnessOf(context));
+    return Focus(
+      // No toma el foco. Solo escucha el del control que envuelve, y no suma
+      // nada a la semántica.
+      canRequestFocus: false,
+      skipTraversal: true,
+      includeSemantics: false,
+      onFocusChange: (conFoco) {
+        if (conFoco != _conFoco) setState(() => _conFoco = conFoco);
+      },
+      child: DecoratedBox(
+        position: DecorationPosition.foreground,
+        decoration: BoxDecoration(
+          borderRadius: widget.radio,
+          border: _conFoco && _conTeclado
+              ? Border.all(color: color, width: 2)
+              : null,
+        ),
+        child: widget.child,
+      ),
+    );
+  }
+}
+```
+
+  En `compositor.dart`, suma el import de `anillo_de_foco.dart`. Cada control que usa
+  `Semantics(excludeSemantics: true)` suma la acción de toque en ese `Semantics`, por la misma
+  razón que `_Boton`, y su `build` devuelve ese `Semantics` dentro de un `AnilloDeFoco` con el
+  radio de su forma.
+
+| Control | Suma en `Semantics` | Radio del anillo |
+| --- | --- | --- |
+| `BotonDeEnvio` | `onTap: alTocar` | `BorderRadius.circular(24)` |
+| `OjoDeLaContrasena` | `onTap: alTocar` | `BorderRadius.circular(24)` |
+| `RespuestaRapida` | `onTap: esperando ? null : alTocar` | `BorderRadius.circular(999)` |
+| `BotonPrincipal` | `onTap: activo ? alTocar : null` | `BorderRadius.circular(15)` |
+| `EnlaceSecundario` | `onTap: alTocar` | `BorderRadius.circular(8)` |
+| `BotonDeGoogle` | `onTap: alTocar` | `BorderRadius.circular(12)` |
+
+  El campo ya marca su foco con el borde de 2 dp en `bienvenidaFoco` de la Tarea 26, así que no
+  lleva anillo.
 
 - [ ] **Paso 6. Corre las pruebas y confirma que pasan.**
 
@@ -21998,7 +22764,9 @@ git log -1 --format='%an <%ae>'
 ### Tarea 32. El botón oficial de Google en web, configurado
 
 **Requisitos.** De RF-BIEN-6, «Google en web» con «El tema» (decisiones B-25 y B-35). La cuenta
-por `onCurrentUserChanged` ya la cubren las Tareas 19 y 23.
+por `onCurrentUserChanged` ya la cubren las Tareas 19 y 23. `google_sign_in_button.dart` y
+`google_sign_in_button_stub.dart` están en los targets de la bienvenida por su enmienda técnica del
+2026-09-26, que no cambia ningún comportamiento aprobado.
 
 **Archivos.**
 - Modificar `lib/components/google_sign_in_button.dart`.
@@ -22225,18 +22993,25 @@ git log -1 --format='%an <%ae>'
 
 ### Tarea 33. Los documentos quedan al día y la verificación completa
 
-**Requisitos.** RF-SPL-19 y RF-BIEN-19 (las maquetas ya están en el repo desde `b720d70` y
-`026107d`, con su `README.md`), el estado de las dos specs y de las enmiendas de app-shell, Auth
-y Registro, las filas del índice, las secciones del README que nombran el login, el registro y la
-ruta post-login, y la parte automática de «Verificación» de las dos specs. La revisión manual
-queda en la lista del Paso 6, para el dueño.
+**Requisitos.** RF-SPL-19, RF-BIEN-18 en su medición, que queda en la lista del Paso 6, y
+RF-BIEN-19 (las maquetas ya están en el repo desde `b720d70` y `026107d`, con su `README.md`). El
+estado de las dos specs y de las enmiendas de app-shell, Auth y Registro, el de la enmienda de la
+spec del test y el de las notas de Perfil académico, Chatbot y Récord académico, que la corrección
+del plan del 2026-09-26 ya escribe como aprobadas y pendientes. Las filas del índice, las
+secciones del README que nombran el login, el registro, la ruta post-login y las rutas, y la parte
+automática de «Verificación» de las dos specs. La revisión manual queda en la lista del Paso 6,
+para el dueño.
 
 **Archivos.**
 - Modificar `specs/features/splash/splash.spec.md` y `specs/features/bienvenida/bienvenida.spec.md`
   (estado y marcas `[@test]`).
 - Modificar `specs/features/app-shell/app-shell.spec.md`, `specs/features/auth/auth.spec.md` y
-  `specs/features/registro/registro.spec.md` (las notas de estado).
-- Modificar `docs/specs/feature-index.md` (filas 0, 1, 10, 16, 22 y 23).
+  `specs/features/registro/registro.spec.md` (las notas de estado y los «(pendiente…)» que quedan).
+- Modificar `specs/features/specialty-test/specialty-test.spec.md`,
+  `specs/features/academic-profile/academic-profile.spec.md`,
+  `specs/features/chatbot/chatbot.spec.md` y `specs/features/academic-record/academic-record.spec.md`
+  (el estado de la enmienda y de las notas de la bienvenida).
+- Modificar `docs/specs/feature-index.md` (filas 0, 1, 10, 16, 21, 22 y 23).
 - Modificar `README.md`.
 
 **Interfaces.**
@@ -22312,7 +23087,41 @@ cambiar("docs/specs/feature-index.md", [
      f"están **aprobadas por el dueño el 2026-09-26** e implementadas el {fecha}"),
     ("**aprobado por el dueño el 2026-09-26** y pendiente de implementar",
      f"**aprobado por el dueño el 2026-09-26** e implementado el {fecha}"),
+    ("queda **aprobada por el dueño el 2026-09-26**, escrita en la spec y sin implementar",
+     f"queda **aprobada por el dueño el 2026-09-26** e implementada el {fecha}"),
 ])
+# Los «(pendiente…)» que no son marcas [@test] con su paréntesis al final.
+cambiar("specs/features/app-shell/app-shell.spec.md", [
+    ("`[@test] ../../../test/components/header/app_header_test.dart` (pendiente del caso nuevo)",
+     "`[@test] ../../../test/components/header/app_header_test.dart`"),
+])
+cambiar("specs/features/auth/auth.spec.md", [
+    ("`bienvenida_sin_especialidad_test.dart` y `bienvenida_restablecer_test.dart` (pendientes), y",
+     "`bienvenida_sin_especialidad_test.dart` y `bienvenida_restablecer_test.dart`, y"),
+])
+cambiar("specs/features/registro/registro.spec.md", [
+    ("`test/bienvenida/bienvenida_registro_test.dart` (pendiente), y los casos 10 a 12 de",
+     "`test/bienvenida/bienvenida_registro_test.dart`, y los casos 10 a 12 de"),
+])
+# La enmienda de la spec del test y las notas de Perfil académico, Chatbot y
+# Récord académico, escritas por la corrección del plan del 2026-09-26.
+nota = (
+    "**aprobada por el dueño el 2026-09-26** junto con esa spec y pendiente de implementar.",
+    f"**aprobada por el dueño el 2026-09-26** junto con esa spec e implementada el {fecha}.",
+)
+cambiar("specs/features/specialty-test/specialty-test.spec.md", [
+    nota,
+    ("bienvenida con Ulises», al final. Sus pruebas se escriben con la implementación y llevan la\n"
+     "> marca de pendientes hasta entonces. Hasta que se implemente, el código sigue el texto de arriba.",
+     "bienvenida con Ulises», al final. Sus pruebas están en `test/bienvenida/`, y desde esa fecha\n"
+     "> el código sigue la enmienda."),
+    ("`test/bienvenida/bienvenida_sin_especialidad_test.dart` (pendientes), y las de",
+     "`test/bienvenida/bienvenida_sin_especialidad_test.dart`, y las de"),
+])
+for spec in ("specs/features/academic-profile/academic-profile.spec.md",
+             "specs/features/chatbot/chatbot.spec.md",
+             "specs/features/academic-record/academic-record.spec.md"):
+    cambiar(spec, [nota])
 indice = pathlib.Path("docs/specs/feature-index.md")
 texto = indice.read_text(encoding="utf-8")
 # Auth y Registro dicen lo mismo, así que van juntas.
@@ -22352,9 +23161,12 @@ Esperado. `faltan: ninguna`. Si falta una prueba, la tarea que la crea quedó in
 vuelve a esa tarea antes de seguir.
 
 - [ ] **Paso 3. El README.** Corre este script, con el mismo control de una sola aparición. Cambia
-  la tabla de los bindings, la ruta post-login con su diagrama y su guarda, la tabla de pantallas y
-  la de rutas, los dos flujos del login, los tres diagramas que nombran `LoginPage` y la tabla de
-  los services.
+  la tabla de los bindings, la ruta post-login con su diagrama y su guarda, la tabla de pantallas,
+  los dos flujos del login, los tres diagramas que nombran `LoginPage` y la tabla de los services.
+  Escribe entera la tabla de rutas desde `paginasDeLaApp`, con la misma cuenta en cada lugar que la
+  da, y cambia las filas que nombran la tarjeta o `login_page.dart`, que son el componente del
+  botón de Google, las pantallas estrechas, los requisitos RF-APP-01, 02, 08 y 09, la pantalla de
+  HU01 y la sección de Google en web.
 
 ```bash
 cd "${REPO:?}"
@@ -22473,12 +23285,61 @@ cambiar(
     "| `LoginPage` | [`lib/pages/login/login_page.dart:10`](lib/pages/login/login_page.dart) | Pública | Código/usuario + contraseña, Google SSO y enlace a recuperación | `AuthService` | `InicioSesion.png` |",
     "| `BienvenidaPage` | [`lib/pages/bienvenida/bienvenida_page.dart`](lib/pages/bienvenida/bienvenida_page.dart) | Pública | La conversación con Ulises, con «Sí, entrar» con código o usuario y contraseña, «Continuar con Google», «¿Olvidaste tu contraseña?», «Soy nuevo» con el registro y el test de especialidad | `AuthService`, `RegistroService`, `SpecialtyTestService` | `ulises-te-recibe-combinada.html` |",
 )
-cambiar("#### Las 15 rutas nombradas", "#### Las 16 rutas nombradas")
-cambiar(
-    "| `/login` | `LoginPage` | `LoginBinding`, controller **permanente** | — | `main.dart:111-118` |",
-    "| `/arranque` | `ArranquePage` | ninguno | — | `paginasDeLaApp` de `main.dart` |\n"
-    "| `/login` | `BienvenidaPage` | `LoginBinding`, `LoginController` y `BienvenidaController` **permanentes** | `{pose?, motivo?}` | `paginasDeLaApp` de `main.dart` |",
+# La tabla de rutas se escribe entera desde paginasDeLaApp, con una fila
+# por GetPage, y el script se detiene si las cuentas no coinciden.
+import re
+
+fuente = pathlib.Path("lib/main.dart").read_text(encoding="utf-8")
+inicio = fuente.index("final List<GetPage<dynamic>> paginasDeLaApp")
+nombres = re.findall(r"name: ([^,\n]+),", fuente[inicio:fuente.index("];", inicio)])
+n = len(nombres)
+filas = [
+    "| `/arranque` | `ArranquePage` | ninguno | — | `paginasDeLaApp` |",
+    "| `/login` | `BienvenidaPage` | `LoginBinding`, `LoginController` y `BienvenidaController` **permanentes** | `{pose?, motivo?}` | `paginasDeLaApp` |",
+    "| `/forgot-password` | `ForgotPasswordPage` | `BindingsBuilder` | — | `paginasDeLaApp` |",
+    "| `/reset-password` | `ResetPasswordPage` | `BindingsBuilder` | `{identifier, maskedEmail?}` | `paginasDeLaApp` |",
+    "| `/setup-carrera` | `SetupCarreraPage` | `SetupCarreraBinding` | — | `paginasDeLaApp` |",
+    "| `/test-especialidad` | `SpecialtyTestPage` | `SpecialtyTestBinding` | `{origen: asistente}` o `{origen: perfil}` | `paginasDeLaApp` |",
+    "| `/home` | `HomePage` | 4 `lazyPut`: malla, secciones, asesorías, calificar | `{pestana: horario}` desde la intro y la bienvenida | `paginasDeLaApp` |",
+    "| `/malla-clasica` | `MallaPage` | `MallaController` | — | `paginasDeLaApp` |",
+    "| `/silabo` | `SilaboViewerPage` | `SilaboViewerController` | `{url, titulo}` | `paginasDeLaApp` |",
+    "| `/teacher-home` | `TeacherHomePage` | `TeacherHomeBinding` | — | `paginasDeLaApp` |",
+    "| `/teacher-advising-create` | `CreateAdvisingPage` | `CreateAdvisingBinding` | devuelve `true` | `paginasDeLaApp` |",
+    "| `/teacher-advising-attendees` | `AttendeesPage` | `AttendeesBinding`, `fenix: true` | `{sessionId, title}` | `paginasDeLaApp` |",
+    "| `/teacher-grade-section` | `TeacherGradeSectionPage` | `TeacherGradeSectionBinding` | `{sectionId, courseName, sectionCode, title}` | `paginasDeLaApp` |",
+    "| `/mis-notas` | `MisNotasPage` | `MisNotasBinding` | — | `paginasDeLaApp` |",
+    "| `/mi-record` | `AcademicRecordPage` | `AcademicRecordBinding` | — | `paginasDeLaApp` |",
+    "| `/portal-sync` | `PortalSyncPage` | `PortalSyncBinding` | devuelve `true` si cargó | `paginasDeLaApp` |",
+    "| `/chatbot` | `ChatbotPage` | ninguno | — | `paginasDeLaApp` |",
+    "| `/networking` | `NetworkingPage` | `NetworkingBinding` | — | `paginasDeLaApp` |",
+    "| `/bloque` | `TimeBlockFormPage` | `TimeBlockFormBinding` | una `TimeBlockRule` para editar, o nada para crear | `paginasDeLaApp` |",
+    "| `/mis-bloques` | `TimeBlockListPage` | `TimeBlockListBinding` | — | `paginasDeLaApp` |",
+]
+if len(filas) != n:
+    raise SystemExit(f"README: {len(filas)} filas para {n} rutas de paginasDeLaApp")
+inicio = texto.index("#### Las 15 rutas nombradas")
+fin = texto.index("\n\n> **3 · Por qué", inicio)
+texto = (
+    texto[:inicio]
+    + f"#### Las {n} rutas nombradas\n\n"
+    + "| Ruta | Página | Binding | Argumentos | Definida en |\n"
+    + "|:---|:---|:---|:---|:---|\n"
+    + "\n".join(filas)
+    + texto[fin:]
 )
+# La misma cuenta de rutas en cada lugar que la da. Las cuentas de pantallas
+# («28 pantallas» y su tabla) cuentan otra cosa, ya venían desfasadas por
+# otras funcionalidades y quedan para una puesta al día aparte del README.
+cambiar("| Ruta nombrada en `getPages` | 15 |", f"| Ruta nombrada en `getPages` | {n} |")
+cambiar(
+    "Las 15 rutas están declaradas en [`lib/main.dart`](lib/main.dart) (`main.dart:105-211`).",
+    f"Las {n} rutas están declaradas en `paginasDeLaApp` de [`lib/main.dart`](lib/main.dart).",
+)
+cambiar("| 15 rutas nombradas | `lib/main.dart:105-211`. |", f"| {n} rutas nombradas | `paginasDeLaApp` de `lib/main.dart`. |")
+cambiar("tabla de 15 getPages", f"tabla de {n} getPages")
+if texto.count("15 rutas nombradas") < 2:
+    raise SystemExit("README: faltan menciones de «15 rutas nombradas»")
+texto = texto.replace("15 rutas nombradas", f"{n} rutas nombradas")
 inicio = texto.index("#### 1 · Login con código y contraseña")
 fin = texto.index("4. `AuthService.login()` hace", inicio)
 texto = (
@@ -22527,31 +23388,73 @@ cambiar(
     "| `auth_service.dart` | `login` :155 | `POST /auth/login` | `String?` — `null` es éxito, texto es el mensaje de error | `LoginController.login` :73 → `LoginPage` |",
     "| `auth_service.dart` | `login` :155 | `POST /auth/login` | `String?` — `null` es éxito, texto es el mensaje de error | `LoginController.entrar` → `BienvenidaController` |",
 )
+# Las filas que nombran la tarjeta del login o login_page.dart.
+cambiar(
+    "| `googleSignInButton()` | [`lib/components/google_sign_in_button.dart`](lib/components/google_sign_in_button.dart) | `pages/login/login_page.dart` — fachada con import condicional |",
+    "| `googleSignInButton()` | [`lib/components/google_sign_in_button.dart`](lib/components/google_sign_in_button.dart) | `pages/bienvenida/widgets/compositor.dart`, en E1 de web. Es la fachada con import condicional y recibe la configuración de GIS |",
+)
+cambiar(
+    "| *web* de Google Sign-In | [`lib/components/google_sign_in_button_web.dart`](lib/components/google_sign_in_button_web.dart) | Rama `dart.library.html`: botón oficial GIS con una `GlobalKey` fija para evitar el warning de `initialize()` llamado dos veces |",
+    "| *web* de Google Sign-In | [`lib/components/google_sign_in_button_web.dart`](lib/components/google_sign_in_button_web.dart) | Rama `dart.library.html`: botón oficial GIS con `continueWith`, `es`, el tema del sistema y el ancho del compositor, que se vuelve a dibujar al cambiar el tema o el ancho |",
+)
+cambiar(
+    "- **Login, `maxWidth: 340`** (`login_page.dart:59`): la tarjeta no se estira en tablet ni en web.",
+    "- **Bienvenida, columna de 600 dp** (`bienvenida_page.dart`). En una pantalla ancha, la conversación y el compositor van en una columna centrada de 600 dp (RF-BIEN-17).",
+)
+cambiar(
+    "| `RF-APP-01` | Iniciar sesión con código y contraseña; el formulario valida no-vacío y **no llama a la API** si falta un campo (`BR-AUTH-F-01`) | [`lib/pages/login/login_page.dart`](lib/pages/login/login_page.dart) | `AuthService` → `POST /auth/login` | Implementado |",
+    "| `RF-APP-01` | Iniciar sesión con código y contraseña; el formulario valida no-vacío y **no llama a la API** si falta un campo (`BR-AUTH-F-01`) | [`lib/pages/bienvenida/bienvenida_page.dart`](lib/pages/bienvenida/bienvenida_page.dart) | `AuthService` → `POST /auth/login` | Implementado |",
+)
+cambiar(
+    "| `RF-APP-02` | Traducir todo error de login a `Código o contraseña incorrectos.` sin distinguir usuario inexistente de contraseña mala (`BR-AUTH-F-01`) | `login_page.dart` | `AuthService.loginErrorMessage` | Implementado |",
+    "| `RF-APP-02` | Traducir todo error de login a `Código o contraseña incorrectos.` sin distinguir usuario inexistente de contraseña mala (`BR-AUTH-F-01`) | `bienvenida_controller.dart` | `AuthService.loginErrorMessage` | Implementado |",
+)
+cambiar(
+    "| `RF-APP-08` | Mostrar spinner y deshabilitar el botón `Entrar` mientras el login está en vuelo (`BR-AUTH-F-08`) | `login_page.dart` | `LoginController.submitting` | Implementado |",
+    "| `RF-APP-08` | Mostrar spinner y deshabilitar el botón `Entrar` mientras el login está en vuelo (`BR-AUTH-F-08`) | `compositor.dart` | `LoginController.submitting` | Implementado |",
+)
+cambiar(
+    "| `RF-APP-09` | Iniciar sesión con Google en web y Android restringido a `@aloe.ulima.edu.pe` (alumno) y `@ulima.edu.pe` (docente), sin autoaprovisionamiento (`BR-AUTH-F-10`) | `login_page.dart`, `google_sign_in_button_web.dart` | `AuthService.loginWithGoogle` → `POST /auth/google` | Implementado |",
+    "| `RF-APP-09` | Iniciar sesión con Google en web y Android restringido a `@aloe.ulima.edu.pe` (alumno) y `@ulima.edu.pe` (docente), sin autoaprovisionamiento (`BR-AUTH-F-10`) | `compositor.dart`, `google_sign_in_button_web.dart` | `AuthService.loginWithGoogle` → `POST /auth/google` | Implementado |",
+)
+cambiar(
+    "| **Pantalla** | [`lib/pages/login/login_page.dart`](lib/pages/login/login_page.dart) |",
+    "| **Pantalla** | [`lib/pages/bienvenida/bienvenida_page.dart`](lib/pages/bienvenida/bienvenida_page.dart) |",
+)
+cambiar(
+    "3. **El botón se construye una sola vez.** `renderButton()` se guarda en un campo\n   `late final` dentro de `initState`\n   ([`lib/components/google_sign_in_button_web.dart`](lib/components/google_sign_in_button_web.dart)`:24-30`)\n   para que Flutter no destruya y recree el `HtmlElementView`; si se recreara, GIS\n   avisaría con «google.accounts.id.initialize() is called multiple times».\n4. **La UI difiere.** En web se pinta el botón oficial de Google; en móvil, un\n   `OutlinedButton` propio con `assets/images/google_logo.svg`\n   ([`lib/pages/login/login_page.dart`](lib/pages/login/login_page.dart)`:359-368`).",
+    "3. **El botón se construye una vez por configuración.** `renderButton()` se guarda en el\n   `State` ([`lib/components/google_sign_in_button_web.dart`](lib/components/google_sign_in_button_web.dart))\n   y solo se vuelve a crear si cambian el tema o el ancho, así que Flutter no recrea el\n   `HtmlElementView` en cada reconstrucción. Al cambiar el tema, GIS puede avisar\n   «google.accounts.id.initialize() is called multiple times», un aviso que se acepta porque\n   web no se despliega (RF-BIEN-6).\n4. **La UI difiere.** En web se pinta el botón oficial de Google, configurado con `continueWith`,\n   `es` y el tema del sistema. En Android e iOS va el botón propio «Continuar con Google» del\n   compositor de E1, con `assets/images/google_logo.svg`\n   ([`lib/pages/bienvenida/widgets/compositor.dart`](lib/pages/bienvenida/widgets/compositor.dart)).",
+)
 p.write_text(texto, encoding="utf-8")
 print("README al día")
 PY
 ```
 
-Esperado. `README al día`. Los textos viejos se copian del README de hoy, con sus guiones largos,
-porque el script los busca tal cual. Los nuevos no los usan. Si una línea ya no está igual, por el
-merge de la Tarea 20, el script dice cuál y se ajusta solo ese par. La celda de mockup
-`InicioSesion.png` de la sección «Mockups» queda, porque documenta la tarjeta anterior.
+Esperado. `README al día`, con `#### Las 20 rutas nombradas`, 20 filas en su tabla y el 20 en cada
+lugar que cuenta las rutas. Las cuentas de pantallas no cambian, como dice el comentario del
+script. Los textos viejos se copian del README de hoy, con sus guiones largos, porque el script
+los busca tal cual. Los nuevos no los usan, salvo el «—» de las celdas vacías de la tabla de rutas,
+que es el formato de esa tabla. Si una línea ya no está igual, por ejemplo por un merge aparte de
+`origin/main`, el script dice cuál y se ajusta solo ese par. La celda de mockup `InicioSesion.png`
+de la sección «Mockups» queda, porque documenta la tarjeta anterior.
 
 - [ ] **Paso 4. Las búsquedas de los documentos.** Son las pruebas de la fila «Documentos» de la
   cobertura.
 
 ```bash
 cd "${REPO:?}"
-grep -n "(pendiente)" specs/features/splash/splash.spec.md specs/features/bienvenida/bienvenida.spec.md specs/features/app-shell/app-shell.spec.md || echo "sin pendientes"
-grep -n "pendientes\? de implementar" docs/specs/feature-index.md specs/features/splash/splash.spec.md specs/features/bienvenida/bienvenida.spec.md specs/features/app-shell/app-shell.spec.md specs/features/auth/auth.spec.md specs/features/registro/registro.spec.md
-grep -n "LoginPage\|RegistroPage\|RegistroBinding\|'/registro'\|login_page.dart" README.md lib test
+grep -rn "(pendiente" specs/features/splash specs/features/bienvenida specs/features/app-shell specs/features/auth specs/features/registro specs/features/specialty-test specs/features/academic-profile specs/features/chatbot specs/features/academic-record | grep -v "\*(pendiente)\*" || echo "sin pendientes"
+grep -rn "pendientes\? de implementar\|sin implementar" docs/specs/feature-index.md specs/features/splash specs/features/bienvenida specs/features/app-shell specs/features/auth specs/features/registro specs/features/specialty-test specs/features/academic-profile specs/features/chatbot specs/features/academic-record
+grep -rn "LoginPage\|RegistroPage\|RegistroBinding\|'/registro'\|login_page.dart" README.md lib test | grep -v "/LoginPage"
 grep -n "Password Reset" docs/specs/feature-index.md | grep -c "fila 23"
 ```
 
-Esperado. `sin pendientes`. La segunda búsqueda solo muestra la fila 13 del índice, el chatbot,
-que no es de este plan. La tercera solo muestra la celda `InicioSesion.png` de «Mockups», la guarda
-`'/LoginPage'` de `session_navigation.dart` y su copia en el README, que siguen porque GetX le da
-ese nombre a una ruta anónima. La cuarta da `1`, la mención de la fila 23 que dejó la Tarea 20.
+Esperado. `sin pendientes`, porque los `*(pendiente)*` en cursiva de la spec del test describen su
+convención de marcas y la búsqueda los deja fuera. La segunda solo muestra la fila 13 del índice, el
+chatbot, que no es de este plan. La tercera solo muestra la celda `InicioSesion.png` de «Mockups»,
+que documenta la tarjeta anterior. La búsqueda deja fuera la guarda `'/LoginPage'` de
+`session_navigation.dart` y sus menciones en el README, que siguen porque GetX le da ese nombre a
+una ruta anónima. La cuarta da `1`, la mención de la fila 23 que dejó el merge `fcbf2e7`.
 
 - [ ] **Paso 5. La verificación automática de las dos specs.** Corre el formato, el análisis, la
   prueba del PNG del nativo y la suite completa en segundo plano, con el comando de «Variables de
@@ -22565,7 +23468,7 @@ cd "${REPO:?}"
 git status --short
 ```
 
-Esperado. El formato no cambia nada, `analyze` da los avisos de la base que midió la Tarea 20,
+Esperado. El formato no cambia nada, `analyze` da `5 issues found.`, los de la base,
 la prueba del PNG pasa sin `--update-goldens` y `git status --short` muestra solo los documentos
 de los Pasos 2 y 3. La suite completa da `All tests passed!`, con `test/splash`,
 `test/bienvenida`, `test/HU01_jeff`, `test/HU02_jeff`, `test/HU20_jeff`, `test/HU23_jeff`,
@@ -22601,15 +23504,15 @@ de los Pasos 2 y 3. La suite completa da `All tests passed!`, con `test/splash`,
      bienvenida.
   10. Un registro real contra el backend desplegado, con una cuenta que el dueño elija y sus
       datos, que nunca entran al repo.
-  11. El splash y la bienvenida se publican juntos, en el mismo push a `main`, y no antes que el
-      test de especialidad (decisión S-30). Este plan no hace push.
+  11. El splash y la bienvenida se publican juntos, en el mismo push a `main` (decisión S-30). El
+      test de especialidad ya está en `main` desde `87403a1`. Este plan no hace push.
 
 - [ ] **Paso 7. Commit.**
 
 ```bash
 cd "${REPO:?}"
 git status --short
-git add specs/features/splash/splash.spec.md specs/features/bienvenida/bienvenida.spec.md specs/features/app-shell/app-shell.spec.md specs/features/auth/auth.spec.md specs/features/registro/registro.spec.md docs/specs/feature-index.md README.md
+git add specs/features/splash/splash.spec.md specs/features/bienvenida/bienvenida.spec.md specs/features/app-shell/app-shell.spec.md specs/features/auth/auth.spec.md specs/features/registro/registro.spec.md specs/features/specialty-test/specialty-test.spec.md specs/features/academic-profile/academic-profile.spec.md specs/features/chatbot/chatbot.spec.md specs/features/academic-record/academic-record.spec.md docs/specs/feature-index.md README.md
 git commit -m "docs(arranque): el splash y la bienvenida quedan implementados en sus specs, el índice y el README, con la revisión manual de «Verificación» pendiente"
 git log -1 --format='%an <%ae>'
 ```
