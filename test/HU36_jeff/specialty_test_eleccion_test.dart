@@ -8,16 +8,19 @@
 
 import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:ulima_plus/models/user_model.dart';
 import 'package:ulima_plus/pages/specialty_test/specialty_test_controller.dart';
 import 'package:ulima_plus/pages/specialty_test/specialty_test_logic.dart';
+import 'package:ulima_plus/pages/specialty_test/widgets/result_view.dart';
 import 'package:ulima_plus/services/specialty_test_service.dart';
 
 import 'datos_de_prueba.dart';
 import 'dobles_de_red.dart';
 import 'dobles_del_controlador.dart';
+import 'montaje_de_pantallas.dart';
 
 /// Llega al resultado con [usuario] y el resultado de [evaluacion].
 Future<({SpecialtyTestController c, AuthDelControlador auth, UiFalsa ui})>
@@ -48,6 +51,7 @@ void main() {
   tearDown(Get.reset);
 
   _controlador();
+  _pantalla();
 }
 
 void _controlador() {
@@ -252,6 +256,111 @@ void _controlador() {
       perfil.c.atrasEnResultado();
       await pumpEventQueue();
       expect(perfil.ui.cierres, [SalidaDelTest.terminado]);
+    });
+  });
+}
+
+/// Monta el resultado con [usuario] y sin animaciones de entrada.
+Future<({SpecialtyTestController c, AuthDelControlador auth})>
+_pantallaDelResultado(
+  WidgetTester tester, {
+  UserModel? usuario,
+  Map<String, dynamic>? evaluacion,
+}) async {
+  final t = prepararTest(
+    ApiFalsaDelTest(evaluaciones: [evaluacion ?? resultadoJson()]),
+    usuario: usuario,
+  );
+  final c = ponerControlador();
+  await tester.pump();
+  c.empezar();
+  responderPasos(c, respuestasEnOrden);
+  await tester.pump();
+  await montarPantalla(tester, const ResultView(), sinMovimiento: true);
+  return (c: c, auth: t.auth);
+}
+
+void _pantalla() {
+  group('WIDGET · Elegir y corazones en el resultado (RF-TEST-9)', () {
+    testWidgets('caso 15: los corazones marcados son los intereses y el '
+        'toque guarda', (tester) async {
+      final r = await _pantallaDelResultado(
+        tester,
+        usuario: alumno(intereses: [kIdTi]),
+      );
+      Icon corazon(int id) => tester.widget<Icon>(
+        find.descendant(
+          of: find.byKey(ResultView.corazonKey(id)),
+          matching: find.byType(Icon),
+        ),
+      );
+      expect(corazon(kIdTi).icon, Icons.favorite_rounded);
+      expect(corazon(kIdSi).icon, isNot(Icons.favorite_rounded));
+      await tester.tap(find.byKey(ResultView.corazonKey(kIdSi)));
+      await tester.pump();
+      expect(corazon(kIdSi).icon, Icons.favorite_rounded);
+      expect(
+        r.auth.guardados.single,
+        const SeleccionDeEspecialidades(intereses: [kIdSi, kIdTi]),
+      );
+    });
+
+    testWidgets('caso 16: si la ganadora ya es la principal, el botón dice '
+        '«Ya es tu principal» y no guarda', (tester) async {
+      final r = await _pantallaDelResultado(
+        tester,
+        usuario: alumno(principal: kIdVj),
+      );
+      expect(find.text('Elegir como principal'), findsNothing);
+      await tester.tap(find.text('Ya es tu principal'));
+      await tester.pump();
+      expect(r.auth.guardados, isEmpty);
+    });
+
+    testWidgets('caso 17: con empate, la hoja pregunta cuál y «Cancelar» no '
+        'guarda', (tester) async {
+      final r = await _pantallaDelResultado(
+        tester,
+        evaluacion: resultadoJson(empate: true),
+      );
+      await tester.tap(find.text('Elegir como principal'));
+      await tester.pumpAndSettle();
+      expect(find.text('¿Cuál eliges como principal?'), findsOneWidget);
+      await tester.tap(find.text('Cancelar'));
+      await tester.pumpAndSettle();
+      expect(r.auth.guardados, isEmpty);
+      await tester.tap(find.text('Elegir como principal'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(BottomSheet),
+          matching: find.text('Desarrollo de Videojuegos'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        r.auth.guardados.single,
+        const SeleccionDeEspecialidades(principal: kIdVj, intereses: [kIdSi]),
+      );
+    });
+
+    testWidgets('caso 18: mientras un guardado está en vuelo los botones no '
+        'responden', (tester) async {
+      final r = await _pantallaDelResultado(tester);
+      final pendiente = Completer<void>();
+      r.auth.respuestasDeGuardado.add(pendiente);
+      await tester.tap(find.byKey(ResultView.corazonKey(kIdSi)));
+      await tester.pump();
+      await tester.tap(find.text('Decidir después'));
+      await tester.tap(find.text('Rehacer el test'));
+      await tester.pump();
+      expect(r.auth.guardados, hasLength(1));
+      expect(r.c.fase.value, FaseDelTest.resultado);
+      pendiente.complete();
+      await tester.pump();
+      await tester.tap(find.text('Rehacer el test'));
+      await tester.pump();
+      expect(r.c.fase.value, FaseDelTest.pregunta);
     });
   });
 }

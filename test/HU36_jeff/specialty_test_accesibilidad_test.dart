@@ -13,6 +13,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:ulima_plus/pages/specialty_test/specialty_test_controller.dart';
 import 'package:ulima_plus/pages/specialty_test/widgets/question_view.dart';
+import 'package:ulima_plus/pages/specialty_test/widgets/result_view.dart';
 import 'package:ulima_plus/pages/specialty_test/widgets/test_buttons.dart';
 import 'package:ulima_plus/pages/specialty_test/widgets/ulises_bubble.dart';
 import 'package:ulima_plus/pages/specialty_test/widgets/waiting_view.dart';
@@ -54,6 +55,7 @@ void main() {
   _bienvenida();
   _preguntas();
   _espera();
+  _resultado();
 }
 
 void _bienvenida() {
@@ -347,6 +349,139 @@ void _espera() {
         pendiente.complete(resultadoJson());
         await tester.pump();
         semantica.dispose();
+      });
+    }
+  });
+}
+
+/// Llega al resultado de [evaluacion] y monta la pantalla.
+Future<SpecialtyTestController> _enElResultado(
+  WidgetTester tester, {
+  Map<String, dynamic>? evaluacion,
+  double escala = 1.0,
+  bool sinMovimiento = true,
+}) async {
+  prepararTest(ApiFalsaDelTest(evaluaciones: [evaluacion ?? resultadoJson()]));
+  final c = ponerControlador();
+  await tester.pump();
+  c.empezar();
+  responderPasos(c, respuestasEnOrden);
+  await tester.pump();
+  await montarPantalla(
+    tester,
+    const ResultView(),
+    escala: escala,
+    sinMovimiento: sinMovimiento,
+  );
+  await tester.pump();
+  return c;
+}
+
+void _resultado() {
+  group('WIDGET · Accesibilidad del resultado (RF-TEST-13)', () {
+    testWidgets('la tarjeta es un nodo con la número uno, su afinidad y el '
+        'motivo con la insignia «IA»', (tester) async {
+      final semantica = tester.ensureSemantics();
+      await _enElResultado(
+        tester,
+        evaluacion: resultadoJson(reasonSource: 'ai'),
+      );
+      expect(
+        find.bySemanticsLabel(
+          'Tu n.º 1, Desarrollo de Videojuegos, 75 % de afinidad',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel('Motivo redactado con IA. $kMotivoLargo'),
+        findsOneWidget,
+      );
+      expect(
+        tester.getSemantics(find.text('Leer más')),
+        isSemantics(isButton: true),
+      );
+      semantica.dispose();
+    });
+
+    testWidgets('con empate la tarjeta nombra las dos', (tester) async {
+      final semantica = tester.ensureSemantics();
+      await _enElResultado(tester, evaluacion: resultadoJson(empate: true));
+      expect(
+        find.bySemanticsLabel(
+          'Empate, Sistemas de Información y Desarrollo de Videojuegos, 62 % '
+          'de afinidad',
+        ),
+        findsOneWidget,
+      );
+      semantica.dispose();
+    });
+
+    testWidgets('cada fila se lee con su puesto y el corazón es un botón con '
+        'toggled', (tester) async {
+      final semantica = tester.ensureSemantics();
+      await _enElResultado(tester);
+      expect(
+        find.bySemanticsLabel(
+          'Puesto 2, Sistemas de Información, 65 % de afinidad',
+        ),
+        findsOneWidget,
+      );
+      final corazon = find.byKey(ResultView.corazonKey(kIdSi));
+      expect(
+        tester.getSemantics(corazon),
+        isSemantics(
+          label: 'Marcar Sistemas de Información como interés',
+          isButton: true,
+          isToggled: false,
+        ),
+      );
+      await tester.tap(corazon);
+      await tester.pump();
+      expect(
+        tester.getSemantics(corazon),
+        isSemantics(
+          label: 'Quitar Sistemas de Información de tus intereses',
+          isToggled: true,
+        ),
+      );
+      semantica.dispose();
+    });
+
+    testWidgets('al abrir el resultado el foco pasa a la burbuja de Ulises', (
+      tester,
+    ) async {
+      await _enElResultado(tester);
+      expect(
+        Focus.of(
+          tester.element(
+            find.text(
+              'Lo tuyo apunta a Desarrollo de Videojuegos, con 75 % de '
+              'afinidad.',
+            ),
+          ),
+        ).hasPrimaryFocus,
+        isTrue,
+      );
+    });
+
+    testWidgets('con menos movimiento no hay confeti ni giro y la afinidad '
+        'sale con su valor final', (tester) async {
+      await _enElResultado(tester);
+      expect(find.byKey(ResultView.confetiKey), findsNothing);
+      expect(find.text('75 % afinidad'), findsOneWidget);
+      await tester.pumpAndSettle();
+    });
+
+    for (final escala in [1.0, 1.3, 2.0]) {
+      testWidgets('con texto a $escala no desborda y los botones siguen '
+          'abajo', (tester) async {
+        await _enElResultado(tester, escala: escala);
+        expect(tester.takeException(), isNull);
+        expect(
+          dentroDeLaPantalla(tester, find.text('Rehacer el test')),
+          isTrue,
+        );
+        _blancosTactiles(tester);
       });
     }
   });
