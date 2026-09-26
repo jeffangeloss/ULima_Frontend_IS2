@@ -51,8 +51,15 @@ void main() {
     await avanzar(tester, 100);
     expect(variantes.lecturas, 0, reason: 'ni se lee ni se escribe la clave');
     final medio = CapaDeArranque.escenaActual!;
-    expect(medio.cruces.first.opacidad, inExclusiveRange(0, 1));
+    // A la mitad de los 200 ms del fundido.
+    expect(medio.cruces.first.opacidad, closeTo(0.5, 0.12));
     expect(medio.cruces.first.escala, 1);
+    await avanzar(tester, 112);
+    expect(
+      CapaDeArranque.escenaActual!.cruces.every((c) => c.opacidad == 1),
+      isTrue,
+      reason: 'el fundido dura 200 ms',
+    );
     await avanzar(tester, 1500);
     final quieta = CapaDeArranque.escenaActual!;
     expect(quieta.cruces.every((c) => c.opacidad == 1), isTrue);
@@ -84,12 +91,15 @@ void main() {
     final (carga, _) = await montar(tester);
     await avanzar(tester, 300);
     carga.terminar('/login');
+    await avanzarHasta(tester, () => Get.currentRoute == '/login');
     final opacidades = <double>[];
-    await avanzarHasta(tester, () {
+    final cuadros = await avanzarHasta(tester, () {
       opacidades.add(CapaDeArranque.opacidad);
       return CapaDeArranque.fase == FaseDeLaCapa.inactiva;
     });
     expect(opacidades.every((o) => o == 1), isTrue);
+    // Se retira con el primer cuadro de la bienvenida, no con el respaldo.
+    expect(cuadros, lessThanOrEqualTo(32));
     expect(Get.currentRoute, '/login');
   });
 }

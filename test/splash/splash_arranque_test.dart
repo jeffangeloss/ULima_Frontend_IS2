@@ -9,6 +9,7 @@
 // Archivos probados lib/services/session_navigation.dart y, desde la Tarea
 // 12, lib/pages/splash/capa_de_arranque.dart.
 
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
@@ -17,6 +18,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ulima_plus/components/logo/escena_del_logo.dart';
 import 'package:ulima_plus/main.dart';
@@ -25,6 +28,7 @@ import 'package:ulima_plus/pages/splash/capa_de_arranque.dart';
 import 'package:ulima_plus/pages/splash/carga_del_arranque.dart';
 import 'package:ulima_plus/pages/splash/estado_de_la_capa.dart';
 import 'package:ulima_plus/pages/splash/variantes/variantes.dart';
+import 'package:ulima_plus/services/api_client.dart';
 import 'package:ulima_plus/services/auth_service.dart';
 import 'package:ulima_plus/services/recarga_ulima_service.dart';
 import 'package:ulima_plus/services/session_navigation.dart';
@@ -33,6 +37,17 @@ import 'package:ulima_plus/services/splash_variante_service.dart';
 import 'package:ulima_plus/services/storage_service.dart';
 
 import 'apoyo_splash.dart';
+
+/// Un almacén que cuenta los cierres de sesión, con un token guardado.
+class _AlmacenEspia extends StorageService {
+  int cierres = 0;
+
+  @override
+  Future<void> clearSession() async => cierres++;
+
+  @override
+  Future<String?> get savedToken async => 'token-guardado';
+}
 
 /// Un binding que deja constancia de que corrió.
 class _BindingMarcado extends Bindings {
@@ -354,15 +369,37 @@ void main() {
         'una sola vez a la bienvenida (S-20)',
         (tester) async {
           final rutas = ObservadorDeRutas();
+          final almacen = _AlmacenEspia();
+          Get.put<StorageService>(almacen);
+          final servidor = MockClient(
+            (_) async => http.Response(
+              jsonEncode({
+                'error': {'code': 'UNAUTHORIZED', 'message': 'Token inválido'},
+              }),
+              401,
+              headers: {'content-type': 'application/json'},
+            ),
+          );
+          int? loginsTrasEl401;
           telefono(tester);
           await tester.pumpWidget(
             appConCapa(
               intro: IntroDelArranque(
                 carga: () async {
                   await Future<void>.delayed(const Duration(milliseconds: 100));
-                  // Lo que hace el interceptor de ApiClient con un 401 durante
-                  // la carga, con /arranque como ruta actual.
-                  expect(offAllToLogin(), isFalse);
+                  // Un 401 de GET /auth/me pasa por el interceptor real de
+                  // ApiClient, con /arranque como ruta actual.
+                  try {
+                    await http.runWithClient(
+                      () => ApiClient(
+                        configuredBaseUrl: 'http://test',
+                      ).getJson('/auth/me'),
+                      () => servidor,
+                    );
+                  } catch (_) {}
+                  loginsTrasEl401 = rutas.nombres
+                      .where((n) => n == '/login')
+                      .length;
                   return '/login';
                 },
                 variantes: VariantesFijas(VarianteSplash.ensamble),
@@ -375,7 +412,12 @@ void main() {
             tester,
             () => CapaDeArranque.fase == FaseDeLaCapa.inactiva,
           );
+          // El interceptor borra la sesión, no navega ni avisa.
+          expect(almacen.cierres, 1);
+          expect(loginsTrasEl401, 0);
+          // La intro navega una sola vez a la bienvenida.
           expect(rutas.nombres.where((n) => n == '/login'), hasLength(1));
+          expect(find.byType(GetSnackBar), findsNothing);
           expect(Get.isSnackbarOpen, isFalse);
         },
       );

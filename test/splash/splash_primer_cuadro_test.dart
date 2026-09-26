@@ -131,6 +131,18 @@ void main() {
       }
     }
     expect(distintos / (1152 * 1152), lessThanOrEqualTo(0.01));
+    // Sin «++». El centro de cada cruz, a (308,7; −133,8) u y
+    // (402,5; −133,8) u de la estrella, queda en el naranja del fondo.
+    const pxPorUnidad = 4 * 90 / 354.8;
+    for (final dx in [308.7, 402.5]) {
+      final x = (576 + dx * pxPorUnidad).round();
+      final y = (1280 - 133.8 * pxPorUnidad).round();
+      expect(
+        pantalla.getUint8((y * 1152 + x) * 4 + 2),
+        closeTo(48, 4),
+        reason: 'la cruz de $dx u no se pinta en el primer cuadro',
+      );
+    }
     // Arriba y abajo del cuadrado, #E77330 de borde a borde.
     expect(pantalla.getUint8((10 * 1152 + 10) * 4 + 2), 48);
     expect(pantalla.getUint8((2550 * 1152 + 1140) * 4 + 2), 48);

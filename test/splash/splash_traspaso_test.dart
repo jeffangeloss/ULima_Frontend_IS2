@@ -70,7 +70,16 @@ void main() {
         final carga = await montar(tester, tipo);
         carga.terminar(ruta);
         final v = varianteDe(tipo);
-        await avanzarHasta(tester, () => Get.currentRoute == '/login');
+        final hasta = await avanzarHasta(
+          tester,
+          () => Get.currentRoute == '/login',
+        );
+        // El relevo llega al terminar la entrada, a los 1250, 1150 y 1330 ms,
+        // más un par de cuadros (RF-SPL-17).
+        expect(
+          hasta,
+          inInclusiveRange(v.finDeLaEntrada, v.finDeLaEntrada + 48),
+        );
         final esperada = v
             .escena(
               v.finDelReposo(0),
@@ -88,6 +97,39 @@ void main() {
       });
     }
   }
+
+  testWidgets('la capa se retira en cuanto la bienvenida pinta su primer '
+      'cuadro, sin esperar el respaldo de 500 ms (RF-SPL-21)', (tester) async {
+    final carga = await montar(tester, VarianteSplash.incremento);
+    carga.terminar('/login');
+    await avanzarHasta(tester, () => Get.currentRoute == '/login');
+    final cuadros = await avanzarHasta(
+      tester,
+      () => CapaDeArranque.fase == FaseDeLaCapa.inactiva,
+    );
+    expect(cuadros, lessThanOrEqualTo(32));
+  });
+
+  testWidgets('antes del relevo precarga la imagen de Ulises, que entra '
+      'volando apenas la bienvenida toma el relevo (RF-SPL-21)', (
+    tester,
+  ) async {
+    final carga = await montar(tester, VarianteSplash.codigo);
+    carga.terminar('/login');
+    await avanzarHasta(tester, () => Get.currentRoute == '/login');
+    final configuracion = createLocalImageConfiguration(
+      tester.element(find.byType(CapaDeArranque)),
+    );
+    final clave = (await tester.runAsync(
+      () => const AssetImage(
+        'assets/images/ulises_chatbot.png',
+      ).obtainKey(configuracion),
+    ))!;
+    expect(
+      PaintingBinding.instance.imageCache.statusForKey(clave).tracked,
+      isTrue,
+    );
+  });
 
   testWidgets('la capa se retira sin fundido cuando la bienvenida pinta su '
       'primer cuadro, y queda montada e inactiva', (tester) async {

@@ -396,16 +396,36 @@ void main() {
           corrida.transform.getTranslation().y,
           closeTo(medio.paginaDy, 1e-6),
         );
+        // La página aparece como un todo, con una sola opacidad.
+        expect(medio.paginaOpacidad, inExclusiveRange(0, 1));
+        final fundida = tester.widget<Opacity>(
+          find
+              .ancestor(of: find.text('home'), matching: find.byType(Opacity))
+              .last,
+        );
+        expect(fundida.opacity, closeTo(medio.paginaOpacidad, 1e-6));
+        // Detrás de la página va el fondo del tema, sin destello.
+        final fondo = tester.widget<ColoredBox>(
+          find
+              .descendant(
+                of: find.byType(CapaDeArranque),
+                matching: find.byType(ColoredBox),
+              )
+              .first,
+        );
+        expect(
+          fondo.color,
+          Theme.of(tester.element(find.text('home'))).colorScheme.surface,
+        );
         await avanzar(tester, 250);
         final ultimo = CapaDeArranque.salidaActual;
         final esperado = modo == ThemeMode.dark
             ? const Color.fromARGB(255, 30, 30, 36)
             : const Color(0xFFFF6600);
-        if (ultimo != null) {
-          expect(ultimo.colorDelPanel.r, closeTo(esperado.r, 0.02));
-          expect(ultimo.colorDelPanel.g, closeTo(esperado.g, 0.02));
-          expect(ultimo.colorDelPanel.b, closeTo(esperado.b, 0.02));
-        }
+        expect(ultimo, isNotNull, reason: 'la salida sigue a los 515 ms');
+        expect(ultimo!.colorDelPanel.r, closeTo(esperado.r, 0.02));
+        expect(ultimo.colorDelPanel.g, closeTo(esperado.g, 0.02));
+        expect(ultimo.colorDelPanel.b, closeTo(esperado.b, 0.02));
         await avanzarHasta(
           tester,
           () => CapaDeArranque.fase == FaseDeLaCapa.inactiva,
