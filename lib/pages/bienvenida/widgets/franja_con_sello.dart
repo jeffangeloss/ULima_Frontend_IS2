@@ -72,9 +72,14 @@ class PildoraDelRegistro extends StatelessWidget {
               if (creada)
                 const Icon(LucideIcons.check, size: 14, color: Colors.white)
               else
-                const SizedBox.square(
+                SizedBox.square(
                   dimension: 14,
                   child: CircularProgressIndicator(
+                    // Sin movimiento, el indicador queda quieto y el texto
+                    // dice solo que se espera (RF-BIEN-15).
+                    value: MediaQuery.disableAnimationsOf(context)
+                        ? 0.75
+                        : null,
                     strokeWidth: 2,
                     color: Colors.white,
                   ),

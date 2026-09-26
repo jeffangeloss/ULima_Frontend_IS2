@@ -5,6 +5,7 @@
 // burbujas, y cada respuesta como «Tú, <texto>».
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart' show FocusSemanticEvent;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -26,6 +27,7 @@ class EntradaView extends StatelessWidget {
     this.conMovimiento = true,
     this.ocultarAvatar = false,
     this.claveDelAvatar,
+    this.enfocar = false,
   });
 
   final EntradaDeLaConversacion entrada;
@@ -46,6 +48,9 @@ class EntradaView extends StatelessWidget {
   /// el paso al horario (RF-BIEN-11).
   final GlobalKey? claveDelAvatar;
 
+  /// Con lector, el foco pasa a esta entrada (RF-BIEN-16).
+  final bool enfocar;
+
   @override
   Widget build(BuildContext context) {
     final hijo = switch (entrada) {
@@ -62,8 +67,51 @@ class EntradaView extends StatelessWidget {
         child: resultado(context, r),
       ),
     };
-    return _Entra(conMovimiento: conMovimiento, child: hijo);
+    return _Enfocable(
+      enfocar: enfocar,
+      child: _Entra(conMovimiento: conMovimiento, child: hijo),
+    );
   }
+}
+
+/// Con lector de pantalla, el foco pasa a la primera burbuja nueva de Ulises
+/// (RF-BIEN-16). El nodo de cada entrada es un contenedor, así que el lector
+/// lee el grupo en su orden.
+class _Enfocable extends StatefulWidget {
+  const _Enfocable({required this.enfocar, required this.child});
+
+  final bool enfocar;
+  final Widget child;
+
+  @override
+  State<_Enfocable> createState() => _EnfocableState();
+}
+
+class _EnfocableState extends State<_Enfocable> {
+  @override
+  void initState() {
+    super.initState();
+    if (widget.enfocar) _enfocar();
+  }
+
+  @override
+  void didUpdateWidget(_Enfocable anterior) {
+    super.didUpdateWidget(anterior);
+    if (widget.enfocar && !anterior.enfocar) _enfocar();
+  }
+
+  void _enfocar() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.findRenderObject()?.sendSemanticsEvent(
+        const FocusSemanticEvent(),
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      Semantics(container: true, child: widget.child);
 }
 
 /// Cada burbuja entra en 340 ms, subiendo 8 dp y de 98 % a 100 % con un

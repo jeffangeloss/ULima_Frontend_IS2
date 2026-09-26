@@ -15,6 +15,7 @@ import '../../../configs/themes.dart';
 import '../../../domain/bienvenida/bienvenida_turnos.dart';
 import '../../password_reset/password_reset_ui.dart';
 import '../bienvenida_controller.dart';
+import 'anillo_de_foco.dart';
 import 'compositor_del_test.dart';
 
 typedef _Textos = TextosDeLaBienvenida;
@@ -163,33 +164,37 @@ class BotonDeEnvio extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final b = Theme.brightnessOf(context);
-    return Semantics(
-      button: true,
-      enabled: alTocar != null,
-      label: _Textos.enviar,
-      excludeSemantics: true,
-      child: Opacity(
-        opacity: alTocar == null ? 0.4 : 1,
-        child: Material(
-          type: MaterialType.transparency,
-          child: InkWell(
-            customBorder: const CircleBorder(),
-            onTap: alTocar,
-            child: Ink(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [
-                    MaterialTheme.testAccentHi(b),
-                    MaterialTheme.testAccent(b),
-                  ],
+    return AnilloDeFoco(
+      radio: BorderRadius.circular(24),
+      child: Semantics(
+        button: true,
+        onTap: alTocar,
+        enabled: alTocar != null,
+        label: _Textos.enviar,
+        excludeSemantics: true,
+        child: Opacity(
+          opacity: alTocar == null ? 0.4 : 1,
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: alTocar,
+              child: Ink(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [
+                      MaterialTheme.testAccentHi(b),
+                      MaterialTheme.testAccent(b),
+                    ],
+                  ),
                 ),
-              ),
-              child: Icon(
-                LucideIcons.arrowUp,
-                color: MaterialTheme.testAccentInk(b),
+                child: Icon(
+                  LucideIcons.arrowUp,
+                  color: MaterialTheme.testAccentInk(b),
+                ),
               ),
             ),
           ),
@@ -210,18 +215,22 @@ class OjoDeLaContrasena extends StatelessWidget {
   final VoidCallback alTocar;
 
   @override
-  Widget build(BuildContext context) => Semantics(
-    button: true,
-    toggled: visible,
-    label: visible ? _Textos.ocultarContrasena : _Textos.mostrarContrasena,
-    excludeSemantics: true,
-    child: IconButton(
-      constraints: const BoxConstraints.tightFor(width: 48, height: 48),
-      onPressed: alTocar,
-      icon: Icon(
-        visible ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-        size: 20,
-        color: MaterialTheme.testMuted(Theme.brightnessOf(context)),
+  Widget build(BuildContext context) => AnilloDeFoco(
+    radio: BorderRadius.circular(24),
+    child: Semantics(
+      button: true,
+      onTap: alTocar,
+      toggled: visible,
+      label: visible ? _Textos.ocultarContrasena : _Textos.mostrarContrasena,
+      excludeSemantics: true,
+      child: IconButton(
+        constraints: const BoxConstraints.tightFor(width: 48, height: 48),
+        onPressed: alTocar,
+        icon: Icon(
+          visible ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+          size: 20,
+          color: MaterialTheme.testMuted(Theme.brightnessOf(context)),
+        ),
       ),
     ),
   );
@@ -245,52 +254,59 @@ class RespuestaRapida extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final b = Theme.brightnessOf(context);
-    return Semantics(
-      button: true,
-      label: texto,
-      excludeSemantics: true,
-      child: Material(
-        type: MaterialType.transparency,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(999),
-          onTap: esperando ? null : alTocar,
-          child: Ink(
-            height: 48,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(999),
-              border: principal
-                  ? null
-                  : Border.all(color: MaterialTheme.testAccent(b), width: 1.5),
-              gradient: principal
-                  ? LinearGradient(
-                      colors: [
-                        MaterialTheme.testAccentHi(b),
-                        MaterialTheme.testAccent(b),
-                      ],
-                    )
-                  : null,
-            ),
-            child: Center(
-              widthFactor: 1,
-              child: esperando
-                  ? SizedBox.square(
-                      dimension: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: MaterialTheme.testAccentInk(b),
+    return AnilloDeFoco(
+      radio: BorderRadius.circular(999),
+      child: Semantics(
+        button: true,
+        onTap: esperando ? null : alTocar,
+        label: texto,
+        excludeSemantics: true,
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(999),
+            onTap: esperando ? null : alTocar,
+            child: Ink(
+              height: 48,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(999),
+                border: principal
+                    ? null
+                    : Border.all(
+                        color: MaterialTheme.testAccent(b),
+                        width: 1.5,
                       ),
-                    )
-                  : Text(
-                      texto,
-                      style: TextStyle(
-                        color: principal
-                            ? MaterialTheme.testAccentInk(b)
-                            : MaterialTheme.testAccentText(b),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
+                gradient: principal
+                    ? LinearGradient(
+                        colors: [
+                          MaterialTheme.testAccentHi(b),
+                          MaterialTheme.testAccent(b),
+                        ],
+                      )
+                    : null,
+              ),
+              child: Center(
+                widthFactor: 1,
+                child: esperando
+                    ? SizedBox.square(
+                        dimension: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: MaterialTheme.testAccentInk(b),
+                        ),
+                      )
+                    : Text(
+                        texto,
+                        style: TextStyle(
+                          color: principal
+                              ? MaterialTheme.testAccentInk(b)
+                              : MaterialTheme.testAccentText(b),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
+              ),
             ),
           ),
         ),
@@ -329,47 +345,51 @@ class BotonPrincipal extends StatelessWidget {
   Widget build(BuildContext context) {
     final b = Theme.brightnessOf(context);
     final activo = alTocar != null && !esperando;
-    return Semantics(
-      button: true,
-      enabled: activo,
-      label: texto,
-      excludeSemantics: true,
-      child: Opacity(
-        opacity: alTocar == null ? 0.4 : 1,
-        child: Material(
-          type: MaterialType.transparency,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(15),
-            onTap: activo ? alTocar : null,
-            child: Ink(
-              height: 48,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(15),
-                gradient: LinearGradient(
-                  colors: [
-                    MaterialTheme.testAccentHi(b),
-                    MaterialTheme.testAccent(b),
-                  ],
+    return AnilloDeFoco(
+      radio: BorderRadius.circular(15),
+      child: Semantics(
+        button: true,
+        onTap: activo ? alTocar : null,
+        enabled: activo,
+        label: texto,
+        excludeSemantics: true,
+        child: Opacity(
+          opacity: alTocar == null ? 0.4 : 1,
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(15),
+              onTap: activo ? alTocar : null,
+              child: Ink(
+                height: 48,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(15),
+                  gradient: LinearGradient(
+                    colors: [
+                      MaterialTheme.testAccentHi(b),
+                      MaterialTheme.testAccent(b),
+                    ],
+                  ),
                 ),
-              ),
-              child: Center(
-                child: esperando
-                    ? SizedBox.square(
-                        dimension: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: MaterialTheme.testAccentInk(b),
+                child: Center(
+                  child: esperando
+                      ? SizedBox.square(
+                          dimension: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: MaterialTheme.testAccentInk(b),
+                          ),
+                        )
+                      : Text(
+                          texto,
+                          style: TextStyle(
+                            color: MaterialTheme.testAccentInk(b),
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
-                      )
-                    : Text(
-                        texto,
-                        style: TextStyle(
-                          color: MaterialTheme.testAccentInk(b),
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
+                ),
               ),
             ),
           ),
@@ -396,27 +416,31 @@ class EnlaceSecundario extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final b = Theme.brightnessOf(context);
-    return Semantics(
-      button: true,
-      label: texto,
-      excludeSemantics: true,
-      child: InkWell(
+    return AnilloDeFoco(
+      radio: BorderRadius.circular(8),
+      child: Semantics(
+        button: true,
         onTap: alTocar,
-        child: SizedBox(
-          height: 48,
-          child: Center(
-            widthFactor: 1,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Text(
-                texto,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: apagado
-                      ? MaterialTheme.testMuted(b)
-                      : MaterialTheme.testAccentText(b),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
+        label: texto,
+        excludeSemantics: true,
+        child: InkWell(
+          onTap: alTocar,
+          child: SizedBox(
+            height: 48,
+            child: Center(
+              widthFactor: 1,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Text(
+                  texto,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: apagado
+                        ? MaterialTheme.testMuted(b)
+                        : MaterialTheme.testAccentText(b),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),
@@ -466,48 +490,54 @@ class BotonDeGoogle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final b = Theme.brightnessOf(context);
-    return Semantics(
-      button: true,
-      label: _Textos.continuarConGoogle,
-      excludeSemantics: true,
-      child: Material(
-        type: MaterialType.transparency,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: alTocar,
-          child: Ink(
-            decoration: BoxDecoration(
-              color: MaterialTheme.bienvenidaGoogleFondo(b),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: MaterialTheme.bienvenidaGoogleBorde(b)),
-            ),
-            // 48 dp de alto, que crecen con el texto grande en lugar de
-            // desbordar (RF-BIEN-16).
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 46),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    SvgPicture.asset(
-                      'assets/images/google_logo.svg',
-                      width: 20,
-                      height: 20,
-                    ),
-                    const SizedBox(width: 10),
-                    Flexible(
-                      child: Text(
-                        _Textos.continuarConGoogle,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: MaterialTheme.bienvenidaGoogleTinta(b),
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
+    return AnilloDeFoco(
+      radio: BorderRadius.circular(12),
+      child: Semantics(
+        button: true,
+        onTap: alTocar,
+        label: _Textos.continuarConGoogle,
+        excludeSemantics: true,
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: alTocar,
+            child: Ink(
+              decoration: BoxDecoration(
+                color: MaterialTheme.bienvenidaGoogleFondo(b),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: MaterialTheme.bienvenidaGoogleBorde(b),
+                ),
+              ),
+              // 48 dp de alto, que crecen con el texto grande en lugar de
+              // desbordar (RF-BIEN-16).
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 46),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SvgPicture.asset(
+                        'assets/images/google_logo.svg',
+                        width: 20,
+                        height: 20,
+                      ),
+                      const SizedBox(width: 10),
+                      Flexible(
+                        child: Text(
+                          _Textos.continuarConGoogle,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: MaterialTheme.bienvenidaGoogleTinta(b),
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

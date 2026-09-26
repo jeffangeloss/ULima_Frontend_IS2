@@ -11,6 +11,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/semantics.dart' show FocusSemanticEvent;
 
 import '../../../components/logo/escena_del_logo.dart';
 import '../../../components/logo/logo_geometria.dart';
@@ -21,6 +22,7 @@ import '../../../domain/bienvenida/bienvenida_turnos.dart';
 import '../../splash/salidas.dart' show naranjaDelSplash;
 import '../../splash/variantes/variante_de_intro.dart'
     show grado, mezcla, tramo;
+import 'anillo_de_foco.dart';
 import 'vuelo_de_ulises.dart';
 
 typedef _Textos = TextosDeLaBienvenida;
@@ -39,6 +41,22 @@ abstract final class TiemposDelRecibimiento {
 }
 
 typedef _T = TiemposDelRecibimiento;
+
+/// Los tiempos con reducir movimiento en ms, desde el relevo, y los tres
+/// últimos desde la respuesta (RF-BIEN-15).
+abstract final class TiemposSinMovimiento {
+  static const double cruceDeLaEstrella = 220;
+  static const double ulises = 120;
+  static const double fundidoDeUlises = 160;
+  static const double fondo = 150;
+  static const double tarjeta = 280;
+  static const double botones = 660;
+  static const double fundido = 180;
+  static const double cruceDeLaSubida = 220;
+  static const double fundidoDelAvatar = 140;
+}
+
+typedef _S = TiemposSinMovimiento;
 
 class Recibimiento extends StatefulWidget {
   const Recibimiento({
@@ -60,17 +78,30 @@ class Recibimiento extends StatefulWidget {
   static const Key claveDeLaTarjeta = Key('recibimiento-tarjeta');
   static const Key claveDeLosBotones = Key('recibimiento-botones');
 
-  /// El fondo y la estrella del cuadro actual, para las pruebas. [context] es
-  /// el de una pieza del recibimiento.
+  /// El fondo y el área que cubre, la estrella, la de debajo con reducir
+  /// movimiento y los puntos de la sombra, la estela y las partículas del
+  /// cuadro actual, para las pruebas. [context] es el de una pieza del
+  /// recibimiento.
   @visibleForTesting
-  static ({Color? fondo, EscenaDelLogo? estrella}) cuadroActual(
-    BuildContext context,
-  ) {
+  static ({
+    Color? fondo,
+    Rect? areaDelFondo,
+    EscenaDelLogo? estrella,
+    EscenaDelLogo? estrellaDebajo,
+    double opacidadDeLaEstrella,
+    int puntos,
+  })
+  cuadroActual(BuildContext context) {
     final estado = context.findAncestorStateOfType<_RecibimientoState>()!;
-    final pintor = estado._pintor(estado.context);
+    final p = estado._pintor(estado.context);
     return (
-      fondo: pintor.fondo == null ? null : pintor.color,
-      estrella: pintor.estrella,
+      fondo: p.fondo == null ? null : p.color,
+      areaDelFondo: p.fondo,
+      estrella: p.estrella,
+      estrellaDebajo: p.estrellaDebajo,
+      opacidadDeLaEstrella: p.opacidadDeLaEstrella,
+      puntos:
+          p.estela.length + p.particulas.length + (p.sombra == null ? 0 : 1),
     );
   }
 
@@ -127,6 +158,25 @@ class _RecibimientoState extends State<Recibimiento>
   PiezasDelSello? _destino;
   late Offset _estrella = widget.pose.centro;
   late double _radio = widget.pose.radio;
+  double _cruceDeLaEstrella = 1;
+
+  bool get _sinMovimiento => MediaQuery.disableAnimationsOf(context);
+  bool get _conLector => MediaQuery.accessibleNavigationOf(context);
+
+  /// Con lector, la tarjeta y los botones aparecen con el relevo (RF-BIEN-16).
+  /// Sin movimiento, Ulises aparece en su lugar y la tarjeta y los botones
+  /// entran con fundidos (RF-BIEN-15).
+  double get _msDeMedida => _conLector || _sinMovimiento ? 0 : _T.quieto;
+  double get _msDeLaTarjeta =>
+      _conLector ? 0 : (_sinMovimiento ? _S.tarjeta : _T.finDelRebote);
+  double get _msDeLosBotones =>
+      _conLector ? 0 : (_sinMovimiento ? _S.botones : _T.botones);
+  double get _finDeLaEntrada => _conLector
+      ? 0
+      : (_sinMovimiento ? _S.botones + _S.fundido : _T.botones + 400);
+  double get _finDeLaSubida =>
+      _sinMovimiento ? _S.cruceDeLaSubida : _T.finDeLaSubida;
+  double get _posado => _sinMovimiento ? _S.cruceDeLaSubida : _T.posado;
 
   static const TextStyle _estiloSaludo = TextStyle(
     fontSize: 12,
@@ -159,28 +209,46 @@ class _RecibimientoState extends State<Recibimiento>
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(Recibimiento anterior) {
+    super.didUpdateWidget(anterior);
+    // Con lector o sin movimiento, las medidas pueden llegar antes que la
+    // visita. Con sesión, Ulises aterriza en su lugar de la maqueta.
+    final a = _aterrizaje;
+    if (widget.conSesion == true && anterior.conSesion != true && a != null) {
+      final aterrizaje = widget.pose.centro + const Offset(-104, 138);
+      if (aterrizaje != a) {
+        _aterrizaje = aterrizaje;
+        _puntos = puntosDelVuelo(aterrizaje, MediaQuery.sizeOf(context));
+      }
+    }
+  }
+
   void _alTic(Duration t) {
     _ms = t.inMicroseconds / 1000;
-    if (_medidas == null && _ms >= _T.quieto) _medir();
+    if (_medidas == null && _ms >= _msDeMedida) _medir();
     switch (_fase) {
       case _Fase.llegada:
-        if (_medidas != null) _moverLaEstrella();
-        if (_ms >= _T.finDelRebote) _alTerminarElRebote();
+        if (_medidas == null) break;
+        _moverLaEstrella();
+        if (_ms >= _msDeLaTarjeta) _alTerminarElRebote();
       case _Fase.saludo:
         // Con la tarjeta y los botones quietos, el reloj calla y no pide
         // cuadros mientras el alumno lee (decisión 13 del plan y
         // RF-BIEN-18).
-        if (_ms >= _T.botones + 400) _reloj.muted = true;
+        if (_ms >= _finDeLaEntrada) _reloj.muted = true;
       case _Fase.subida:
         // Tras un toque en reposo, la subida cuenta desde este cuadro.
         _respuestaEn ??= _ms;
-        _destino ??= PiezasDelSello.medir(context, widget.claveDelSello);
+        if (!_sinMovimiento) {
+          _destino ??= PiezasDelSello.medir(context, widget.claveDelSello);
+        }
         final desde = _ms - _respuestaEn!;
-        if (!_selloPosado && desde >= _T.finDeLaSubida) {
+        if (!_selloPosado && desde >= _finDeLaSubida) {
           _selloPosado = true;
           widget.alPosarseElSello();
         }
-        if (desde >= _T.posado) {
+        if (desde >= _posado) {
           _fase = _Fase.fin;
           _reloj.stop();
           widget.alTerminar();
@@ -254,10 +322,18 @@ class _RecibimientoState extends State<Recibimiento>
 
   /// Si Ulises y la tarjeta no caben, la estrella sube, y si hace falta se
   /// achica, lo justo antes de que Ulises aterrice, en 300 ms con
-  /// easeInOutCubic (B-28).
+  /// easeInOutCubic (B-28). Sin movimiento no se desliza, y la nueva aparece
+  /// encima en 220 ms mientras la del centro sigue entera debajo
+  /// (RF-BIEN-15).
   void _moverLaEstrella() {
     final m = _medidas!;
     if (widget.conSesion == true || m.enConversacion) return;
+    if (_sinMovimiento) {
+      _estrella = m.estrella;
+      _radio = m.radio;
+      _cruceDeLaEstrella = tramo(_ms, 0, _S.cruceDeLaEstrella);
+      return;
+    }
     final t = Curves.easeInOutCubic.transform(
       tramo(_ms, _T.aterrizaje - 300, _T.aterrizaje),
     );
@@ -270,8 +346,9 @@ class _RecibimientoState extends State<Recibimiento>
     // Mientras el controlador no atiende la visita, Ulises sigue asentado.
     if (conSesion == null) return;
     if (conSesion) {
-      // El fin del rebote hace de respuesta, sin el asentimiento
-      // (RF-BIEN-21).
+      // El fin del rebote hace de respuesta, sin el asentimiento, y con
+      // lector la conversación empieza con el relevo (RF-BIEN-16 y
+      // RF-BIEN-21).
       widget.alAterrizarConSesion();
       _subir(_ms);
     } else if (_medidas!.enConversacion) {
@@ -287,7 +364,7 @@ class _RecibimientoState extends State<Recibimiento>
 
   void _responder(bool yaUsa) {
     // Los toques cuentan desde que los botones empiezan a entrar.
-    if (_fase != _Fase.saludo || _ms < _T.botones) return;
+    if (_fase != _Fase.saludo || _ms < _msDeLosBotones) return;
     widget.alResponder(yaUsa);
     // En reposo el reloj calla y _ms quedó en el último cuadro, así que la
     // subida cuenta desde el primer cuadro después del toque.
@@ -306,15 +383,26 @@ class _RecibimientoState extends State<Recibimiento>
     final tamano = MediaQuery.sizeOf(context);
     final franja = MaterialTheme.bienvenidaFranja(Theme.brightnessOf(context));
     // Mientras Ulises vuela, el fondo pasa en 1100 ms, con la curva seno, de
-    // #E77330 al color de la franja (RF-BIEN-2).
-    final cambio = curvaSeno(tramo(_ms, _T.quieto, _T.quieto + 1100));
+    // #E77330 al color de la franja, o en 150 ms sin movimiento (RF-BIEN-2 y
+    // RF-BIEN-15).
+    final quieto = _sinMovimiento;
+    final cambio = quieto
+        ? tramo(_ms, _S.ulises, _S.ulises + _S.fondo)
+        : curvaSeno(tramo(_ms, _T.quieto, _T.quieto + 1100));
     final quieta = EscenaDelLogo.desdePose(
       widget.pose,
     ).copyWith(centro: _estrella, radio: _radio);
+    // Sin movimiento, la estrella del centro sigue entera debajo mientras la
+    // nueva aparece encima.
+    final seMovio =
+        _estrella != widget.pose.centro || _radio != widget.pose.radio;
+    final debajo = quieto && seMovio && _cruceDeLaEstrella < 1
+        ? EscenaDelLogo.desdePose(widget.pose)
+        : null;
     final a = _aterrizaje;
     final puntos = _puntos;
     final vuelo = _ms - _T.quieto;
-    var sombra = a == null || vuelo < 0
+    var sombra = quieto || a == null || vuelo < 0
         ? null
         : sombraDelVuelo(a, curvaSeno(tramo(vuelo, 0, 1300)));
     Rect? fondo = Offset.zero & tamano;
@@ -324,7 +412,9 @@ class _RecibimientoState extends State<Recibimiento>
     var revelado = 0.0;
     final respuesta = _respuestaEn;
     final destino = _destino;
-    if (respuesta != null) {
+    // Sin movimiento no hay subida: el recibimiento sigue entero debajo de la
+    // franja y la conversación que aparecen encima (RF-BIEN-15).
+    if (respuesta != null && !quieto) {
       final desde = _ms - respuesta;
       final lineal = tramo(desde, _T.inicioDeLaSubida, _T.finDeLaSubida);
       final t = Curves.easeInOutCubic.transform(lineal);
@@ -364,12 +454,14 @@ class _RecibimientoState extends State<Recibimiento>
       color: Color.lerp(naranjaDelSplash, franja, cambio)!,
       radio: radio,
       estrella: estrella,
+      estrellaDebajo: debajo,
+      opacidadDeLaEstrella: debajo == null ? 1 : _cruceDeLaEstrella,
       cruces: cruces,
       sombra: sombra,
-      estela: a == null || puntos == null
+      estela: quieto || a == null || puntos == null
           ? const <({Offset centro, double opacidad})>[]
           : estelaDelVuelo(puntos, a, vuelo),
-      particulas: a == null
+      particulas: quieto || a == null
           ? const <({Offset centro, double radio, double opacidad})>[]
           : particulasDelAterrizaje(a, _ms - _T.aterrizaje),
       ulima: _selloPosado ? null : destino?.ulima,
@@ -425,25 +517,40 @@ class _RecibimientoState extends State<Recibimiento>
           painter: _pintor(context),
         ),
       ),
-      if (_aterrizaje != null && _ms >= _T.quieto) _ulises(),
+      if (_aterrizaje != null &&
+          _ms >= (_sinMovimiento ? _S.ulises : _T.quieto))
+        _ulises(),
       if (_conTarjeta) ..._tarjetaYBotones(context),
     ],
   );
 
   Widget _ulises() {
     final a = _aterrizaje!;
-    var pose = _ms < _T.aterrizaje
-        ? ulisesEnVuelo(_puntos!, a, _ms - _T.quieto)
-        : _ms < _T.finDelRebote
-        ? ulisesAlAterrizar(a, _ms - _T.aterrizaje)
-        : ulisesAsiente(a, _ms - _T.finDelRebote);
     final respuesta = _respuestaEn;
-    if (respuesta != null) {
-      pose = ulisesSalta(
-        a,
-        widget.avatar.center,
-        _ms - respuesta - _T.inicioDelSalto,
+    PoseDeUlises pose;
+    if (_sinMovimiento) {
+      // Ulises no vuela. Aparece en su lugar con un fundido de 160 ms, y al
+      // responder pasa a su avatar con uno de 140 ms (RF-BIEN-15).
+      pose = PoseDeUlises(
+        centro: a,
+        lado: 70,
+        opacidad: respuesta == null
+            ? tramo(_ms, _S.ulises, _S.ulises + _S.fundidoDeUlises)
+            : 1 - tramo(_ms - respuesta, 0, _S.fundidoDelAvatar),
       );
+    } else {
+      pose = _ms < _T.aterrizaje
+          ? ulisesEnVuelo(_puntos!, a, _ms - _T.quieto)
+          : _ms < _T.finDelRebote
+          ? ulisesAlAterrizar(a, _ms - _T.aterrizaje)
+          : ulisesAsiente(a, _ms - _T.finDelRebote);
+      if (respuesta != null) {
+        pose = ulisesSalta(
+          a,
+          widget.avatar.center,
+          _ms - respuesta - _T.inicioDelSalto,
+        );
+      }
     }
     return Positioned(
       left: pose.centro.dx - pose.lado / 2,
@@ -457,13 +564,16 @@ class _RecibimientoState extends State<Recibimiento>
               child: Transform.scale(
                 scaleX: pose.escalaX,
                 scaleY: pose.escalaY,
-                child: ClipOval(
-                  key: Recibimiento.claveDeUlises,
-                  child: Image.asset(
-                    'assets/images/ulises_chatbot.png',
-                    width: pose.lado,
-                    height: pose.lado,
-                    fit: BoxFit.cover,
+                child: Opacity(
+                  opacity: pose.opacidad.clamp(0.0, 1.0),
+                  child: ClipOval(
+                    key: Recibimiento.claveDeUlises,
+                    child: Image.asset(
+                      'assets/images/ulises_chatbot.png',
+                      width: pose.lado,
+                      height: pose.lado,
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 ),
               ),
@@ -478,18 +588,34 @@ class _RecibimientoState extends State<Recibimiento>
     final m = _medidas!;
     final b = Theme.brightnessOf(context);
     final respuesta = _respuestaEn;
+    final quieto = _sinMovimiento;
+    final lector = _conLector;
     // Al responder, la tarjeta y los botones se van en 280 ms. Tras un toque
-    // en reposo, hasta el cuadro siguiente siguen enteros.
-    final salida = _fase != _Fase.subida
-        ? 1.0
-        : respuesta == null
+    // en reposo, hasta el cuadro siguiente siguen enteros. Sin movimiento
+    // siguen enteros debajo de la conversación que aparece encima.
+    final salida = _fase != _Fase.subida || respuesta == null || quieto
         ? 1.0
         : 1 - tramo(_ms - respuesta, 0, 280);
-    final aparece = tramo(_ms, _T.finDelRebote, _T.finDelRebote + 280);
+    // Con lector están desde el relevo. Sin movimiento, fundidos de 180 ms
+    // sin desplazamiento (RF-BIEN-15 y RF-BIEN-16).
+    final aparece = lector
+        ? 1.0
+        : tramo(
+            _ms,
+            _msDeLaTarjeta,
+            _msDeLaTarjeta + (quieto ? _S.fundido : 280),
+          );
     final entra = _rebote.transform(
       tramo(_ms, _T.finDelRebote, _T.finDelRebote + 360),
     );
-    final botones = tramo(_ms, _T.botones, _T.botones + 400);
+    final botones = lector
+        ? 1.0
+        : tramo(
+            _ms,
+            _msDeLosBotones,
+            _msDeLosBotones + (quieto ? _S.fundido : 400),
+          );
+    final conForma = !quieto && !lector;
     return <Widget>[
       Positioned(
         left: m.tarjeta.left,
@@ -501,9 +627,9 @@ class _RecibimientoState extends State<Recibimiento>
             // Entra en 360 ms con un leve rebote, desde 8 dp más abajo y al
             // 96 %.
             child: Transform.translate(
-              offset: Offset(0, 8 * (1 - entra)),
+              offset: Offset(0, conForma ? 8 * (1 - entra) : 0),
               child: Transform.scale(
-                scale: 0.96 + 0.04 * entra,
+                scale: conForma ? 0.96 + 0.04 * entra : 1,
                 alignment: const Alignment(-1, -0.2),
                 child: const _Tarjeta(key: Recibimiento.claveDeLaTarjeta),
               ),
@@ -511,7 +637,7 @@ class _RecibimientoState extends State<Recibimiento>
           ),
         ),
       ),
-      if (_ms >= _T.botones)
+      if (_ms >= _msDeLosBotones)
         Positioned(
           left: m.botones.left,
           width: m.botones.width,
@@ -524,7 +650,9 @@ class _RecibimientoState extends State<Recibimiento>
               child: Transform.translate(
                 offset: Offset(
                   0,
-                  18 * (1 - Curves.easeOutCubic.transform(botones)),
+                  conForma
+                      ? 18 * (1 - Curves.easeOutCubic.transform(botones))
+                      : 0,
                 ),
                 child: Column(
                   key: Recibimiento.claveDeLosBotones,
@@ -555,8 +683,26 @@ class _RecibimientoState extends State<Recibimiento>
 }
 
 /// La tarjeta del saludo, con su pico hacia Ulises (RF-BIEN-2).
-class _Tarjeta extends StatelessWidget {
+class _Tarjeta extends StatefulWidget {
   const _Tarjeta({super.key});
+
+  @override
+  State<_Tarjeta> createState() => _TarjetaState();
+}
+
+class _TarjetaState extends State<_Tarjeta> {
+  @override
+  void initState() {
+    super.initState();
+    // Con lector, el foco pasa a la tarjeta y después a los dos botones
+    // (RF-BIEN-16).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !MediaQuery.accessibleNavigationOf(context)) return;
+      context.findRenderObject()?.sendSemanticsEvent(
+        const FocusSemanticEvent(),
+      );
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -635,41 +781,47 @@ class _Boton extends StatelessWidget {
   final VoidCallback alTocar;
 
   @override
-  Widget build(BuildContext context) => Semantics(
-    button: true,
-    label: texto,
-    excludeSemantics: true,
-    // El borde de 1,5 dp va dentro de los 50 dp, como en la maqueta, así que
-    // se pinta encima y no suma al alto.
-    child: DecoratedBox(
-      position: DecorationPosition.foreground,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        border: borde == null ? null : Border.all(color: borde!, width: 1.5),
-      ),
-      child: Material(
-        type: MaterialType.transparency,
-        child: InkWell(
+  Widget build(BuildContext context) => AnilloDeFoco(
+    radio: BorderRadius.circular(16),
+    child: Semantics(
+      button: true,
+      label: texto,
+      // Con excludeSemantics, la acción del InkWell no llega al lector, así
+      // que el botón la declara aquí (RF-BIEN-16).
+      onTap: alTocar,
+      excludeSemantics: true,
+      // El borde de 1,5 dp va dentro de los 50 dp, como en la maqueta, así
+      // que se pinta encima y no suma al alto.
+      child: DecoratedBox(
+        position: DecorationPosition.foreground,
+        decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          // Cada uno se oscurece un 7 % al tocarlo (B-3).
-          highlightColor: Colors.black.withValues(alpha: 0.07),
-          splashColor: Colors.transparent,
-          onTap: alTocar,
-          child: Ink(
-            decoration: BoxDecoration(
-              color: fondo,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 50),
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 9),
-                  child: Text(
-                    texto,
-                    textAlign: TextAlign.center,
-                    style: _RecibimientoState._estiloBoton.copyWith(
-                      color: tinta,
+          border: borde == null ? null : Border.all(color: borde!, width: 1.5),
+        ),
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            // Cada uno se oscurece un 7 % al tocarlo (B-3).
+            highlightColor: Colors.black.withValues(alpha: 0.07),
+            splashColor: Colors.transparent,
+            onTap: alTocar,
+            child: Ink(
+              decoration: BoxDecoration(
+                color: fondo,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 50),
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 9),
+                    child: Text(
+                      texto,
+                      textAlign: TextAlign.center,
+                      style: _RecibimientoState._estiloBoton.copyWith(
+                        color: tinta,
+                      ),
                     ),
                   ),
                 ),
@@ -705,6 +857,8 @@ class _PintorDelRecibimiento extends CustomPainter {
     required this.color,
     required this.radio,
     required this.estrella,
+    required this.estrellaDebajo,
+    required this.opacidadDeLaEstrella,
     required this.cruces,
     required this.sombra,
     required this.estela,
@@ -719,6 +873,11 @@ class _PintorDelRecibimiento extends CustomPainter {
   final Color color;
   final double radio;
   final EscenaDelLogo? estrella;
+
+  /// Con reducir movimiento, la estrella del centro, entera debajo mientras
+  /// la nueva aparece encima con [opacidadDeLaEstrella] (RF-BIEN-15).
+  final EscenaDelLogo? estrellaDebajo;
+  final double opacidadDeLaEstrella;
   final List<CruzDeLaSubida> cruces;
   final ({Offset centro, double ancho, double opacidad})? sombra;
   final List<({Offset centro, double opacidad})> estela;
@@ -760,8 +919,21 @@ class _PintorDelRecibimiento extends CustomPainter {
       blanco.color = Colors.white.withValues(alpha: p.opacidad);
       canvas.drawCircle(p.centro, p.radio, blanco);
     }
+    final abajo = estrellaDebajo;
+    if (abajo != null) pintarEscena(canvas, abajo);
     final e = estrella;
-    if (e != null) pintarEscena(canvas, e);
+    if (e != null) {
+      if (opacidadDeLaEstrella < 1) {
+        canvas.saveLayer(
+          null,
+          Paint()..color = Color.fromRGBO(0, 0, 0, opacidadDeLaEstrella),
+        );
+        pintarEscena(canvas, e);
+        canvas.restore();
+      } else {
+        pintarEscena(canvas, e);
+      }
+    }
     if (cruces.isNotEmpty) {
       final pintura = Paint()
         ..isAntiAlias = true

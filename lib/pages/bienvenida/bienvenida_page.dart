@@ -81,6 +81,25 @@ class _BienvenidaPageState extends State<BienvenidaPage>
   final GlobalKey _claveDelUltimoAvatar = GlobalKey();
   bool _pasoEmpezado = false;
 
+  /// Sin movimiento, la franja con el sello y la conversación aparecen encima
+  /// del recibimiento en 220 ms (RF-BIEN-15). Fuera de ese cruce vale 1.
+  late final AnimationController _cruceDeLaSubida = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 220),
+    value: 1,
+    // Es el fundido de reducir movimiento, así que no se acorta con él.
+    animationBehavior: AnimationBehavior.preserve,
+  );
+  bool _cruceSinMovimiento = false;
+
+  /// La primera burbuja nueva de Ulises, a la que va el foco del lector
+  /// (RF-BIEN-16).
+  int _visiblesAntes = 0;
+  int? _idAEnfocar;
+
+  /// El cursor que había antes de montar la bienvenida.
+  bool? _cursorAnterior;
+
   bool get _sinMovimiento => MediaQuery.disableAnimationsOf(context);
   bool get _conLector => MediaQuery.accessibleNavigationOf(context);
 
@@ -116,6 +135,11 @@ class _BienvenidaPageState extends State<BienvenidaPage>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    // Sin movimiento, el cursor del campo no parpadea (RF-BIEN-15). El SDK
+    // solo lo permite con este interruptor global, que la página devuelve a su
+    // valor en su dispose.
+    _cursorAnterior ??= EditableText.debugDeterministicCursor;
+    EditableText.debugDeterministicCursor = _sinMovimiento || _cursorAnterior!;
     if (_leida) return;
     _leida = true;
     final argumentos = ModalRoute.of(context)?.settings.arguments;
@@ -163,6 +187,17 @@ class _BienvenidaPageState extends State<BienvenidaPage>
 
   void _alRevelar() {
     if (!mounted) return;
+    final visibles = _revelador.visibles;
+    final entradas = _c.entradas;
+    if (_conLector && visibles > _visiblesAntes) {
+      final nuevas = entradas.sublist(
+        _visiblesAntes.clamp(0, entradas.length),
+        visibles.clamp(0, entradas.length),
+      );
+      _idAEnfocar =
+          nuevas.whereType<BurbujaDeUlises>().firstOrNull?.id ?? _idAEnfocar;
+    }
+    _visiblesAntes = visibles;
     setState(() {});
     // La conversación se desplaza en 450 ms hasta el final, o salta con
     // reducir movimiento (RF-BIEN-5 y RF-BIEN-15).
@@ -314,6 +349,9 @@ class _BienvenidaPageState extends State<BienvenidaPage>
     _pulso.dispose();
     _rombos.dispose();
     _pildora.dispose();
+    _cruceDeLaSubida.dispose();
+    final cursor = _cursorAnterior;
+    if (cursor != null) EditableText.debugDeterministicCursor = cursor;
     _c.terminarVisita(_visita);
     super.dispose();
   }
@@ -354,9 +392,27 @@ class _BienvenidaPageState extends State<BienvenidaPage>
     // Sin un motivo, el recibimiento tapa la conversación desde el primer
     // cuadro, que sale solo de los argumentos (RF-BIEN-1 a RF-BIEN-3).
     final conRecibimiento = _motivo == null && !_recibimientoTerminado;
+    // Las claves conservan el estado de los dos al cambiar de orden.
+    final conversacion = KeyedSubtree(
+      key: const ValueKey<String>('conversacion'),
+      child: FadeTransition(
+        opacity: _cruceDeLaSubida,
+        child: _conversacion(context, atendida: atendida),
+      ),
+    );
+    final recibimiento = conRecibimiento
+        ? Positioned.fill(
+            key: const ValueKey<String>('recibimiento'),
+            child: _recibimiento(context, atendida: atendida),
+          )
+        : null;
+    // Sin movimiento, la franja y la conversación aparecen encima del
+    // recibimiento, que sigue entero debajo hasta quedar cubierto.
+    final encima = _cruceSinMovimiento;
     return Stack(
       children: [
-        _conversacion(context, atendida: atendida),
+        if (encima && recibimiento != null) recibimiento,
+        conversacion,
         Positioned(
           top: CabeceraConSello.alto(context),
           left: 0,
@@ -373,8 +429,7 @@ class _BienvenidaPageState extends State<BienvenidaPage>
             ),
           ),
         ),
-        if (conRecibimiento)
-          Positioned.fill(child: _recibimiento(context, atendida: atendida)),
+        if (!encima && recibimiento != null) recibimiento,
         Positioned(
           top: CabeceraConSello.alto(context) + 8,
           left: 0,
@@ -408,9 +463,13 @@ class _BienvenidaPageState extends State<BienvenidaPage>
           _sincronizar();
           _revelador.mostrarYa(_primerGrupoConRespuesta());
           setState(() {
-            _selloVisible = false;
-            _avatarVisible = false;
+            // Sin movimiento, el sello y el avatar se ven enteros en la
+            // franja y la conversación que aparecen encima (RF-BIEN-15).
+            _selloVisible = _sinMovimiento;
+            _avatarVisible = _sinMovimiento;
+            _cruceSinMovimiento = _sinMovimiento;
           });
+          if (_sinMovimiento) unawaited(_cruceDeLaSubida.forward(from: 0));
         },
         alPosarseElSello: () {
           setState(() => _selloVisible = true);
@@ -420,6 +479,7 @@ class _BienvenidaPageState extends State<BienvenidaPage>
           setState(() {
             _avatarVisible = true;
             _recibimientoTerminado = true;
+            _cruceSinMovimiento = false;
           });
           // 650 ms después empieza el primer turno de la rama elegida.
           _revelador.retenido = false;
@@ -518,6 +578,7 @@ class _BienvenidaPageState extends State<BienvenidaPage>
                               claveDelAvatar: i == ultimoAvatar
                                   ? _claveDelUltimoAvatar
                                   : null,
+                              enfocar: entrada.id == _idAEnfocar,
                               conMovimiento: !_sinMovimiento,
                               resultado: (context, r) =>
                                   ResultadoEnLaConversacion(c: _c, entrada: r),
