@@ -625,9 +625,19 @@ class _E1 extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           // En web, signIn() no funciona con google_sign_in 6.x, así que va
-          // el botón oficial, y la cuenta llega por onCurrentUserChanged.
+          // el botón oficial, con el ancho del compositor hasta 400 px y el
+          // tema del sistema, y la cuenta llega por onCurrentUserChanged.
           if (kIsWeb)
-            Center(child: googleSignInButton())
+            LayoutBuilder(
+              builder: (context, limites) => Center(
+                child: googleSignInButton(
+                  configuracion: configuracionDelBotonDeGoogle(
+                    oscuro: Theme.brightnessOf(context) == Brightness.dark,
+                    anchoDelCompositor: limites.maxWidth,
+                  ),
+                ),
+              ),
+            )
           else
             BotonDeGoogle(
               alTocar: c.esperando.value ? null : c.entrarConGoogle,

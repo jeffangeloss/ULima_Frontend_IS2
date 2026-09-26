@@ -19,6 +19,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
+import 'package:ulima_plus/components/google_sign_in_button.dart';
 import 'package:ulima_plus/domain/bienvenida/bienvenida_turnos.dart';
 import 'package:ulima_plus/models/user_model.dart';
 import 'package:ulima_plus/pages/bienvenida/conversacion.dart';
@@ -660,6 +661,24 @@ void main() {
         (codigo: '20230001', contrasena: 'secreta-de-prueba'),
       ]);
       await avanzar(tester, 3000);
+    });
+  });
+
+  group('el botón de GIS (RF-BIEN-6, B-25 y B-35)', () {
+    testWidgets('fuera de web, el botón con su configuración no dibuja nada', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        Center(
+          child: googleSignInButton(
+            configuracion: configuracionDelBotonDeGoogle(
+              oscuro: false,
+              anchoDelCompositor: 351,
+            ),
+          ),
+        ),
+      );
+      expect(tester.getSize(find.byType(SizedBox)), Size.zero);
     });
   });
 }
