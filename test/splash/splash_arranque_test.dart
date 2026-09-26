@@ -9,11 +9,19 @@
 // Archivos probados lib/services/session_navigation.dart y, desde la Tarea
 // 12, lib/pages/splash/capa_de_arranque.dart.
 
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:ulima_plus/components/logo/escena_del_logo.dart';
+import 'package:ulima_plus/pages/splash/capa_de_arranque.dart';
+import 'package:ulima_plus/pages/splash/estado_de_la_capa.dart';
 import 'package:ulima_plus/services/session_navigation.dart';
+import 'package:ulima_plus/services/splash_variante_service.dart';
+
+import 'apoyo_splash.dart';
 
 /// Un binding que deja constancia de que corrió.
 class _BindingMarcado extends Bindings {
@@ -117,6 +125,106 @@ void main() {
       final ruta = _rutaDe(tester, 'login') as GetPageRoute<dynamic>;
       expect(ruta.transition, isNot(Transition.noTransition));
       expect(ruta.settings.arguments, isNull);
+    });
+  });
+
+  group('la capa (RF-SPL-4 y RF-SPL-6)', () {
+    setUp(reiniciarArranque);
+    tearDown(reiniciarArranque);
+
+    testWidgets('sin intro está inactiva, no tapa la pantalla y deja pasar '
+        'los toques', (tester) async {
+      telefono(tester);
+      await tester.pumpWidget(appConCapa());
+      await tester.pump();
+      expect(CapaDeArranque.fase, FaseDeLaCapa.inactiva);
+      expect(EstadoDeLaCapa.cubre.value, isFalse);
+      await tester.tap(find.text('bienvenida'));
+      expect(toquesEnLaPagina, 1);
+    });
+
+    testWidgets('con intro tapa la pantalla, bloquea los toques y la barra de '
+        'estado usa íconos claros', (tester) async {
+      telefono(tester);
+      await tester.pumpWidget(
+        appConCapa(
+          intro: IntroDelArranque(
+            carga: CargaFalsa().call,
+            variantes: VariantesFijas(VarianteSplash.ensamble),
+            random: Random(1),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(EstadoDeLaCapa.cubre.value, isTrue);
+      expect(CapaDeArranque.fase, isNot(FaseDeLaCapa.inactiva));
+      final bloqueo = tester.widget<AbsorbPointer>(
+        find
+            .descendant(
+              of: find.byType(CapaDeArranque),
+              matching: find.byType(AbsorbPointer),
+            )
+            .first,
+      );
+      expect(bloqueo.absorbing, isTrue);
+      final region = tester.widget<AnnotatedRegion<SystemUiOverlayStyle>>(
+        find
+            .descendant(
+              of: find.byType(CapaDeArranque),
+              matching: find.byType(AnnotatedRegion<SystemUiOverlayStyle>),
+            )
+            .first,
+      );
+      expect(region.value.statusBarIconBrightness, Brightness.light);
+    });
+
+    testWidgets('la estrella queda quieta hasta que la variante está elegida y '
+        'el tiempo de la intro corre desde ahí', (tester) async {
+      telefono(tester);
+      final variantes = VariantesFijas(
+        VarianteSplash.ensamble,
+        enseguida: false,
+      );
+      await tester.pumpWidget(
+        appConCapa(
+          intro: IntroDelArranque(
+            carga: CargaFalsa().call,
+            variantes: variantes,
+            random: Random(1),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(CapaDeArranque.fase, FaseDeLaCapa.eligiendo);
+      final quieta = CapaDeArranque.escenaActual!;
+      expect(quieta.rombos.every((r) => r.desplazamiento == 0), isTrue);
+      expect(quieta.cruces, isEmpty);
+
+      variantes.elegirYa();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(CapaDeArranque.fase, FaseDeLaCapa.intro);
+      // A unos 200 ms de la elección, los rombos de Ensamble se están
+      // abriendo.
+      expect(
+        CapaDeArranque.escenaActual!.rombos[3].desplazamiento,
+        greaterThan(100),
+      );
+    });
+
+    testWidgets('la carga corre en paralelo desde el montaje', (tester) async {
+      telefono(tester);
+      final carga = CargaFalsa();
+      await tester.pumpWidget(
+        appConCapa(
+          intro: IntroDelArranque(
+            carga: carga.call,
+            variantes: VariantesFijas(VarianteSplash.codigo, enseguida: false),
+            random: Random(1),
+          ),
+        ),
+      );
+      expect(carga.llamadas, 1);
     });
   });
 }
