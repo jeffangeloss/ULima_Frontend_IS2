@@ -230,6 +230,29 @@ void _preguntas() {
       expect(c.paso.value, 1);
     });
 
+    testWidgets('con lector, «Siguiente» de la pregunta que sale no avanza '
+        'la que entra', (tester) async {
+      final c = await _enLaPregunta(tester, indice: 1, lector: true);
+      await tester.tap(find.byKey(QuestionView.tarjetaKey('top')));
+      await tester.pump();
+      await tester.tap(find.byTooltip('Pregunta anterior'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 10));
+      expect(c.paso.value, 0);
+      // La pregunta 1 vuelve con su respuesta y su «Siguiente», y la 2 sale
+      // con el suyo.
+      final queSale = find.ancestor(
+        of: find.text('Tarea de prueba dos arriba'),
+        matching: find.byType(SingleChildScrollView),
+      );
+      await tester.tap(
+        find.descendant(of: queSale, matching: find.text('Siguiente')),
+        warnIfMissed: false,
+      );
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(c.paso.value, 0);
+    });
+
     testWidgets('la pastilla del historial dice ver u ocultar y su estado', (
       tester,
     ) async {

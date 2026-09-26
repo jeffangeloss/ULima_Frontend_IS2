@@ -184,6 +184,27 @@ void _duelo() {
       expect(find.text('Tarea de prueba dos arriba'), findsOneWidget);
     });
 
+    for (final (objetivo, ms) in [
+      (find.byKey(QuestionView.tarjetaKey('bottom')), 10),
+      (find.text('Ninguna me llama'), 5),
+    ]) {
+      testWidgets('caso 5b: un toque en la pregunta que sale, a los $ms ms '
+          'del avance, no responde la que entra', (tester) async {
+        final c = await _enLaPregunta(tester, indice: 1);
+        await tester.tap(find.byKey(QuestionView.tarjetaKey('top')));
+        await tester.pump(const Duration(milliseconds: 350));
+        expect(c.paso.value, 2);
+        await tester.pump(Duration(milliseconds: ms));
+        // Solo la pregunta 2, que sale, tiene tarjetas y esos botones.
+        await tester.tap(objetivo, warnIfMissed: false);
+        await tester.pump();
+        expect(c.respuestas.containsKey('q03'), isFalse);
+        expect(c.respuestas['q02'], 'top');
+        await tester.pump(const Duration(milliseconds: 550));
+        expect(c.paso.value, 2);
+      });
+    }
+
     testWidgets('caso 6: el ícono de la tarea es el de su nombre, y uno '
         'desconocido cae al neutro', (tester) async {
       await _enLaPregunta(tester);

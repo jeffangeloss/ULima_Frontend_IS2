@@ -185,12 +185,22 @@ class _PasoState extends State<_Paso> {
     super.dispose();
   }
 
+  /// Si este paso es el vigente. En la transición, el paso que sale sigue en
+  /// pantalla uno o dos cuadros y recibe toques, pero el controlador ya está
+  /// en el que entra, así que esos toques no hacen nada.
+  bool get _vigente => widget.datos.paso == widget.controller.paso.value;
+
   void _responder(String valor) {
+    if (!_vigente) return;
     HapticFeedback.selectionClick();
     widget.controller.responder(
       valor,
       avanceSolo: !MediaQuery.accessibleNavigationOf(context),
     );
+  }
+
+  void _avanzar() {
+    if (_vigente) widget.controller.avanzar();
   }
 
   @override
@@ -248,7 +258,7 @@ class _PasoState extends State<_Paso> {
             TestPrimaryButton(
               label: 'Siguiente',
               icon: LucideIcons.arrowRight,
-              onPressed: widget.controller.avanzar,
+              onPressed: _avanzar,
             ),
           ],
         ],
