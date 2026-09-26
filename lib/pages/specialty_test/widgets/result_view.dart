@@ -87,6 +87,9 @@ class _ResultViewState extends State<ResultView> with TickerProviderStateMixin {
     }
     final elegida = await showModalBottomSheet<int>(
       context: context,
+      // Con texto grande la hoja pasa del alto por defecto, así que toma el
+      // que necesita, hasta el 85 % de la pantalla, y desplaza (RF-TEST-13).
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _HojaDelEmpate(ganadoras: r.winners),
     );
@@ -985,44 +988,49 @@ class _HojaDelEmpate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final b = Theme.of(context).brightness;
-    return Container(
-      decoration: BoxDecoration(
-        color: MaterialTheme.sheetBg(b),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.85,
       ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Semantics(
-                header: true,
-                child: Text(
-                  '¿Cuál eliges como principal?',
-                  style: TextStyle(
-                    color: MaterialTheme.textPrimary(b),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
+      child: Container(
+        decoration: BoxDecoration(
+          color: MaterialTheme.sheetBg(b),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Semantics(
+                  header: true,
+                  child: Text(
+                    '¿Cuál eliges como principal?',
+                    style: TextStyle(
+                      color: MaterialTheme.textPrimary(b),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              for (final g in ganadoras) ...[
-                TestPrimaryButton(
-                  label: g.name,
-                  height: 48,
-                  onPressed: () => Navigator.of(context).pop(g.specialtyId),
+                const SizedBox(height: 12),
+                for (final g in ganadoras) ...[
+                  TestPrimaryButton(
+                    label: g.name,
+                    height: 48,
+                    onPressed: () => Navigator.of(context).pop(g.specialtyId),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                TestSecondaryButton(
+                  label: 'Cancelar',
+                  onPressed: () => Navigator.of(context).pop(),
                 ),
-                const SizedBox(height: 8),
               ],
-              TestSecondaryButton(
-                label: 'Cancelar',
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ],
+            ),
           ),
         ),
       ),

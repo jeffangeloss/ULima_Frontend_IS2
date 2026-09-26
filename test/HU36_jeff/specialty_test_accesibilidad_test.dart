@@ -483,6 +483,22 @@ void _resultado() {
         );
         _blancosTactiles(tester);
       });
+
+      testWidgets('con texto a $escala la hoja del empate no desborda y '
+          '«Cancelar» queda en la pantalla', (tester) async {
+        await _enElResultado(
+          tester,
+          evaluacion: resultadoJson(empate: true),
+          escala: escala,
+        );
+        await tester.tap(find.text('Elegir como principal'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+        expect(find.text('¿Cuál eliges como principal?'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+        expect(dentroDeLaPantalla(tester, find.text('Cancelar')), isTrue);
+        _blancosTactiles(tester);
+      });
     }
   });
 }
