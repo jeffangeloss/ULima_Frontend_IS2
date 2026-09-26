@@ -20,6 +20,7 @@ import 'package:ulima_plus/pages/setup_carrera/setup_carrera_controller.dart';
 import 'package:ulima_plus/pages/setup_carrera/setup_carrera_page.dart';
 import 'package:ulima_plus/pages/specialty_test/specialty_test_controller.dart';
 import 'package:ulima_plus/pages/specialty_test/specialty_test_logic.dart';
+import 'package:ulima_plus/pages/specialty_test/widgets/test_buttons.dart';
 import 'package:ulima_plus/services/auth_service.dart';
 import 'package:ulima_plus/services/specialty_test_service.dart';
 import 'package:ulima_plus/services/storage_service.dart';
@@ -127,6 +128,125 @@ Future<void> _recorrerElAsistente(
     expect(find.textContaining('No pudimos guardar'), findsOneWidget);
   }
   revisar(_paso('_SeleccionStep'));
+}
+
+/// Los tokens de `MaterialTheme` en [b]. Las constantes de la paleta, como
+/// el blanco, no cuentan, porque son iguales en los dos temas.
+Set<int> _tokensDe(Brightness b) => {
+  for (final token in <Color Function(Brightness)>[
+    MaterialTheme.headerColor,
+    MaterialTheme.bloqueCurso,
+    MaterialTheme.bloqueSeccion,
+    MaterialTheme.bloqueAsistencia,
+    MaterialTheme.bloqueAsistenciaLinea,
+    MaterialTheme.pageBg,
+    MaterialTheme.cardBg,
+    MaterialTheme.textPrimary,
+    MaterialTheme.textSecondary,
+    MaterialTheme.textMuted,
+    MaterialTheme.textDimmed,
+    MaterialTheme.borderColor,
+    MaterialTheme.tagBg,
+    MaterialTheme.iconBtnBg,
+    MaterialTheme.progressBg,
+    MaterialTheme.lockedBg,
+    MaterialTheme.espPrincipalBg,
+    MaterialTheme.espInteresBg,
+    MaterialTheme.chipDisabledBg,
+    MaterialTheme.chipDisabledBorder,
+    MaterialTheme.chipDisabledText,
+    MaterialTheme.chipInactiveText,
+    MaterialTheme.sheetBg,
+    MaterialTheme.sheetHandle,
+    MaterialTheme.sheetRowBg,
+    MaterialTheme.labelColor,
+    MaterialTheme.externalBadgeBg,
+    MaterialTheme.dividerMalla,
+    MaterialTheme.specialtyBg,
+    MaterialTheme.placeholderText,
+    MaterialTheme.descText,
+    MaterialTheme.chatOwnBubbleBg,
+    MaterialTheme.errorBg,
+    MaterialTheme.iconoNaranja,
+    MaterialTheme.testInk2,
+    MaterialTheme.testMuted,
+    MaterialTheme.testLine,
+    MaterialTheme.testChipBg,
+    MaterialTheme.testAccent,
+    MaterialTheme.testAccentHi,
+    MaterialTheme.testAccentInk,
+    MaterialTheme.testAccentText,
+    MaterialTheme.testAccentDeep,
+    MaterialTheme.testAccentSoft,
+    MaterialTheme.testHeartOff,
+    MaterialTheme.testTrack,
+    MaterialTheme.testFeatherOn,
+    MaterialTheme.testFeatherOff,
+    MaterialTheme.testTaskTileBg,
+    MaterialTheme.testTaskIconInk,
+    MaterialTheme.testAiBadgeBg,
+  ])
+    token(b).toARGB32(),
+};
+
+/// La tinta que pinta el `RichText` que [e] construye, que en un `Text` y en
+/// un `Icon` ya lleva el estilo heredado.
+Color? _tintaPintada(Element e) {
+  Color? tinta;
+  var encontrada = false;
+  void buscar(Element hijo) {
+    if (encontrada) return;
+    final w = hijo.widget;
+    if (w is RichText) {
+      encontrada = true;
+      tinta = w.text.style?.color;
+      return;
+    }
+    hijo.visitChildren(buscar);
+  }
+
+  e.visitChildren(buscar);
+  return tinta;
+}
+
+/// Cada color que pintan los `Container`, `Text` e `Icon` de [paso], con el
+/// fondo, el borde y el degradado de cada `Container` y la tinta efectiva de
+/// cada `Text` e `Icon`.
+List<(String, Color)> _coloresDe(Finder paso) {
+  final colores = <(String, Color)>[];
+  for (final e
+      in find
+          .descendant(of: paso, matching: find.byType(Container))
+          .evaluate()) {
+    final w = e.widget as Container;
+    if (w.color != null) colores.add(('el fondo de un Container', w.color!));
+    final d = w.decoration;
+    if (d is! BoxDecoration) continue;
+    if (d.color != null) colores.add(('el fondo de un Container', d.color!));
+    for (final c in d.gradient?.colors ?? const <Color>[]) {
+      colores.add(('el degradado de un Container', c));
+    }
+    final borde = d.border;
+    if (borde is Border) {
+      for (final lado in [borde.top, borde.right, borde.bottom, borde.left]) {
+        if (lado.style == BorderStyle.none) continue;
+        colores.add(('el borde de un Container', lado.color));
+      }
+    }
+  }
+  for (final e
+      in find.descendant(of: paso, matching: find.byType(Text)).evaluate()) {
+    final tinta = _tintaPintada(e);
+    final texto = (e.widget as Text).data ?? '';
+    colores.add(('el texto «$texto»', tinta ?? const Color(0x00000000)));
+  }
+  for (final e
+      in find.descendant(of: paso, matching: find.byType(Icon)).evaluate()) {
+    final tinta = _tintaPintada(e);
+    final icono = (e.widget as Icon).icon?.codePoint.toRadixString(16);
+    colores.add(('el ícono U+$icono', tinta ?? const Color(0x00000000)));
+  }
+  return colores;
 }
 
 String _hex(Color c) =>
@@ -274,14 +394,29 @@ void main() {
       'caso 5: la ruta tiene su binding y la página no hace Get.put',
       (tester) async {
         await _sesion(tester, ApiFalsaDelTest());
+        // Sin el binding, la página no encuentra su controlador y no lo
+        // registra por su cuenta.
+        await montarPantalla(tester, const SetupCarreraPage());
+        expect(
+          tester.takeException().toString(),
+          contains('"SetupCarreraController" not found'),
+        );
+        expect(Get.isRegistered<SetupCarreraController>(), isFalse);
         SetupCarreraBinding().dependencies();
         expect(Get.isRegistered<SetupCarreraController>(), isTrue);
         expect(Get.isPrepared<SetupCarreraController>(), isTrue);
+        final delBinding = Get.find<SetupCarreraController>();
         await montarPantalla(tester, const SetupCarreraPage());
+        expect(tester.takeException(), isNull);
         expect(
-          Get.find<SetupCarreraController>().step.value,
-          SetupStep.carrera,
+          identical(Get.find<SetupCarreraController>(), delBinding),
+          isTrue,
         );
+        final pagina = tester.widget<SetupCarreraPage>(
+          find.byType(SetupCarreraPage),
+        );
+        expect(identical(pagina.controller, delBinding), isTrue);
+        expect(delBinding.step.value, SetupStep.carrera);
       },
     );
 
@@ -356,49 +491,108 @@ void main() {
       expect(find.text('Ingeniería de Software'), findsOneWidget);
     });
 
-    testWidgets('caso 7: «Finalizar configuración» cabe entero a 375 de '
-        'ancho', (tester) async {
+    testWidgets('caso 7: el botón inferior es el principal del test, con '
+        '52 px de alto y tinta sobre naranja, y «Finalizar configuración» '
+        'cabe entero a 375 de ancho', (tester) async {
+      // El botón de la etiqueta es un TestPrimaryButton a lo ancho, de
+      // 52 px, con el texto en testAccentInk sobre testAccent.
+      void esElBotonNuevo(String etiqueta) {
+        final texto = find.text(etiqueta);
+        final boton = find.ancestor(
+          of: texto,
+          matching: find.byType(TestPrimaryButton),
+        );
+        expect(boton, findsOneWidget, reason: etiqueta);
+        expect(find.byType(ElevatedButton), findsNothing, reason: etiqueta);
+        expect(tester.getSize(boton), const Size(335, 52), reason: etiqueta);
+        expect(
+          colorDeTexto(tester, etiqueta),
+          MaterialTheme.testAccentInk(Brightness.light),
+          reason: etiqueta,
+        );
+        expect(
+          _fondosDe(tester.element(texto)),
+          contains(MaterialTheme.testAccent(Brightness.light)),
+          reason: etiqueta,
+        );
+      }
+
       await _sesion(tester, ApiFalsaDelTest(), intereses: [kIdSi]);
       await _asistente(tester, salida: SalidaDelTest.seleccionManual);
+      esElBotonNuevo('Continuar');
       await tester.tap(find.text('Continuar'));
       await tester.pump();
       final texto = find.text('Finalizar configuración');
       expect(texto, findsOneWidget);
       expect(tester.takeException(), isNull);
+      esElBotonNuevo('Finalizar configuración');
       // Una sola línea, dentro del botón.
       expect(tester.getSize(texto).height, lessThan(30));
       expect(dentroDeLaPantalla(tester, texto), isTrue);
     });
 
     for (final brillo in Brightness.values) {
-      testWidgets('caso 8: en ${brillo.name}, la cabecera va en headerColor '
-          'con texto blanco y el resto en tokens', (tester) async {
-        await _sesion(tester, ApiFalsaDelTest());
-        await _asistente(tester, brillo: brillo);
-        final scaffold = tester.widget<Scaffold>(find.byType(Scaffold).last);
-        expect(scaffold.backgroundColor, MaterialTheme.pageBg(brillo));
-        final cabecera = tester.widget<Container>(
-          find
-              .ancestor(
-                of: find.text('Hola, Alumna'),
-                matching: find.byType(Container),
-              )
-              .first,
-        );
-        expect(
-          (cabecera.decoration! as BoxDecoration).color,
-          MaterialTheme.headerColor(brillo),
-        );
-        expect(colorDeTexto(tester, 'Hola, Alumna'), Colors.white);
-        expect(
-          colorDeTexto(tester, 'Tu carrera'),
-          MaterialTheme.textPrimary(brillo),
-        );
-        expect(
-          colorDeTexto(tester, 'Carrera de Prueba'),
-          MaterialTheme.textPrimary(brillo),
-        );
-      });
+      for (final sinCatalogo in [false, true]) {
+        testWidgets('caso ${sinCatalogo ? '8b' : '8'}: en ${brillo.name}, '
+            '${sinCatalogo ? 'con los avisos de catálogo' : 'con cada estado '
+                      'de la tarjeta y de sus chips'}, la cabecera va en '
+            'headerColor con texto blanco y cada Container, Text e Icon de '
+            'los pasos lleva un token de MaterialTheme', (tester) async {
+          final tokens = _tokensDe(brillo);
+          var revisados = 0;
+          final sueltos = <String>[];
+          await _recorrerElAsistente(
+            tester,
+            brillo: brillo,
+            sinCatalogo: sinCatalogo,
+            revisar: (paso) {
+              final scaffold = tester.widget<Scaffold>(
+                find.byType(Scaffold).last,
+              );
+              expect(scaffold.backgroundColor, MaterialTheme.pageBg(brillo));
+              final cabecera = tester.widget<Container>(
+                find
+                    .ancestor(
+                      of: find.text('Hola, Alumna'),
+                      matching: find.byType(Container),
+                    )
+                    .first,
+              );
+              expect(
+                (cabecera.decoration! as BoxDecoration).color,
+                MaterialTheme.headerColor(brillo),
+              );
+              expect(colorDeTexto(tester, 'Hola, Alumna'), Colors.white);
+              if (find.text('Tu carrera').evaluate().isNotEmpty) {
+                expect(
+                  colorDeTexto(tester, 'Tu carrera'),
+                  MaterialTheme.textPrimary(brillo),
+                );
+                if (!sinCatalogo) {
+                  expect(
+                    colorDeTexto(tester, 'Carrera de Prueba'),
+                    MaterialTheme.textPrimary(brillo),
+                  );
+                }
+              }
+              for (final (que, color) in _coloresDe(paso)) {
+                revisados++;
+                if (!tokens.contains(color.toARGB32())) {
+                  sueltos.add('$que en ${_hex(color)}');
+                }
+              }
+            },
+          );
+          if (!sinCatalogo) {
+            expect(
+              colorDeTexto(tester, 'Especialización principal'),
+              MaterialTheme.textPrimary(brillo),
+            );
+          }
+          expect(revisados, greaterThan(sinCatalogo ? 10 : 60));
+          expect(sueltos, isEmpty);
+        });
+      }
     }
   });
 
