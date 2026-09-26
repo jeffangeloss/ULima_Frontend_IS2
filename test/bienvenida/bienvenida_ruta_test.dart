@@ -26,6 +26,7 @@ import 'package:ulima_plus/domain/bienvenida/bienvenida_turnos.dart';
 import 'package:ulima_plus/models/registro_models.dart';
 import 'package:ulima_plus/pages/bienvenida/bienvenida_page.dart';
 import 'package:ulima_plus/pages/bienvenida/widgets/compositor.dart';
+import 'package:ulima_plus/pages/bienvenida/widgets/recibimiento.dart';
 import 'package:ulima_plus/pages/registro/registro_controller.dart';
 import 'package:ulima_plus/pages/splash/salidas.dart' show naranjaDelSplash;
 import 'package:ulima_plus/services/api_client.dart';
@@ -400,17 +401,15 @@ void main() {
       final nueva = find.byType(BienvenidaPage, skipOffstage: false).last;
       // El primer cuadro es el naranja del splash con el logo en reposo, y
       // la conversación de la visita anterior no se pinta.
-      expect(
-        find.descendant(
-          of: nueva,
-          matching: find.byWidgetPredicate(
-            (w) => w is ColoredBox && w.color == naranjaDelSplash,
-            skipOffstage: false,
-          ),
-          skipOffstage: false,
-        ),
-        findsOneWidget,
+      final fondo = find.descendant(
+        of: nueva,
+        matching: find.byKey(Recibimiento.claveDelFondo, skipOffstage: false),
+        skipOffstage: false,
       );
+      expect(fondo, findsOneWidget);
+      final cuadro = Recibimiento.cuadroActual(tester.element(fondo));
+      expect(cuadro.fondo, naranjaDelSplash);
+      expect(cuadro.estrella!.cruces, hasLength(2));
       expect(
         find.descendant(
           of: nueva,

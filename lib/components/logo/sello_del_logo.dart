@@ -56,7 +56,7 @@ class SelloDelLogo extends StatelessWidget {
       excludeSemantics: true,
       child: LayoutBuilder(
         builder: (context, limites) {
-          final escalaDeTexto = _escalaQueCabe(
+          final escalaDeTexto = escalaQueCabe(
             estiloDelSello,
             sistema,
             limites.maxWidth,
@@ -85,8 +85,8 @@ class SelloDelLogo extends StatelessWidget {
   }
 
   /// La escala del sistema o, si el sello no cabe en [ancho], la mayor con la
-  /// que cabe (RF-BIEN-20).
-  static TextScaler _escalaQueCabe(
+  /// que cabe (RF-BIEN-20). La subida de la bienvenida mide con ella.
+  static TextScaler escalaQueCabe(
     TextStyle estilo,
     TextScaler sistema,
     double ancho,
@@ -107,6 +107,24 @@ class SelloDelLogo extends StatelessWidget {
     if (anchoDelTexto(sistema) <= libre) return sistema;
     final base = anchoDelTexto(TextScaler.noScaling);
     return TextScaler.linear(math.max(0.5, libre / base));
+  }
+
+  /// Los centros de los «++» dentro de la caja de sus glifos, de [tamano] y
+  /// con la línea base [base] desde arriba, y su largo, con [em] el tamaño de
+  /// la letra ya escalado. Los usan el sello y la subida de la bienvenida,
+  /// así que el destino de la subida coincide con el sello.
+  static ({List<Offset> centros, double largo}) medidasDeLosMas({
+    required Size tamano,
+    required double base,
+    required double em,
+  }) {
+    final y = base - 0.34 * em;
+    return (
+      centros: <Offset>[
+        for (var i = 0; i < 2; i++) Offset(tamano.width * (0.25 + 0.5 * i), y),
+      ],
+      largo: 0.5 * em,
+    );
   }
 }
 
@@ -200,20 +218,19 @@ class _PintorDeLosMas extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final y = base - 0.34 * em;
-    final largo = 0.5 * em;
+    final mas = SelloDelLogo.medidasDeLosMas(tamano: size, base: base, em: em);
     final pintura = Paint()
       ..isAntiAlias = true
       ..color = color;
     final (h, v) = LogoGeometria.barrasDeCruz();
-    for (var i = 0; i < 2; i++) {
+    for (final c in mas.centros) {
       canvas.save();
-      canvas.translate(size.width * (0.25 + 0.5 * i), y);
+      canvas.translate(c.dx, c.dy);
       // Un sesgo horizontal, como el skewX de la maqueta y la salida del
       // splash, y no un giro. Con −12° la punta de arriba de la barra vertical
       // cae hacia la derecha, como la cursiva de «ULIMA».
       canvas.skew(math.tan(SelloDelLogo.inclinacionDeLosMas), 0);
-      canvas.scale(largo / LogoGeometria.largoDeCruz);
+      canvas.scale(mas.largo / LogoGeometria.largoDeCruz);
       canvas.drawRect(h, pintura);
       canvas.drawRect(v, pintura);
       canvas.restore();
@@ -296,4 +313,89 @@ class CabeceraConSello extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Dónde queda cada pieza de un sello ya dibujado, en coordenadas globales.
+/// Es el destino de la subida del recibimiento y el origen del paso al
+/// horario (decisión 14 del plan), así que el logo dibujado cae siempre sobre
+/// el sello real.
+class PiezasDelSello {
+  const PiezasDelSello({
+    required this.estrella,
+    required this.radio,
+    required this.ulima,
+    required this.origenDeUlima,
+    required this.mas,
+    required this.largoDeLosMas,
+  });
+
+  /// Mide el sello de [claveDelSello] con el estilo y la escala con que se
+  /// dibuja, o null si todavía no tiene tamaño. Quien lo recibe desecha
+  /// [ulima] con [desechar].
+  static PiezasDelSello? medir(BuildContext context, GlobalKey claveDelSello) {
+    final caja = claveDelSello.currentContext?.findRenderObject();
+    if (caja is! RenderBox || !caja.hasSize || !caja.attached) return null;
+    final sello = caja.localToGlobal(Offset.zero) & caja.size;
+    final estilo = DefaultTextStyle.of(context).style
+        .merge(SelloDelLogo.estilo(Theme.of(context).colorScheme))
+        .copyWith(color: Colors.white);
+    final escala = SelloDelLogo.escalaQueCabe(
+      estilo,
+      MediaQuery.textScalerOf(context),
+      MediaQuery.sizeOf(context).width - 2 * CabeceraConSello.margenLateral,
+    );
+    TextPainter medirTexto(String texto) => TextPainter(
+      text: TextSpan(text: texto, style: estilo),
+      textDirection: TextDirection.ltr,
+      textScaler: escala,
+    )..layout();
+    final ulima = medirTexto('ULIMA');
+    final glifos = medirTexto('++');
+    final tamanoDeLosMas = Size(glifos.width, glifos.height);
+    final base = glifos.computeDistanceToActualBaseline(
+      TextBaseline.alphabetic,
+    );
+    glifos.dispose();
+    // La fila del sello centra en vertical la estrella, «ULIMA» y los «++»,
+    // así que cada pieza se mide desde el centro de su caja.
+    final izquierdaDeUlima =
+        sello.left + SelloDelLogo.tamanoDeEstrella + SelloDelLogo.separacion;
+    final esquinaDeLosMas = Offset(
+      izquierdaDeUlima + ulima.width,
+      sello.center.dy - tamanoDeLosMas.height / 2,
+    );
+    final mas = SelloDelLogo.medidasDeLosMas(
+      tamano: tamanoDeLosMas,
+      base: base,
+      em: escala.scale(estilo.fontSize ?? 20),
+    );
+    return PiezasDelSello(
+      estrella: Offset(
+        sello.left + SelloDelLogo.tamanoDeEstrella / 2,
+        sello.center.dy,
+      ),
+      radio: SelloDelLogo.tamanoDeEstrella / 2,
+      ulima: ulima,
+      origenDeUlima: Offset(
+        izquierdaDeUlima,
+        sello.center.dy - ulima.height / 2,
+      ),
+      mas: <Offset>[for (final c in mas.centros) esquinaDeLosMas + c],
+      largoDeLosMas: mas.largo,
+    );
+  }
+
+  /// El centro de la estrella y su radio de punta a punta.
+  final Offset estrella;
+  final double radio;
+
+  /// «ULIMA» ya medido con el estilo del sello, para dibujarlo encima.
+  final TextPainter ulima;
+  final Offset origenDeUlima;
+
+  /// Los centros de los «++».
+  final List<Offset> mas;
+  final double largoDeLosMas;
+
+  void desechar() => ulima.dispose();
 }

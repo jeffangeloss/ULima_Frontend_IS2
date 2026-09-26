@@ -24,6 +24,7 @@ class EntradaView extends StatelessWidget {
     required this.primerGrupo,
     required this.resultado,
     this.conMovimiento = true,
+    this.ocultarAvatar = false,
   });
 
   final EntradaDeLaConversacion entrada;
@@ -36,6 +37,10 @@ class EntradaView extends StatelessWidget {
   resultado;
   final bool conMovimiento;
 
+  /// Ulises es el avatar mientras salta desde el recibimiento, así que el
+  /// del primer grupo y su nombre esperan a que se pose (RF-BIEN-2).
+  final bool ocultarAvatar;
+
   @override
   Widget build(BuildContext context) {
     final hijo = switch (entrada) {
@@ -43,6 +48,7 @@ class EntradaView extends StatelessWidget {
         entrada: u,
         primeraDelGrupo: anterior is! BurbujaDeUlises,
         primerGrupo: primerGrupo,
+        ocultarAvatar: ocultarAvatar,
       ),
       final RespuestaDelAlumno r => _Respuesta(entrada: r),
       final ResultadoDelTest r => Padding(
@@ -87,11 +93,13 @@ class _BurbujaDeUlises extends StatelessWidget {
     required this.entrada,
     required this.primeraDelGrupo,
     required this.primerGrupo,
+    this.ocultarAvatar = false,
   });
 
   final BurbujaDeUlises entrada;
   final bool primeraDelGrupo;
   final bool primerGrupo;
+  final bool ocultarAvatar;
 
   @override
   Widget build(BuildContext context) {
@@ -109,7 +117,11 @@ class _BurbujaDeUlises extends StatelessWidget {
               SizedBox(
                 width: avatar,
                 child: primeraDelGrupo
-                    ? UlisesAvatar(size: avatar)
+                    // Al posarse Ulises, su avatar queda en su lugar.
+                    ? Opacity(
+                        opacity: ocultarAvatar ? 0 : 1,
+                        child: UlisesAvatar(size: avatar),
+                      )
                     : const SizedBox.shrink(),
               ),
               const SizedBox(width: 8),
@@ -118,14 +130,19 @@ class _BurbujaDeUlises extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (primeraDelGrupo && primerGrupo)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 3),
-                        child: Text(
-                          TextosDeLaBienvenida.ulises,
-                          style: TextStyle(
-                            color: MaterialTheme.testMuted(b),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
+                      // El nombre aparece en 250 ms al posarse Ulises.
+                      AnimatedOpacity(
+                        opacity: ocultarAvatar ? 0 : 1,
+                        duration: const Duration(milliseconds: 250),
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 3),
+                          child: Text(
+                            TextosDeLaBienvenida.ulises,
+                            style: TextStyle(
+                              color: MaterialTheme.testMuted(b),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
                       ),

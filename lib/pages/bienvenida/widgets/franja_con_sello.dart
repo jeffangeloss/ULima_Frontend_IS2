@@ -16,17 +16,28 @@ class FranjaConSello extends StatelessWidget {
     required this.latido,
     required this.rombos,
     this.radioInferior = 26,
+    this.claveDelSello,
+    this.selloVisible = true,
   });
 
   final ValueListenable<double> latido;
   final ValueListenable<List<double>?> rombos;
   final double radioInferior;
 
+  /// La clave con la que la subida del recibimiento mide el sello.
+  final GlobalKey? claveDelSello;
+
+  /// Oculto mientras el recibimiento dibuja el suyo en el mismo lugar.
+  final bool selloVisible;
+
   @override
   Widget build(BuildContext context) => CabeceraConSello(
     color: MaterialTheme.bienvenidaFranja(Theme.brightnessOf(context)),
     radioInferior: radioInferior,
-    sello: SelloDelLogo(latido: latido, rombos: rombos),
+    sello: Opacity(
+      opacity: selloVisible ? 1 : 0,
+      child: SelloDelLogo(key: claveDelSello, latido: latido, rombos: rombos),
+    ),
   );
 }
 

@@ -6,6 +6,7 @@
 // controlador, con el ritmo del revelador.
 
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -14,21 +15,19 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import '../../components/logo/escena_del_logo.dart';
-import '../../components/logo/estrella_del_logo.dart' show EscenaFija;
-import '../../components/logo/pintor_del_logo.dart';
 import '../../components/logo/sello_del_logo.dart';
 import '../../configs/themes.dart';
 import '../../domain/bienvenida/bienvenida_turnos.dart';
 import '../../services/session_navigation.dart';
 import '../specialty_test/widgets/result_view.dart' show PintorDelConfeti;
 import '../splash/capa_de_arranque.dart';
-import '../splash/salidas.dart' show naranjaDelSplash;
 import 'bienvenida_controller.dart';
 import 'conversacion.dart';
 import 'widgets/burbujas.dart';
 import 'widgets/compositor.dart';
 import 'widgets/compositor_del_test.dart';
 import 'widgets/franja_con_sello.dart';
+import 'widgets/recibimiento.dart';
 import 'widgets/revelador.dart';
 
 class BienvenidaPage extends StatefulWidget {
@@ -64,6 +63,15 @@ class _BienvenidaPageState extends State<BienvenidaPage>
   bool _leida = false;
   PoseDelLogo? _pose;
   MotivoDeLlegada? _motivo;
+
+  /// El sello de la franja, destino de la subida del recibimiento.
+  final GlobalKey _claveDelSello = GlobalKey();
+  bool _recibimientoTerminado = false;
+
+  /// Mientras el logo sube, el recibimiento dibuja el sello y a Ulises, así
+  /// que los de la conversación esperan a que se posen.
+  bool _selloVisible = true;
+  bool _avatarVisible = true;
 
   bool get _sinMovimiento => MediaQuery.disableAnimationsOf(context);
   bool get _conLector => MediaQuery.accessibleNavigationOf(context);
@@ -109,6 +117,9 @@ class _BienvenidaPageState extends State<BienvenidaPage>
       _pose = pose is PoseDelLogo ? pose : null;
       _motivo = motivo is MotivoDeLlegada ? motivo : null;
     }
+    // Sin un motivo, la conversación espera al recibimiento, que la suelta
+    // cuando Ulises se posa en su avatar (RF-BIEN-2).
+    _revelador.retenido = _motivo == null;
     // Sin pose, el splash no precargó a Ulises (RF-BIEN-3).
     if (_pose == null) {
       unawaited(
@@ -135,9 +146,12 @@ class _BienvenidaPageState extends State<BienvenidaPage>
     );
   }
 
-  bool _tieneCompositor(TurnoDeLaBienvenida t) =>
-      t != TurnoDeLaBienvenida.recibimiento &&
-      t != TurnoDeLaBienvenida.llegadaConSesion;
+  /// Con «Si no cabe», el recibimiento tiene sus respuestas rápidas (B-28).
+  bool _tieneCompositor(TurnoDeLaBienvenida t) => switch (t) {
+    TurnoDeLaBienvenida.recibimiento => _c.saludoEnLaConversacion.value,
+    TurnoDeLaBienvenida.llegadaConSesion => false,
+    _ => true,
+  };
 
   void _alRevelar() {
     if (!mounted) return;
@@ -265,15 +279,9 @@ class _BienvenidaPageState extends State<BienvenidaPage>
 
   Widget _cuerpo(BuildContext context) {
     final atendida = _atendida;
-    final turno = atendida ? _c.ultimoTurno.value : null;
-    // Antes de que el controlador atienda la visita, el primer cuadro sale
-    // solo de los argumentos (RF-BIEN-1).
-    final directo = _motivo != null;
-    final enElPrimerCuadro =
-        !directo &&
-        (!atendida ||
-            turno == TurnoDeLaBienvenida.recibimiento ||
-            turno == TurnoDeLaBienvenida.llegadaConSesion);
+    // Sin un motivo, el recibimiento tapa la conversación desde el primer
+    // cuadro, que sale solo de los argumentos (RF-BIEN-1 a RF-BIEN-3).
+    final conRecibimiento = _motivo == null && !_recibimientoTerminado;
     return Stack(
       children: [
         _conversacion(context, atendida: atendida),
@@ -293,7 +301,8 @@ class _BienvenidaPageState extends State<BienvenidaPage>
             ),
           ),
         ),
-        if (enElPrimerCuadro) Positioned.fill(child: _primerCuadro(context)),
+        if (conRecibimiento)
+          Positioned.fill(child: _recibimiento(context, atendida: atendida)),
         Positioned(
           top: CabeceraConSello.alto(context) + 8,
           left: 0,
@@ -311,13 +320,59 @@ class _BienvenidaPageState extends State<BienvenidaPage>
     );
   }
 
-  /// #E77330 de borde a borde y el logo blanco en la pose recibida, o en su
-  /// pose de reposo sin pose, en los dos temas (RF-BIEN-2 y RF-BIEN-3).
-  Widget _primerCuadro(BuildContext context) {
-    final pose = _pose ?? _poseDeReposo(context);
-    return ColoredBox(
-      color: naranjaDelSplash,
-      child: LogoEnEscena(escena: EscenaFija(EscenaDelLogo.desdePose(pose))),
+  Widget _recibimiento(BuildContext context, {required bool atendida}) =>
+      Recibimiento(
+        pose: _pose ?? _poseDeReposo(context),
+        // Mientras el controlador no atiende la visita, todavía no se sabe
+        // si hay una sesión puesta (RF-BIEN-21).
+        conSesion: atendida ? _c.conSesion : null,
+        claveDelSello: _claveDelSello,
+        avatar: _avatar(context),
+        alResponder: (yaUsa) => _c.responderAlSaludo(yaUsa: yaUsa),
+        alAterrizarConSesion: _c.ulisesAterrizoConSesion,
+        alSaludarEnLaConversacion: _c.saludarEnLaConversacion,
+        alSubir: () {
+          // La conversación ya trae su primer grupo, sin esperar el ritmo.
+          _sincronizar();
+          _revelador.mostrarYa(_primerGrupoConRespuesta());
+          setState(() {
+            _selloVisible = false;
+            _avatarVisible = false;
+          });
+        },
+        alPosarseElSello: () {
+          setState(() => _selloVisible = true);
+          _latir();
+        },
+        alTerminar: () {
+          setState(() {
+            _avatarVisible = true;
+            _recibimientoTerminado = true;
+          });
+          // 650 ms después empieza el primer turno de la rama elegida.
+          _revelador.retenido = false;
+        },
+      );
+
+  /// El primer grupo de Ulises y, si la hay, la respuesta del alumno. Las
+  /// entradas que siguen esperan su pausa (RF-BIEN-2 y RF-BIEN-21).
+  int _primerGrupoConRespuesta() {
+    final entradas = _c.entradas;
+    final respuesta = entradas.indexWhere((e) => e is RespuestaDelAlumno);
+    if (respuesta >= 0) return respuesta + 1;
+    return entradas.takeWhile((e) => e is BurbujaDeUlises).length.clamp(0, 2);
+  }
+
+  /// El avatar de 40 dp del primer grupo, bajo la franja, con el relleno de
+  /// la lista y el de la primera burbuja.
+  Rect _avatar(BuildContext context) {
+    final ancho = MediaQuery.sizeOf(context).width;
+    final columna = math.min(ancho, 600.0);
+    return Rect.fromLTWH(
+      (ancho - columna) / 2 + 12,
+      CabeceraConSello.alto(context) + 8 + 12,
+      40,
+      40,
     );
   }
 
@@ -344,7 +399,12 @@ class _BienvenidaPageState extends State<BienvenidaPage>
     return LayoutBuilder(
       builder: (context, limites) => Column(
         children: [
-          FranjaConSello(latido: _latido, rombos: _rombos),
+          FranjaConSello(
+            latido: _latido,
+            rombos: _rombos,
+            claveDelSello: _claveDelSello,
+            selloVisible: _selloVisible,
+          ),
           Expanded(
             child: Center(
               child: ConstrainedBox(
@@ -358,15 +418,17 @@ class _BienvenidaPageState extends State<BienvenidaPage>
                   itemBuilder: (context, i) {
                     final entrada = entradas[i];
                     final anterior = i > 0 ? entradas[i - 1] : null;
+                    final primerGrupo = _enElPrimerGrupo(
+                      entradas,
+                      i,
+                      primerIdDeUlises,
+                    );
                     return EntradaView(
                       key: ValueKey<int>(entrada.id),
                       entrada: entrada,
                       anterior: anterior,
-                      primerGrupo: _enElPrimerGrupo(
-                        entradas,
-                        i,
-                        primerIdDeUlises,
-                      ),
+                      primerGrupo: primerGrupo,
+                      ocultarAvatar: primerGrupo && !_avatarVisible,
                       conMovimiento: !_sinMovimiento,
                       resultado: (context, r) =>
                           ResultadoEnLaConversacion(c: _c, entrada: r),

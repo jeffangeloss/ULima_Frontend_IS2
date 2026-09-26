@@ -5,13 +5,17 @@
 // RF-BIEN-21 y B-10. Un alumno con sesión y la configuración a medias llega
 // a la bienvenida y sigue en la conversación hasta el test, sin la pregunta
 // ni los dos botones. Sin sesión, o con un motivo, la llegada es la de
-// siempre aunque currentUser quede en memoria. Las Tareas 25 y 28 suman el
-// test y el recibimiento.
-// Archivo probado lib/pages/bienvenida/bienvenida_controller.dart.
+// siempre aunque currentUser quede en memoria. El recibimiento con sesión
+// sube el logo al terminar el rebote de Ulises y sigue con T0, hasta el paso
+// al horario.
+// Archivos probados lib/pages/bienvenida/bienvenida_controller.dart y
+// lib/pages/bienvenida/widgets/recibimiento.dart.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
+import 'package:ulima_plus/components/logo/sello_del_logo.dart';
 import 'package:ulima_plus/domain/bienvenida/bienvenida_turnos.dart';
+import 'package:ulima_plus/pages/bienvenida/widgets/recibimiento.dart';
 import 'package:ulima_plus/services/session_navigation.dart';
 
 import 'apoyo_bienvenida.dart';
@@ -101,6 +105,56 @@ void main() {
       await c.terminarLaSeleccion();
       expect(c.turno.value, TurnoDeLaBienvenida.pasoAlHorario);
       expect(b.rutas, isEmpty);
+    });
+  });
+
+  group('el recibimiento con sesión (RF-BIEN-21)', () {
+    setUp(() {
+      Get.testMode = true;
+      Get.reset();
+    });
+
+    testWidgets('sin la tarjeta ni los botones, con el primer grupo al subir '
+        'y T0 a los 3,62 s del relevo', (tester) async {
+      final b = Bienvenida(
+        auth: AuthDeLaBienvenida(usuario: alumnaDePrueba(setupComplete: false)),
+        token: 'jwt-de-prueba',
+      );
+      await montarLaBienvenida(tester, b);
+      await avanzar(tester, 2400);
+      expect(find.text(TextosDeLaBienvenida.pregunta), findsNothing);
+      expect(find.text(TextosDeLaBienvenida.siEntrar), findsNothing);
+      await avanzar(tester, 800);
+      expect(find.byType(Recibimiento), findsNothing);
+      expect(find.text(TextosDeLaBienvenida.saludoConSesion), findsOneWidget);
+      expect(find.text(TextosDeLaBienvenida.faltaEspecialidad), findsOneWidget);
+      expect(find.text(TextosDeLaBienvenida.ulises), findsOneWidget);
+      expect(b.delAlumno, isEmpty);
+      expect(find.text(TextosDeLaBienvenida.invitacionAlTest(5)), findsNothing);
+      await avanzar(tester, 600);
+      expect(
+        find.text(TextosDeLaBienvenida.invitacionAlTest(5)),
+        findsOneWidget,
+      );
+      await avanzar(tester, 2000);
+    });
+
+    testWidgets('el sello late al posarse, sin respuesta del alumno', (
+      tester,
+    ) async {
+      final b = Bienvenida(
+        auth: AuthDeLaBienvenida(usuario: alumnaDePrueba(setupComplete: false)),
+        token: 'jwt-de-prueba',
+      );
+      await montarLaBienvenida(tester, b);
+      // El rebote termina a los 1,94 s y la subida dura 90 + 900 ms.
+      await avanzar(tester, 2900);
+      final sello = tester.widget<SelloDelLogo>(find.byType(SelloDelLogo));
+      expect(sello.latido!.value, 0);
+      await avanzar(tester, 100);
+      expect(sello.latido!.value, greaterThan(0));
+      expect(b.controlador.latidos.value, 0);
+      await avanzar(tester, 3000);
     });
   });
 }

@@ -261,6 +261,7 @@ class BienvenidaController extends GetxController {
     ultimoTurno.value = null;
     esperando.value = false;
     errorLocal.value = null;
+    saludoEnLaConversacion.value = false;
     _conSesion = false;
     pildora.value = null;
     enviando.value = false;
@@ -297,11 +298,26 @@ class BienvenidaController extends GetxController {
 
   // ── Recibimiento (RF-BIEN-2 y RF-BIEN-21) ────────────────────────────────
 
+  /// «Si no cabe», el último recurso. Ulises saluda ya en la conversación y
+  /// la pregunta queda con sus respuestas rápidas (B-28).
+  final saludoEnLaConversacion = false.obs;
+
+  void saludarEnLaConversacion() {
+    if (turno.value != TurnoB.recibimiento || saludoEnLaConversacion.value) {
+      return;
+    }
+    saludoEnLaConversacion.value = true;
+    entradas.add(BurbujaDeUlises(id: _id(), texto: TextosB.saludo));
+    entradas.add(BurbujaDeUlises(id: _id(), texto: TextosB.pregunta));
+  }
+
   /// «Sí, entrar» o «Soy nuevo». La conversación ya trae el primer grupo.
   void responderAlSaludo({required bool yaUsa}) {
     if (turno.value != TurnoB.recibimiento) return;
-    entradas.add(BurbujaDeUlises(id: _id(), texto: TextosB.saludo));
-    entradas.add(BurbujaDeUlises(id: _id(), texto: TextosB.pregunta));
+    if (!saludoEnLaConversacion.value) {
+      entradas.add(BurbujaDeUlises(id: _id(), texto: TextosB.saludo));
+      entradas.add(BurbujaDeUlises(id: _id(), texto: TextosB.pregunta));
+    }
     _responder(yaUsa ? TextosB.siEntrar : TextosB.soyNuevo);
     if (yaUsa) {
       _abrirE1();

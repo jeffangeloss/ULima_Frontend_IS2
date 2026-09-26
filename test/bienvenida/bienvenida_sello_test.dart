@@ -4,9 +4,13 @@
 // RF-BIEN-4. El sello es la estrella de la cabecera y «ULIMA++» a 1,22 veces
 // su tamaño, centrado a lo ancho y a la altura de la fila de la cabecera, en
 // una franja que mide lo mismo que la cabecera de /home. Es un encabezado
-// «ULIMA++». La Tarea 28 suma el latido, el pulso y la subida.
-// Archivo probado lib/components/logo/sello_del_logo.dart.
+// «ULIMA++». En la conversación late 380 ms con cada respuesta, y el pulso
+// recorre sus rombos solo mientras se envía el registro. La subida y el
+// latido al posarse los prueba bienvenida_recibimiento_test.dart.
+// Archivos probados lib/components/logo/sello_del_logo.dart y
+// lib/pages/bienvenida/bienvenida_page.dart.
 
+import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
@@ -18,9 +22,14 @@ import 'package:get/get.dart';
 import 'package:ulima_plus/components/header/app_header.dart';
 import 'package:ulima_plus/components/logo/sello_del_logo.dart';
 import 'package:ulima_plus/configs/themes.dart';
+import 'package:ulima_plus/models/registro_models.dart';
 import 'package:ulima_plus/models/user_model.dart';
+import 'package:ulima_plus/pages/bienvenida/widgets/compositor.dart';
 import 'package:ulima_plus/services/alert_service.dart';
 import 'package:ulima_plus/services/auth_service.dart';
+import 'package:ulima_plus/services/session_navigation.dart';
+
+import 'apoyo_bienvenida.dart';
 
 class _AuthDeAlumna extends AuthService {
   @override
@@ -201,6 +210,76 @@ void main() {
       expect(sello.left, greaterThanOrEqualTo(56 - 0.5));
       expect(sello.right, lessThanOrEqualTo(375 - 56 + 0.5));
       expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('el latido y el pulso en la conversación (RF-BIEN-4)', () {
+    const expirada = <String, Object>{
+      argumentoDeMotivo: MotivoDeLlegada.expirada,
+    };
+
+    setUp(() {
+      Get.testMode = true;
+      Get.reset();
+    });
+    tearDown(Get.reset);
+
+    testWidgets('el sello late 380 ms con cada respuesta', (tester) async {
+      await montarLaBienvenida(tester, Bienvenida(), argumentos: expirada);
+      await avanzar(tester, 1500);
+      final sello = tester.widget<SelloDelLogo>(find.byType(SelloDelLogo));
+      expect(sello.latido!.value, 0);
+      await tester.enterText(find.byType(TextField).first, '20230001');
+      await tester.pump();
+      await tester.tap(find.byType(BotonDeEnvio));
+      // El latido cuenta desde el primer cuadro después del toque.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 80));
+      expect(sello.latido!.value, inExclusiveRange(0, 1));
+      await tester.pump(const Duration(milliseconds: 290));
+      expect(sello.latido!.value, inExclusiveRange(0, 1));
+      await tester.pump(const Duration(milliseconds: 20));
+      expect(sello.latido!.value, 1, reason: 'dura 380 ms');
+      await avanzar(tester, 2000);
+    });
+
+    testWidgets('el pulso recorre los rombos solo durante el envío y vuelven a '
+        'la opacidad plena en 200 ms', (tester) async {
+      final pendiente = Completer<RegistroResult>();
+      final b = Bienvenida(registro: RegistroFalso(pendiente: pendiente));
+      await montarLaBienvenida(tester, b, argumentos: expirada);
+      await avanzar(tester, 1500);
+      final c = b.controlador..soyNuevo();
+      c.registro!.codigoCtrl.text = '20230001';
+      c.enviarCodigoDeAlumno();
+      c.registro!
+        ..passwordCtrl.text = 'Contrasena1'
+        ..confirmacionCtrl.text = 'Contrasena1';
+      c
+        ..enviarContrasenas()
+        ..aceptarConsentimiento();
+      c.registro!.portalPasswordCtrl.text = 'clave-de-prueba';
+      c.enviarPortal();
+      c.registro!.passcodeCtrl.text = '123456';
+      final sello = tester.widget<SelloDelLogo>(find.byType(SelloDelLogo));
+      expect(sello.rombos!.value, isNull);
+      unawaited(c.crearCuenta());
+      await avanzar(tester, 300);
+      final rombos = sello.rombos!.value!;
+      expect(rombos, hasLength(8));
+      expect(rombos.every((o) => o >= 0.42 - 1e-9 && o <= 1 + 1e-9), isTrue);
+      expect(rombos.any((o) => o < 0.9), isTrue);
+      pendiente.completeError(
+        const RegistroFailure(
+          'No hay conexión. Revisa tu internet e inténtalo de nuevo.',
+          code: 'SIN_CONEXION',
+        ),
+      );
+      await avanzar(tester, 100);
+      expect(sello.rombos!.value, isNotNull, reason: 'vuelven en 200 ms');
+      await avanzar(tester, 150);
+      expect(sello.rombos!.value, isNull);
+      await avanzar(tester, 3000);
     });
   });
 }

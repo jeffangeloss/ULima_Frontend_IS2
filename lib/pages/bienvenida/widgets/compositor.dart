@@ -683,6 +683,22 @@ Widget? compositorDelTurno(
   TurnoDeLaBienvenida.espera ||
   TurnoDeLaBienvenida.resultado => CompositorDelTest(c: c, turno: turno),
   TurnoDeLaBienvenida.seleccionManual => SeleccionManual(c: c),
+  // «Si no cabe», Ulises saluda ya en la conversación y la pregunta queda
+  // con sus respuestas rápidas (B-28).
+  TurnoDeLaBienvenida.recibimiento when c.saludoEnLaConversacion.value =>
+    RespuestasRapidas(
+      respuestas: [
+        RespuestaRapida(
+          texto: _Textos.siEntrar,
+          principal: true,
+          alTocar: () => c.responderAlSaludo(yaUsa: true),
+        ),
+        RespuestaRapida(
+          texto: _Textos.soyNuevo,
+          alTocar: () => c.responderAlSaludo(yaUsa: false),
+        ),
+      ],
+    ),
   TurnoDeLaBienvenida.recibimiento ||
   TurnoDeLaBienvenida.llegadaConSesion ||
   TurnoDeLaBienvenida.e3Despedida ||
