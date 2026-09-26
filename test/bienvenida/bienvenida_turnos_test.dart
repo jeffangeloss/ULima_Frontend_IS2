@@ -7,8 +7,10 @@
 // configuración de GIS de RF-BIEN-6 (B-35).
 // Archivo probado lib/domain/bienvenida/bienvenida_turnos.dart.
 
+import 'dart:math' as math;
 import 'dart:ui';
 
+import 'package:flutter/animation.dart' show Curves;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ulima_plus/domain/bienvenida/bienvenida_turnos.dart';
 
@@ -87,6 +89,15 @@ void main() {
       expect(duracionDelLatido, const Duration(milliseconds: 380));
       expect(escalaDelLatido(0), 1);
       expect(escalaDelLatido(0.21), closeTo(1.13, 1e-9));
+      // Con forma de medio seno, y no de triángulo.
+      expect(
+        escalaDelLatido(0.105),
+        closeTo(1 + 0.13 * math.sin(math.pi / 4), 1e-9),
+      );
+      expect(
+        escalaDelLatido(0.59),
+        closeTo(1 + 0.05 * math.sin(math.pi / 4), 1e-9),
+      );
       expect(escalaDelLatido(0.45), 1);
       expect(escalaDelLatido(0.70), closeTo(1.05, 1e-9));
       expect(escalaDelLatido(0.95), 1);
@@ -99,6 +110,12 @@ void main() {
       expect(anilloDelLatido(0).opacidad, closeTo(0.55, 1e-9));
       expect(anilloDelLatido(1).radio, closeTo(1.5, 1e-9));
       expect(anilloDelLatido(1).opacidad, closeTo(0, 1e-9));
+      // El radio crece con easeOutCubic y la opacidad baja en línea recta.
+      expect(
+        anilloDelLatido(0.5).radio,
+        closeTo(0.62 + (1.5 - 0.62) * Curves.easeOutCubic.transform(0.5), 1e-9),
+      );
+      expect(anilloDelLatido(0.5).opacidad, closeTo(0.275, 1e-9));
     });
 
     test('el pulso recorre los ocho rombos en 1100 ms desde el de arriba', () {

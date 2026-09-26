@@ -90,8 +90,13 @@ void main() {
       await c.submit();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
-      _avisoAbajo(tester, 'Solicitud enviada');
-      await _cerrarAvisos(tester);
+      // Los avisos se cierran aunque una comprobación falle, porque la cola de
+      // avisos de GetX es estática y un aviso colgado frena a los siguientes.
+      try {
+        _avisoAbajo(tester, 'Solicitud enviada');
+      } finally {
+        await _cerrarAvisos(tester);
+      }
     });
 
     testWidgets('«Código reenviado» sale abajo', (tester) async {
@@ -101,9 +106,12 @@ void main() {
       await c.resendCode();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
-      _avisoAbajo(tester, 'Código reenviado');
-      c.onClose();
-      await _cerrarAvisos(tester);
+      try {
+        _avisoAbajo(tester, 'Código reenviado');
+      } finally {
+        c.onClose();
+        await _cerrarAvisos(tester);
+      }
     });
 
     testWidgets('el restablecimiento llega con `restablecida` y «Contraseña '
@@ -119,13 +127,16 @@ void main() {
       await c.submit();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
-      expect(Get.currentRoute, '/login');
-      expect(
-        ModalRoute.of(tester.element(find.text('login')))!.settings.arguments,
-        {argumentoDeMotivo: MotivoDeLlegada.restablecida},
-      );
-      _avisoAbajo(tester, 'Contraseña actualizada');
-      await _cerrarAvisos(tester);
+      try {
+        expect(Get.currentRoute, '/login');
+        expect(
+          ModalRoute.of(tester.element(find.text('login')))!.settings.arguments,
+          {argumentoDeMotivo: MotivoDeLlegada.restablecida},
+        );
+        _avisoAbajo(tester, 'Contraseña actualizada');
+      } finally {
+        await _cerrarAvisos(tester);
+      }
     });
 
     test('«Código enviado» del Perfil sale abajo', () {
@@ -227,13 +238,44 @@ void main() {
       }
     });
 
-    testWidgets('la flecha sigue arriba a la izquierda y el sello nunca queda '
-        'bajo ella', (tester) async {
+    for (final escala in [1.0, 1.3, 2.0]) {
+      testWidgets('con el texto al ${escala * 100} % y el teclado abierto, la '
+          'flecha sigue arriba a la izquierda y el sello nunca queda bajo '
+          'ella', (tester) async {
+        await montar(tester, escala: escala, teclado: 300);
+        final flecha = tester.getRect(find.byTooltip('Volver'));
+        final sello = tester.getRect(find.byType(SelloDelLogo));
+        expect(flecha.left, lessThan(20));
+        expect(sello.left, greaterThan(flecha.right));
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    testWidgets('el sello de la cabecera queda quieto, sin latido ni pulso', (
+      tester,
+    ) async {
       await montar(tester);
-      final flecha = tester.getRect(find.byTooltip('Volver'));
-      final sello = tester.getRect(find.byType(SelloDelLogo));
-      expect(flecha.left, lessThan(20));
-      expect(sello.left, greaterThan(flecha.right));
+      final sello = tester.widget<SelloDelLogo>(find.byType(SelloDelLogo));
+      expect(sello.latido, isNull);
+      expect(sello.rombos, isNull);
+      final antes = tester.getRect(find.byType(SelloDelLogo));
+      await tester.pump(const Duration(seconds: 2));
+      expect(tester.getRect(find.byType(SelloDelLogo)), antes);
+    });
+
+    testWidgets('/reset-password abierta desde el Perfil, con el correo '
+        'enmascarado, lleva el mismo sello', (tester) async {
+      await montar(tester, inicial: '/sello');
+      final enLaFranja = selloDeLaFranja(tester);
+      Get.toNamed(
+        '/reset-password',
+        arguments: {
+          'identifier': '20230001',
+          'maskedEmail': 't***@aloe.ulima.edu.pe',
+        },
+      );
+      await tester.pumpAndSettle();
+      expect(tester.getRect(find.byType(SelloDelLogo).last), enLaFranja);
     });
 
     for (final escala in [1.0, 1.3, 2.0]) {
@@ -251,6 +293,16 @@ void main() {
         );
         expect(tarjeta.top, greaterThanOrEqualTo(cabecera.bottom));
         expect(tester.takeException(), isNull);
+      });
+    }
+
+    for (final brillo in Brightness.values) {
+      testWidgets('en ${brillo.name} declara íconos claros', (tester) async {
+        await montar(tester, brillo: brillo);
+        final region = tester.widget<AnnotatedRegion<SystemUiOverlayStyle>>(
+          find.byType(AnnotatedRegion<SystemUiOverlayStyle>).first,
+        );
+        expect(region.value.statusBarIconBrightness, Brightness.light);
       });
     }
 
