@@ -14,14 +14,20 @@
 // lib/pages/bienvenida/bienvenida_page.dart.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:ulima_plus/components/logo/escena_del_logo.dart';
 import 'package:ulima_plus/configs/themes.dart';
 import 'package:ulima_plus/domain/bienvenida/bienvenida_turnos.dart';
+import 'package:ulima_plus/pages/bienvenida/bienvenida_controller.dart'
+    show EstadoDeLaPildora;
+import 'package:ulima_plus/pages/bienvenida/conversacion.dart';
+import 'package:ulima_plus/pages/bienvenida/widgets/burbujas.dart';
 import 'package:ulima_plus/pages/bienvenida/widgets/anillo_de_foco.dart';
 import 'package:ulima_plus/pages/bienvenida/widgets/compositor.dart';
+import 'package:ulima_plus/pages/bienvenida/widgets/franja_con_sello.dart';
 import 'package:ulima_plus/pages/bienvenida/widgets/recibimiento.dart';
 import 'package:ulima_plus/services/session_navigation.dart';
 
@@ -201,7 +207,15 @@ void main() {
     await avanzar(tester, 200);
     expect(find.byKey(Recibimiento.claveDeLaTarjeta), findsNothing);
     expect(find.text(TextosDeLaBienvenida.saludoConSesion), findsOneWidget);
-    expect(_focos(eventos), isNotEmpty);
+    final primera = tester
+        .getSemantics(find.text(TextosDeLaBienvenida.saludoConSesion))
+        .id;
+    final segunda = tester
+        .getSemantics(find.text(TextosDeLaBienvenida.faltaEspecialidad))
+        .id;
+    expect(primera, isNot(segunda));
+    expect(_focos(eventos), contains(primera));
+    expect(_focos(eventos), isNot(contains(segunda)));
     await avanzar(tester, 3000);
     semantica.dispose();
   });
@@ -219,15 +233,38 @@ void main() {
     await avanzar(tester, 50);
     expect(find.text(TextosDeLaBienvenida.saludo), findsOneWidget);
     expect(find.text(TextosDeLaBienvenida.e1), findsOneWidget);
-    final antes = _focos(eventos).length;
-    expect(antes, greaterThan(0));
+    // El foco va a la primera de Ulises, el saludo, y no a E1.
+    final saludo = tester.getSemantics(find.text(TextosDeLaBienvenida.saludo));
+    final e1 = tester.getSemantics(find.text(TextosDeLaBienvenida.e1));
+    expect(saludo.id, isNot(e1.id));
+    expect(_focos(eventos), contains(saludo.id));
+    expect(_focos(eventos), isNot(contains(e1.id)));
     await tester.enterText(find.byType(TextField).first, '20230001');
     // Un cuadro tras teclear, para que el botón de envío se encienda.
     await tester.pump();
     await tester.tap(find.byType(BotonDeEnvio));
     await avanzar(tester, 100);
     expect(find.text(TextosDeLaBienvenida.e2), findsOneWidget);
-    expect(_focos(eventos).length, greaterThan(antes));
+    // Y en E2 a su burbuja, no a la respuesta del alumno.
+    expect(
+      _focos(eventos),
+      contains(tester.getSemantics(find.text(TextosDeLaBienvenida.e2)).id),
+    );
+    expect(
+      _focos(eventos),
+      isNot(
+        contains(
+          tester
+              .getSemantics(
+                find.descendant(
+                  of: find.byType(ListView),
+                  matching: find.text('20230001'),
+                ),
+              )
+              .id,
+        ),
+      ),
+    );
     semantica.dispose();
   });
 
@@ -361,8 +398,112 @@ void main() {
       );
       await avanzar(tester, 1500);
       expect(tester.takeException(), isNull);
+      // «Continuar con Google» crece con su texto en lugar de recortarlo.
+      final texto = tester.renderObject<RenderParagraph>(
+        find.descendant(
+          of: find.byType(BotonDeGoogle),
+          matching: find.byType(RichText),
+        ),
+      );
+      expect(
+        texto.size.height,
+        greaterThanOrEqualTo(
+          texto.getMinIntrinsicHeight(texto.size.width) - 0.5,
+        ),
+        reason: 'el texto se recorta',
+      );
+      expect(
+        tester.getSize(find.byType(BotonDeGoogle)).height,
+        greaterThanOrEqualTo(48),
+      );
       await llegarAE2(tester);
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('la píldora y el error local son regiones vivas, las burbujas '
+      'no, y los controles son botones con su acción, con el ojo que dice '
+      '«Mostrar contraseña» y «Ocultar contraseña» (RF-BIEN-16)', (
+    tester,
+  ) async {
+    final semantica = tester.ensureSemantics();
+    const tema = MaterialTheme(TextTheme());
+    var visible = false;
+    Finder vivaEn(Type tipo) => find.descendant(
+      of: find.byType(tipo),
+      matching: find.byWidgetPredicate(
+        (w) => w is Semantics && w.properties.liveRegion == true,
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: tema.light(),
+        home: Scaffold(
+          body: StatefulBuilder(
+            builder: (context, setState) => ListView(
+              children: [
+                const PildoraDelRegistro(estado: EstadoDeLaPildora.creando),
+                const ErrorLocal('Ingresa tu código de alumno.'),
+                EntradaView(
+                  entrada: const BurbujaDeUlises(id: 1, texto: 'Hola'),
+                  anterior: null,
+                  primerGrupo: false,
+                  resultado: (_, _) => const SizedBox.shrink(),
+                ),
+                OjoDeLaContrasena(
+                  visible: visible,
+                  alTocar: () => setState(() => visible = !visible),
+                ),
+                BotonPrincipal(
+                  texto: TextosDeLaBienvenida.entrar,
+                  alTocar: () {},
+                ),
+                RespuestaRapida(
+                  texto: TextosDeLaBienvenida.acepto,
+                  alTocar: () {},
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 400));
+    for (final tipo in [PildoraDelRegistro, ErrorLocal]) {
+      expect(
+        tester.getSemantics(vivaEn(tipo)),
+        isSemantics(isLiveRegion: true),
+        reason: '$tipo',
+      );
+    }
+    expect(vivaEn(EntradaView), findsNothing);
+    expect(
+      tester.getSemantics(find.text('Hola')),
+      isSemantics(isLiveRegion: false),
+    );
+    for (final texto in [
+      TextosDeLaBienvenida.mostrarContrasena,
+      TextosDeLaBienvenida.entrar,
+      TextosDeLaBienvenida.acepto,
+    ]) {
+      expect(
+        tester.getSemantics(find.bySemanticsLabel(texto)),
+        isSemantics(label: texto, isButton: true, hasTapAction: true),
+        reason: texto,
+      );
+    }
+    await tester.tap(find.byType(OjoDeLaContrasena));
+    await tester.pump();
+    expect(
+      tester.getSemantics(
+        find.bySemanticsLabel(TextosDeLaBienvenida.ocultarContrasena),
+      ),
+      isSemantics(
+        label: TextosDeLaBienvenida.ocultarContrasena,
+        isButton: true,
+        hasTapAction: true,
+      ),
+    );
+    semantica.dispose();
+  });
 }

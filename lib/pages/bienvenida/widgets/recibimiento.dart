@@ -42,16 +42,26 @@ abstract final class TiemposDelRecibimiento {
 
 typedef _T = TiemposDelRecibimiento;
 
-/// Los tiempos con reducir movimiento en ms, desde el relevo, y los tres
-/// últimos desde la respuesta (RF-BIEN-15).
+/// Los tiempos con reducir movimiento en ms (RF-BIEN-15).
 abstract final class TiemposSinMovimiento {
+  /// Duración del cruce de «Si no cabe», desde que se sabe que no hay
+  /// sesión.
   static const double cruceDeLaEstrella = 220;
+
+  /// Ulises aparece a los 120 ms del relevo, con un fundido de 160 ms, y el
+  /// fondo cambia desde ese momento en 150 ms.
   static const double ulises = 120;
   static const double fundidoDeUlises = 160;
   static const double fondo = 150;
+
+  /// La tarjeta y los botones entran a los 280 y 660 ms del relevo, con un
+  /// fundido de 180 ms cada uno.
   static const double tarjeta = 280;
   static const double botones = 660;
   static const double fundido = 180;
+
+  /// Desde la respuesta, la conversación aparece encima en 220 ms y Ulises
+  /// pasa a su avatar en 140 ms.
   static const double cruceDeLaSubida = 220;
   static const double fundidoDelAvatar = 140;
 }
@@ -167,6 +177,9 @@ class _RecibimientoState extends State<Recibimiento>
   late double _radio = widget.pose.radio;
   double _cruceDeLaEstrella = 1;
 
+  /// Cuándo empezó el cruce de la estrella, que espera a saber si hay sesión.
+  double? _inicioDelCruce;
+
   bool get _sinMovimiento => MediaQuery.disableAnimationsOf(context);
   bool get _conLector => MediaQuery.accessibleNavigationOf(context);
 
@@ -178,9 +191,16 @@ class _RecibimientoState extends State<Recibimiento>
       _conLector ? 0 : (_sinMovimiento ? _S.tarjeta : _T.finDelRebote);
   double get _msDeLosBotones =>
       _conLector ? 0 : (_sinMovimiento ? _S.botones : _T.botones);
-  double get _finDeLaEntrada => _conLector
-      ? 0
-      : (_sinMovimiento ? _S.botones + _S.fundido : _T.botones + 400);
+
+  /// Con lector la tarjeta no espera, pero Ulises vuela y el fondo cambia
+  /// igual, así que el reloj sigue hasta el fin de la entrada.
+  double get _finDeLaEntrada =>
+      _sinMovimiento ? _S.botones + _S.fundido : _T.botones + 400;
+
+  /// Sin movimiento o con lector, la tarjeta no espera a que la estrella se
+  /// deslice, así que «Si no cabe» es un fundido cruzado (RF-BIEN-15 y
+  /// RF-BIEN-16).
+  bool get _cruzaLaEstrella => _sinMovimiento || _conLector;
   double get _finDeLaSubida =>
       _sinMovimiento ? _S.cruceDeLaSubida : _T.finDeLaSubida;
   double get _posado => _sinMovimiento ? _S.cruceDeLaSubida : _T.posado;
@@ -219,8 +239,9 @@ class _RecibimientoState extends State<Recibimiento>
   @override
   void didUpdateWidget(Recibimiento anterior) {
     super.didUpdateWidget(anterior);
-    // Con lector o sin movimiento, las medidas pueden llegar antes que la
-    // visita. Con sesión, Ulises aterriza en su lugar de la maqueta.
+    // Las medidas pueden llegar antes que la visita: con lector, sin
+    // movimiento, o si el token tarda más de 160 ms. Con sesión, Ulises
+    // aterriza en su lugar de la maqueta.
     final a = _aterrizaje;
     if (widget.conSesion == true && anterior.conSesion != true && a != null) {
       final aterrizaje = widget.pose.centro + const Offset(-104, 138);
@@ -240,10 +261,13 @@ class _RecibimientoState extends State<Recibimiento>
         _moverLaEstrella();
         if (_ms >= _msDeLaTarjeta) _alTerminarElRebote();
       case _Fase.saludo:
-        // Con la tarjeta y los botones quietos, el reloj calla y no pide
-        // cuadros mientras el alumno lee (decisión 13 del plan y
-        // RF-BIEN-18).
-        if (_ms >= _finDeLaEntrada) _reloj.muted = true;
+        // Con lector, la tarjeta llega antes que el cruce de la estrella.
+        _moverLaEstrella();
+        // Con todo quieto, el reloj calla y no pide cuadros mientras el
+        // alumno lee (decisión 13 del plan y RF-BIEN-18).
+        if (_ms >= _finDeLaEntrada && _cruceDeLaEstrella >= 1) {
+          _reloj.muted = true;
+        }
       case _Fase.subida:
         // Tras un toque en reposo, la subida cuenta desde este cuadro.
         _respuestaEn ??= _ms;
@@ -329,18 +353,19 @@ class _RecibimientoState extends State<Recibimiento>
 
   /// Si Ulises y la tarjeta no caben, la estrella sube, y si hace falta se
   /// achica, lo justo antes de que Ulises aterrice, en 300 ms con
-  /// easeInOutCubic (B-28). Sin movimiento no se desliza, y la nueva aparece
-  /// encima en 220 ms mientras la del centro sigue entera debajo
-  /// (RF-BIEN-15).
+  /// easeInOutCubic (B-28). Sin movimiento o con lector no se desliza, y la
+  /// nueva aparece encima en 220 ms, desde que se sabe que no hay sesión,
+  /// mientras la del centro sigue entera debajo (RF-BIEN-15 y RF-BIEN-16).
   void _moverLaEstrella() {
     final m = _medidas!;
     // Con sesión, o mientras todavía no se sabe, la estrella no se mueve
     // (RF-BIEN-21).
     if (widget.conSesion != false || m.enConversacion) return;
-    if (_sinMovimiento) {
+    if (_cruzaLaEstrella) {
       _estrella = m.estrella;
       _radio = m.radio;
-      _cruceDeLaEstrella = tramo(_ms, 0, _S.cruceDeLaEstrella);
+      final inicio = _inicioDelCruce ??= _ms;
+      _cruceDeLaEstrella = tramo(_ms, inicio, inicio + _S.cruceDeLaEstrella);
       return;
     }
     final t = Curves.easeInOutCubic.transform(
@@ -376,10 +401,11 @@ class _RecibimientoState extends State<Recibimiento>
     if (_fase != _Fase.saludo || _ms < _msDeLosBotones) return;
     widget.alResponder(yaUsa);
     // En reposo el reloj calla y _ms quedó en el último cuadro, así que la
-    // subida cuenta desde el primer cuadro después del toque.
+    // subida cuenta desde el primer cuadro después del toque. Sin movimiento
+    // también, porque el cruce de la página empieza en ese cuadro.
     final enReposo = _reloj.muted;
     _reloj.muted = false;
-    _subir(enReposo ? null : _ms);
+    _subir(enReposo || _sinMovimiento ? null : _ms);
   }
 
   void _subir(double? ms) {
@@ -401,11 +427,11 @@ class _RecibimientoState extends State<Recibimiento>
     final quieta = EscenaDelLogo.desdePose(
       widget.pose,
     ).copyWith(centro: _estrella, radio: _radio);
-    // Sin movimiento, la estrella del centro sigue entera debajo mientras la
-    // nueva aparece encima.
+    // Sin movimiento o con lector, la estrella del centro sigue entera debajo
+    // mientras la nueva aparece encima.
     final seMovio =
         _estrella != widget.pose.centro || _radio != widget.pose.radio;
-    final debajo = quieto && seMovio && _cruceDeLaEstrella < 1
+    final debajo = _cruzaLaEstrella && seMovio && _cruceDeLaEstrella < 1
         ? EscenaDelLogo.desdePose(widget.pose)
         : null;
     final a = _aterrizaje;

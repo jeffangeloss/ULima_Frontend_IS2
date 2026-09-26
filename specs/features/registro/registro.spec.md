@@ -44,9 +44,9 @@ No es un formulario de alta genérico. No pide nombre, ni carrera, ni correo, pe
 - RS-FE-1: Desde `/login` se puede llegar a `/registro` y crear una cuenta que queda lista para usarse, sin pasar por ningún canal fuera de la app.
   `[@test] ../../../test/HU33_jeff/registro_service_test.dart`
   `[@test] ../../../test/HU33_jeff/registro_controller_test.dart`
-  `[@test] ../../../test/HU33_jeff/registro_page_test.dart`
+  `[@test] ../../../test/bienvenida/bienvenida_registro_test.dart`
 - RS-FE-2: Las dos contraseñas en juego —la de miUlima y la de ULima++— se piden en pantallas distintas y la de ULima++ se rotula como propia de la app. Nunca se ven las dos a la vez.
-  `[@test] ../../../test/HU33_jeff/registro_page_test.dart`
+  `[@test] ../../../test/bienvenida/bienvenida_registro_test.dart`
 - RS-FE-3: El cliente no agrega ningún camino para averiguar si un código tiene cuenta. Ninguna pantalla anterior al envío consulta al backend por un código, y el registro no se ofrece en función de por qué falló un login. Ver §Deuda conocida: el endpoint ya es distinguible por sí mismo, y eso no se arregla desde acá.
   `[@test] ../../../test/HU33_jeff/registro_controller_test.dart`
 - RS-FE-4: Ningún fallo del registro cierra sesiones, navega fuera de la pantalla ni muestra un mensaje que no describa lo que pasó.

@@ -14,8 +14,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:ulima_plus/components/logo/escena_del_logo.dart';
 import 'package:ulima_plus/components/logo/sello_del_logo.dart';
+import 'package:ulima_plus/components/skeleton.dart';
+import 'package:ulima_plus/configs/themes.dart';
 import 'package:ulima_plus/domain/bienvenida/bienvenida_turnos.dart';
 import 'package:ulima_plus/models/registro_models.dart';
+import 'package:ulima_plus/pages/bienvenida/bienvenida_page.dart';
+import 'package:ulima_plus/pages/bienvenida/conversacion.dart';
+import 'package:ulima_plus/pages/bienvenida/widgets/burbujas.dart';
 import 'package:ulima_plus/pages/bienvenida/widgets/compositor.dart';
 import 'package:ulima_plus/pages/bienvenida/widgets/franja_con_sello.dart';
 import 'package:ulima_plus/pages/bienvenida/widgets/recibimiento.dart';
@@ -142,6 +147,68 @@ void main() {
     expect(_cuadro(tester).opacidadDeLaEstrella, 1);
   });
 
+  testWidgets('si el token tarda 300 ms, el cruce de la estrella igual '
+      'ocurre en 220 ms, con la del centro entera debajo (RF-BIEN-15)', (
+    tester,
+  ) async {
+    await montarLaBienvenida(
+      tester,
+      Bienvenida(
+        tokenGuardado: () => Future<String?>.delayed(
+          const Duration(milliseconds: 300),
+          () => null,
+        ),
+      ),
+      argumentos: _conPose(),
+      sinMovimiento: true,
+      escala: 2,
+    );
+    var conCruce = false;
+    for (var t = 0; t < 700; t += 16) {
+      await tester.pump(const Duration(milliseconds: 16));
+      final cuadro = _cuadro(tester);
+      if (cuadro.estrellaDebajo != null) {
+        conCruce = true;
+        expect(cuadro.estrellaDebajo!.pose.radio, 90);
+      }
+    }
+    expect(conCruce, isTrue, reason: 'la estrella no salta');
+    expect(_cuadro(tester).opacidadDeLaEstrella, 1);
+    await avanzar(tester, 1000);
+  });
+
+  testWidgets('en la subida sin movimiento, cada cuadro tiene un logo a '
+      'opacidad plena, también si el toque llega pronto', (tester) async {
+    await montarLaBienvenida(
+      tester,
+      Bienvenida(),
+      argumentos: _conPose(),
+      sinMovimiento: true,
+    );
+    await avanzar(tester, 700);
+    await tester.tap(find.text(TextosDeLaBienvenida.siEntrar));
+    double conversacion() => tester
+        .widget<FadeTransition>(
+          find
+              .ancestor(
+                of: find.byType(FranjaConSello),
+                matching: find.byType(FadeTransition),
+              )
+              .first,
+        )
+        .opacity
+        .value;
+    for (var t = 0; t < 600; t += 16) {
+      await tester.pump(const Duration(milliseconds: 16));
+      final conRecibimiento = find.byType(Recibimiento).evaluate().isNotEmpty;
+      expect(
+        conRecibimiento || conversacion() == 1,
+        isTrue,
+        reason: 'a los $t ms no hay logo a opacidad plena',
+      );
+    }
+  });
+
   testWidgets('al responder, la franja con el sello y la conversación '
       'aparecen encima en 220 ms mientras el recibimiento sigue entero '
       'debajo, y Ulises pasa a su avatar en 140 ms', (tester) async {
@@ -239,4 +306,98 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     expect(EditableText.debugDeterministicCursor, isFalse);
   });
+
+  testWidgets('con movimiento, el cursor parpadea como siempre', (
+    tester,
+  ) async {
+    await montarLaBienvenida(tester, Bienvenida(), argumentos: _expirada);
+    await avanzar(tester, 1500);
+    expect(EditableText.debugDeterministicCursor, isFalse);
+    await tester.pumpWidget(const SizedBox.shrink());
+    expect(EditableText.debugDeterministicCursor, isFalse);
+  });
+
+  testWidgets('con dos bienvenidas a la vez, como al volver del «¿Olvidaste '
+      'tu contraseña?», el cursor sigue quieto en la nueva y vuelve a como '
+      'estaba al salir de las dos (RF-BIEN-15)', (tester) async {
+    await montarLaBienvenida(
+      tester,
+      Bienvenida(),
+      argumentos: _expirada,
+      sinMovimiento: true,
+    );
+    await avanzar(tester, 1500);
+    unawaited(Get.toNamed<void>('/forgot-password'));
+    await avanzar(tester, 600);
+    // La vuelta monta otra bienvenida mientras la anterior sale.
+    expect(offAllToLogin(motivo: MotivoDeLlegada.restablecida), isTrue);
+    await tester.pump();
+    expect(EditableText.debugDeterministicCursor, isTrue);
+    await avanzar(tester, 1500);
+    expect(find.byType(BienvenidaPage), findsOneWidget);
+    expect(EditableText.debugDeterministicCursor, isTrue);
+    await tester.pumpWidget(const SizedBox.shrink());
+    expect(EditableText.debugDeterministicCursor, isFalse);
+  });
+
+  for (final quieto in [true, false]) {
+    testWidgets('${quieto ? 'sin' : 'con'} movimiento, los indicadores de '
+        'espera ${quieto ? 'quedan quietos' : 'giran'} y la burbuja de carga '
+        '${quieto ? 'no' : 'sí'} pulsa (RF-BIEN-15 y RF-TEST-13)', (
+      tester,
+    ) async {
+      const tema = MaterialTheme(TextTheme());
+      Widget burbuja(TipoDeBurbuja tipo) => EntradaView(
+        entrada: BurbujaDeUlises(
+          id: tipo.index,
+          texto: 'Un momento',
+          tipo: tipo,
+        ),
+        anterior: null,
+        primerGrupo: false,
+        conMovimiento: !quieto,
+        resultado: (_, _) => const SizedBox.shrink(),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: tema.light(),
+          home: MediaQuery(
+            data: MediaQueryData(disableAnimations: quieto),
+            child: Scaffold(
+              body: ListView(
+                children: [
+                  BotonPrincipal(
+                    texto: TextosDeLaBienvenida.entrar,
+                    esperando: true,
+                    alTocar: () {},
+                  ),
+                  RespuestaRapida(
+                    texto: TextosDeLaBienvenida.iniciarSesion,
+                    esperando: true,
+                    alTocar: () {},
+                  ),
+                  burbuja(TipoDeBurbuja.esperando),
+                  burbuja(TipoDeBurbuja.cargando),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 400));
+      final indicadores = tester.widgetList<CircularProgressIndicator>(
+        find.byType(CircularProgressIndicator),
+      );
+      expect(indicadores, hasLength(3));
+      for (final i in indicadores) {
+        expect(i.value, quieto ? isNotNull : isNull);
+      }
+      expect(find.byType(SkeletonBox), findsOneWidget);
+      expect(
+        find.byType(SkeletonPulse),
+        quieto ? findsNothing : findsOneWidget,
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+  }
 }

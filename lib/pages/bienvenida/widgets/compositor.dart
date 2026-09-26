@@ -292,6 +292,10 @@ class RespuestaRapida extends StatelessWidget {
                     ? SizedBox.square(
                         dimension: 20,
                         child: CircularProgressIndicator(
+                          // Sin movimiento no gira (RF-BIEN-15).
+                          value: MediaQuery.disableAnimationsOf(context)
+                              ? 0.75
+                              : null,
                           strokeWidth: 2,
                           color: MaterialTheme.testAccentInk(b),
                         ),
@@ -377,6 +381,10 @@ class BotonPrincipal extends StatelessWidget {
                       ? SizedBox.square(
                           dimension: 20,
                           child: CircularProgressIndicator(
+                            // Sin movimiento no gira (RF-BIEN-15).
+                            value: MediaQuery.disableAnimationsOf(context)
+                                ? 0.75
+                                : null,
                             strokeWidth: 2,
                             color: MaterialTheme.testAccentInk(b),
                           ),

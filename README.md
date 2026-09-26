@@ -304,7 +304,7 @@ Además hay **5 bloques `BindingsBuilder` inline** en `main.dart`, uno por ruta:
 | `/malla-clasica` | `MallaController` | Vista mapa de solo lectura; se rehidrata fresca en cada entrada. `main.dart:147-157` |
 | `/silabo` | `SilaboViewerController` | Recibe `{'url', 'titulo'}` por argumentos. `main.dart:158-168` |
 
-**Dos rutas nombradas no declaran binding**: `/setup-carrera` y `/chatbot` hacen `Get.put` dentro de la página (`setup_carrera_page.dart:17`, `chatbot_page.dart:18`). Y **6 destinos se abren con `Get.to(() => Widget())` anónimo**, sin ruta nombrada ni binding: `AlertasPage`, `DescripCursosPage`, `AtRiskStudentsPage`, `ChatPage`, `CreateAnnouncementPage` y `DelegadoAnunciosPage`. Es exactamente el patrón que la regla anterior prohíbe; no ha explotado ahí, pero es deuda.
+**Dos rutas nombradas no declaran binding**: `/arranque`, que solo sostiene la intro de la capa del arranque, y `/chatbot`, que hace `Get.put` dentro de la página (`chatbot_page.dart:19`). Y **6 destinos se abren con `Get.to(() => Widget())` anónimo**, sin ruta nombrada ni binding: `AlertasPage`, `DescripCursosPage`, `AtRiskStudentsPage`, `ChatPage`, `CreateAnnouncementPage` y `DelegadoAnunciosPage`. Es exactamente el patrón que la regla anterior prohíbe; no ha explotado ahí, pero es deuda.
 
 ---
 

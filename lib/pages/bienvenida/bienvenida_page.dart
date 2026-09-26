@@ -85,7 +85,9 @@ class _BienvenidaPageState extends State<BienvenidaPage>
   /// del recibimiento en 220 ms (RF-BIEN-15). Fuera de ese cruce vale 1.
   late final AnimationController _cruceDeLaSubida = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 220),
+    duration: Duration(
+      milliseconds: TiemposSinMovimiento.cruceDeLaSubida.round(),
+    ),
     value: 1,
     // Es el fundido de reducir movimiento, así que no se acorta con él.
     animationBehavior: AnimationBehavior.preserve,
@@ -93,12 +95,21 @@ class _BienvenidaPageState extends State<BienvenidaPage>
   bool _cruceSinMovimiento = false;
 
   /// La primera burbuja nueva de Ulises, a la que va el foco del lector
-  /// (RF-BIEN-16).
+  /// (RF-BIEN-16). Las entradas que el revelador suelta antes de un mismo
+  /// cuadro son un solo grupo, así que [_visiblesAntes] se actualiza después
+  /// del cuadro.
   int _visiblesAntes = 0;
   int? _idAEnfocar;
+  bool _grupoAbierto = false;
 
-  /// El cursor que había antes de montar la bienvenida.
-  bool? _cursorAnterior;
+  /// Sin movimiento, el cursor del campo no parpadea (RF-BIEN-15). El SDK
+  /// solo lo permite con un interruptor global, así que las páginas montadas
+  /// que lo piden se cuentan, y la primera guarda el valor de antes, que
+  /// vuelve cuando sale la última. Al volver del «¿Olvidaste tu
+  /// contraseña?» conviven dos bienvenidas.
+  static int _cursoresQuietos = 0;
+  static bool _cursorDeAntes = false;
+  bool _pideCursorQuieto = false;
 
   bool get _sinMovimiento => MediaQuery.disableAnimationsOf(context);
   bool get _conLector => MediaQuery.accessibleNavigationOf(context);
@@ -135,11 +146,7 @@ class _BienvenidaPageState extends State<BienvenidaPage>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Sin movimiento, el cursor del campo no parpadea (RF-BIEN-15). El SDK
-    // solo lo permite con este interruptor global, que la página devuelve a su
-    // valor en su dispose.
-    _cursorAnterior ??= EditableText.debugDeterministicCursor;
-    EditableText.debugDeterministicCursor = _sinMovimiento || _cursorAnterior!;
+    _pedirElCursorQuieto(_sinMovimiento);
     if (_leida) return;
     _leida = true;
     final argumentos = ModalRoute.of(context)?.settings.arguments;
@@ -160,6 +167,19 @@ class _BienvenidaPageState extends State<BienvenidaPage>
           context,
         ).catchError((Object _) {}),
       );
+    }
+  }
+
+  void _pedirElCursorQuieto(bool pide) {
+    if (pide == _pideCursorQuieto) return;
+    _pideCursorQuieto = pide;
+    if (pide) {
+      if (_cursoresQuietos++ == 0) {
+        _cursorDeAntes = EditableText.debugDeterministicCursor;
+      }
+      EditableText.debugDeterministicCursor = true;
+    } else if (--_cursoresQuietos == 0) {
+      EditableText.debugDeterministicCursor = _cursorDeAntes;
     }
   }
 
@@ -197,7 +217,13 @@ class _BienvenidaPageState extends State<BienvenidaPage>
       _idAEnfocar =
           nuevas.whereType<BurbujaDeUlises>().firstOrNull?.id ?? _idAEnfocar;
     }
-    _visiblesAntes = visibles;
+    if (!_grupoAbierto) {
+      _grupoAbierto = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _grupoAbierto = false;
+        if (mounted) _visiblesAntes = _revelador.visibles;
+      });
+    }
     setState(() {});
     // La conversación se desplaza en 450 ms hasta el final, o salta con
     // reducir movimiento (RF-BIEN-5 y RF-BIEN-15).
@@ -355,8 +381,7 @@ class _BienvenidaPageState extends State<BienvenidaPage>
     _rombos.dispose();
     _pildora.dispose();
     _cruceDeLaSubida.dispose();
-    final cursor = _cursorAnterior;
-    if (cursor != null) EditableText.debugDeterministicCursor = cursor;
+    _pedirElCursorQuieto(false);
     _c.terminarVisita(_visita);
     super.dispose();
   }

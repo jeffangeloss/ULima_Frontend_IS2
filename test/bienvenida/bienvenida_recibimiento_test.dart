@@ -318,6 +318,52 @@ void main() {
   }
 
   for (final escala in [1.0, 1.3, 2.0]) {
+    for (final sinMovimiento in [false, true]) {
+      testWidgets('con lector${sinMovimiento ? ' y sin movimiento' : ''} y el '
+          'texto a $escala, la tarjeta nunca tapa la estrella, que queda '
+          'entera, y Ulises y el fondo llegan (RF-BIEN-2, RF-BIEN-15 y '
+          'RF-BIEN-16)', (tester) async {
+        await montarLaBienvenida(
+          tester,
+          Bienvenida(),
+          argumentos: _conPose(),
+          escala: escala,
+          conLector: true,
+          sinMovimiento: sinMovimiento,
+        );
+        // En cada cuadro, la estrella a la vista queda fuera de la tarjeta.
+        for (var t = 0; t < 3000; t += 16) {
+          await tester.pump(const Duration(milliseconds: 16));
+          final tarjeta = find.byKey(Recibimiento.claveDeLaTarjeta);
+          if (tarjeta.evaluate().isEmpty) continue;
+          final cuadro = Recibimiento.cuadroActual(tester.element(_fondo()));
+          // La de encima. Con el cruce, la del centro sigue debajo.
+          final estrella = cuadro.estrella!.pose;
+          expect(
+            tester.getRect(tarjeta).top,
+            greaterThanOrEqualTo(estrella.centro.dy + estrella.radio - 0.5),
+            reason: 'a los $t ms la tarjeta pisa la estrella a la vista',
+          );
+        }
+        final cuadro = Recibimiento.cuadroActual(tester.element(_fondo()));
+        expect(cuadro.estrellaDebajo, isNull, reason: 'el cruce terminó');
+        expect(cuadro.opacidadDeLaEstrella, 1);
+        final estrella = Recibimiento.estrellaActual(tester.element(_fondo()));
+        final tarjeta = tester.getRect(
+          find.byKey(Recibimiento.claveDeLaTarjeta),
+        );
+        expect(
+          tarjeta.top,
+          greaterThanOrEqualTo(estrella.centro.dy + estrella.radio + 12 - 0.5),
+        );
+        // Ulises llegó a su lugar y el fondo ya es el de la franja.
+        expect(_ulises(), findsOneWidget);
+        expect(cuadro.fondo, const Color(0xFFFF6600));
+      });
+    }
+  }
+
+  for (final escala in [1.0, 1.3, 2.0]) {
     testWidgets('en 375 × 667 con el texto a $escala, nada entra en el margen '
         'de la estrella ni queda a menos de 16 dp de los botones', (
       tester,

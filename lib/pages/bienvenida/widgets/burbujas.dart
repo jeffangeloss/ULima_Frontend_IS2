@@ -75,8 +75,8 @@ class EntradaView extends StatelessWidget {
 }
 
 /// Con lector de pantalla, el foco pasa a la primera burbuja nueva de Ulises
-/// (RF-BIEN-16). El nodo de cada entrada es un contenedor, así que el lector
-/// lee el grupo en su orden.
+/// (RF-BIEN-16). Cada entrada ya es un nodo de la lista, que recibe el foco y
+/// el lector lee en su orden.
 class _Enfocable extends StatefulWidget {
   const _Enfocable({required this.enfocar, required this.child});
 
@@ -110,8 +110,7 @@ class _EnfocableState extends State<_Enfocable> {
   }
 
   @override
-  Widget build(BuildContext context) =>
-      Semantics(container: true, child: widget.child);
+  Widget build(BuildContext context) => widget.child;
 }
 
 /// Cada burbuja entra en 340 ms, subiendo 8 dp y de 98 % a 100 % con un
@@ -255,9 +254,12 @@ class _Contenido extends StatelessWidget {
       height: 1.35,
     );
     final negrita = estilo.copyWith(fontWeight: FontWeight.w700);
+    final quieto = MediaQuery.disableAnimationsOf(context);
     switch (entrada.tipo) {
       case TipoDeBurbuja.cargando:
-        return const SkeletonPulse(child: SkeletonBox(width: 180, height: 14));
+        // Sin movimiento, el esqueleto no pulsa (RF-BIEN-15).
+        const esqueleto = SkeletonBox(width: 180, height: 14);
+        return quieto ? esqueleto : const SkeletonPulse(child: esqueleto);
       case TipoDeBurbuja.error:
         return Row(
           mainAxisSize: MainAxisSize.min,
@@ -281,6 +283,8 @@ class _Contenido extends StatelessWidget {
             SizedBox.square(
               dimension: 16,
               child: CircularProgressIndicator(
+                // Sin movimiento no gira (RF-BIEN-15 y RF-TEST-13).
+                value: quieto ? 0.75 : null,
                 strokeWidth: 2,
                 color: MaterialTheme.testAccent(b),
               ),
