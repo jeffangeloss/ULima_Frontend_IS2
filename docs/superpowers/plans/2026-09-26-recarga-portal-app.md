@@ -1033,6 +1033,16 @@ Crea `test/HU37_jeff/ultima_lectura_test.dart` con este contenido.
 //
 // Las fechas van en UTC, y Lima está 5 horas atrás todo el año, así que las
 // 15:42 UTC son las 10:42 de Lima.
+//
+// Dart no cambia la zona horaria dentro del proceso, así que el caso del
+// teléfono en otra zona depende de la zona de la máquina que corre la prueba.
+// La suite corre solo en una máquina local, porque
+// `.github/workflows/build-apk.yml` no corre `flutter test`. En una máquina en
+// UTC−5, `toLocal()` deja las dos fechas en la hora de Lima, y ese caso no
+// distingue una hora calculada en la zona del teléfono. Con `TZ=UTC`, este
+// archivo falla si `cuandoSeLeyo` usa `toLocal()` en lugar de `enHoraDeLima`,
+// así que la verificación lo corre también con
+// `TZ=UTC flutter test --no-pub test/HU37_jeff/ultima_lectura_test.dart`.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ulima_plus/domain/recarga_ulima/ultima_lectura.dart';
@@ -1084,7 +1094,8 @@ void main() {
 
       expect(cuandoSeLeyo(ultimoMinuto, ahoraDia26), 'ayer a las 23:59');
       expect(cuandoSeLeyo(medianoche, ahoraDia26), 'hoy a las 00:00');
-      // La misma hora con otra zona horaria del teléfono da el mismo texto.
+      // Las mismas fechas en la zona del proceso, que con `TZ=UTC` no es la de
+      // Lima, dan el mismo texto.
       expect(
         cuandoSeLeyo(ultimoMinuto.toLocal(), ahoraDia26.toLocal()),
         'ayer a las 23:59',
@@ -1248,10 +1259,14 @@ String textoNotasLeidas(DateTime leidoEn, DateTime ahora) =>
 ```bash
 "$DART" format lib/domain/recarga_ulima test/HU37_jeff
 "$FLUTTER" test --no-pub test/HU37_jeff/formato_nota_test.dart test/HU37_jeff/ultima_lectura_test.dart
+TZ=UTC "$FLUTTER" test --no-pub test/HU37_jeff/ultima_lectura_test.dart
 "$FLUTTER" analyze --no-pub lib/domain/recarga_ulima test/HU37_jeff
 ```
 
-**Esperado.** El formato no cambia nada, pasan las 11 pruebas y el análisis no encuentra avisos.
+**Esperado.** El formato no cambia nada, pasan las 11 pruebas, con `TZ=UTC` pasan otra vez las 8
+de `ultima_lectura_test.dart` y el análisis no encuentra avisos. La corrida con `TZ=UTC` es la
+que cubre el teléfono en otra zona, porque Dart no cambia la zona dentro del proceso y, en una
+máquina en UTC−5, `toLocal()` deja las fechas en la hora de Lima.
 
 - [ ] **Paso 6. Commit.**
 
@@ -7888,6 +7903,17 @@ cambiar(SPEC, [
         'Todas están en `test/HU37_jeff/` (D20), con datos inventados y el alumno `20230001`, y cada una\n'
         'se enlaza con `[@test]` junto a su requisito. Comparten los dobles de `recarga_dobles.dart`.',
     ),
+    (
+        '- `flutter analyze` sin avisos nuevos y `flutter test` en verde, con los avisos previos reportados\n'
+        '  aparte.\n',
+        '- `flutter analyze` sin avisos nuevos y `flutter test` en verde, con los avisos previos reportados\n'
+        '  aparte.\n'
+        '- `TZ=UTC flutter test --no-pub test/HU37_jeff/ultima_lectura_test.dart`. La suite corre solo en\n'
+        '  una máquina local, porque `.github/workflows/build-apk.yml` no corre `flutter test`, y en UTC−5\n'
+        '  la hora local coincide con la de Lima. Con `TZ=UTC`, las pruebas de RF-RCG-9 detectan una hora\n'
+        '  o un día calculados con `toLocal()`, y el caso de las 23:59 y las 00:00 cubre el teléfono en\n'
+        '  otra zona.\n',
+    ),
 ])
 
 PRUEBAS = {
@@ -8047,8 +8073,9 @@ print('cierre aplicado')
   El script hace estos cambios.
   - En la spec de la recarga, el estado pasa a «implementada en la app el FECHA», el párrafo de
     las pruebas dice que existen y que falta la revisión manual y las condiciones de B1 y B15, la
-    maqueta queda en `docs/images/UI/recarga/`, «Pruebas previstas» dice que todas existen y cada
-    requisito, de RF-RCG-1 a RF-RCG-11, termina con los enlaces `[@test]` de sus archivos.
+    maqueta queda en `docs/images/UI/recarga/`, «Pruebas previstas» dice que todas existen, cada
+    requisito, de RF-RCG-1 a RF-RCG-11, termina con los enlaces `[@test]` de sus archivos y
+    «Verificación» suma la corrida de `ultima_lectura_test.dart` con `TZ=UTC`.
   - En `grades.spec.md`, `course-detail.spec.md`, `portal-sync.spec.md`,
     `academic-record.spec.md` y `schedule.spec.md`, la enmienda pasa de «pendiente de
     implementación» a «implementada el FECHA», sale la frase «Hasta que se implemente…» y las tres
@@ -8078,20 +8105,23 @@ grep -rhoE '\[@test\] \.\./\.\./\.\./test/HU37_jeff/[a-z_]+\.dart' specs | sed '
 
 **Esperado.** Once archivos cambiados y ninguna línea `FALTA`.
 
-- [ ] **Paso 3. Verificación final.** Corre en primer plano el formato y las dos búsquedas, y en
-  segundo plano el análisis y la suite completa, esperando sus notificaciones.
+- [ ] **Paso 3. Verificación final.** Corre en primer plano el formato, las dos búsquedas y
+  `ultima_lectura_test.dart` con `TZ=UTC`, y en segundo plano el análisis y la suite completa,
+  esperando sus notificaciones.
 
 ```bash
 "$DART" format --output=none --set-exit-if-changed lib/models/recarga_ulima_models.dart lib/domain/recarga_ulima lib/services/recarga_ulima_service.dart lib/components/recarga_ulima lib/components/calculadora/nota_tile.dart lib/components/calculadora/curso_card.dart lib/pages/mis_notas lib/pages/descripcion_cursos/descrip_cursos.dart lib/configs/themes.dart test/HU37_jeff
 git diff ef22203 -- . ':(exclude)docs/superpowers/plans' | grep '^+' | grep -nE '/Users/|/private/|/tmp/|/home/'
 git diff ef22203 -- . | grep '^+' | grep -oE '\b[0-9]{8}\b' | sort -u
+TZ=UTC "$FLUTTER" test --no-pub test/HU37_jeff/ultima_lectura_test.dart
 "$FLUTTER" analyze --no-pub      # en segundo plano
 "$FLUTTER" test --no-pub         # en segundo plano
 ```
 
 **Esperado.** El formato no cambia nada, la búsqueda de rutas no encuentra nada, los únicos
-códigos de ocho dígitos son `20230001` y `20230002`, `analyze` da los mismos 6 avisos de la línea
-base y la suite pasa con 1385 pruebas.
+códigos de ocho dígitos son `20230001` y `20230002`, la corrida con `TZ=UTC` pasa las 8 pruebas de
+`ultima_lectura_test.dart`, `analyze` da los mismos 6 avisos de la línea base y la suite pasa con
+1385 pruebas.
 
 - [ ] **Paso 4. Commit.**
 
@@ -8124,7 +8154,7 @@ git log -1 --format='%an <%ae>'
 | RF-RCG-7, «Qué no cambia de la calculadora» | 8 | `HU07_sam`, `HU06_sam` y `chats_pestana_test.dart` sin cambios |
 | RF-RCG-8, pie con hora y botón, estado sin datos, aviso compacto, `recargarSeccion` y sin el servicio | 9 | `asistencia_recarga_test.dart`, más `chat_ficha_curso_test.dart` y `time_blocks_acciones_test.dart` sin cambios |
 | RF-RCG-8, `Seccion.asistenciaLeidaEn` | 9 | `asistencia_recarga_test.dart`, grupo unitario |
-| RF-RCG-9 | 2 | `ultima_lectura_test.dart` |
+| RF-RCG-9 | 2 | `ultima_lectura_test.dart`, también con `TZ=UTC` |
 | RF-RCG-10, contrastes salvo D12 y D24 | 3 | `contraste_recarga_test.dart` |
 | RF-RCG-10, 48 por 48, tooltips, encabezado, etiquetas y `liveRegion` | 5, 6, 8 y 9 | los casos de Semantics y de tamaño de cada archivo de widget |
 | RF-RCG-11 y D16 | 10 | `portal_sync_refresco_calculadora_test.dart` |

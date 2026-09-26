@@ -6,6 +6,16 @@
 //
 // Las fechas van en UTC, y Lima está 5 horas atrás todo el año, así que las
 // 15:42 UTC son las 10:42 de Lima.
+//
+// Dart no cambia la zona horaria dentro del proceso, así que el caso del
+// teléfono en otra zona depende de la zona de la máquina que corre la prueba.
+// La suite corre solo en una máquina local, porque
+// `.github/workflows/build-apk.yml` no corre `flutter test`. En una máquina en
+// UTC−5, `toLocal()` deja las dos fechas en la hora de Lima, y ese caso no
+// distingue una hora calculada en la zona del teléfono. Con `TZ=UTC`, este
+// archivo falla si `cuandoSeLeyo` usa `toLocal()` en lugar de `enHoraDeLima`,
+// así que la verificación lo corre también con
+// `TZ=UTC flutter test --no-pub test/HU37_jeff/ultima_lectura_test.dart`.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ulima_plus/domain/recarga_ulima/ultima_lectura.dart';
@@ -57,7 +67,8 @@ void main() {
 
       expect(cuandoSeLeyo(ultimoMinuto, ahoraDia26), 'ayer a las 23:59');
       expect(cuandoSeLeyo(medianoche, ahoraDia26), 'hoy a las 00:00');
-      // La misma hora con otra zona horaria del teléfono da el mismo texto.
+      // Las mismas fechas en la zona del proceso, que con `TZ=UTC` no es la de
+      // Lima, dan el mismo texto.
       expect(
         cuandoSeLeyo(ultimoMinuto.toLocal(), ahoraDia26.toLocal()),
         'ayer a las 23:59',
