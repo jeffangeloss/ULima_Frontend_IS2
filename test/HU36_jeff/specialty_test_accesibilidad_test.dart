@@ -9,9 +9,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
+import 'package:ulima_plus/pages/specialty_test/specialty_test_controller.dart';
+import 'package:ulima_plus/pages/specialty_test/widgets/question_view.dart';
 import 'package:ulima_plus/pages/specialty_test/widgets/test_buttons.dart';
+import 'package:ulima_plus/pages/specialty_test/widgets/ulises_bubble.dart';
 import 'package:ulima_plus/pages/specialty_test/widgets/welcome_view.dart';
 
+import 'datos_de_prueba.dart';
 import 'dobles_de_red.dart';
 import 'dobles_del_controlador.dart';
 import 'montaje_de_pantallas.dart';
@@ -45,6 +49,7 @@ void main() {
   tearDown(Get.reset);
 
   _bienvenida();
+  _preguntas();
 }
 
 void _bienvenida() {
@@ -90,6 +95,224 @@ void _bienvenida() {
       await montarPantalla(tester, const WelcomeView(), sinMovimiento: true);
       await tester.pumpAndSettle();
       expect(tester.hasRunningAnimations, isFalse);
+    });
+  });
+}
+
+/// Monta la conversación en la pregunta de índice [indice].
+Future<SpecialtyTestController> _enLaPregunta(
+  WidgetTester tester, {
+  int indice = 0,
+  double escala = 1.0,
+  bool lector = false,
+  bool sinMovimiento = false,
+}) async {
+  prepararTest(ApiFalsaDelTest());
+  final c = ponerControlador();
+  await tester.pump();
+  c.empezar();
+  responderPasos(c, respuestasEnOrden.take(indice).toList());
+  await montarPantalla(
+    tester,
+    const QuestionView(),
+    escala: escala,
+    lector: lector,
+    sinMovimiento: sinMovimiento,
+  );
+  await tester.pump();
+  return c;
+}
+
+/// El nodo `Focus` que envuelve a [texto] tiene el foco.
+bool _conFoco(WidgetTester tester, String texto) =>
+    Focus.of(tester.element(find.text(texto))).hasPrimaryFocus;
+
+void _preguntas() {
+  group('WIDGET · Accesibilidad de las preguntas (RF-TEST-13)', () {
+    testWidgets('cada tarjeta es un botón con su tarea, la ayuda y selected', (
+      tester,
+    ) async {
+      final semantica = tester.ensureSemantics();
+      await _enLaPregunta(tester, lector: true);
+      final top = find.byKey(QuestionView.tarjetaKey('top'));
+      expect(
+        tester.getSemantics(top),
+        isSemantics(
+          label: 'Tarea de prueba uno arriba',
+          hint: kDuelHelp,
+          isButton: true,
+          hasTapAction: true,
+          isSelected: false,
+        ),
+      );
+      await tester.tap(top);
+      await tester.pump(const Duration(milliseconds: 150));
+      expect(tester.getSemantics(top), isSemantics(isSelected: true));
+      expect(
+        tester.getSemantics(find.text('Me gustan las dos')),
+        isSemantics(label: 'Me gustan las dos', isButton: true),
+      );
+      semantica.dispose();
+    });
+
+    testWidgets('la escala es un grupo con el enunciado y cada opción, un '
+        'botón exclusivo con checked', (tester) async {
+      final semantica = tester.ensureSemantics();
+      await _enLaPregunta(tester, indice: 2, lector: true);
+      final opcion = find.byKey(QuestionView.opcionKey('bastante'));
+      expect(
+        tester.getSemantics(opcion),
+        isSemantics(
+          label: 'Bastante',
+          isButton: true,
+          isInMutuallyExclusiveGroup: true,
+          isChecked: false,
+        ),
+      );
+      await tester.tap(opcion);
+      await tester.pump(const Duration(milliseconds: 150));
+      expect(tester.getSemantics(opcion), isSemantics(isChecked: true));
+      semantica.dispose();
+    });
+
+    testWidgets('la burbuja es una región viva y el enunciado, un encabezado', (
+      tester,
+    ) async {
+      final semantica = tester.ensureSemantics();
+      await _enLaPregunta(tester);
+      expect(
+        tester.getSemantics(find.byType(UlisesTurnView)),
+        isSemantics(isLiveRegion: true),
+      );
+      expect(
+        tester.getSemantics(find.text('¿Cuál harías con más ganas?')),
+        isSemantics(isHeader: true),
+      );
+      semantica.dispose();
+    });
+
+    testWidgets('el foco pasa al enunciado nuevo al avanzar y al volver', (
+      tester,
+    ) async {
+      final c = await _enLaPregunta(tester, lector: true);
+      expect(_conFoco(tester, '¿Cuál harías con más ganas?'), isTrue);
+      await tester.tap(find.byKey(QuestionView.tarjetaKey('top')));
+      await tester.pump();
+      await tester.tap(find.text('Siguiente'));
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pump();
+      expect(c.paso.value, 1);
+      expect(_conFoco(tester, '¿Y entre estas dos?'), isTrue);
+      await tester.tap(find.byTooltip('Pregunta anterior'));
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pump();
+      expect(_conFoco(tester, '¿Cuál harías con más ganas?'), isTrue);
+    });
+
+    testWidgets('con lector no hay avance solo y aparece «Siguiente»', (
+      tester,
+    ) async {
+      final c = await _enLaPregunta(tester, lector: true);
+      expect(find.text('Siguiente'), findsNothing);
+      await tester.tap(find.byKey(QuestionView.tarjetaKey('bottom')));
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(c.paso.value, 0);
+      expect(find.text('Siguiente'), findsOneWidget);
+      await tester.tap(find.text('Siguiente'));
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(c.paso.value, 1);
+    });
+
+    testWidgets('la pastilla del historial dice ver u ocultar y su estado', (
+      tester,
+    ) async {
+      final semantica = tester.ensureSemantics();
+      await _enLaPregunta(tester, indice: 2);
+      final pastilla = find.text('2 respuestas anteriores');
+      expect(
+        tester.getSemantics(pastilla),
+        isSemantics(
+          label: 'Ver tus 2 respuestas anteriores',
+          isButton: true,
+          isExpanded: false,
+        ),
+      );
+      await tester.tap(pastilla);
+      await tester.pump();
+      expect(
+        tester.getSemantics(pastilla),
+        isSemantics(
+          label: 'Ocultar tus respuestas anteriores',
+          isExpanded: true,
+        ),
+      );
+      semantica.dispose();
+    });
+
+    testWidgets('las imágenes quedan fuera del árbol y los blancos miden 48', (
+      tester,
+    ) async {
+      await _enLaPregunta(tester);
+      _imagenesFueraDelArbol(tester);
+      for (final t in ['Pregunta anterior', 'Pausar el test y seguir luego']) {
+        final r = tester.getSize(find.byTooltip(t));
+        expect(r.width, greaterThanOrEqualTo(48));
+        expect(r.height, greaterThanOrEqualTo(48));
+      }
+      expect(
+        tester
+            .getSize(
+              find.ancestor(
+                of: find.text('Me gustan las dos'),
+                matching: find.byType(InkWell),
+              ),
+            )
+            .height,
+        greaterThanOrEqualTo(48),
+      );
+    });
+
+    for (final escala in [1.0, 1.3, 2.0]) {
+      testWidgets('con texto a $escala ni el duelo ni la escala desbordan', (
+        tester,
+      ) async {
+        await _enLaPregunta(tester, escala: escala);
+        expect(tester.takeException(), isNull);
+        Get.reset();
+        await _enLaPregunta(tester, indice: 2, escala: escala);
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    testWidgets('desde 1,3 «Me gustan las dos» y «Ninguna me llama» van una '
+        'debajo de otra', (tester) async {
+      await _enLaPregunta(tester, escala: 1.3);
+      expect(
+        tester.getTopLeft(find.text('Ninguna me llama')).dy,
+        greaterThan(tester.getBottomLeft(find.text('Me gustan las dos')).dy),
+      );
+    });
+
+    testWidgets('con menos movimiento no brilla la pluma ni crece la opción', (
+      tester,
+    ) async {
+      await _enLaPregunta(tester, indice: 2, sinMovimiento: true);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(QuestionView.opcionKey('nada')));
+      await tester.pump();
+      expect(
+        tester
+            .widget<AnimatedScale>(
+              find.descendant(
+                of: find.byKey(QuestionView.opcionKey('nada')),
+                matching: find.byType(AnimatedScale),
+              ),
+            )
+            .scale,
+        1,
+      );
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle();
     });
   });
 }

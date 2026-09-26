@@ -6,15 +6,21 @@
 //
 // Datos inventados (datos_de_prueba.dart). El alumno de prueba es 20230001.
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:ulima_plus/configs/themes.dart';
 import 'package:ulima_plus/models/specialty_test_models.dart';
 import 'package:ulima_plus/pages/specialty_test/specialty_test_controller.dart';
+import 'package:ulima_plus/pages/specialty_test/widgets/question_view.dart';
+import 'package:ulima_plus/pages/specialty_test/widgets/ulises_bubble.dart';
 import 'package:ulima_plus/services/specialty_test_service.dart';
 
 import 'datos_de_prueba.dart';
 import 'dobles_de_red.dart';
 import 'dobles_del_controlador.dart';
+import 'montaje_de_pantallas.dart';
 
 TiebreakRecord _desempate(int order, {String? respuesta}) => TiebreakRecord(
   tiebreak:
@@ -36,6 +42,7 @@ void main() {
   tearDown(Get.reset);
 
   _controlador();
+  _pantalla();
 }
 
 void _controlador() {
@@ -178,6 +185,134 @@ void _controlador() {
       Get.delete<SpecialtyTestController>();
       expect(t.service.paused!.answers, {'q01': 'top', 'q02': 'both'});
       expect(t.service.paused!.answeredQuestions, 2);
+    });
+  });
+}
+
+/// Monta la conversación en la pregunta 1 y deja al controlador a mano.
+Future<SpecialtyTestController> _conversacion(
+  WidgetTester tester, {
+  UiFalsa? ui,
+}) async {
+  prepararTest(ApiFalsaDelTest());
+  final c = ponerControlador(ui: ui);
+  await tester.pump();
+  c.empezar();
+  await montarPantalla(tester, const QuestionView());
+  return c;
+}
+
+/// Responde tocando y deja pasar el avance y la transición.
+Future<void> _tocarYAvanzar(WidgetTester tester, Finder objetivo) async {
+  await tester.tap(objetivo);
+  await tester.pump(const Duration(milliseconds: 350));
+  await tester.pump(const Duration(milliseconds: 200));
+}
+
+List<String> _burbujas(WidgetTester tester) => tester
+    .widgetList<UlisesBubble>(find.byType(UlisesBubble))
+    .map((b) => b.text)
+    .toList();
+
+void _pantalla() {
+  group('WIDGET · La conversación con Ulises (RF-TEST-4)', () {
+    testWidgets('caso 9: la barra dice «Pregunta N de T» con las preguntas '
+        'del contenido', (tester) async {
+      await _conversacion(tester);
+      expect(find.text('Ulises'), findsOneWidget);
+      expect(find.text('Pregunta 1 de 5'), findsOneWidget);
+      expect(find.byTooltip('Pregunta anterior'), findsOneWidget);
+      expect(find.byTooltip('Pausar el test y seguir luego'), findsOneWidget);
+      await _tocarYAvanzar(tester, find.byKey(QuestionView.tarjetaKey('top')));
+      expect(find.text('Pregunta 2 de 5'), findsOneWidget);
+    });
+
+    testWidgets('caso 10: las plumas van llenas hasta la actual y vacías '
+        'después, siempre en naranja', (tester) async {
+      await _conversacion(tester);
+      await _tocarYAvanzar(tester, find.byKey(QuestionView.tarjetaKey('top')));
+      const b = Brightness.light;
+      Color pluma(int i) =>
+          tester.widget<Icon>(find.byKey(TestFeathers.plumaKey(i))).color!;
+      expect(pluma(0), MaterialTheme.testFeatherOn(b));
+      expect(pluma(1), MaterialTheme.testFeatherOn(b));
+      expect(pluma(2), MaterialTheme.testFeatherOff(b));
+      expect(pluma(4), MaterialTheme.testFeatherOff(b));
+    });
+
+    testWidgets('caso 11: en pantalla queda solo el último turno de Ulises, '
+        'con sus reglas', (tester) async {
+      await _conversacion(tester);
+      expect(_burbujas(tester), [kDuelHelp]);
+      await _tocarYAvanzar(tester, find.byKey(QuestionView.tarjetaKey('top')));
+      expect(_burbujas(tester), ['Reacción propia de la pregunta uno.']);
+      await _tocarYAvanzar(tester, find.text('Me gustan las dos'));
+      expect(_burbujas(tester), [kBoth[0], kScaleHelp]);
+      await _tocarYAvanzar(tester, find.text('Bastante'));
+      expect(_burbujas(tester), ['Cierre de prueba del bloque uno.']);
+      expect(find.text('Cierra el bloque 1 de 2'), findsOneWidget);
+    });
+
+    testWidgets('caso 12: ninguna línea ni rótulo nombra una especialidad', (
+      tester,
+    ) async {
+      await _conversacion(tester);
+      for (final nombre in [
+        'Ingeniería de Software',
+        'Tecnologías de la Información',
+        'Sistemas de Información',
+        'Desarrollo de Videojuegos',
+      ]) {
+        expect(find.textContaining(nombre), findsNothing);
+      }
+    });
+
+    testWidgets('caso 13: la pastilla del historial se despliega y se pliega', (
+      tester,
+    ) async {
+      await _conversacion(tester);
+      expect(find.text('1 respuesta anterior'), findsNothing);
+      await _tocarYAvanzar(tester, find.byKey(QuestionView.tarjetaKey('top')));
+      expect(find.text('1 respuesta anterior'), findsOneWidget);
+      expect(find.byKey(QuestionView.historialKey), findsNothing);
+      await tester.tap(find.text('1 respuesta anterior'));
+      await tester.pump();
+      expect(find.byKey(QuestionView.historialKey), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(QuestionView.historialKey),
+          matching: find.textContaining('Tarea de prueba uno arriba'),
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('1 respuesta anterior'));
+      await tester.pump();
+      expect(find.byKey(QuestionView.historialKey), findsNothing);
+    });
+
+    testWidgets(
+      'caso 14: «Pregunta anterior» vuelve con la respuesta marcada',
+      (tester) async {
+        final c = await _conversacion(tester);
+        await _tocarYAvanzar(
+          tester,
+          find.byKey(QuestionView.tarjetaKey('top')),
+        );
+        await tester.tap(find.byTooltip('Pregunta anterior'));
+        await tester.pump(const Duration(milliseconds: 200));
+        expect(find.text('Pregunta 1 de 5'), findsOneWidget);
+        expect(find.byIcon(LucideIcons.check), findsOneWidget);
+        expect(c.respuestaActual, 'top');
+      },
+    );
+
+    testWidgets('caso 15: «Pausar el test y seguir luego» cierra la ruta', (
+      tester,
+    ) async {
+      final ui = UiFalsa();
+      await _conversacion(tester, ui: ui);
+      await tester.tap(find.byTooltip('Pausar el test y seguir luego'));
+      expect(ui.cierres, [null]);
     });
   });
 }
