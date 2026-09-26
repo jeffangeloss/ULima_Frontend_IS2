@@ -22,9 +22,11 @@ targets:
   - ../../../lib/main.dart
   - ../../../test/HU37_jeff/**
   - ../../../docs/specs/api-contracts.md
-  # AGENTS.md, KNOWLEDGE.md y README.md entran solo si el dueño aprueba la decisión B12.
+  # AGENTS.md y KNOWLEDGE.md entran solo si el dueño aprueba la decisión B12.
   - ../../../AGENTS.md
   - ../../../KNOWLEDGE.md
+  # README.md entra siempre, porque RF-RCG-5 vuelve falsa su frase sobre la entrada a
+  # /mis-notas (README.md:102). Lo demás de esa línea cambia solo con B10 y B12.
   - ../../../README.md
 ---
 
@@ -37,8 +39,8 @@ targets:
 > Contraparte del backend. `ULima_Backend_IS2/specs/features/recarga-portal/recarga-portal.spec.md`
 > (RS-BE-48 a RS-BE-60), también en borrador, en la rama `feat/recarga-notas-asistencia`
 > (commit `77ed7a3`). Esta spec consume las rutas que ese borrador propone y no inventa ningún
-> campo. Lo que al contrato le falta para la maqueta está en «Contrato que se consume», en
-> «Huecos del contrato».
+> campo. Lo que al contrato le falta para la maqueta, y el máximo de presupuesto que la app le
+> pide bajar, está en «Contrato que se consume», en «Huecos del contrato».
 > Enmienda, también como propuesta, `grades.spec.md`, `course-detail.spec.md`,
 > `portal-sync.spec.md`, `academic-record.spec.md` (RF-REC-6) y `schedule.spec.md` (ver
 > «Cambios en otras specs»). La rama `feat/recarga-notas-asistencia-fe` parte de `origin/main`
@@ -101,7 +103,9 @@ Diagnóstico sobre `19fed1b`.
   `GET /course-detail/sections/:id` (`descrip_cursos_controller.dart:51-99`) y se asigna una sola
   vez.
 - **Importación.** `/portal-sync` pide consentimiento en cada visita (RF-REC-6), contraseña y
-  código, tarda entre 30 y 50 s y gasta 1 de 5 cupos por hora. Al terminar borra
+  código, y gasta 1 de 5 cupos por hora. Su duración con las fases de delegados y de asistencia
+  no se ha medido frente al plazo de 90 s de la app. Las únicas mediciones, de 40,7 s y 47,7 s
+  (2026-09-02, con el backend en Lima), son anteriores a esas dos fases. Al terminar borra
   `CalculadoraController` con `Get.delete(force: true)` (`portal_sync_controller.dart:140-145`).
 - **Estilos que la maqueta reutiliza.** La hoja «Selecciona un Curso» usa `primary` al 10 % de
   fondo y al 30 % de borde (`calculadora_page.dart:238-244`). La tarjeta «Actualizar desde
@@ -121,19 +125,34 @@ estado.
 - **Modelos** (`lib/models/recarga_ulima_models.dart`). `VistaUlima { lastReadAt: DateTime?,
   cursos: List<CursoUlima> }`, `CursoUlima { sectionId: int, courseCode, courseName, sectionCode,
   lastReadAt: DateTime?, evaluaciones: List<EvaluacionUlima> }` y `EvaluacionUlima { key, group?,
-  name, week: int?, weight: double, value: double?, mark, assessmentId: int?, match }`, con la
-  forma exacta de `GET /grades/me/ulima`. `ResultadoRecarga` guarda `readAt`, los estados por
-  curso (`sectionId`, `attendance`, `grades`) y `view`. La lectura es tolerante. Un número que
-  llega como texto se convierte, una fecha ilegible queda `null`, un `mark` desconocido se trata
-  como `pending` y un `match` desconocido como `none`.
+  name, week: int?, weight: double, value: double?, mark, assessmentId: int?, match }`, que
+  leen `GET /grades/me/ulima` con este mapeo de claves. `VistaUlima.cursos` sale de `courses` y
+  `CursoUlima.evaluaciones` sale de `assessments`, y todos los demás campos llevan el mismo
+  nombre que en el JSON. En esta spec, `vista.cursos` y `evaluaciones` nombran siempre esas
+  listas del modelo, y `courses` y `assessments` nombran siempre las claves del JSON.
+  `ResultadoRecarga` guarda `readAt`, los estados por curso (`sectionId`, `attendance`,
+  `grades`) y `view`. La lectura es tolerante. Un número que llega como texto se convierte, una
+  fecha ilegible queda `null`, un `mark` desconocido se trata como `pending` y un `match`
+  desconocido como `none`.
 - **`cargar()`** hace `GET /grades/me/ulima` y deja el resultado en `vista` (un `Rx`). Un fallo no
-  borra la vista que ya había y deja `errorCarga` en verdadero hasta la siguiente carga buena.
+  borra la vista que ya había del mismo alumno y deja `errorCarga` en verdadero hasta la
+  siguiente carga buena.
 - **`recargar({password, passcode})`** hace `POST /portal-sync/refresh` con el cuerpo exacto
   `{ "credentials": { "password": …, "passcode": … }, "consent": true }`. No manda `cookies`, ni el
   código del alumno, ni ninguna otra clave, porque el backend valida en modo estricto. El plazo de
-  la app es de 90 s, el mismo de la importación (D18). Con `200` aplica `view` a `vista` y guarda
-  los estados por curso del último resultado. Con error deja un `AvisoRecarga` (título, cuerpo y
-  acción, RF-RCG-4) en `ultimoAviso`.
+  la app es de 90 s, el mismo de la importación (D18), y solo alcanza si el peor caso del backend
+  queda por debajo, lo que exige bajar el máximo de su presupuesto (hueco 5). Con `200` aplica
+  `view` a `vista` y guarda los estados por curso del último resultado. Con error deja un
+  `AvisoRecarga` (título, cuerpo y acción, RF-RCG-4) en `ultimoAviso`.
+- **Plazo vencido o fallo de red** (D23). El backend puede terminar y escribir después de que la
+  app deja de esperar. Por eso `recargar()` guarda, al enviar, la `lastReadAt` que tiene la vista
+  y, tras el plazo o un fallo de red sin respuesta, llama a `cargar()` antes de volver. Si la
+  vista nueva trae una `lastReadAt` posterior a la guardada, o una donde antes había `null`,
+  la recarga sí se guardó y `recargar()` vuelve como un `200` sin estados por curso, así que no
+  se pinta ninguna línea de lectura parcial. Si no, vuelve con el aviso del plazo o de la red.
+  Mientras ese aviso siga presente, cualquier `cargar()` posterior que traiga una `lastReadAt`
+  posterior a la guardada lo borra y corre la recarga del horario de RF-RCG-3. Las dos horas son
+  del servidor, así que el reloj del teléfono no interviene.
 - **Contraseña y código.** Llegan como parámetros y se descartan al volver la llamada. Nunca
   entran en un `Rx`, en `shared_preferences`, en `flutter_secure_storage` ni en un `debugPrint`, y
   el cuerpo de la petición nunca se imprime. Es la misma regla de «Cambio de diseño» de
@@ -142,9 +161,25 @@ estado.
   en ese estado no hace nada.
 - **Qué guarda y dónde.** Todo vive en memoria. `AuthService.logout()` llama a `clear()`, con la
   guarda `Get.isRegistered<RecargaUlimaService>()`, igual que con `AcademicRecordService`, y
-  `clear()` vacía `vista`, `ultimoAviso` y los estados por curso. Nada de esto va a
-  `shared_preferences`, porque son datos académicos oficiales (KNOWLEDGE.md, «Decisiones no
-  negociables»).
+  `clear()` vacía `vista`, `ultimoAviso`, `errorCarga`, `enviando` y los estados por curso. Nada
+  de esto va a `shared_preferences`, porque son datos académicos oficiales (KNOWLEDGE.md,
+  «Decisiones no negociables»).
+- **Dueño de los datos.** `logout()` no basta. Cuando caduca el JWT, `ApiClient` borra la sesión
+  y navega a `/login` sin llamar a `logout()` (`api_client.dart:143-160`), y el servicio es
+  permanente, así que el siguiente alumno que entra en el mismo teléfono vería la vista del
+  anterior. El servicio se ata al alumno como `AcademicRecordService`
+  (`academic_record_service.dart:48-98`), con tres reglas.
+  1. Guarda `_ownerCode`, el código del alumno dueño de la vista, del aviso, de `errorCarga` y de
+     los estados por curso, y un contador de generación.
+  2. `vista`, `ultimoAviso`, `errorCarga` y los estados por curso se leen por getters que leen
+     primero su `Rx`, para que el `Obx` que los llama se suscriba, y devuelven `null`, falso o
+     vacío si el código de `AuthService.to.currentUser` no es `_ownerCode`. Ninguna pantalla ni
+     ningún controller lee los `Rx` sin pasar por esos getters.
+  3. `cargar()` y `recargar()` comparan ese código con `_ownerCode` y, si difiere, llaman a
+     `clear()` antes de cualquier `await`. `clear()` sube el contador, y cada petición lleva el
+     número con el que salió. Una respuesta de `cargar()` o de `recargar()` que vuelve con otro
+     número, porque en medio hubo un `clear()` o un cambio de dueño, se descarta sin tocar la
+     vista, el aviso, `errorCarga` ni los estados.
 - **Nada de datos de terceros.** El contrato no trae la mínima ni la máxima de la clase, y la app
   tampoco las pide ni las calcula.
 
@@ -170,9 +205,19 @@ De arriba abajo lleva lo siguiente.
    `Tu contraseña del portal`, `autofillHints: password` y un ojo a la derecha que alterna
    `Mostrar contraseña` y `Ocultar contraseña` en su tooltip. El campo mide al menos 52 de alto,
    con esquinas de 12.
-4. El rótulo `Código del autenticador` (14, negrita) y seis casillas de 50 de alto, con
+4. El rótulo `Código del autenticador` (14, negrita) y seis casillas con
    `PasswordResetOtpField`, que ya trae teclado numérico, `digitsOnly` y
-   `autofillHints: oneTimeCode`. Debajo, centrado, `El código de 6 dígitos que cambia cada 30 segundos.`
+   `autofillHints: oneTimeCode`. Hoy ese widget fija las casillas en 52 de alto, las rellena con
+   `palette.fieldFill` y solo pinta el borde de la activa (`password_reset_ui.dart:400-435`),
+   mientras la maqueta dibuja casillas de contorno, sin relleno y de 50 de alto. La hoja le pasa
+   `PasswordResetPalette.from(context)`, del que el widget sigue tomando el color del dígito
+   (`fieldText`) y el borde de la casilla activa (`focusedFieldLine`). Además, el widget suma
+   cuatro parámetros opcionales, cuyo valor por defecto deja como están `/portal-sync`,
+   `/registro` y el cambio de contraseña. Son `boxHeight` (52 por defecto y 50 en la hoja),
+   `boxFill` (`palette.fieldFill` por defecto y transparente en la hoja), `idleBorderColor`
+   (transparente por defecto y `onSurface` al 50 % en la hoja, D13, con ancho de 1) y
+   `readOnly` (falso por defecto y verdadero durante la espera, que no deja enfocar ni editar
+   las casillas). Debajo, centrado, `El código de 6 dígitos que cambia cada 30 segundos.`
    (11, `onSurface` al 70 %, D14).
 5. Dos botones de 48 de alto, uno al lado del otro, `Cancelar` (contorno) y `Actualizar`
    (relleno naranja y texto blanco en negrita, D12).
@@ -185,27 +230,29 @@ botón apagado ya dice qué falta. La contraseña viaja sin `trim()` y el códig
 igual que en `/portal-sync`.
 
 **Espera.** Al tocar «Actualizar», la hoja llama a `RecargaUlimaService.recargar` y pasa a la
-espera. Los dos campos quedan de solo lectura, la X y «Cancelar» se apagan, «Actualizar» cambia su
-texto por un indicador circular de 20 y, bajo los botones, aparece
-`Leyendo miUlima. Puede tardar hasta un minuto.` (12, `onSurface` al 70 %, centrado, D4). La
-espera no tiene etapas, porque la recarga es una sola petición.
+espera. Los dos campos quedan de solo lectura (las casillas, con `readOnly`), la X y «Cancelar»
+se apagan, «Actualizar» cambia su texto por un indicador circular de 20 y, bajo los botones,
+aparece `Leyendo miUlima. Puede tardar hasta un minuto.` (12, `onSurface` al 70 %, centrado,
+D4). La espera no tiene etapas, porque la recarga es una sola petición.
 
 **Cómo se cierra.** La hoja se abre con `isDismissible: false` y `enableDrag: false` (D4), así que
 un toque fuera o un arrastre no la cierran ni dejan el código a medio escribir. Fuera de la espera
 la cierran la X, «Cancelar» y el botón atrás del sistema. Durante la espera nada la cierra, y un
 `PopScope` con `canPop: false` bloquea el botón atrás. Al terminar, con éxito o con error, la hoja
-se cierra sola (RF-RCG-3). Cerrarla de cualquier forma vacía los dos campos.
+se cierra sola (RF-RCG-3). Cerrarla de cualquier forma, con la X, con «Cancelar», con atrás o al
+terminar, vacía los dos campos.
 
 ### RF-RCG-3. Resultado de la recarga
 
 - **Éxito (`200`).** La hoja se cierra y vacía sus campos. `RecargaUlimaService` aplica `view` y
   guarda los estados por curso. Después, sin esperar a la pantalla, recarga el horario con
   `HorarioController.reload()` si el controller está registrado, porque la asistencia y
-  `asistenciaLeidaEn` llegan por `GET /schedule/me/sessions` y no en `view`. La calculadora y
-  `/mis-notas` se actualizan solas porque leen `vista` (RF-RCG-6 y RF-RCG-7), y la ficha abierta
-  vuelve a leer su sección (RF-RCG-8). La app no muestra ningún resumen ni aviso de éxito (D19).
-  La hora nueva de la franja, de la fila «Notas oficiales» y del bloque de asistencia ya muestra
-  la lectura nueva.
+  `asistenciaLeidaEn` llegan por `GET /schedule/me/sessions` y no en `view`. Es la única llamada
+  a `reload()` de la recarga, y el servicio expone su `Future` como `recargaHorario` para que
+  nadie la repita. La calculadora y `/mis-notas` se actualizan solas porque leen `vista`
+  (RF-RCG-6 y RF-RCG-7), y la ficha abierta vuelve a leer su sección (RF-RCG-8). La app no
+  muestra ningún resumen ni aviso de éxito (D19). La hora nueva de la franja, de la fila «Notas
+  oficiales» y del bloque de asistencia ya muestra la lectura nueva.
 - **Lectura parcial.** Un `200` puede traer cursos que no se leyeron. Hasta el siguiente intento o
   hasta cerrar la app, una tarjeta de `/mis-notas` cuyo estado `grades` en ese resultado no es
   `read`, y un bloque de asistencia cuyo estado `attendance` no es `updated`, muestran bajo su
@@ -214,6 +261,13 @@ se cierra sola (RF-RCG-3). Cerrarla de cualquier forma vacía los dos campos.
 - **Error.** La hoja se cierra y vacía la contraseña y el código, como pide la maqueta, y
   `ultimoAviso` queda con el aviso de RF-RCG-4. La vista anterior no cambia, así que las notas y la
   asistencia leídas antes siguen a la vista.
+- **Plazo vencido o fallo de red.** Antes de cerrar la hoja, `recargar()` vuelve a pedir la vista
+  (RF-RCG-1, D23). Si esa vista muestra que la recarga sí se guardó, la hoja sigue el camino del
+  éxito, sin línea de lectura parcial. Si no, sigue el del error. Con el máximo de presupuesto del
+  hueco 5, el backend ya terminó cuando vence el plazo de la app, así que un «Reintentar»
+  inmediato no choca con `409 PORTAL_REFRESH_IN_PROGRESS`. Tras un fallo de red el backend puede
+  seguir trabajando hasta su peor caso, y un reintento en ese lapso recibe ese `409`, cuyo aviso
+  ya pide esperar.
 - **`401`.** Es la expiración del JWT y la maneja `ApiClient` como siempre, que cierra la sesión.
   El backend nunca responde `401` por un fallo del portal.
 
@@ -222,8 +276,9 @@ se cierra sola (RF-RCG-3). Cerrarla de cualquier forma vacía los dos campos.
 Cuando una recarga falla, el aviso ocupa el lugar de la franja de `/mis-notas` (RF-RCG-6) y
 aparece también, en versión compacta, en el bloque de asistencia de la ficha (RF-RCG-8). Vive en
 `ultimoAviso`, en memoria. Se borra cuando el alumno envía un nuevo intento desde la hoja, al
-tocar «Cargar mis datos», al cerrar sesión y al cerrar la app (D17). Un aviso nuevo reemplaza al
-anterior.
+tocar «Cargar mis datos», al cerrar sesión, al cambiar el alumno dueño (RF-RCG-1), al cerrar la
+app (D17) y, si es el aviso del plazo o de la red, cuando una lectura posterior muestra que la
+recarga sí se guardó (D23). Un aviso nuevo reemplaza al anterior.
 
 **Forma en `/mis-notas`.** La tarjeta de la franja con el borde en rojo al 30 %, el ícono
 `Icons.error_outline` de 20 en rojo (`Colors.red`) sobre una caja de rojo al 12 %, el título
@@ -272,10 +327,11 @@ todo el ancho, en `lib/components/recarga_ulima/fila_notas_oficiales.dart`.
   `MaterialTheme.iconoNaranja`. En el centro, `Notas oficiales` (14, peso 700, `onSurface`) y,
   debajo, la segunda línea (12, `onSurface` al 70 %). A la derecha, `Icons.chevron_right` de 22 en
   `onSurface` al 50 %.
-- **Segunda línea.** Con la vista cargada y `lastReadAt` presente, `Última lectura hoy a las 10:42`
-  (RF-RCG-9). Con la vista cargada y `lastReadAt` en `null`,
-  `Aún no se actualizan desde la ULima`. Mientras la vista carga, o si su carga falla, la fila
-  lleva solo el título.
+- **Segunda línea.** Depende solo de la vista del alumno actual (RF-RCG-1), no de `errorCarga`.
+  Con vista y `lastReadAt` presente, `Última lectura hoy a las 10:42` (RF-RCG-9), también si una
+  carga posterior falló, porque esa hora sigue siendo la de los datos que la calculadora
+  muestra. Con vista y `lastReadAt` en `null`, `Aún no se actualizan desde la ULima`. Sin vista,
+  porque la primera carga está en curso o porque falló, la fila lleva solo el título.
 - **Toque.** `Get.toNamed('/mis-notas')`. La fila no espera resultado, porque la calculadora lee
   `vista` y se actualiza sola.
 - **Estados de la calculadora.** La fila está en los tres estados de hoy, con notas, sin notas y
@@ -287,6 +343,9 @@ todo el ancho, en `lib/components/recarga_ulima/fila_notas_oficiales.dart`.
   curso como `Rx` propios y los llena desde `RecargaUlimaService` en `onInit`, con la guarda
   `Get.isRegistered`. La página nunca hace `Get.find` del servicio. Así la prueba HU07, cuyo doble
   reemplaza `onInit`, sigue pasando sin cambios.
+- **README.** La frase de `README.md:102` que dice que a `/mis-notas` se llega por el ícono
+  `school_outlined` de la calculadora deja de ser cierta con este cambio, así que el PR de
+  implementación la corrige para nombrar la fila «Notas oficiales», con o sin la decisión B12.
 
 ### RF-RCG-6. La pantalla «Notas oficiales» (`/mis-notas`, cambio 2)
 
@@ -316,6 +375,8 @@ según el caso, va una línea de 12 en `textSecondary`.
 - Curso con `lastReadAt` en `null` y sin evaluaciones, `Aún no se actualizan desde la ULima`, sin
   filas.
 - Curso sin lectura en el último resultado, `No se pudo leer en esta actualización.` (RF-RCG-3).
+- Si un curso cumple los dos casos, porque nunca se leyó y además falló en el último resultado,
+  la tarjeta lleva solo `No se pudo leer en esta actualización.`, que es el dato más reciente.
 
 **Fila de evaluación.** Una por cada elemento de `evaluaciones`, en el orden en que llegan (por
 semana, las sin semana al final, y luego por clave).
@@ -333,7 +394,8 @@ semana, las sin semana al final, y luego por clave).
 
 **Insignia «Final».** Igual que hoy. Suma el valor por el peso entre 100 de cada evaluación
 publicada, cuenta `NP` como 0 (decisión B8) y las `pending` como 0, y aparece solo si el curso
-tiene al menos una `graded` o `np`. Su umbral es el de la decisión B9, por defecto 10.5.
+tiene al menos una `graded` o `np`. Su umbral sigue en 10.5 (`mis_notas_page.dart:208`) con la
+opción por defecto de la decisión B9.
 
 **Estados.**
 
@@ -341,7 +403,7 @@ tiene al menos una `graded` o `np`. Su umbral es el de la decisión B9, por defe
 | --- | --- |
 | Primera carga | El esqueleto de hoy (`SkeletonCardList(count: 4)`), sin franja. |
 | Error de carga sin datos | El vacío de hoy con `Icons.wifi_off` y `No se pudieron cargar tus notas oficiales.`, sin franja. |
-| Sin cursos (`courses: []`) | El vacío de hoy con `Icons.school_outlined` y `Aún no tienes cursos con notas oficiales.`, sin franja, porque una recarga respondería `409 IMPORT_REQUIRED`. |
+| Sin cursos (`courses: []` en el JSON, `vista.cursos` vacía) | El vacío de hoy con `Icons.school_outlined` y `Aún no tienes cursos con notas oficiales.`, sin franja, porque una recarga respondería `409 IMPORT_REQUIRED`. |
 | Antes de la primera lectura | La franja con `Aún no se actualizan desde la ULima` y las tarjetas con esa misma línea y sin filas. |
 | Sin notas publicadas | La franja con la hora y las filas con `Sin nota`, sin «Final». Es el estado del sondeo de la semana 5. |
 | Con notas | La franja con la hora, las filas con su nota y la insignia «Final». |
@@ -362,15 +424,27 @@ porque todavía no hay nota, y siguen disponibles para simular. Las que no tiene
 **Cómo se ven.** Cada una es un `NotaTile` con el mismo contenedor, la misma tipografía y la línea
 `Peso: 20%  •  Nota: 15.0/20` de siempre, con el formato de D10, o `Peso: 20%  •  Nota: NP` con
 `np`. El título es el `name` de la ULima (D8). En lugar del tacho va la marca `ULima`, que no es
-tocable. Es una píldora con el tamaño de `RecordPositionBadge` (relleno de 10 por 4, texto de 11 y
-peso 800), fondo `espPrincipalBg` y texto en el naranja de D11, en un alto de 40 como el tacho, así
-que la fila mide lo mismo. La fila no se puede borrar ni editar. Su `Semantics` dice
+tocable. Es una píldora con el tamaño de `RecordPositionBadge` (relleno de 10 por 4, texto de 11
+y peso 800), fondo `espPrincipalBg` y texto en el naranja de D11, en un alto de 40 como el tacho,
+así que la fila mide lo mismo. La fila no se puede borrar ni editar. Su `Semantics` dice
 `Examen escrito 1, peso 20 por ciento, nota 15.0 de 20, publicada por la ULima`.
+
+**API de `NotaTile`.** Hoy recibe `int peso`, `double nota` y un `onDelete` obligatorio
+(`nota_tile.dart:5-8`), así que no puede pintar `12.5%`, `NP` ni la marca. Cambia de forma
+compatible con las llamadas de hoy. `peso` pasa a `num`, `nota` pasa a `double?`, y suma
+`np` (falso por defecto) y `deUlima` (falso por defecto). `onDelete` pasa a `VoidCallback?`, con
+un `assert` que lo exige cuando `deUlima` es falso. Con `deUlima`, el tile pinta la marca en lugar
+del tacho, no abre el diálogo `Eliminar Nota` y lleva el `Semantics` de arriba. Con `np`, la línea
+dice `Nota: NP`, y `nota` puede llegar `null`. En las dos clases de filas, el peso se escribe
+con la función pura de D10 (`20%` o `12.5%`) y la nota con un decimal, como hoy (D10), así que
+una misma tarjeta nunca mezcla `14.25` y `14.3`. Las funciones de formato viven en
+`lib/domain/recarga_ulima/formato_nota.dart`.
 
 **Promedio y suma de pesos.** `POST /grades/me/calculate` recibe las filas visibles del curso, las
 simuladas y las de la ULima, con `NP` como 0 (decisión B8) y el peso exacto de la ULima, sin
-truncar. La barra «Suma de pesos» suma también esas filas. El aviso «Desaprobado» usa el umbral de
-la decisión B9.
+truncar. La barra «Suma de pesos» suma también esas filas. El aviso «Desaprobado» conserva su
+umbral de hoy, por debajo de 11 (`curso_card.dart:95`), con la opción por defecto de la decisión
+B9.
 
 **Una evaluación con las dos notas.** Si el alumno tiene una nota simulada para una evaluación
 que la ULima ya publica (mismo `assessmentId`), se ve solo la fila de la ULima y el promedio usa
@@ -379,8 +453,14 @@ solo esa. La simulada no se borra de `simulated_grades` y vuelve a verse si la U
 
 **Guardar y borrar.** Las filas de la ULima viven en una lista aparte de `curso['notas']`, así que
 `_guardarNotasRemotas` sigue mandando solo las simuladas, incluidas las que quedan ocultas, y nunca
-una de la ULima. El tacho de una simulada la borra por su `evaluacionId`, no por su posición en la
-lista visible.
+una de la ULima. `CursoCard` trata la ausencia de esa lista aparte como una lista vacía, porque el
+doble de HU07 arma sus cursos sin ella. El borrado conserva la firma
+`eliminarNota(int cursoIndex, int notaIndex)`, que el doble de HU07 sobrescribe
+(`test/HU07_sam/calculadora_flujo_cajanegra_test.dart:89`), y el `onDeleteNota` de `CursoCard`
+sigue con la forma `Function(int, int)`. `notaIndex` es la posición de la simulada en
+`curso['notas']`, la lista de simuladas, y no en la lista visible, que mezcla las dos clases de
+filas y omite las simuladas ocultas. `CursoCard` traduce la fila visible a ese índice buscando en
+`curso['notas']` la simulada con el mismo `evaluacionId`.
 
 **Registrar Nota.** `getAvailableEvaluations` excluye también las evaluaciones con una fila de la
 ULima visible. El modal, sus textos y su validación no cambian.
@@ -399,10 +479,12 @@ suma al final de sus filas la línea
 (12, `onSurface` al 70 %, con `Icons.info_outline` de 16, D15).
 
 **Cuándo se carga y se recalcula.** En `onInit`, si el servicio está registrado y todavía no
-tiene vista, el controller llama a `cargar()`, y `recargarTodo()` (RF-RCG-11) la vuelve a pedir
-siempre. Con cada cambio de `vista` (un `ever` que el controller cierra en `onClose`), el
-controller rehace las filas de la ULima y pide el promedio de los cursos que cambian. Un fallo
-de `GET /grades/me/ulima` deja la calculadora como hoy, sin filas de la ULima.
+tiene vista para el alumno actual (su getter filtrado devuelve `null`, RF-RCG-1), el controller
+llama a `cargar()`, y `recargarTodo()` (RF-RCG-11) la vuelve a pedir siempre. Con cada cambio de
+`vista` (un `ever` que el controller cierra en `onClose`), el controller rehace las filas de la
+ULima desde el getter filtrado y pide el promedio de los cursos que cambian. Un fallo de
+`GET /grades/me/ulima` sin vista previa del alumno deja la calculadora como hoy, sin filas de la
+ULima. Con vista previa del mismo alumno, las filas siguen, igual que la hora de RF-RCG-5.
 
 ### RF-RCG-8. La asistencia en la ficha del curso
 
@@ -416,20 +498,43 @@ se suma una fila, en `lib/components/recarga_ulima/pie_asistencia.dart`, con dos
   táctil de 48 y el color de texto de D11 sobre `bloqueAsistencia`. Abre la hoja (RF-RCG-2).
 
 Si el último resultado no trae esta sección como leída, debajo va `No se pudo leer en esta actualización.`
-(RF-RCG-3). Con `ultimoAviso` presente, la fila muestra en su lugar el aviso compacto, con
-`Icons.error_outline` de 18 en rojo, `No se pudo actualizar` (13, peso 800) y el cuerpo de
-RF-RCG-4 (12), y el botón cambia a la acción de ese aviso.
+(12, `onSurfaceVariant`, RF-RCG-3). Con `ultimoAviso` presente, la fila muestra en su lugar el
+aviso compacto, con `Icons.error_outline` de 18 en rojo, `No se pudo actualizar` (13, peso 800)
+y el cuerpo de RF-RCG-4 (12), y el botón cambia a la acción de ese aviso.
 
 **Sin datos.** En el estado de `descrip_cursos.dart:314-360`, el botón pasa a decir
-`Actualizar desde la ULima` y abre la hoja en vez de `/portal-sync` (D3). Los textos
-`Sin datos de asistencia para este curso.` y
-`Todavía no se importaron tus horas de clase desde miUlima.` no cambian.
+`Actualizar desde la ULima`, con el color de texto de D11, y abre la hoja en vez de
+`/portal-sync` (D3). Los textos `Sin datos de asistencia para este curso.` y
+`Todavía no se importaron tus horas de clase desde miUlima.` no cambian. Como D19 no muestra el
+éxito, este estado también lleva las dos señales de la recarga, entre la línea
+`Todavía no se importaron…` y el botón, separadas por 12 como el resto del bloque.
 
-**Después de una recarga.** Si la hoja termina con `200`, la ficha espera a que
-`HorarioController.reload()` termine y llama a un método nuevo,
-`DescripCursosController.recargarSeccion(idSeccion)`, que vuelve a leer solo la sección, primero
-de `uniqueEnrolledCourses` y, si no está, de `GET /course-detail/sections/:id`, y la reemplaza en
-`secciones` sin tocar anuncios, asesorías ni contactos. La pestaña elegida no cambia.
+- Si el último resultado no trae esta sección como leída, `No se pudo leer en esta actualización.`
+  (12, `onSurfaceVariant`). Es el caso de un `200` en el que el menú de miUlima no trae el curso
+  (`missing`) o su página falla, y sin esta línea el bloque quedaría igual y mudo.
+- Con `ultimoAviso` presente, el aviso compacto de arriba, en lugar de esa línea, y el botón
+  cambia a la acción del aviso.
+
+**Estado por curso.** El estado del último resultado se busca comparando `sectionId` como texto
+con `idSeccion`, como en RF-RCG-7.
+
+**Sin el servicio.** La ficha lee `RecargaUlimaService` solo con la guarda
+`Get.isRegistered<RecargaUlimaService>()`, como la calculadora (RF-RCG-5). Sin el servicio, el
+bloque queda como hoy, sin la fila nueva, y el botón del estado sin datos sigue abriendo
+`/portal-sync`. Así `test/HU23_jeff/chat_ficha_curso_test.dart` y
+`test/HU35_jeff/time_blocks_acciones_test.dart`, que montan `DescripCursosPage` sin el servicio,
+siguen pasando sin cambios.
+
+**Después de una recarga.** Si la hoja termina con `200`, la ficha llama a un método nuevo,
+`DescripCursosController.recargarSeccion(idSeccion)`, y no llama ella a
+`HorarioController.reload()`, que ya corre una sola vez desde el servicio (RF-RCG-3).
+`recargarSeccion` pide primero `GET /course-detail/sections/:id`, que trae las horas del alumno
+autenticado y `asistenciaLeidaEn`, porque `reload()` se traga sus errores
+(`horario_controller.dart:176-193`) y `uniqueEnrolledCourses` puede seguir vieja. Solo si esa
+petición falla, espera `recargaHorario` (RF-RCG-3) y busca la sección en
+`uniqueEnrolledCourses`. Si ninguna de las dos la trae, la sección no cambia. Si alguna la trae,
+la reemplaza en `secciones` y en `seccionActual` sin tocar anuncios, asesorías ni contactos. La
+pestaña elegida no cambia.
 
 **Modelo.** `Seccion` suma `asistenciaLeidaEn` (`DateTime?`), leído de `asistenciaLeidaEn` con
 `DateTime.tryParse`. Un backend sin RS-BE-58 no lo manda y queda `null`. Las horas siguen
@@ -443,12 +548,14 @@ elegida conserva al menos 200 de alto visible, y la verificación manual lo comp
 Una función pura, `cuandoSeLeyo(DateTime leidoEn, DateTime ahora)`, en
 `lib/domain/recarga_ulima/ultima_lectura.dart`, devuelve la parte variable del texto (D22).
 
-- Las dos fechas se llevan a hora de Lima (UTC−5 todo el año, sin horario de verano, como
-  `enHoraDeLima` de `chat_linea_tiempo.dart`) y se comparan por fecha de calendario.
+- Las dos fechas se llevan a hora de Lima (UTC−5 todo el año, sin horario de verano) con
+  `enHoraDeLima` de `chat_linea_tiempo.dart`, que es pública, y se comparan por fecha de
+  calendario.
 - Mismo día, o un `leidoEn` posterior a `ahora` por un reloj atrasado, da `hoy a las HH:mm`. El
   día anterior da `ayer a las HH:mm`. Otro día del mismo año da `el 22 de septiembre a las HH:mm`,
-  con el mes en minúscula y la lista de meses de `chat_linea_tiempo.dart`. Otro año suma
-  ` de 2025` después del mes.
+  con el mes en minúscula. Otro año suma ` de 2025` después del mes. La lista de meses vive en
+  `ultima_lectura.dart`, con los mismos doce nombres, porque la de `chat_linea_tiempo.dart`
+  (`_meses`, `:133`) es privada y ese archivo no está en `targets`.
 - `HH:mm` va en 24 horas y con ceros a la izquierda.
 - Los textos completos son `Última lectura <cuándo>` en la fila, la franja y el bloque de
   asistencia, y `Se muestran las notas leídas <cuándo>.` en el aviso.
@@ -465,11 +572,14 @@ en claro. Los contrastes de esta tabla salen de la fórmula de WCAG 2.1 sobre lo
 | Ícono de la fila (`iconoNaranja`) | 3,64:1 | 5,00:1 | 3:1 |
 | Flecha de la fila (`onSurface` al 50 %) | 3,25:1 | 4,81:1 | 3:1 |
 | Texto de la marca `ULima` (`#A34300` en claro, `#FF8C42` en oscuro, sobre `espPrincipalBg`) | 5,66:1 | 5,92:1 | 4,5:1 |
+| Texto `Nota: …/20` de las filas de la ULima (`primary` sobre `tertiaryContainer`, heredado de `NotaTile`, D24) | 2,44:1 | 5,55:1 | 4,5:1, **no se cumple en claro** |
+| Ícono de la franja (`primaryDark` sobre `espPrincipalBg`, como la tarjeta del Perfil) | 3,73:1 | 3,32:1 | 3:1 |
 | Segunda línea de la franja y del aviso (`textSecondary` sobre `cardBg`) | 10,35:1 | 6,44:1 | 4,5:1 |
 | Acción del aviso (`#A34300` en claro, `#FF6600` en oscuro, sobre `cardBg`) | 6,25:1 | 5,65:1 | 4,5:1 |
 | Ícono rojo del aviso sobre su caja | 3,14:1 | 4,00:1 | 3:1 |
 | Ícono rojo del aviso compacto sobre `bloqueAsistencia` | 3,13:1 | 3,72:1 | 3:1 |
 | Botón `Actualizar` del bloque de asistencia (`#A34300` y `#FF6600` sobre `bloqueAsistencia`) | 5,31:1 | 4,67:1 | 4,5:1 |
+| Botón del estado sin datos (`#A34300` y `#FF6600` sobre `bloqueAsistencia`, D11; hoy `primary`, con 2,49:1 en claro) | 5,31:1 | 4,67:1 | 4,5:1 |
 | Aviso de consentimiento y ayuda de la hoja (`onSurface` al 70 %) | 6,38:1 | 8,74:1 | 4,5:1 |
 | Pista del campo de contraseña (`onSurface` al 60 %) | 4,54:1 | 6,74:1 | 4,5:1 |
 | Borde de las casillas y del campo (`onSurface` al 50 %, D13) | 3,31:1 | 5,08:1 | 3:1 |
@@ -477,9 +587,12 @@ en claro. Los contrastes de esta tabla salen de la fórmula de WCAG 2.1 sobre lo
 
 Los naranjas de texto entran a `themes.dart` como dos tokens con nombre propio y un comentario
 que cita su contraste, como `iconoNaranja`. `textoNaranja` vale `#A34300` en claro y `#FF6600` en
-oscuro, para la acción del aviso y el botón del bloque de asistencia, e `insigniaUlimaTexto` vale
-`#A34300` en claro y `#FF8C42` en oscuro, para la marca `ULima`. El botón de la hoja repite el color de «Registrar», que tampoco llega a
-4,5:1, y la decisión D12 deja ver la alternativa.
+oscuro, para la acción del aviso y los dos botones del bloque de asistencia, e
+`insigniaUlimaTexto` vale `#A34300` en claro y `#FF8C42` en oscuro, para la marca `ULima`. El
+botón de la hoja repite el color de «Registrar», que tampoco llega a 4,5:1, y la decisión D12
+deja ver la alternativa. Las filas de la ULima heredan de `NotaTile` el texto `Nota: …/20` en
+`primary` sobre `tertiaryContainer`, igual que las simuladas de hoy, y la decisión D24 deja ver
+la alternativa, que cambia la calculadora aprobada.
 
 **Accesibilidad, además del contraste.** Todo lo tocable mide al menos 48 por 48. Cada botón de
 solo ícono tiene tooltip. El título de la hoja es un encabezado (`Semantics(header: true)`), el
@@ -505,10 +618,13 @@ Es la lista «Qué no cambia» de la maqueta aprobada, con lo que el código fij
 
 - La cabecera `ULIMA++` con la campana, el título `Calculadora de Notas` (24, peso 900) y
   `Cursos con notas: N` con su estilo.
-- La `CursoCard` entera, con su cabecera naranja, `Sección: N`, el nombre, `Ciclo: …`, el promedio
-  de 36, el aviso `Desaprobado` con su ícono y la barra `Suma de pesos: X% / 100%`. Solo el umbral
-  del aviso depende de la decisión B9.
-- Las filas de las notas simuladas, con peso, nota, tacho y el diálogo `Eliminar Nota`.
+- La `CursoCard`, con su cabecera naranja, `Sección: N`, el nombre, `Ciclo: …`, el promedio de 36,
+  el aviso `Desaprobado` con su ícono y su umbral de 11, y la barra `Suma de pesos: X% / 100%`.
+  La opción por defecto de la decisión B9 conserva los dos umbrales de hoy, 11 para el aviso y
+  10.5 para la insignia `Final`. Sus otras dos opciones cambian lo aprobado, una el aviso y la
+  otra la insignia.
+- Las filas de las notas simuladas, con peso, nota con un decimal, tacho y el diálogo
+  `Eliminar Nota`.
 - El botón ancho `+ Registrar Nota`, la hoja `Selecciona un Curso` y el modal `Registrar Nota`
   con sus textos (`Evaluación (del Sílabo)`, `Peso automático:`, `Nota (0 - 20)`, los tres errores
   de validación y `<sigla> registrada`).
@@ -522,8 +638,14 @@ Es la lista «Qué no cambia» de la maqueta aprobada, con lo que el código fij
 - En `/mis-notas`, la barra naranja con `Notas oficiales`, las tarjetas de curso, la insignia
   `Final` y la flecha de recarga, que sigue consultando solo a ULima++.
 
+D7 y D15 tocan la `CursoCard` más allá de los tres cambios aprobados, y los dos quedan
+abiertos. D7 ordena las filas según el sílabo, que es el orden que dibuja la maqueta pero
+reordena las simuladas, que hoy salen en el orden en que se registraron. D15 suma una línea al
+final de la tarjeta cuando la ULima publica evaluaciones que no están en el sílabo.
+
 Lo único que sale es el birrete sin texto junto al título. Las pruebas `test/HU07_sam/**`,
-`test/HU06_sam/**` y `test/HU23_jeff/chats_pestana_test.dart` siguen pasando sin cambios.
+`test/HU06_sam/**` y `test/HU23_jeff/chats_pestana_test.dart` siguen pasando sin cambios, y la
+firma de `eliminarNota` que conserva RF-RCG-7 es la que lo permite.
 
 ## Textos nuevos
 
@@ -538,7 +660,7 @@ Todos son propuesta de esta spec, salvo los que copian la maqueta aprobada, marc
 | Hoja | `Actualizar desde la ULima` (M), `Entras como 20230001` (M), el aviso de consentimiento (M), `Contraseña de miUlima` (M), `Tu contraseña del portal` (M), `Código del autenticador` (M), `El código de 6 dígitos que cambia cada 30 segundos.` (M), `Cancelar` (M), `Actualizar` (M), `Cerrar`, `Mostrar contraseña`, `Ocultar contraseña`, `Leyendo miUlima. Puede tardar hasta un minuto.` |
 | Aviso | `No se pudo actualizar` (M), `Reintentar` (M), `Se muestran las notas leídas hoy a las 10:42.` (M), el cuerpo del rechazo (M), los demás cuerpos de RF-RCG-4, `Cargar mis datos` |
 | Calculadora | La marca `ULima` (M), `Nota: NP`, la línea del sílabo que no coincide |
-| Ficha del curso | `Actualizar`, `Actualizar desde la ULima`, `No se pudo actualizar`, `No se pudo leer en esta actualización.` |
+| Ficha del curso | `Actualizar`, `Actualizar desde la ULima`, `No se pudo actualizar`, `No se pudo leer en esta actualización.`, en los dos estados del bloque |
 
 ## Flujo de datos
 
@@ -552,12 +674,18 @@ Calculadora
   MisNotasController.load() -> RecargaUlimaService.cargar() -> GET /grades/me/ulima
   franja -> HojaRecargaUlima -> RecargaUlimaService.recargar(password, passcode)
     -> POST /portal-sync/refresh { credentials, consent: true }
-      200 -> vista = view, estados por curso -> HorarioController.reload()
+      200 -> vista = view, estados por curso -> recargaHorario = HorarioController.reload() (una vez)
+      plazo o red -> cargar() -> lastReadAt más nueva ? como 200, sin estados : aviso
       error -> ultimoAviso -> aviso rojo en la franja y en el bloque de asistencia
 
 Ficha del curso
   botón «Actualizar» -> la misma hoja
-    200 -> HorarioController.reload() -> recargarSeccion(idSeccion)
+    200 -> recargarSeccion(idSeccion) -> GET /course-detail/sections/:id
+      si falla -> await recargaHorario -> uniqueEnrolledCourses
+
+Cambio de alumno sin logout (JWT vencido)
+  cargar() o recargar() con otro código -> clear() antes de cualquier await
+  respuesta con otra generación -> se descarta
 ```
 
 ## Contrato que se consume
@@ -566,7 +694,9 @@ Detalle en `docs/specs/api-contracts.md`, secciones Grades, Official Grades, Sch
 Detail y Portal Sync.
 
 - `POST /portal-sync/refresh` (propuesto, RS-BE-49 a RS-BE-56). Cuerpo, errores, `details.kind` y
-  `details.retryAfterMinutes` del `429`, estados por curso y `view`.
+  `details.retryAfterMinutes` del `429`, estados por curso y `view`. Sus dos fases leen los menús
+  de Asistencia y de Nota con `parseAulas`, así que sin RS-BE-48 toda recarga termina en
+  `502 PORTAL_UNREADABLE` (decisión B1).
 - `GET /grades/me/ulima` (propuesto, RS-BE-57).
 - `asistenciaLeidaEn` en `secciones` de `GET /schedule/me/sessions` y de
   `GET /course-detail/sections` y `GET /course-detail/sections/:sectionId` (propuesto, RS-BE-58).
@@ -579,8 +709,9 @@ Detail y Portal Sync.
 
 ### Huecos del contrato
 
-Lo que la maqueta pide y el contrato propuesto no trae. La spec no inventa campos y resuelve cada
-uno con lo que ya existe, como opción por defecto.
+Lo que la maqueta o la app piden y el contrato propuesto no trae o no garantiza. La spec no
+inventa campos y resuelve cada uno con lo que ya existe, como opción por defecto, salvo el hueco
+5, que pide un cambio al borrador del backend.
 
 1. `GET /grades/me/ulima` no trae la sigla de la evaluación del sílabo, y la fila de `/mis-notas`
    la muestra como prefijo, como hoy. Por defecto la app la toma de `syllabi` en
@@ -591,29 +722,45 @@ uno con lo que ya existe, como opción por defecto.
    horas y `asistenciaLeidaEn` por curso.
 3. `asistenciaLeidaEn` es `null` para las horas importadas antes de la migración `0015`, así que
    la app no puede decir de cuándo son. Por defecto no pinta la línea (D2).
-4. El contrato no dice si la ULima redondea el promedio final, y de eso depende el umbral
-   (decisión B9).
+4. El contrato no dice si la ULima redondea el promedio final, y de eso depende cuál sería el
+   umbral único si el dueño elige una de las dos alternativas de la decisión B9. La opción por
+   defecto de la app conserva los dos umbrales de hoy y no depende de ese dato.
+5. El presupuesto del backend no garantiza el plazo de 90 s de la app (D18). RS-BE-50 valida
+   `PORTAL_REFRESH_BUDGET_MS` entre 20 000 y 80 000, y su peor caso es el presupuesto, más la
+   última petición en vuelo (`PORTAL_TIMEOUT_MS`, 8 s por defecto), la transacción y el cierre de
+   sesión (otros 8 s). Con los 60 000 por defecto queda en unos 76 s más la transacción, pero con
+   80 000 pasa de 96 s y la app dejaría de esperar antes de que el backend termine y escriba. Por
+   defecto, la app pide al backend bajar el máximo de esa validación a 65 000, con lo que el peor
+   caso queda en unos 81 s más la transacción y deja margen para la red del teléfono.
+   Alternativa, dejar el máximo en 80 000 y subir el plazo de la app a 105 s (D18). En los dos
+   casos, D23 cubre la escritura que llega después del plazo.
 
 ## Cambios en otras specs
 
 Todos son propuesta y siguen el estado de esta spec.
 
-- `specs/features/grades/grades.spec.md`. Nota de enmienda que remite a RF-RCG-5 y RF-RCG-7 y a
-  «Qué no cambia de la calculadora». Anota además que la línea que dice que las notas se guardan
+- `specs/features/grades/grades.spec.md`. Nota de enmienda con los tres cambios aprobados, dos en
+  la calculadora (RF-RCG-5 y RF-RCG-7) y uno en `/mis-notas` (RF-RCG-6), que remite a «Qué no
+  cambia de la calculadora». Anota además que la línea que dice que las notas se guardan
   en `student_score` describe mal el código, que las guarda en `simulated_grades`.
 - `specs/features/course-detail/course-detail.spec.md`. Nota de enmienda con el botón, la hora de
   la última lectura y `recargarSeccion` (RF-RCG-8).
 - `specs/features/portal-sync/portal-sync.spec.md`. BR-SYNC-F-06 recarga la calculadora en vez de
-  borrarla (RF-RCG-11), la hoja reutiliza `PasswordResetOtpField` y el aviso de
-  `IMPORT_REQUIRED` es una entrada nueva a `/portal-sync`.
+  borrarla (RF-RCG-11), la hoja reutiliza `PasswordResetOtpField` con cuatro parámetros
+  opcionales que `/portal-sync` no usa (RF-RCG-2) y el aviso de `IMPORT_REQUIRED` es una entrada
+  nueva a `/portal-sync`.
 - `specs/features/academic-record/academic-record.spec.md`. RF-REC-6 sigue rigiendo la
   importación. La recarga no pasa por `PortalConsentView` y lleva su propio aviso (decisión B4).
-- `specs/features/schedule/schedule.spec.md`. `HorarioController.reload()` también corre después
-  de una recarga, y las secciones traen `asistenciaLeidaEn`.
+- `specs/features/schedule/schedule.spec.md`. `HorarioController.reload()` también corre una vez
+  después de una recarga, desde `RecargaUlimaService`, y las secciones traen `asistenciaLeidaEn`.
 - `docs/specs/api-contracts.md`. Las dos rutas nuevas, el campo nuevo, la sección Official Grades,
-  que faltaba, y las correcciones de la importación que ya recoge el contrato del backend.
+  que faltaba, las correcciones de la importación que ya recoge el contrato del backend
+  (representantes, asistencia y `400 INVALID_REQUEST_BODY`) y el hueco 5 del presupuesto.
 - `docs/specs/feature-index.md`. La fila 21.
-- `AGENTS.md`, `KNOWLEDGE.md` y `README.md`, solo con la decisión B12.
+- `README.md:102`, siempre, en la frase que nombra la entrada a `/mis-notas` (RF-RCG-5). La misma
+  línea cambia además la fuente de `/mis-notas` con la decisión B10 y la frase «Nunca se
+  mezclan» con la decisión B12.
+- `AGENTS.md` y `KNOWLEDGE.md`, solo con la decisión B12.
 
 ## Qué NO entra
 
@@ -638,11 +785,13 @@ requisitos.
 ### Decisiones del backend que cambian la app (B1 a B18)
 
 Llevan el número de «Decisiones abiertas» de la spec del backend, y su opción por defecto es la de
-allá.
+allá, salvo B9. La opción por defecto del backend para B9 cambia la calculadora aprobada, así que
+la app adopta por defecto la opción que conserva lo aprobado y deja las del backend como
+alternativas.
 
 | # | Decisión | Opción por defecto y efecto en la app | Alternativa |
 | --- | --- | --- | --- |
-| B1 | RS-BE-48 como corrección aparte | Sí. La app no cambia, pero el botón de asistencia solo sirve con RS-BE-48 en producción, porque sin él el backend no encuentra ninguna aula. | Publicarlo junto con la recarga. |
+| B1 | RS-BE-48 como corrección aparte | Sí. La app no cambia, pero ningún botón funciona sin RS-BE-48 en producción. Los menús de Asistencia y de Nota llegan con el mismo formato de lista, RS-BE-51 y RS-BE-52 leen los dos con `parseAulas` y, sin RS-BE-48, toda recarga termina en `502 PORTAL_UNREADABLE`, que la app muestra con su aviso. Por eso la app se publica solo con RS-BE-48 desplegado («Verificación»). | Publicarlo junto con la recarga, con la misma condición de publicación. |
 | B2 | Endpoint propio o importación completa | `POST /portal-sync/refresh` y la hoja de RF-RCG-2. | Los botones abren `/portal-sync` con el consentimiento de RF-REC-6 en cada toque, y `/mis-notas` necesita además B13. |
 | B3 | Cupo y tope de rechazos | 5 por hora y 3 rechazos cada 15 minutos. La app muestra los textos de RF-RCG-4 sin citar números. | Otros números, que no cambian la app. |
 | B4 | Consentimiento en cada recarga | El aviso de la hoja aprobada y `consent: true` en cada recarga, sin tocar `PortalConsentView`. | Una casilla sin marcar, `Acepto que ULima++ lea en miUlima mis notas parciales y mi asistencia.`, que enciende «Actualizar» junto con los dos campos. |
@@ -650,7 +799,7 @@ allá.
 | B6 | Nota simulada cuando la ULima publica la misma evaluación | Se ve la de la ULima, la simulada no se borra y vuelve si la ULima la retira (RF-RCG-7). | Borrar la simulada al guardar la de la ULima. |
 | B7 | Notas de la ULima sin pareja en el sílabo | Se ven en `/mis-notas`, no entran a la calculadora y la tarjeta avisa (RF-RCG-7). | Entran a la calculadora con su peso, aunque la suma pase de 100. |
 | B8 | «NP» | Se ve `NP` y cuenta como 0 en el promedio y en «Final». | No contarlo, o hacer fallar al curso hasta tener una muestra. |
-| B9 | Umbral único de aprobación | 10.5 en la calculadora y en `/mis-notas`, así que el aviso «Desaprobado» baja de 11 a 10.5. | 11 en las dos pantallas si la ULima no redondea. |
+| B9 | Umbral único de aprobación | Ningún umbral único. Se conservan los dos de hoy, 11 para el aviso «Desaprobado» de la calculadora (`curso_card.dart:95`) y 10.5 para la insignia «Final» de `/mis-notas` (`mis_notas_page.dart:208`). Es la única opción que calza con la maqueta aprobada, que dibuja `prom < 11` y `fin >= 10.5` y pone los dos en «Qué no cambia». Difiere de la opción por defecto del backend. | 10.5 en las dos pantallas, que es la opción por defecto del backend y cambia la calculadora aprobada, porque el aviso baja de 11 a 10.5. U 11 en las dos si la ULima no redondea, que cambia la insignia «Final» aprobada. |
 | B10 | Papel de `/mis-notas` y de las notas del docente | `/mis-notas` lee `GET /grades/me/ulima`, y las notas de `student_score` se quedan sin pantalla de alumno. | Mostrar las dos por evaluación, con la de la ULima mandando, o retirar la carga docente. |
 | B11 | Alertas de riesgo y chatbot | Siguen como hoy. | Que lean las notas de la ULima, cada uno con su enmienda. |
 | B12 | La regla «las notas son personales y no oficiales» | Cambia en el PR de implementación, en `AGENTS.md:58`, `KNOWLEDGE.md:72` y `README.md:102`, con el texto de abajo. | Otro texto, o no tocarla, y entonces la calculadora no puede mostrar las notas de la ULima. |
@@ -663,38 +812,44 @@ allá.
 
 Texto propuesto para B12, en el PR de implementación. En `AGENTS.md` y `KNOWLEDGE.md`, la regla
 pasa a decir `Las notas que el alumno registra en la calculadora son personales y no oficiales (simulated_grades). La calculadora muestra además, fijas y con la marca «ULima», las notas parciales que publica la ULima (GET /grades/me/ulima).`
-En `README.md:102`, la frase «Nunca se mezclan» pasa a describir esa convivencia y `/mis-notas`
-pasa a leer `GET /grades/me/ulima`.
+En `README.md:102`, la frase «Nunca se mezclan» pasa a describir esa convivencia. En esa misma
+línea, la fuente de `/mis-notas` pasa a `GET /grades/me/ulima` solo con la opción por defecto de
+B10, y la entrada a `/mis-notas` cambia siempre, porque depende de RF-RCG-5 y no de B12.
 
-### Puntos que fija esta spec (D1 a D22)
+### Puntos que fija esta spec (D1 a D24)
 
-Ninguno está en lo que decide el dueño. La spec los fija con un valor por defecto que el dueño
-puede cambiar.
+Ninguno figura en «Pedido y decisiones del dueño», así que la spec los fija con un valor por
+defecto que el dueño puede cambiar. Cuatro de ellos, D8, D11, D13 y D14, cambian por defecto lo
+que dibuja la maqueta aprobada, y su fila lo dice con «Cambia la maqueta aprobada». En esos
+cuatro, la alternativa es la maqueta. D7 y D15, además, suman cambios a la `CursoCard` más allá
+de los tres aprobados, como anota «Qué no cambia de la calculadora».
 
 | # | Punto | Valor por defecto | Alternativa | Dónde |
 | --- | --- | --- | --- | --- |
 | D1 | Lugar del botón y de la hora en el bloque de asistencia | Una fila nueva bajo las horas y el anillo, con la hora a la izquierda y «Actualizar» a la derecha | El botón bajo el anillo y la hora bajo el título «Asistencia», que suma menos alto pero se corta con el texto grande | RF-RCG-8 |
 | D2 | Asistencia sin hora de lectura | No se pinta la línea | `Última lectura sin registrar` | RF-RCG-8 |
-| D3 | Botón del estado sin datos | Dice `Actualizar desde la ULima` y abre la hoja | Dejarlo como hoy, hacia `/portal-sync` | RF-RCG-8 |
+| D3 | Botón del estado sin datos | Dice `Actualizar desde la ULima`, abre la hoja y el bloque muestra el aviso compacto y la línea de lectura parcial encima del botón | Dejarlo como hoy, hacia `/portal-sync` | RF-RCG-8 |
 | D4 | Espera y cierre de la hoja | Texto de espera, campos de solo lectura, sin cierre por toque fuera ni por arrastre en ningún estado | Cerrar la hoja al enviar y mostrar la espera en la franja | RF-RCG-2 |
 | D5 | Mensajes y acciones por error | La tabla de RF-RCG-4 | Mostrar el `message` del backend | RF-RCG-4 |
 | D6 | Lectura parcial | La línea `No se pudo leer en esta actualización.` por curso, en memoria, sin mostrar `warnings` | Un aviso único con el número de cursos sin lectura, o nada | RF-RCG-3 |
-| D7 | Orden de las filas en la calculadora | El del sílabo, con las ajenas al final | Primero las de la ULima y después las simuladas en su orden de hoy | RF-RCG-7 |
-| D8 | Título de una fila de la ULima en la calculadora | El `name` de la ULima, que trae el ordinal («Examen escrito 1») | El nombre del sílabo, sin ordinal | RF-RCG-7 |
+| D7 | Orden de las filas en la calculadora | El del sílabo, con las ajenas al final, como dibuja la maqueta. Reordena las simuladas, que hoy salen en el orden en que se registraron, y es un cambio a la `CursoCard` más allá de los tres aprobados | Primero las de la ULima y después las simuladas en su orden de hoy | RF-RCG-7 |
+| D8 | Título de una fila de la ULima en la calculadora | El `name` de la ULima, que trae el ordinal («Examen escrito 1»). Cambia la maqueta aprobada, que titula la fila con el nombre del sílabo | El nombre del sílabo, sin ordinal, como la maqueta | RF-RCG-7 |
 | D9 | Prefijo de la fila en `/mis-notas` | La sigla del sílabo cuando hay pareja, tomada de `GET /grades/me/courses`, y solo el nombre sin pareja | Solo el nombre de la ULima, o un campo nuevo del backend (hueco 1) | RF-RCG-6 |
-| D10 | Formato de peso y nota | Peso entero sin decimales y con hasta dos si los tiene (`12.5%`). Nota con un decimal si tiene uno o ninguno (`15.0`) y con dos si los tiene (`14.25`), con punto decimal como el resto de la app | Redondear todo a un decimal, como hoy | RF-RCG-6 y RF-RCG-7 |
-| D11 | Naranjas de texto | `#A34300` en claro y `#FF8C42` en la marca en oscuro, `#FF6600` en la acción y el botón en oscuro, porque `primaryDark` da 3,73:1 en la marca y 4,12:1 en la acción | Los colores de la maqueta (`primaryDark`), por debajo de 4,5:1 | RF-RCG-4, RF-RCG-7, RF-RCG-8 y RF-RCG-10 |
+| D10 | Formato de peso y nota | Peso entero sin decimales y con hasta dos si los tiene (`12.5%`), en las dos pantallas. En `/mis-notas`, nota con un decimal si tiene uno o ninguno (`15.0`) y con dos si los tiene (`14.25`). En la calculadora, todas las filas, simuladas y de la ULima, siguen con un decimal (`toStringAsFixed(1)`), como hoy y como la maqueta, así que una tarjeta nunca mezcla `14.25` y `14.3`. Punto decimal, como el resto de la app | Dos decimales cuando los hay también en la calculadora, en las dos clases de filas, que cambia la fila aprobada de una simulada con dos decimales. O redondear todo a un decimal, como hoy | RF-RCG-6 y RF-RCG-7 |
+| D11 | Naranjas de texto | `#A34300` en claro y `#FF8C42` en la marca en oscuro, `#FF6600` en la acción y los dos botones del bloque de asistencia en oscuro, porque `primaryDark` da 3,73:1 en la marca y 4,12:1 en la acción, y el `primary` de hoy del botón del estado sin datos da 2,49:1 en claro. Cambia la maqueta aprobada en la marca y en «Reintentar» | Los colores de la maqueta (`primaryDark`), por debajo de 4,5:1, y el botón del estado sin datos en `primary` | RF-RCG-4, RF-RCG-7, RF-RCG-8 y RF-RCG-10 |
 | D12 | Color del botón «Actualizar» de la hoja | Blanco sobre `#FF6600`, como «Registrar» y la maqueta, con 2,94:1 | Blanco sobre `#B84500` (5,40:1), distinto del resto de los botones de la app | RF-RCG-2 y RF-RCG-10 |
-| D13 | Borde del campo y de las casillas | `onSurface` al 50 % (3,31:1), con un parámetro opcional de borde en reposo en `PasswordResetOtpField` que las demás pantallas no usan | El `outline` al 50 % del modal «Registrar Nota» (1,16:1) | RF-RCG-2 y RF-RCG-10 |
-| D14 | Textos tenues | La ayuda bajo las casillas en `onSurface` al 70 % (6,38:1), y la línea de la última lectura del aviso en `textSecondary` (6,44:1 en oscuro) | Los valores de la maqueta, `onSurface` al 50 % (3,31:1) y `textMuted` (3,86:1 en oscuro) | RF-RCG-2 y RF-RCG-4 |
-| D15 | Aviso de sílabo que no coincide | La línea al final de la tarjeta del curso | Sin aviso, o un aviso en la fila «Notas oficiales» | RF-RCG-7 |
+| D13 | Borde del campo y de las casillas | `onSurface` al 50 % (3,31:1), con el parámetro `idleBorderColor` de `PasswordResetOtpField`, que las demás pantallas no usan. Cambia la maqueta aprobada, que dibuja el borde en `outline` al 50 % | El `outline` al 50 % de la maqueta y del modal «Registrar Nota» (1,16:1) | RF-RCG-2 y RF-RCG-10 |
+| D14 | Textos tenues | La ayuda bajo las casillas en `onSurface` al 70 % (6,38:1), y la línea de la última lectura del aviso en `textSecondary` (6,44:1 en oscuro). Cambia la maqueta aprobada | Los valores de la maqueta, `onSurface` al 50 % (3,31:1) y `textMuted` (3,86:1 en oscuro) | RF-RCG-2 y RF-RCG-4 |
+| D15 | Aviso de sílabo que no coincide | La línea al final de la tarjeta del curso, que es un cambio a la `CursoCard` más allá de los tres aprobados | Sin aviso, o un aviso en la fila «Notas oficiales» | RF-RCG-7 |
 | D16 | Refresco de la calculadora tras importar | `recargarTodo()` en vez de `Get.delete` | Dejar el borrado y cerrar `/mis-notas` antes de abrir `/portal-sync` | RF-RCG-11 |
 | D17 | Vida del aviso rojo | En memoria, hasta el siguiente envío, «Cargar mis datos», el cierre de sesión o el cierre de la app | Guardarlo para mostrarlo al volver a abrir la app | RF-RCG-4 |
-| D18 | Plazo de la app | 90 s, como la importación, sobre un peor caso del backend de unos 80 s | Otro plazo, que no puede bajar del peor caso del backend | RF-RCG-1 |
+| D18 | Plazo de la app | 90 s, como la importación, siempre que el backend baje el máximo de `PORTAL_REFRESH_BUDGET_MS` a 65 000, con lo que su peor caso queda en unos 81 s más la transacción (hueco 5) | Dejar el máximo del backend en 80 000 y subir el plazo de la app a 105 s, más que el de la importación | RF-RCG-1 |
 | D19 | Aviso de éxito | Ninguno, la hora nueva ya lo dice | Un `SnackBar` con `Notas y asistencia actualizadas.` | RF-RCG-3 |
 | D20 | Carpeta de pruebas | `test/HU37_jeff/`, la misma historia del backend | Otra carpeta | «Pruebas previstas» |
 | D21 | Dónde vive el código | `RecargaUlimaService` como `GetxService` permanente, piezas en `lib/components/recarga_ulima/` y funciones puras en `lib/domain/recarga_ulima/` | Sumar la recarga a `PortalSyncService`, que no es un servicio compartido | RF-RCG-1 |
 | D22 | Formato de la hora | `hoy`, `ayer` o `el 22 de septiembre`, y `a las HH:mm` | `hace N minutos`, que cambia sin que la pantalla se redibuje | RF-RCG-9 |
+| D23 | Recarga que el backend guarda después del plazo o de un fallo de red | `recargar()` vuelve a pedir `GET /grades/me/ulima` antes de volver y, si la `lastReadAt` avanzó respecto de la de antes del envío, la trata como un `200` sin estados por curso. Mientras siga el aviso del plazo o de la red, cualquier carga posterior que muestre esa hora más nueva lo borra | Volver a pedir la vista y dejar siempre el aviso | RF-RCG-1, RF-RCG-3 y RF-RCG-4 |
+| D24 | Contraste de `Nota: …/20` en las filas de la ULima | Se hereda de `NotaTile`, en `primary` sobre `tertiaryContainer` (2,44:1 en claro), igual que las simuladas aprobadas | `textoNaranja` en las dos clases de filas (5,19:1 en claro), que cambia la calculadora aprobada | RF-RCG-7 y RF-RCG-10 |
 
 ## Pruebas previstas
 
@@ -702,50 +857,83 @@ Todas van en `test/HU37_jeff/` (D20), con datos inventados y el alumno `20230001
 `[@test]` junto a su requisito cuando existan.
 
 - `recarga_ulima_models_test.dart` (unitaria, RF-RCG-1). La vista del ejemplo del contrato se lee
-  entera. Un número en texto se convierte. Un `mark` o un `match` desconocidos se tratan como
-  `pending` y `none`. Una fecha ilegible queda `null`. El resultado de la recarga trae sus estados
-  por curso y su `view`.
+  entera, con `courses` en `vista.cursos` y `assessments` en `evaluaciones`. Un número en texto se
+  convierte. Un `mark` o un `match` desconocidos se tratan como `pending` y `none`. Una fecha
+  ilegible queda `null`. El resultado de la recarga trae sus estados por curso y su `view`.
 - `recarga_ulima_service_test.dart` (unitaria con `ApiClient` simulado, RF-RCG-1, RF-RCG-3 y
   RF-RCG-4). El cuerpo tiene exactamente `credentials` y `consent: true`, sin `cookies` ni código
   de alumno. Cada fila de la tabla de RF-RCG-4 da su título, su cuerpo y su acción, con `1 minuto`
-  y `N minutos`. El plazo de 90 s y un fallo de red dan su aviso. Un `200` aplica `view` y guarda
-  los estados. Un error no toca la vista. Una segunda llamada durante `enviando` no sale. `clear()`
-  vacía todo. Con un registrador espía, ningún mensaje contiene la contraseña ni el código.
+  y `N minutos`. El plazo de 90 s y un fallo de red dan su aviso. Un `200` aplica `view`, guarda
+  los estados y llama una sola vez a `HorarioController.reload()`, con un doble espía registrado,
+  cuyo `Future` queda en `recargaHorario`. Un error no toca la vista ni llama a `reload()`. Una
+  segunda llamada durante `enviando` no sale. `clear()` vacía todo. Con el servicio registrado,
+  `AuthService.logout()` llama a `clear()`, y sin él no falla. Con un registrador espía, ningún
+  mensaje contiene la contraseña ni el código. Casos del dueño de los datos (RF-RCG-1), cada uno
+  con el alumno `20230001` y otro alumno inventado, `20230002`, sin `logout()` de por medio, como
+  tras un JWT vencido. La vista, el aviso, `errorCarga` y los estados del primero no se ven con el
+  segundo como usuario actual. Un `cargar()` del segundo llama a `clear()` antes de su primer
+  `await`, y si falla no deja ver la vista del primero. Una respuesta de `cargar()` y una de
+  `recargar()` que llegan después de `clear()` se descartan y no vuelven a llenar la vista ni el
+  aviso. Casos de D23. Tras el plazo y tras un fallo de red, `recargar()` pide
+  `GET /grades/me/ulima`. Si la `lastReadAt` avanzó, vuelve como éxito sin estados y sin aviso, y
+  si no avanzó, vuelve con su aviso. Con el aviso del plazo presente, un `cargar()` posterior con
+  la hora más nueva lo borra y llama a `reload()`, y uno con la misma hora lo deja.
 - `ultima_lectura_test.dart` (unitaria, RF-RCG-9). Hoy, ayer, otro día, otro año, las 23:59 y las
-  00:00 de Lima con el teléfono en otra zona, y un `leidoEn` posterior a `ahora`.
+  00:00 de Lima con el teléfono en otra zona, y un `leidoEn` posterior a `ahora`. Los doce meses
+  salen en minúscula.
+- `formato_nota_test.dart` (unitaria, D10). El peso `20` da `20%`, `12.5` da `12.5%` y `12.25` da
+  `12.25%`. En `/mis-notas`, la nota `15` da `15.0`, `14.5` da `14.5` y `14.25` da `14.25`. En la
+  calculadora, `14.25` da `14.3` en las dos clases de filas.
 - `filas_calculadora_test.dart` (unitaria, RF-RCG-7). Una simulada y una de la ULima con el mismo
   `assessmentId` dan solo la de la ULima. `pending` y `match: none` no entran. `np` entra con valor
   0. El orden sigue al sílabo. Las filas que se guardan son solo las simuladas, también las
-  ocultas.
+  ocultas. La fila visible de una simulada se traduce a su índice en `curso['notas']` por
+  `evaluacionId`, también con una fila de la ULima antes y con una simulada oculta.
 - `hoja_recarga_test.dart` (de widget, RF-RCG-2 y RF-RCG-3). Los textos exactos, `Entras como
   20230001` con el código en negrita, «Actualizar» apagado sin contraseña, con cinco dígitos y con
-  una contraseña de espacios, y encendido con seis. La espera muestra su texto, apaga la X y
-  «Cancelar» y no deja cerrar con atrás. El éxito y el error cierran la hoja y vacían los dos
-  campos. Las etiquetas de `Semantics`. En claro y en oscuro.
+  una contraseña de espacios, y encendido con seis. Las seis casillas miden 50 de alto, no tienen
+  relleno y llevan el borde en reposo de D13. La espera muestra su texto, deja las casillas de
+  solo lectura, apaga la X y «Cancelar» y no deja cerrar con atrás. Cerrar con la X, con
+  «Cancelar» y con atrás vacía los dos campos, y al reabrir la hoja llegan vacíos. El éxito y el
+  error cierran la hoja y vacían los dos campos. Las etiquetas de `Semantics`. En claro y en
+  oscuro.
 - `mis_notas_ulima_test.dart` (de widget, RF-RCG-4 y RF-RCG-6). Cada fila de la tabla de estados.
-  La franja con y sin lectura. Una fila `graded`, una `pending` con `Sin nota`, una `np` con `NP` y
-  una sin semana. La sigla solo con pareja, y ninguna sigla si el sílabo no carga. La insignia «Final» con 10.5. El aviso de rechazo con
-  la línea de la última lectura y «Reintentar», el de `IMPORT_REQUIRED` con «Cargar mis datos» y
-  el de `403` con «Reintentar». La línea de lectura parcial. La flecha del AppBar llama solo a
-  `GET /grades/me/ulima`.
+  La franja con y sin lectura, y la etiqueta de su `Semantics`. Una fila `graded`, una `pending`
+  con `Sin nota`, una `np` con `NP` y una sin semana. La sigla solo con pareja, y ninguna sigla si
+  el sílabo no carga. La insignia «Final» con 10.5. Una tarjeta con `lastReadAt` en `null` que
+  además falló en el último resultado lleva solo `No se pudo leer en esta actualización.`. El
+  aviso de rechazo con la línea de la última lectura y «Reintentar», el de `IMPORT_REQUIRED` con
+  «Cargar mis datos» y el de `403` con «Reintentar». El aviso lleva `liveRegion`. «Reintentar»
+  abre la hoja vacía. «Cargar mis datos» borra el aviso, abre `/portal-sync` y llama a `cargar()`
+  solo si vuelve `true`, no con `false` ni con `null`. La línea de lectura parcial. La flecha del
+  AppBar llama solo a `GET /grades/me/ulima`.
 - `calculadora_ulima_test.dart` (de widget, RF-RCG-5 y RF-RCG-7). La fila «Notas oficiales» con
   sus tres segundas líneas, su `Semantics` y su navegación a `/mis-notas`, en los tres estados de
-  la calculadora. El birrete ya no está. Una fila de la ULima con la marca `ULima` y sin tacho. El
-  promedio y la suma de pesos cuentan las dos clases de filas. Un curso solo con notas de la ULima
-  aparece y cuenta en «Cursos con notas». `POST /grades/me/notes` nunca lleva una nota de la ULima.
-  Borrar una simulada después de una fila de la ULima borra la correcta. «Registrar Nota» no ofrece
-  una evaluación ya publicada. La línea del sílabo que no coincide.
+  la calculadora. Con una vista previa y `errorCarga` en verdadero, la fila conserva la hora. El
+  birrete ya no está. Una fila de la ULima con la marca `ULima` y sin tacho. El promedio y la suma
+  de pesos cuentan las dos clases de filas. Con promedio 10.9 se ve «Desaprobado» y con 11 no,
+  como hoy. Un curso solo con notas de la ULima aparece y cuenta en «Cursos con notas».
+  `POST /grades/me/notes` nunca lleva una nota de la ULima. El tacho de una simulada que sigue a
+  una fila de la ULima llama a `eliminarNota` con el índice de esa simulada en `curso['notas']`.
+  «Registrar Nota» no ofrece una evaluación ya publicada. La línea del sílabo que no coincide.
 - `asistencia_recarga_test.dart` (de widget, RF-RCG-8). La fila con hora y botón, sin línea con
-  `asistenciaLeidaEn` en `null`, el botón del estado sin datos abre la hoja, un `200` llama a
-  `recargarSeccion` sin recargar las pestañas y conserva la elegida, el aviso compacto y la línea
-  de lectura parcial. `Seccion.fromJson` lee `asistenciaLeidaEn` y tolera que falte.
+  `asistenciaLeidaEn` en `null`. El botón del estado sin datos abre la hoja. Un `200` llama a
+  `recargarSeccion`, que pide `GET /course-detail/sections/:id` sin volver a llamar a
+  `reload()`, no recarga las pestañas y conserva la elegida. Si esa petición falla, espera
+  `recargaHorario` y lee `uniqueEnrolledCourses`. El aviso compacto y la línea de lectura parcial,
+  en el estado con datos y en el estado sin datos, donde van entre la línea explicativa y el botón
+  y el aviso cambia la acción del botón. El estado por curso se encuentra con un `sectionId`
+  entero y un `idSeccion` de texto. Sin `RecargaUlimaService` registrado, el bloque queda como
+  hoy. `Seccion.fromJson` lee `asistenciaLeidaEn` y tolera que falte.
 - `portal_sync_refresco_calculadora_test.dart` (unitaria, RF-RCG-11). Tras una importación
   exitosa, `CalculadoraController` sigue registrado y su `recargarTodo()` corre.
 - `contraste_recarga_test.dart` (unitaria, RF-RCG-10). Cada fila de la tabla de contraste, salvo
-  la de D12, cumple su mínimo con los valores de `themes.dart`.
-- Siguen pasando sin cambios `test/HU07_sam/**`, `test/HU06_sam/**`,
-  `test/HU34_jeff/portal_sync_consent_test.dart`, `test/HU34_jeff/record_page_test.dart`,
-  `test/HU23_jeff/chats_pestana_test.dart`, `test/HU23_jeff/chat_ficha_curso_test.dart` y
+  las de D12 y D24, cumple su mínimo con los valores de `themes.dart`.
+- Siguen pasando sin cambios `test/HU07_sam/**`, `test/HU06_sam/**`, `test/HU02_jeff/**`,
+  `test/HU20_jeff/otp_field_ime_test.dart`, `test/HU33_jeff/registro_page_test.dart`,
+  `test/HU34_jeff/portal_sync_consent_test.dart`, `test/HU34_jeff/registro_consent_test.dart`,
+  `test/HU34_jeff/record_page_test.dart`, `test/HU23_jeff/chats_pestana_test.dart`,
+  `test/HU23_jeff/chat_ficha_curso_test.dart`, `test/HU35_jeff/time_blocks_acciones_test.dart` y
   `test/HU_asistencia/**`.
 
 ## Verificación
@@ -755,5 +943,7 @@ Todas van en `test/HU37_jeff/` (D20), con datos inventados y el alumno `20230001
 - Revisión manual en un iPhone SE, en claro y en oscuro, con el texto al 200 % y con VoiceOver, de
   la fila, la franja, la hoja con el teclado abierto, el aviso y el bloque de asistencia, y la
   misma revisión en Android con TalkBack.
-- La app se publica solo con el backend de RS-BE-49 a RS-BE-58 desplegado, la migración `0015`
-  aplicada con su aprobación de BD y la medición de B15 hecha.
+- La app se publica solo con el backend de RS-BE-48 a RS-BE-60 desplegado, incluido RS-BE-48,
+  sin el cual ningún botón funciona (decisión B1), con un máximo de `PORTAL_REFRESH_BUDGET_MS`
+  compatible con el plazo de D18 (65 000 o menos con el plazo de 90 s, hueco 5), la migración
+  `0015` aplicada con su aprobación de BD y la medición de B15 hecha.
