@@ -29,6 +29,9 @@ import 'recarga_dobles.dart';
 const String _refresh = 'POST /portal-sync/refresh';
 const String _leida = '2025-09-22T15:42:10.000Z';
 
+/// El texto de la ruta `/portal-sync` de prueba.
+const String _pantallaImportacion = 'PANTALLA DE IMPORTACIÓN';
+
 Map<String, dynamic> _seccionJson({
   bool conDatos = true,
   int asistido = 12,
@@ -152,6 +155,12 @@ Future<_Ficha> _abrirFicha(
     GetMaterialApp(
       theme: const MaterialTheme(TextTheme()).light(),
       home: DescripCursosPage(idSeccion: '301'),
+      getPages: [
+        GetPage(
+          name: '/portal-sync',
+          page: () => const Scaffold(body: Text(_pantallaImportacion)),
+        ),
+      ],
     ),
   );
   await tester.pump();
@@ -159,6 +168,17 @@ Future<_Ficha> _abrirFicha(
 }
 
 Finder get _enLaHoja => find.byType(HojaRecargaUlima);
+
+/// Toca «Cargar mis datos» y comprueba que abre `/portal-sync`, no la hoja, y
+/// que borra el aviso.
+Future<void> _cargarMisDatosAbreLaImportacion(WidgetTester tester) async {
+  await tester.tap(find.widgetWithText(TextButton, 'Cargar mis datos'));
+  await _asentar(tester);
+
+  expect(find.text(_pantallaImportacion), findsOneWidget);
+  expect(_enLaHoja, findsNothing);
+  expect(RecargaUlimaService.to.ultimoAviso, isNull);
+}
 
 /// Llena la hoja y toca su «Actualizar».
 Future<void> _enviarHoja(WidgetTester tester) async {
@@ -352,6 +372,8 @@ void main() {
         findsOneWidget,
       );
       expect(find.widgetWithText(TextButton, 'Actualizar'), findsNothing);
+
+      await _cargarMisDatosAbreLaImportacion(tester);
     });
   });
 
@@ -413,8 +435,8 @@ void main() {
       expect(boton.dy, greaterThan(parcial.dy));
     });
 
-    testWidgets('el aviso compacto va en el mismo lugar y cambia la acción del '
-        'botón', (tester) async {
+    testWidgets('el aviso compacto va en el mismo lugar y su «Reintentar» '
+        'abre la hoja', (tester) async {
       final api = ApiRecargaFalsa()
         ..responder(_refresh, errorApi(409, 'PORTAL_LOGIN_REJECTED'));
       await _abrirFicha(
@@ -436,6 +458,27 @@ void main() {
       await tester.tap(boton);
       await _asentar(tester);
       expect(_enLaHoja, findsOneWidget);
+    });
+
+    testWidgets('con IMPORT_REQUIRED el botón dice «Cargar mis datos» y abre '
+        '/portal-sync en lugar de la hoja', (tester) async {
+      final api = ApiRecargaFalsa()
+        ..responder(_refresh, errorApi(409, 'IMPORT_REQUIRED'));
+      await _abrirFicha(
+        tester,
+        seccion: _seccionJson(conDatos: false),
+        api: api,
+        antes: (s) =>
+            s.recargar(password: 'clave-de-prueba', passcode: '482913'),
+      );
+
+      expect(find.text('Primero carga tus datos del ciclo.'), findsOneWidget);
+      expect(
+        find.widgetWithText(TextButton, 'Actualizar desde la ULima'),
+        findsNothing,
+      );
+
+      await _cargarMisDatosAbreLaImportacion(tester);
     });
   });
 
