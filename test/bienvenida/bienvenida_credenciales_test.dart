@@ -231,6 +231,9 @@ void main() {
       b.controlador.responderAlSaludo(yaUsa: false);
       expect(b.controlador.registro, isNotNull);
       expect(Get.isRegistered<RegistroController>(), isFalse);
+      // Un Get.put sobre el campo anulable lo registraría con el tipo
+      // anulable.
+      expect(Get.isRegistered<RegistroController?>(), isFalse);
     });
 
     test(
@@ -243,6 +246,17 @@ void main() {
         final registro = b.controlador.registro!;
         b.controlador.terminarVisita(visita);
         expect(registro.cerrado, isTrue);
+
+        // Una visita nueva reinicia la bienvenida y cierra el registro que
+        // estuviera abierto, aunque la vieja no haya llegado a su dispose.
+        final otra = b.controlador.nuevaVisita();
+        await b.controlador.empezarVisita(otra);
+        b.controlador.responderAlSaludo(yaUsa: false);
+        final segundo = b.controlador.registro!;
+        final tercera = b.controlador.nuevaVisita();
+        await b.controlador.empezarVisita(tercera);
+        expect(segundo.cerrado, isTrue);
+        expect(b.controlador.registro, isNull);
       },
     );
   });
@@ -275,6 +289,28 @@ void main() {
       await avanzar(tester, 2000);
       expect(find.textContaining('crear'), findsNothing);
       expect(find.text(TextosDeLaBienvenida.soyNuevo), findsOneWidget);
+
+      // «Soy nuevo» lleva a N1, que ofrece «Ya tengo cuenta».
+      expect(find.text(TextosDeLaBienvenida.yaTengoCuenta), findsNothing);
+      await tester.tap(find.text(TextosDeLaBienvenida.soyNuevo));
+      await avanzar(tester, 2000);
+      expect(b.controlador.turno.value, TurnoDeLaBienvenida.n1Codigo);
+      final compositor = find.byType(MarcoDelCompositor);
+      expect(
+        find.descendant(
+          of: compositor,
+          matching: find.text(TextosDeLaBienvenida.yaTengoCuenta),
+        ),
+        findsOneWidget,
+      );
+      // «Soy nuevo» queda solo como la respuesta del alumno.
+      expect(
+        find.descendant(
+          of: compositor,
+          matching: find.text(TextosDeLaBienvenida.soyNuevo),
+        ),
+        findsNothing,
+      );
     });
   });
 }

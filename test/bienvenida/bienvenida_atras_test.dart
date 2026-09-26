@@ -11,6 +11,7 @@ import 'package:ulima_plus/domain/bienvenida/bienvenida_turnos.dart';
 import 'package:ulima_plus/models/registro_models.dart';
 
 import '../HU36_jeff/dobles_de_red.dart';
+import '../HU36_jeff/dobles_del_controlador.dart' show respuestasEnOrden;
 import 'apoyo_bienvenida.dart';
 
 typedef _T = TurnoDeLaBienvenida;
@@ -79,6 +80,22 @@ void main() {
         ..atras();
       expect(c.test!.paso.value, 0);
       expect(b.delAlumno.last, 'Pregunta anterior');
+
+      // Hasta el resultado, donde el atrás no responde ni sale.
+      for (final v in respuestasEnOrden) {
+        c
+          ..responderAlTest(v, conLector: true)
+          ..siguiente();
+      }
+      await pumpEventQueue();
+      expect(c.turno.value, _T.resultado);
+      final entradas = c.entradas.length;
+      final respuestas = b.delAlumno.length;
+      c.atras();
+      expect(c.turno.value, _T.resultado);
+      expect(c.atrasSaleDeLaApp, isFalse);
+      expect(c.entradas, hasLength(entradas));
+      expect(b.delAlumno, hasLength(respuestas));
     });
   });
 }

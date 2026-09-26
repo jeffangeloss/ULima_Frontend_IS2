@@ -55,5 +55,14 @@ void main() {
     final compositor = tester.getRect(find.byType(MarcoDelCompositor));
     expect(compositor.width, lessThanOrEqualTo(600));
     expect(compositor.center.dx, closeTo(512, 0.5));
+    // La conversación, no solo el compositor, va en la misma columna.
+    final conversacion = tester.getRect(
+      find.descendant(
+        of: find.byType(BienvenidaPage),
+        matching: find.byType(ListView),
+      ),
+    );
+    expect(conversacion.width, 600);
+    expect(conversacion.center.dx, closeTo(512, 0.5));
   });
 }
