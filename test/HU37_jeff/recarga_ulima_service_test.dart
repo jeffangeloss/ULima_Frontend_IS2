@@ -110,26 +110,67 @@ void main() {
       expect(s.vista, isNull);
     });
 
-    test('clear() vacía la vista, el aviso, errorCarga, enviando y los '
-        'estados', () async {
+    // Tras clear() no hay dueño y cada getter devuelve null o falso, así que
+    // estas pruebas piden un cargar() del mismo alumno, que queda pendiente,
+    // antes de mirar.
+    test('clear() vacía la vista, el aviso, errorCarga y enviando, y el mismo '
+        'alumno no los recupera al volver', () async {
       loguear(alumna());
+      final vuelta = Completer<Map<String, dynamic>>();
       final api = ApiRecargaFalsa()
+        ..responder(_vistaGet, vistaJson())
         ..responder(_vistaGet, errorApi(500, 'HTTP_ERROR'))
+        ..responder(_vistaGet, vuelta)
         ..responder(_refresh, errorApi(409, 'PORTAL_LOGIN_REJECTED'));
       final s = _servicio(api);
       await s.cargar();
+      await s.cargar();
       await _recargar(s);
+      expect(s.vista, isNotNull);
       expect(s.errorCarga, isTrue);
       expect(s.ultimoAviso, isNotNull);
 
       s.clear();
+      expect(s.enviando, isFalse);
+      final carga = s.cargar();
 
       expect(s.vista, isNull);
       expect(s.ultimoAviso, isNull);
       expect(s.errorCarga, isFalse);
-      expect(s.enviando, isFalse);
-      expect(s.sinLecturaDeNotas(81), isFalse);
+      vuelta.completeError(errorApi(500, 'HTTP_ERROR'));
+      await carga;
+    });
+
+    test('clear() vacía los estados y recargaHorario, y el mismo alumno no '
+        'los recupera al volver', () async {
+      loguear(alumna());
+      Get.put<HorarioController>(_HorarioEspia());
+      final vuelta = Completer<Map<String, dynamic>>();
+      final api = ApiRecargaFalsa()
+        ..responder(_vistaGet, vistaJson())
+        ..responder(_vistaGet, vuelta)
+        ..responder(
+          _refresh,
+          resultadoJson(
+            courses: [
+              {'sectionId': 81, 'attendance': 'failed', 'grades': 'failed'},
+            ],
+          ),
+        );
+      final s = _servicio(api);
+      await s.cargar();
+      await _recargar(s);
+      expect(s.sinLecturaDeNotas(81), isTrue);
+      expect(s.recargaHorario, isNotNull);
+
+      s.clear();
       expect(s.recargaHorario, isNull);
+      final carga = s.cargar();
+
+      expect(s.sinLecturaDeNotas(81), isFalse);
+      expect(s.sinLecturaDeAsistencia(81), isFalse);
+      vuelta.completeError(errorApi(500, 'HTTP_ERROR'));
+      await carga;
     });
 
     test('la vista, el aviso, errorCarga y los estados del 20230001 no se '
@@ -144,6 +185,7 @@ void main() {
             ],
           ),
         )
+        ..responder(_refresh, errorApi(409, 'PORTAL_LOGIN_REJECTED'))
         ..responder(_vistaGet, errorApi(500, 'HTTP_ERROR'));
       final s = _servicio(api);
       await _recargar(s);
@@ -156,10 +198,18 @@ void main() {
       auth.userRx.value = alumna(code: '20230002');
 
       expect(s.vista, isNull);
-      expect(s.ultimoAviso, isNull);
       expect(s.errorCarga, isFalse);
       expect(s.sinLecturaDeNotas(81), isFalse);
       expect(s.sinLecturaDeAsistencia(81), isFalse);
+
+      // Los estados y el aviso no conviven, porque cada envío borra los dos,
+      // así que el aviso sale de una segunda recarga del primero, fallida.
+      auth.userRx.value = alumna();
+      await _recargar(s);
+      expect(s.ultimoAviso, isNotNull);
+
+      auth.userRx.value = alumna(code: '20230002');
+      expect(s.ultimoAviso, isNull);
     });
 
     test('un cargar() del 20230002 llama a clear() antes de su primer await, '
@@ -186,18 +236,26 @@ void main() {
       expect(s.errorCarga, isTrue);
     });
 
-    test('una respuesta de cargar() que llega después de clear() se '
-        'descarta', () async {
-      loguear(alumna());
-      final pendiente = Completer<Map<String, dynamic>>();
-      final api = ApiRecargaFalsa()..responder(_vistaGet, pendiente);
+    test('una respuesta de cargar() del 20230001 que llega después de clear() '
+        'y del cargar() del 20230002 se descarta', () async {
+      final auth = loguear(alumna());
+      final delPrimero = Completer<Map<String, dynamic>>();
+      final delSegundo = Completer<Map<String, dynamic>>();
+      final api = ApiRecargaFalsa()
+        ..responder(_vistaGet, delPrimero)
+        ..responder(_vistaGet, delSegundo);
       final s = _servicio(api);
 
-      final carga = s.cargar();
+      final cargaDelPrimero = s.cargar();
       s.clear();
-      pendiente.complete(vistaJson());
-      await carga;
+      auth.userRx.value = alumna(code: '20230002');
+      final cargaDelSegundo = s.cargar();
+      delPrimero.complete(vistaJson());
+      await cargaDelPrimero;
+      expect(s.vista, isNull);
 
+      delSegundo.completeError(errorApi(500, 'HTTP_ERROR'));
+      await cargaDelSegundo;
       expect(s.vista, isNull);
     });
 
@@ -527,28 +585,47 @@ void main() {
       expect(await primera, isTrue);
     });
 
-    test('una respuesta de recargar() que llega después de clear() se '
-        'descarta y no vuelve a llenar la vista ni el aviso', () async {
-      loguear(alumna());
-      final bien = Completer<Map<String, dynamic>>();
-      final mal = Completer<Map<String, dynamic>>();
-      final api = ApiRecargaFalsa()
-        ..responder(_refresh, bien)
-        ..responder(_refresh, mal);
-      final s = _servicio(api);
+    // Tras clear() no hay dueño y los getters no filtran nada, así que el
+    // 20230002 ya tiene un cargar() pendiente cuando vuelve la respuesta.
+    for (final exito in <bool>[true, false]) {
+      test('una respuesta ${exito ? 'buena' : 'de error'} de recargar() del '
+          '20230001 que llega después de clear() y del cargar() del 20230002 '
+          'se descarta', () async {
+        final auth = loguear(alumna());
+        final delPrimero = Completer<Map<String, dynamic>>();
+        final delSegundo = Completer<Map<String, dynamic>>();
+        final api = ApiRecargaFalsa()
+          ..responder(_vistaGet, vistaJson())
+          ..responder(_vistaGet, delSegundo)
+          ..responder(_refresh, delPrimero);
+        final s = _servicio(api);
+        await s.cargar();
 
-      final primera = _recargar(s);
-      s.clear();
-      bien.complete(resultadoJson());
-      expect(await primera, isFalse);
-      expect(s.vista, isNull);
+        final recarga = _recargar(s);
+        s.clear();
+        auth.userRx.value = alumna(code: '20230002');
+        final carga = s.cargar();
+        if (exito) {
+          delPrimero.complete(
+            resultadoJson(
+              courses: [
+                {'sectionId': 81, 'attendance': 'failed', 'grades': 'failed'},
+              ],
+            ),
+          );
+        } else {
+          delPrimero.completeError(errorApi(409, 'PORTAL_LOGIN_REJECTED'));
+        }
 
-      final segunda = _recargar(s);
-      s.clear();
-      mal.completeError(errorApi(409, 'PORTAL_LOGIN_REJECTED'));
-      expect(await segunda, isFalse);
-      expect(s.ultimoAviso, isNull);
-    });
+        expect(await recarga, isFalse);
+        expect(s.vista, isNull);
+        expect(s.ultimoAviso, isNull);
+        expect(s.sinLecturaDeNotas(81), isFalse);
+        expect(s.enviando, isFalse);
+        delSegundo.completeError(errorApi(500, 'HTTP_ERROR'));
+        await carga;
+      });
+    }
 
     test(
       'ningún mensaje de registro contiene la contraseña ni el código',
