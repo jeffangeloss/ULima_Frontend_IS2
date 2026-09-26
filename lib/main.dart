@@ -12,6 +12,7 @@ import '/services/auth_service.dart';
 import '/services/alert_service.dart';
 import '/services/malla_service.dart';
 import '/services/academic_record_service.dart';
+import '/services/specialty_test_service.dart';
 import '/services/time_blocks_service.dart';
 import '/services/post_login_route.dart';
 import '/services/storage_service.dart';
@@ -79,6 +80,10 @@ void main() async {
   // formulario de /bloque escribe sobre este mismo estado. Tampoco carga nada
   // al arrancar: el horario pide su ventana al montarse.
   Get.put<TimeBlocksService>(TimeBlocksService(), permanent: true);
+  // Capa de datos del test de especialidad (RF-TEST-2). Permanente porque
+  // guarda en memoria la copia del contenido de la sesión, un test en pausa
+  // y el último resultado. Tampoco carga nada al arrancar.
+  Get.put<SpecialtyTestService>(SpecialtyTestService(), permanent: true);
 
   // Intentar restaurar sesión guardada.
   final restored = await AuthService.to.tryRestoreSession();

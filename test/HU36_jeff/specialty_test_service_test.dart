@@ -15,7 +15,9 @@ import 'package:http/http.dart' as http;
 import 'package:ulima_plus/models/specialty_test_models.dart';
 import 'package:ulima_plus/services/api_client.dart';
 import 'package:ulima_plus/services/auth_service.dart';
+import 'package:ulima_plus/services/malla_service.dart';
 import 'package:ulima_plus/services/specialty_test_service.dart';
+import 'package:ulima_plus/services/storage_service.dart';
 
 import 'datos_de_prueba.dart';
 import 'dobles_de_red.dart';
@@ -49,6 +51,7 @@ void main() {
   _evaluacion();
   _ultimoResultado();
   _dueno();
+  _authService();
 }
 
 void _contenido() {
@@ -487,6 +490,145 @@ void _dueno() {
       );
       auth.userRx.value = alumno();
       expect(s.paused, isNull);
+    });
+  });
+}
+
+/// Un `AuthService` real sobre la API falsa, con sesión puesta por
+/// `adoptarSesion`, que carga los catálogos como un registro recién hecho.
+Future<AuthService> _sesion(
+  ApiFalsaDelTest api, {
+  int? principal,
+  List<int>? intereses,
+}) async {
+  Get.put<StorageService>(AlmacenDePrueba());
+  final auth = AuthService(apiClient: api);
+  Get.put<AuthService>(auth);
+  await auth.adoptarSesion(
+    token: 'token-de-prueba',
+    user: alumno(principal: principal, intereses: intereses),
+  );
+  return auth;
+}
+
+void _authService() {
+  group('UNITARIA · AuthService para el test (RF-TEST-2 y RF-TEST-14)', () {
+    testWidgets('caso 22: completeSetup con plazo vence a los 15 s sin tocar '
+        'el usuario ni las preferencias', (tester) async {
+      final api = ApiFalsaDelTest(
+        guardados: [Completer<Map<String, dynamic>>()],
+      );
+      final auth = await _sesion(api, principal: kIdSw);
+      Object? error;
+      unawaited(
+        auth
+            .completeSetup(
+              careerId: 1,
+              especialidadPrincipal: kIdVj,
+              especialidadesInteres: [kIdSw],
+              timeout: SpecialtyTestService.saveTimeout,
+            )
+            .then((_) {}, onError: (Object e) => error = e),
+      );
+      await tester.pump(const Duration(seconds: 14, milliseconds: 999));
+      expect(error, isNull);
+      await tester.pump(const Duration(milliseconds: 1));
+      expect(error, isA<TimeoutException>());
+      expect(auth.currentUser!.especialidadPrincipal, kIdSw);
+      expect((StorageService.to as AlmacenDePrueba).setupsGuardados, 0);
+    });
+
+    testWidgets('caso 23: sin plazo, completeSetup espera lo que haga falta', (
+      tester,
+    ) async {
+      final pendiente = Completer<Map<String, dynamic>>();
+      final api = ApiFalsaDelTest(guardados: [pendiente]);
+      final auth = await _sesion(api);
+      var listo = false;
+      unawaited(
+        auth
+            .completeSetup(
+              careerId: 1,
+              especialidadPrincipal: kIdVj,
+              especialidadesInteres: [kIdVj, kIdSw],
+            )
+            .then((_) => listo = true),
+      );
+      await tester.pump(const Duration(seconds: 30));
+      expect(listo, isFalse);
+      pendiente.complete(respuestaDeGuardado(api.cuerposDeGuardado.single));
+      await tester.pump();
+      expect(listo, isTrue);
+      expect(api.cuerposDeGuardado.single, {
+        'primarySpecialtyId': kIdVj,
+        'interestSpecialtyIds': [kIdSw],
+      });
+      expect(auth.currentUser!.especialidadPrincipal, kIdVj);
+      expect(auth.currentUser!.especialidadesInteres, [kIdSw]);
+    });
+
+    test('caso 24: catalogsFailed distingue un catálogo que no carga de uno '
+        'vacío, y reloadCatalogs reintenta', () async {
+      final api = ApiFalsaDelTest(
+        especialidades: [
+          http.ClientException('sin red'),
+          http.ClientException('sin red'),
+          especialidadesJson(ids: const []),
+          especialidadesJson(),
+        ],
+      );
+      final auth = await _sesion(api);
+      expect(auth.catalogsFailed, isTrue);
+      expect(auth.especialidades, isEmpty);
+      expect(await auth.reloadCatalogs(), isTrue);
+      expect(auth.catalogsFailed, isFalse);
+      expect(auth.especialidades, isEmpty);
+      expect(await auth.reloadCatalogs(), isTrue);
+      expect(auth.especialidades, hasLength(4));
+    });
+
+    test('caso 25: isOfficialSpecialty dice si el id está en el catálogo '
+        'cargado y activo', () async {
+      final catalogo = especialidadesJson();
+      // Un id antiguo que un backend sin BR-AP-07 todavía mandaría inactivo.
+      (catalogo['specialties'] as List).add(<String, dynamic>{
+        'id': 3,
+        'carrera_id': 1,
+        'name': 'ESPECIALIDAD ANTIGUA DE PRUEBA',
+        'is_active': false,
+        'display_order': 5,
+      });
+      final auth = await _sesion(ApiFalsaDelTest(especialidades: [catalogo]));
+      for (final id in [kIdSw, kIdTi, kIdSi, kIdVj]) {
+        expect(auth.isOfficialSpecialty(id), isTrue, reason: '$id');
+      }
+      expect(auth.isOfficialSpecialty(3), isFalse);
+      expect(auth.isOfficialSpecialty(99), isFalse);
+      expect(auth.officialSpecialtyIds, {kIdSw, kIdTi, kIdSi, kIdVj});
+      // getEspecialidadName no cambia y sigue dando '' para un id
+      // desconocido.
+      expect(auth.getEspecialidadName(99), '');
+    });
+
+    test('caso 26: logout() vacía el test y el siguiente pedido vuelve a la '
+        'red', () async {
+      final api = ApiFalsaDelTest();
+      final auth = await _sesion(api);
+      Get.put<MallaService>(MallaService());
+      final s = _servicio(api);
+      final c = await s.fetchContent();
+      await s.loadLastResult();
+      s.pause(
+        PausedSpecialtyTest(content: c, answers: const {}, tiebreaks: const []),
+      );
+      await auth.logout();
+      expect(auth.currentUser, isNull);
+      await auth.adoptarSesion(token: 'token-de-prueba', user: alumno());
+      expect(s.content, isNull);
+      expect(s.paused, isNull);
+      expect(s.lastResult, isNull);
+      await s.loadLastResult();
+      expect(api.getsDeResultado, 2);
     });
   });
 }
