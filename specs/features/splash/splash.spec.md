@@ -1,6 +1,6 @@
 ---
 name: Splash animado
-description: Splash nativo que no corta el logo y una intro animada en Flutter con tres variantes al azar, Ensamble, Incremento y Código, que corre mientras carga la app y termina en /home abierto en la pestaña Horario o, sin sesión, en el traspaso a la bienvenida con Ulises
+description: Splash nativo que no corta el logo y una intro animada en Flutter con tres variantes al azar, Ensamble, Incremento y Código, que corre mientras carga la app y termina en /home abierto en la pestaña Horario o, sin sesión o sin especialidad elegida, en el traspaso a la bienvenida con Ulises
 targets:
   - ../../../lib/main.dart
   - ../../../lib/pages/splash/**
@@ -9,7 +9,6 @@ targets:
   - ../../../lib/services/session_navigation.dart
   - ../../../lib/components/header/app_header.dart
   - ../../../lib/pages/home/home_page.dart
-  - ../../../lib/pages/setup_carrera/setup_carrera_page.dart
   - ../../../pubspec.yaml
   - ../../../assets/splash/**
   - ../../../android/app/src/main/res/drawable*/**
@@ -29,13 +28,26 @@ targets:
 
 # Splash animado
 
-> Estado. **Diseñada el 2026-09-25, corregida el mismo día con los hallazgos de dos revisiones,
-> enmendada también ese día con dos decisiones del dueño y pendiente de su aprobación antes de
-> implementar.**
-> Nada de esta spec está aprobado. «Decisiones» reúne primero los pedidos del dueño y después
-> cada punto que confirma o cambia, con la opción que la spec toma por defecto, en dos tablas. La
-> primera reúne las que cambian lo que ve el alumno, que decide el dueño, y la segunda las
-> técnicas, que propone el equipo.
+> Estado. **Aprobada por el dueño el 2026-09-26 y pendiente de implementar.** Diseñada el
+> 2026-09-25, corregida el mismo día con los hallazgos de dos revisiones y enmendada también ese
+> día con dos decisiones del dueño.
+> El dueño aprueba la spec con «aplica» y lo confirma como «Arranque: todas las recomendadas».
+> Aprueba S-1 a S-34 en la opción que la spec toma por defecto, salvo S-29, donde elige la opción
+> que cumple mejor sus pedidos de que el logo no se pierda y de ver el horario después del splash.
+> El alumno con cuenta que todavía no elige su especialidad ya no va al asistente de carrera. Va a
+> la conversación con Ulises, que le toma el test ahí mismo con el logo en la cabecera y después
+> lo lleva a su horario (RF-SPL-12). La misma aprobación elige la opción gemela de B-10 y cambia
+> B-9 en la spec de la bienvenida.
+> Tres decisiones quedan explícitas en su opción por defecto. Todos los roles abren en Horario
+> (S-24), el splash y la bienvenida se publican juntos (S-30) y la animación se ve siempre
+> completa (S-6).
+> El ajuste del 2026-09-26 por S-29 reescribe RF-SPL-12, que pasa a ser el relevo con sesión, y
+> toca «Contexto», RF-SPL-4, RF-SPL-10, RF-SPL-13, RF-SPL-15, RF-SPL-17, RF-SPL-19 a RF-SPL-21, las
+> filas S-6, S-9, S-10, S-22 y S-29, «Cambios en otras specs», «Qué NO entra», «Verificación» y
+> los targets, de los que sale `setup_carrera_page.dart`.
+> «Decisiones» reúne primero los pedidos del dueño y después cada punto, con la opción aprobada,
+> en dos tablas. La primera reúne las que cambian lo que ve el alumno, que decide el dueño, y la
+> segunda las técnicas, que propone el equipo.
 > Las decisiones de esta spec llevan el prefijo S y las de la spec de la bienvenida, el prefijo
 > B, así que S-29 y B-10 nunca se confunden aunque las dos specs numeren desde 1.
 > La enmienda del 2026-09-25 suma dos requisitos. Con sesión, `/home` abre en la pestaña Horario
@@ -43,8 +55,8 @@ targets:
 > Sin sesión, la intro ya no termina en la tarjeta del login. El logo se queda entero en el centro
 > y la bienvenida con Ulises toma el relevo sin salto (RF-SPL-21). Esa bienvenida es la versión
 > combinada de «Ulises te recibe» que el dueño elige ese día, y la describe su propia spec,
-> `specs/features/bienvenida/bienvenida.spec.md`, también pendiente de aprobación. Su maqueta
-> queda en `docs/images/UI/bienvenida/` (RF-SPL-19).
+> `specs/features/bienvenida/bienvenida.spec.md`, que el dueño aprueba con esta el 2026-09-26. Su
+> maqueta queda en `docs/images/UI/bienvenida/` (RF-SPL-19).
 > El pedido del dueño del 2026-09-25 es reparar el splash de Android, que corta el logo, y
 > volverlo animado e innovador con el logo y los «++». Se le muestran tres conceptos animados y
 > responde que le gustan todos y que quiere «que se puedan randomizar siempre que la app se
@@ -84,6 +96,8 @@ targets:
 - Como alumno o docente con sesión, quiero ver mi horario apenas termina el arranque.
 - Como alumno sin sesión, quiero que el logo se quede en pantalla y que Ulises me reciba, sin un
   corte entre el arranque y la bienvenida.
+- Como alumno con cuenta que todavía no elige su especialidad, quiero que Ulises me tome el test
+  sin que el logo se pierda y me lleve después a mi horario.
 
 ## Contexto
 
@@ -133,7 +147,8 @@ El diagnóstico del 2026-09-25 sobre `41ff0a6` es lo que motiva la spec.
   - `/setup-carrera` no usa `AppHeader`. Su cabecera es `_WizardHeader`, `#FF6600` en los dos
     temas, dentro de un `SafeArea` y sobre un fondo `#F7F7F8` fijo
     (`setup_carrera_page.dart:20-25` y `:47-95`), así que la franja bajo la barra de estado es
-    gris claro y la cabecera naranja empieza debajo.
+    gris claro y la cabecera naranja empieza debajo. El 2026-09-26 el dueño elige que la intro ya
+    no lleve a esa pantalla (RF-SPL-12 y decisión S-29).
   - `/login` no tiene cabecera. Es una página `#FF6600` con una tarjeta blanca en claro, y
     `#262626` con una tarjeta `#050505` en oscuro (`login_page.dart:464-465` y `:485-486`). La
     tarjeta lleva el ícono de la app en 96 dp con esquinas de 22 dp (`login_page.dart:80-88`).
@@ -216,7 +231,8 @@ la intro empieza a moverse (RF-SPL-6).
   bloqueo en vertical, que hoy ya van primero (`main.dart:59-62`). En web no hay intro y `main()`
   conserva el orden de hoy (decisión S-22), porque `WidgetsApp` usa la ruta de la URL antes que
   `initialRoute` y una recarga en `/#/home` construiría `HomePage`, con `AuthService.to` en sus
-  campos, antes de que existan los servicios.
+  campos, antes de que existan los servicios. El único cambio en web es la ruta inicial del alumno
+  sin especialidad, que pasa de `/setup-carrera` a `/login` (RF-SPL-12).
 - La carga pasa a una función que devuelve la ruta de destino y corre en paralelo con la intro.
   Da los mismos pasos que hoy y en el mismo orden, con Firebase (`main.dart:63`), la línea de
   `LucideIcons` (`:64`), `StorageService` (`:67-70`), el registro de los servicios permanentes
@@ -250,27 +266,28 @@ la intro empieza a moverse (RF-SPL-6).
   quedan ligados a `/arranque`, y al retirarla GetX se niega a borrarlos y solo deja un aviso en
   el registro, que es esperado.
 - Cuando terminan la entrada de la variante y la carga, la capa navega sin transición, espera el
-  primer cuadro de la página ya montada debajo, mide los destinos (RF-SPL-11 y RF-SPL-12) y
+  primer cuadro de la página ya montada debajo, mide la cabecera de destino (RF-SPL-11) y
   reproduce la salida. Al terminar, la capa se retira y la página queda tal cual. Hacia la
   bienvenida no hay salida, y la capa se retira en cuanto la bienvenida pinta su primer cuadro
   (RF-SPL-21).
 - **Navegación sin transición.** En get 4.7.3, `Get.offAllNamed` no acepta transición
-  (`extension_navigation.dart:778-792`), y como las `GetPage` de los tres destinos no fijan
-  ninguna, correría la transición por defecto de 300 ms del `PageTransitionsTheme`
-  (`get_transition_mixin.dart`, caso `default`), que en iOS es un deslizamiento lateral. En el
-  primer cuadro la página estaría transformada y la capa mediría posiciones erradas. Por eso la
-  intro navega con `Get.offAll`, con el `page` y el `binding` de la misma `GetPage` del destino,
-  `routeName` igual a la ruta, `Transition.noTransition` y `opaque: true` (decisión S-19). Lleva
-  además el argumento de ruta de cada destino, que es la pestaña de `/home` (RF-SPL-20) o la
-  pose del logo para la bienvenida (RF-SPL-21). `Get.offAll` acepta `arguments` y los guarda en
-  el `RouteSettings` de la ruta (`extension_navigation.dart:957-990` de get 4.7.3). Las `GetPage`
-  se declaran una sola vez en `main.dart` y la intro las toma de ahí, así que el binding no se
-  duplica. `Get.currentRoute` queda en el nombre de la ruta, como hoy, y el login, el logout
-  y el resto de la navegación conservan su transición.
-- **La bienvenida siempre por `offAllToLogin`.** Sin sesión, la intro navega a la bienvenida, que
-  por defecto ocupa la ruta `/login` (decisión S-32), por `offAllToLogin` de
-  `session_navigation.dart`. Esa función suma la opción de navegar sin transición de la misma
-  manera y con el argumento de la pose (RF-SPL-21). La intro nunca navega con
+  (`extension_navigation.dart:778-792`), y como las `GetPage` de los dos destinos, `/home` y
+  `/login`, no fijan ninguna, correría la transición por defecto de 300 ms del
+  `PageTransitionsTheme` (`get_transition_mixin.dart`, caso `default`), que en iOS es un
+  deslizamiento lateral. En el primer cuadro la página estaría transformada y la capa mediría
+  posiciones erradas. Por eso la intro navega con `Get.offAll`, con el `page` y el `binding` de la
+  misma `GetPage` del destino, `routeName` igual a la ruta, `Transition.noTransition` y
+  `opaque: true` (decisión S-19). Lleva además el argumento de ruta de cada destino, que es la
+  pestaña de `/home` (RF-SPL-20) o la pose del logo para la bienvenida (RF-SPL-21). `Get.offAll`
+  acepta `arguments` y los guarda en el `RouteSettings` de la ruta
+  (`extension_navigation.dart:957-990` de get 4.7.3). Las `GetPage` se declaran una sola vez en
+  `main.dart` y la intro las toma de ahí, así que el binding no se duplica. `Get.currentRoute` queda
+  en el nombre de la ruta, como hoy, y el login, el logout y el resto de la navegación conservan su
+  transición.
+- **La bienvenida siempre por `offAllToLogin`.** Sin sesión, y con la sesión de un alumno sin
+  especialidad (RF-SPL-12), la intro navega a la bienvenida, que ocupa la ruta `/login` (decisión
+  S-32), por `offAllToLogin` de `session_navigation.dart`. Esa función suma la opción de navegar sin
+  transición de la misma manera y con el argumento de la pose (RF-SPL-21). La intro nunca navega con
   `Get.offAllNamed('/login')` directo, como pide ese archivo (`session_navigation.dart:4-19`).
 - **Un 401 durante la carga.** Con `runApp` inmediato, `/arranque` ya está montada, así que un
   401 de `GET /auth/me` o de los catálogos dentro de `tryRestoreSession`, que no usa
@@ -290,14 +307,13 @@ la intro empieza a moverse (RF-SPL-6).
   claros sobre el naranja. Como Flutter conserva el último estilo, cada destino declara el suyo
   con un `AnnotatedRegion<SystemUiOverlayStyle>` en su raíz, que rige desde que la capa se
   retira y también cuando se llega por otro camino. `AppHeader`, y con ella `/home`, usa íconos
-  claros en los dos temas, y la bienvenida declara el suyo según su spec (RF-SPL-21).
-  `/setup-carrera` usa íconos oscuros sobre su franja gris, o claros con la alternativa de la
-  decisión S-10, y con el test de especialidad en el código los usa según el tema (RF-SPL-12). En
-  la salida hacia `/setup-carrera` con la franja gris, la capa pasa a íconos oscuros cuando el
-  borde superior del panel baja de la mitad de la franja.
-- El destino se decide igual que hoy, con dos cambios. `/home` abre en la pestaña Horario
-  (RF-SPL-20), y sin sesión la bienvenida con Ulises toma el lugar de la tarjeta del login
-  (RF-SPL-21). Un usuario con sesión nunca ve la bienvenida un instante.
+  claros en los dos temas, y la bienvenida declara el suyo según su spec (RF-SPL-21). La intro ya
+  no llega a `/setup-carrera` (RF-SPL-12), así que esa pantalla no declara nada con esta spec.
+- El destino se decide igual que hoy, con tres cambios. `/home` abre en la pestaña Horario
+  (RF-SPL-20), sin sesión la bienvenida con Ulises toma el lugar de la tarjeta del login
+  (RF-SPL-21) y el alumno con sesión y sin especialidad va también a la bienvenida, donde Ulises
+  le toma el test, en lugar del asistente de carrera (RF-SPL-12). Un docente o un alumno con la
+  configuración completa nunca ve la bienvenida un instante.
 
 `[@test] ../../../test/splash/splash_arranque_test.dart` (pendiente)
 
@@ -438,9 +454,9 @@ que sus medidas se escalan con R.
 - Si la carga termina antes que la entrada, la salida empieza al terminar la entrada. Si no, la
   variante repite su bucle hasta que la carga termina, y la salida empieza en ese momento, en las
   tres variantes.
-- Sin sesión no hay salida. El traspaso a la bienvenida ocurre en esos mismos momentos, salvo
-  que la carga termine durante el bucle, porque entonces el bucle vuelve antes al reposo
-  (RF-SPL-21).
+- Sin sesión, o con la sesión de un alumno sin especialidad, no hay salida. El traspaso a la
+  bienvenida ocurre en esos mismos momentos, salvo que la carga termine durante el bucle, porque
+  entonces el bucle vuelve antes al reposo (RF-SPL-12 y RF-SPL-21).
 - **A.** Una onda recorre los rombos en sentido horario, con un período de 1100 ms y hasta 20 u
   hacia afuera (forma de seno a la sexta). Entra en 300 ms y se apaga en el primer tercio de la
   salida.
@@ -501,50 +517,48 @@ cabecera es la misma en todas las pestañas (BR-SHELL-F-03 de app-shell).
 
 `[@test] ../../../test/splash/splash_salida_test.dart` (pendiente)
 
-### RF-SPL-12. La salida hacia `/setup-carrera`
+### RF-SPL-12. Con sesión y sin especialidad, el relevo a la conversación con Ulises
 
-La salida es común a las tres variantes y dura 420 ms, con easeInOutCubic (decisión S-9). A
-`/setup-carrera` llega el alumno con sesión que todavía no termina la configuración de su carrera
-(`post_login_route.dart:11-14`).
+El dueño elige el 2026-09-26 que el alumno con cuenta que todavía no elige su especialidad no vaya
+al asistente de carrera. Como el alumno sin sesión, pasa a la conversación con Ulises, que le toma
+el test ahí mismo con el logo en la cabecera y después lo lleva a su horario (decisión S-29, que el
+dueño aprueba junto con B-10 de la bienvenida). Así se cumplen sus dos pedidos, que el logo no se
+pierda y que quien tiene sesión vea su horario después del splash.
 
-- **`/setup-carrera`.** Por defecto la página no cambia y la franja bajo la barra de estado
-  sigue gris `#F7F7F8`, como hoy (decisión S-10). El panel se recoge hasta el rectángulo de
-  `_WizardHeader`, sin la franja, así que su borde superior baja de 0 al alto de la franja y deja
-  ver el gris de la página, mientras su color va a `#FF6600`, el de esa cabecera en los dos
-  temas. La estrella y los «++» se achican hacia el ícono del saludo (`LucideIcons.sparkles`, 22
-  dp) y se desvanecen en el último 40 %. En el último 30 %, el panel se desvanece sobre la
-  cabecera real, con su contenido y su sombra, así que en el último cuadro la capa ya no cubre
-  nada y la pantalla no cambia al retirarla.
-- Con la alternativa de la decisión S-10, `setup_carrera_page.dart` pinta la franja de `#FF6600` en
-  los dos temas, también cuando se llega desde la bienvenida, y el panel se recoge hasta la
-  cabecera con la franja incluida.
-- La spec del test de especialidad, aprobada el 2026-09-25 y pendiente de implementar, cambia la
-  cabecera del asistente a `headerColor` y sus colores fijos a los del tema (RF-TEST-1 y
-  RF-TEST-12 de `specs/features/specialty-test/specialty-test.spec.md`, en su rama). La salida
-  funde el panel al color que la cabecera tenga cuando se implemente el splash, así que con el
-  test ya en el código funde a `rgb(30, 30, 36)` en oscuro, y la franja toma el fondo de la
-  página en su tema. En ese caso la barra de estado del asistente lleva íconos oscuros en claro y
-  claros en oscuro, para que se lean sobre la franja (RF-SPL-4).
-- En esta salida el logo se desvanece, lo que choca con el pedido del dueño de que el logo con sus
-  «++» no se pierda en ningún momento. La decisión S-29, que se decide junto con B-10 de la
-  bienvenida, lo deja abierto.
-- `setup_carrera_page.dart` informa dónde queda la cabecera del asistente, igual que la cabecera
-  de RF-SPL-11. Si no se puede medir, la salida es un fundido de 300 ms.
-- La salida hacia `/login` de la versión anterior de esta spec, que encajaba la estrella y los
-  «++» en el ícono de 96 dp de la tarjeta, ya no existe. Sin sesión, la intro no tiene salida y la
-  bienvenida con Ulises toma el relevo (RF-SPL-21).
+- **Quién.** El alumno con sesión y la configuración a medias, al que `postLoginRoute` manda a
+  `/setup-carrera` (`post_login_route.dart:11-14`). `postLoginRoute` no cambia, así que la carga
+  sigue devolviendo esa ruta y la intro la traduce en el relevo. El docente nunca llega aquí,
+  porque `postLoginRoute` siempre lo manda a `/home`.
+- **Sin salida.** Con esa ruta, la intro no reproduce ninguna salida. Hace el relevo de
+  RF-SPL-21, igual que sin sesión, con la pose del logo como argumento, por `offAllToLogin` y sin
+  transición (RF-SPL-4), y desde el bucle vuelve antes al reposo como allí (decisión S-34).
+- **La sesión sigue.** El relevo no borra ni cambia la sesión y no pasa ningún argumento nuevo. La
+  bienvenida reconoce la sesión al empezar su visita y sigue con Ulises y el test hasta el paso al
+  horario (RF-BIEN-21, RF-BIEN-10 y RF-BIEN-11 de la bienvenida).
+- **El logo no se pierde.** Como en RF-SPL-21, el logo sigue entero a la vista desde que la
+  entrada muestra los «++» hasta que la bienvenida lo recibe, y desde ahí sigue en el sello hasta
+  la cabecera de `/home`.
+- **Web.** Sin intro (decisión S-22), `main()` conserva el orden de hoy, salvo que, cuando
+  `postLoginRoute` da `/setup-carrera`, la ruta inicial es `/login`. La bienvenida arranca sin
+  pose y reconoce la sesión igual (RF-BIEN-3 y RF-BIEN-21).
+- **Un 401 durante la carga.** No cambia. `tryRestoreSession` devuelve `false`, no queda sesión y
+  el relevo es el de RF-SPL-21 sin sesión (RF-SPL-4).
+- **Lo que sale.** La salida hacia `/setup-carrera` de la versión anterior de esta spec ya no
+  existe, igual que la salida hacia `/login`. Esa salida duraba 420 ms, recogía el panel hasta la
+  cabecera del asistente y desvanecía el logo junto al ícono del saludo. `setup_carrera_page.dart`
+  sale de los targets, y `/setup-carrera` sigue registrada en `main.dart` sin llegadas desde el
+  arranque («Qué NO entra»).
 
-`[@test] ../../../test/splash/splash_salida_test.dart` (pendiente)
+`[@test] ../../../test/splash/splash_traspaso_test.dart` (pendiente)
 
 ### RF-SPL-13. Modo oscuro
 
 - El splash nativo y la entrada no cambian en oscuro y siguen en `#E77330` (decisión S-2).
-- La salida funde el panel al color de destino de cada tema, que es `rgb(30, 30, 36)` en la
-  cabecera oscura de `/home` y `#FF6600` en el asistente, que hoy no cambia con el tema, igual
-  que su franja gris. Con el test de especialidad en el código, el asistente oscuro funde a
-  `rgb(30, 30, 36)` (RF-SPL-12).
-- Sin sesión, el traspaso es igual en los dos temas, con `#E77330` y el logo blanco, y el paso a
-  los colores del tema oscuro es de la bienvenida (RF-SPL-21).
+- La salida hacia `/home` funde el panel al `headerColor` de cada tema, que es `rgb(30, 30, 36)`
+  en la cabecera oscura.
+- Sin sesión, o con la sesión de un alumno sin especialidad, el traspaso es igual en los dos
+  temas, con `#E77330` y el logo blanco, y el paso a los colores del tema oscuro es de la
+  bienvenida (RF-SPL-12 y RF-SPL-21).
 - En `/home` oscuro, el borde inferior de 2 dp de la cabecera, en `primaryContainer`, aparece con
   el fundido final de RF-SPL-11.
 - La estrella y los «++» siguen blancos, que es el color del texto de la cabecera en los dos
@@ -581,7 +595,8 @@ La salida es común a las tres variantes y dura 420 ms, con easeInOutCubic (deci
   llama a `SemanticsService.announce`, así que el lector la anuncia una sola vez y no anuncia cada
   cuadro.
 - Mientras la capa está encima, el lector no ve la página de debajo. Al retirarse la capa, el
-  lector pasa a la página de destino, que sin sesión es la bienvenida.
+  lector pasa a la página de destino, que sin sesión, o con la sesión de un alumno sin
+  especialidad, es la bienvenida.
 
 `[@test] ../../../test/splash/splash_accesibilidad_test.dart` (pendiente)
 
@@ -608,9 +623,9 @@ La salida es común a las tres variantes y dura 420 ms, con easeInOutCubic (deci
   (decisión S-17), y la opacidad sobre la página solo se usa durante la salida.
 - **Duración.** Con una carga más corta que la entrada, la animación completa dura 1,8 s o menos.
   Las entradas duran 1250, 1150 y 1330 ms y las salidas hacia `/home` 530, 620 y 420 ms, para
-  totales de 1780, 1770 y 1750 ms. La salida hacia `/setup-carrera` dura 420 ms, con totales de
-  1670, 1570 y 1750 ms. Sin sesión no hay salida, y la bienvenida toma el relevo al terminar la
-  entrada, a los 1250, 1150 y 1330 ms, más el primer cuadro de la bienvenida (RF-SPL-21).
+  totales de 1780, 1770 y 1750 ms. Sin sesión, o con la sesión de un alumno sin especialidad, no
+  hay salida, y la bienvenida toma el relevo al terminar la entrada, a los 1250, 1150 y 1330 ms,
+  más el primer cuadro de la bienvenida (RF-SPL-12 y RF-SPL-21).
 - **Fluidez.** Se mide en modo perfil con la línea de tiempo de DevTools, en un Android de gama de
   entrada con pantalla de 60 Hz y en el iPhone SE del dueño, con tres arranques en frío por
   variante (decisión S-17). Dos cuadros quedan fuera de la medida, porque su costo no depende de la
@@ -632,8 +647,8 @@ La salida es común a las tres variantes y dura 420 ms, con easeInOutCubic (deci
   (RF-SPL-4), y S la salida, eso ocurre en máx(E, C) + P + S desde el primer cuadro de Flutter.
   Hacia la bienvenida no hay S, así que el relevo ocurre en máx(E, C) + P. Hoy la app queda
   lista en C + A + P desde que corre `main()`, donde A son las alertas del alumno, y el primer
-  cuadro de Flutter llega recién ahí. Hacia `/home` y `/setup-carrera`, ninguna variante suma
-  espera después de la carga, porque la salida de Incremento absorbe el tic en curso
+  cuadro de Flutter llega recién ahí. Hacia `/home`, ninguna variante suma espera después de la
+  carga, porque la salida de Incremento absorbe el tic en curso
   (RF-SPL-10). Hacia la bienvenida, si la carga termina durante el bucle, su vuelta al reposo
   suma a lo sumo 300 ms en Ensamble, 700 ms en Incremento y 120 ms en Código (decisión S-34).
 - Con la intro el arranque se ve antes, porque el primer cuadro ya no espera la carga, pero la app
@@ -646,14 +661,18 @@ La salida es común a las tres variantes y dura 420 ms, con easeInOutCubic (deci
     que tarden Firebase y el almacenamiento. Los dos botones llegan después, cuando Ulises
     aterriza y saluda. El que vuelve puede tocar «Sí, entrar» de 3,5 a 3,7 s después del primer
     cuadro, unos 3 s más tarde que hoy la tarjeta del login (RF-BIEN-2 y decisiones S-6 y B-2).
-  - `/home` o `/setup-carrera` del alumno con sesión. Con una carga más corta que la entrada, la
-    app queda lista hasta E + S − C − A después que hoy, entre unas décimas y algo más de 1 s
-    según lo que tarde la red. Con una carga más larga, queda lista S − A después, una salida
-    menos las alertas que la decisión S-7 saca de la carga.
+  - `/home` del alumno con sesión. Con una carga más corta que la entrada, la app queda lista
+    hasta E + S − C − A después que hoy, entre unas décimas y algo más de 1 s según lo que tarde
+    la red. Con una carga más larga, queda lista S − A después, una salida menos las alertas que
+    la decisión S-7 saca de la carga.
+  - La bienvenida del alumno con sesión y sin especialidad. Hoy el asistente de carrera aparece en
+    C + A + P, y con la intro el relevo ocurre en máx(E, C) + P, sin salida. La invitación al test
+    llega después, unos 3,6 s tras el relevo más lo que tarde el contenido del test, porque antes
+    Ulises aterriza y la estrella sube al sello (RF-BIEN-21 y decisión S-29).
   - `/home` del docente con sesión. Hoy no pide alertas, así que con una carga larga queda lista
     una salida después que hoy, de 420 a 620 ms, y con una corta, hasta E + S − C después.
-- La decisión S-6 fija si la entrada se ve siempre completa, que es la opción por defecto, o si se
-  acorta o se salta con un toque cuando la carga ya está lista.
+- La animación se ve siempre completa, también cuando la carga ya está lista antes, y ningún
+  toque la acorta ni la salta (decisión S-6, que el dueño confirma el 2026-09-26).
 
 `[@test] ../../../test/splash/splash_ensamble_test.dart` (pendiente)
 `[@test] ../../../test/splash/splash_incremento_test.dart` (pendiente)
@@ -662,7 +681,7 @@ La salida es común a las tres variantes y dura 420 ms, con easeInOutCubic (deci
 ### RF-SPL-18. Fallos de la carga y tope de tiempo
 
 - **Sin red.** Todo sigue como hoy. `tryRestoreSession` devuelve `false` y la ruta es la de la
-  bienvenida, `/login` por defecto (`auth_service.dart:209-215` y decisión S-32), y la intro hace el
+  bienvenida, `/login` (`auth_service.dart:209-215` y decisión S-32), y la intro hace el
   traspaso por `offAllToLogin` al terminar su entrada (RF-SPL-21).
 - **Una excepción antes de registrar los servicios.** Si fallan `Firebase.initializeApp` o
   `StorageService`, no hay una ruta segura, porque la bienvenida y el home necesitan esos
@@ -684,8 +703,8 @@ La salida es común a las tres variantes y dura 420 ms, con easeInOutCubic (deci
 ### RF-SPL-19. Las maquetas quedan en el repo
 
 - `docs/images/UI/splash/` guarda las maquetas como referencia visual, con su línea de tiempo en
-  milisegundos, sin datos reales. Están en el repo desde `b720d70`, como parte de esta spec, y
-  siguen pendientes de aprobación con ella (decisión S-23).
+  milisegundos, sin datos reales. Están en el repo desde `b720d70`, como parte de esta spec, y el
+  dueño las aprueba con ella el 2026-09-26 (decisión S-23).
   - `ensamble.html`, `incremento.html` y `codigo.html` son los tres conceptos. Se abren solos en un
     navegador y tienen Repetir, carga lenta y sin movimiento.
   - `ensamble-adaptada.html` es Ensamble con el arranque de RF-SPL-7, desde la estrella completa
@@ -709,6 +728,8 @@ La salida es común a las tres variantes y dura 420 ms, con easeInOutCubic (deci
     relativa, así que se abre desde su carpeta del repo.
   - `README.md` dice que manda la spec, lista las diferencias y deja a la spec de la bienvenida
     todo lo que pasa después del relevo.
+  - La maqueta no tiene el recorrido del alumno con sesión y sin especialidad (RF-SPL-12). Su
+    relevo es el de «Soy nuevo» y «Ya tengo cuenta», y lo que sigue lo fija RF-BIEN-21.
 - Las tarjetas, los cursos y las aulas de las maquetas son inventados, igual que el código
   `20230001`, la alumna Valeria y el código del autenticador de la maqueta de la bienvenida.
 
@@ -728,19 +749,20 @@ luego de ver el splash dinámico, pueda ver su horario».
 - No se usa un parámetro de consulta como `/home?pestana=horario`, porque get 4.7.3 solo llena
   `Get.parameters` en la navegación por nombre (`route_middleware.dart:259`). Con `Get.offAll`,
   la consulta quedaría en el nombre de la ruta y `Get.currentRoute` dejaría de ser `/home`.
-- **Los roles.** Por defecto todos los roles abren en Horario (decisión S-24). El alumno, el
+- **Los roles.** Todos los roles abren en Horario (decisión S-24, que el dueño confirma el
+  2026-09-26). El alumno, el
   delegado y el subdelegado la tienen en la tercera pestaña, porque Delegado va después de Chats
   (`home_shell_config.dart:58-78`). El profesor titular la tiene en la tercera y el jefe de
   práctica en la segunda, porque sin `canGrade` no hay Calificar (`:33-54`). Como la pestaña se
   busca por su etiqueta, el mismo argumento sirve para todos, y `canGrade` ya se conoce al
   navegar, porque la carga pide las secciones del docente dentro de `tryRestoreSession`
-  (`auth_service.dart:201-205`). Con la alternativa de la decisión S-24, la intro pasa el argumento
-  solo a los alumnos, y el docente abre en Secciones, como hoy.
-- **Qué llegadas lo pasan.** Por defecto lo pasan la intro, con esta spec, y la bienvenida cuando
-  el que vuelve entra o cuando el nuevo termina su cuenta y su test, porque el dueño pide que los
-  dos lleguen a su horario. Lo segundo lo fija la spec de la bienvenida. El final del asistente de
-  carrera (`setup_carrera_controller.dart:103` y RF-TEST-9 de la spec del test) sigue sin
-  argumento y abre en la primera pestaña (decisión S-25).
+  (`auth_service.dart:201-205`).
+- **Qué llegadas lo pasan.** Lo pasan la intro, con esta spec, y la bienvenida cuando el que
+  vuelve entra, cuando el nuevo termina su cuenta y su test y cuando el alumno sin especialidad
+  termina su test, porque el dueño pide que todos lleguen a su horario. Lo segundo lo fija la spec
+  de la bienvenida. El final del asistente de carrera (`setup_carrera_controller.dart:103` y
+  RF-TEST-9 de la spec del test) sigue sin argumento y abre en la primera pestaña (decisión S-25),
+  aunque la intro y la bienvenida ya no llevan a ese asistente (RF-SPL-12).
 - **La orientación.** Horario permite girar (BR-SHELL-F-00 de app-shell), y hoy `HomePage` pide
   sus orientaciones al montarse (`home_page.dart:56-66`). Mientras la capa cubre la pantalla, la
   app sigue en vertical, y `HomePage` abierta en Horario pide las orientaciones de Horario recién
@@ -768,11 +790,12 @@ luego de ver el splash dinámico, pueda ver su horario».
 El dueño elige el 2026-09-25 la versión combinada de «Ulises te recibe» para el arranque sin
 sesión. Tras la intro al azar, la estrella grande con sus «++» se queda en el centro, entera y sin
 nada encima, y la bienvenida con Ulises toma el relevo sin salto. Esta spec cubre solo el relevo.
-Todo lo que sigue es de `specs/features/bienvenida/bienvenida.spec.md`, pendiente de aprobación
-como esta. Esa bienvenida no es la del test de especialidad (RF-TEST-3).
+Todo lo que sigue es de `specs/features/bienvenida/bienvenida.spec.md`, que el dueño aprueba con
+esta el 2026-09-26. Esa bienvenida no es la del test de especialidad (RF-TEST-3). Desde esa
+aprobación, el mismo relevo lleva también al alumno con sesión y sin especialidad (RF-SPL-12).
 
-- **La ruta.** La bienvenida reemplaza a la tarjeta del login como pantalla sin sesión y, por
-  defecto, ocupa la ruta `/login`, que conserva su nombre, porque `offAllToLogin`, el 401 del
+- **La ruta.** La bienvenida reemplaza a la tarjeta del login como pantalla sin sesión y ocupa
+  la ruta `/login`, que conserva su nombre, porque `offAllToLogin`, el 401 del
   `ApiClient`, el cierre de sesión y el restablecimiento de contraseña navegan a ese nombre
   (`session_navigation.dart:32-38` y decisión S-32).
 - **Sin salida.** Cuando terminan la entrada y la carga, el logo queda completo y quieto con sus
@@ -805,11 +828,10 @@ como esta. Esa bienvenida no es la del test de especialidad (RF-TEST-3).
 - **Sin pose.** En web, que no tiene intro (decisión S-22), y cuando se llega a la bienvenida por un
   cierre de sesión, un 401 o un restablecimiento de contraseña, no hay pose, y la bienvenida
   arranca con su recibimiento corto o directo en «Sí, entrar» (RF-BIEN-3).
-- **Orden de publicación.** Por defecto el splash y la bienvenida se publican juntos, en el mismo
-  push a `main`, y el splash nunca sale con el final hacia la tarjeta del login de hoy (decisión
-  S-30). La spec de la bienvenida dice lo mismo en su «Verificación». Con la alternativa, el
-  splash sale primero y, mientras falte la bienvenida, el relevo es un fundido de 300 ms hacia el
-  login de hoy.
+- **Orden de publicación.** El splash y la bienvenida se publican juntos, en el mismo push a
+  `main`, y el splash nunca sale con el final hacia la tarjeta del login de hoy (decisión S-30,
+  que el dueño confirma el 2026-09-26). La spec de la bienvenida dice lo mismo en su
+  «Verificación».
 
 `[@test] ../../../test/splash/splash_traspaso_test.dart` (pendiente)
 
@@ -830,37 +852,41 @@ hoy al abrir la pestaña (RF-SPL-20).
 
 ## Cambios en otras specs
 
-- **App shell.** Suma BR-SHELL-F-04, la estrella junto a «ULIMA++» en la cabecera, pendiente de
-  aprobación junto con esta spec (decisión S-11). La misma regla dice que la cabecera declara
+- **App shell.** Suma BR-SHELL-F-04, la estrella junto a «ULIMA++» en la cabecera, que el dueño
+  aprueba con esta spec el 2026-09-26 (decisión S-11). La misma regla dice que la cabecera declara
   íconos claros en la barra de estado (RF-SPL-4), que no depende de esa decisión. La enmienda del
   2026-09-25 cambia además BR-SHELL-F-02, que hoy dice que la aplicación abre en la primera
   pestaña. Sin argumento sigue así, y con el argumento de RF-SPL-20 abre en Horario (decisiones
   S-24, S-25 y S-31). BR-SHELL-F-00 suma que, abierta en Horario bajo la capa, la orientación de
-  Horario rige desde que la capa se retira (decisión S-26). Las dos quedan pendientes de
-  aprobación. BR-SHELL-F-01 y BR-SHELL-F-03 no cambian, y el enlace de BR-SHELL-F-01 sigue siendo
+  Horario rige desde que la capa se retira (decisión S-26). El dueño aprueba las dos enmiendas el
+  2026-09-26. BR-SHELL-F-01 y BR-SHELL-F-03 no cambian, y el enlace de BR-SHELL-F-01 sigue siendo
   solo el texto.
 - **Auth.** BR-AUTH-F-03 sigue siendo cierta, porque el arranque sigue llamando a
   `tryRestoreSession`, ahora desde la carga en paralelo. No cambia. `offAllToLogin` suma la
   guarda de `/arranque`, la navegación sin transición de la intro y el argumento de la pose
   (RF-SPL-4 y RF-SPL-21), y sus demás llamadores no cambian. La tarjeta del login deja de ser el
-  destino sin sesión del splash, y la spec de la bienvenida enmienda auth cuando la reemplace.
-- **Academic profile.** El asistente de `/setup-carrera` declara íconos oscuros sobre su franja
-  gris y dice dónde queda su cabecera (RF-SPL-4 y RF-SPL-12). Con la alternativa de la decisión
-  S-10, además pinta la franja de naranja. La spec del test de especialidad, aprobada en su rama,
-  ya cambia la cabecera y los colores del asistente, y la salida los toma de ahí (RF-SPL-12).
-- **Test de especialidad.** No cambia. El `Get.offAllNamed('/home')` de su RF-TEST-9 sigue sin
-  argumento y abre en la primera pestaña, salvo que el dueño elija la alternativa de la
-  decisión S-25.
+  destino sin sesión del splash, y el alumno con sesión y sin especialidad pasa a la bienvenida en
+  lugar de `/setup-carrera` (RF-SPL-12). La enmienda de auth que trae la spec de la bienvenida,
+  aprobada el 2026-09-26, recoge los dos cambios.
+- **Academic profile.** Esta spec no cambia el asistente de `/setup-carrera`. Por la decisión
+  S-29, la intro ya no lleva a él y no hay salida que lo mida ni barra de estado que declarar
+  (RF-SPL-12). Que el asistente quede sin llegadas desde el arranque lo anota la spec de la
+  bienvenida, que también deja de llevar a él («Cambios en otras specs» de esa spec).
+- **Test de especialidad.** Esta spec no la cambia. El `Get.offAllNamed('/home')` de su
+  RF-TEST-9 sigue sin argumento y abre en la primera pestaña (decisión S-25). La enmienda
+  aprobada que trae la spec de la bienvenida anota que el alumno sin especialidad hace el test en
+  la conversación y no en el asistente (RF-SPL-12 y RF-BIEN-21).
 - **Schedule.** No cambia. La pestaña Horario solo pasa a ser la primera que se ve.
 - **Bienvenida.** La bienvenida de `specs/features/bienvenida/bienvenida.spec.md` recibe la pose
   del logo y pinta un primer cuadro idéntico al último de la intro, avisa cuando lo pinta, declara
   su estilo de barra de estado y arranca también sin pose (RF-SPL-21, RF-BIEN-2, RF-BIEN-3 y
-  RF-BIEN-17). Ocupa la ruta que fije la decisión S-32 y pasa el argumento de Horario al llegar a
+  RF-BIEN-17). Ocupa la ruta `/login` de la decisión S-32 y pasa el argumento de Horario al llegar a
   `/home` (RF-SPL-20 y RF-BIEN-11). Su paso al horario usa la capa de esta spec, que por eso es
   una pieza permanente del `builder` con una entrada para la bienvenida (RF-SPL-4 y decisión B-33
-  de la bienvenida), y `lib/pages/splash/**` entra en los targets de esa spec. Las decisiones
-  S-28 y B-16 se deciden juntas, igual que S-29 y B-10, y las dos specs se publican juntas
-  (decisión S-30).
+  de la bienvenida), y `lib/pages/splash/**` entra en los targets de esa spec. Con la sesión de
+  un alumno sin especialidad, la bienvenida reconoce la sesión y le toma el test (RF-SPL-12 y
+  RF-BIEN-21). El dueño aprueba juntas S-28 con B-16 y S-29 con B-10, y las dos specs se publican
+  juntas (decisión S-30).
 - **README.** La sección «El arranque» describe hoy doce pasos antes de `runApp`
   (`README.md:128-143`). La implementación la reescribe con el arranque nuevo.
 
@@ -876,78 +902,99 @@ hoy al abrir la pestaña (RF-SPL-20).
 - Animar por partes el contenido de la página de destino, como las tarjetas escalonadas de las
   maquetas originales.
 - Sonido.
-- La intro en web (decisión S-22). En web, `main()` conserva el arranque de hoy.
+- La intro en web (decisión S-22). En web, `main()` conserva el arranque de hoy, salvo la ruta
+  inicial del alumno sin especialidad (RF-SPL-12).
 - Quitar la animación de salida que Android 12 o superior puede reproducir sobre el primer cuadro,
   que exige `setOnExitAnimationListener` en `MainActivity.kt`, fuera de targets («Verificación»).
 - Paquetes de animación como Lottie, Rive o `flutter_animate`.
 - La bienvenida con Ulises, con su conversación y el inicio de sesión, el registro y el test
   dentro de ella, que son de su spec (RF-SPL-21).
-- Cambiar la pestaña con la que abren las demás llegadas a `/home`, salvo con la alternativa de
-  la decisión S-25.
-- Las alternativas de «Decisiones», mientras el dueño no las elija.
+- Cambiar la pestaña con la que abren las demás llegadas a `/home` (decisión S-25).
+- Quitar la ruta `/setup-carrera` y el asistente de carrera, que quedan sin llegadas desde el
+  arranque (RF-SPL-12). Van en un cambio aparte, junto con el origen `asistente` de la spec del
+  test.
+- Las alternativas de «Decisiones», que el dueño descarta el 2026-09-26.
 
 ## Decisiones
 
-Ninguna está aprobada. El dueño confirma o cambia cada una al aprobar la spec. Las decisiones S-24 a
+El dueño aprueba las 34 el 2026-09-26, S-1 a S-34, en la opción que la spec toma por defecto,
+salvo S-29, donde elige la opción que hasta entonces era la alternativa. Las decisiones S-24 a
 S-34 llegan con la enmienda del 2026-09-25, y la corrección de una revisión, ese mismo día, deja
 las tablas en palabras llanas y enlaza las decisiones gemelas de la bienvenida.
 
+### Aprobación del dueño del 2026-09-26
+
+El dueño aprueba la spec con «aplica» y lo confirma como «Arranque: todas las recomendadas». En la
+misma aprobación cambia dos decisiones, porque cumplen mejor lo que pidió, «que no se pierda el
+logo» y «con sesión, luego del splash, ver su horario».
+
+- **S-29, junto con B-10 de la bienvenida.** El alumno con cuenta que todavía no elige su
+  especialidad no va al asistente de carrera. Va a la conversación con Ulises, que le toma el test
+  ahí mismo con el logo en la cabecera y después lo lleva a su horario (RF-SPL-12 y RF-BIEN-21).
+- **B-9 de la bienvenida.** «¿Olvidaste tu contraseña?» conserva las pantallas de hoy, con el sello
+  del logo ULima++ y sus «++» en su cabecera, para que el logo nunca se pierda (RF-BIEN-20). Esta
+  spec no cambia por esa decisión.
+
+Tres decisiones quedan además explícitas en su opción por defecto. Todos los roles abren en
+Horario (S-24), el splash y la bienvenida se publican juntos (S-30) y la animación se ve siempre
+completa (S-6).
+
 ### Pedidos del dueño del 2026-09-25
 
-La spec recoge estos pedidos del dueño. El texto que los describe sigue pendiente de su
-aprobación, igual que el resto. Donde una opción por defecto no cumple un pedido entero, el
-pedido lo dice y nombra la decisión que lo abre.
+La spec recoge estos pedidos del dueño, y el dueño aprueba su texto con el resto el 2026-09-26.
+Con S-29 y B-9 en la opción que elige ese día, las opciones aprobadas cumplen cada pedido entero.
 
 - Tres variantes, Ensamble adaptada, Incremento y Código, al azar en cada arranque en frío
   (RF-SPL-6 a RF-SPL-9). Con «reducir movimiento» activado en el teléfono no hay variante, y la
   estrella queda quieta (S-12).
-- Con sesión, después del splash se ve el horario (RF-SPL-20). Qué roles y qué llegadas lo hacen
-  queda en las decisiones S-24 y S-25. Con las opciones por defecto hay una excepción. El alumno
-  que tiene cuenta pero todavía no elige su especialidad va al asistente de carrera y no a su
-  horario (S-29, que se decide junto con B-10 de la bienvenida).
+- Con sesión, después del splash se ve el horario (RF-SPL-20), en todos los roles (S-24) y en las
+  llegadas de S-25. El alumno que tiene cuenta pero todavía no elige su especialidad hace antes el
+  test con Ulises y termina en su horario (S-29, que el dueño elige junto con B-10 de la
+  bienvenida).
 - Sin sesión, «Ulises te recibe» en su versión combinada. La estrella con sus «++» se queda entera
   en el centro, Ulises aterriza a su lado y la conversación sigue hasta el horario, sin que el
-  logo se pierda en ningún momento (RF-SPL-21 y la spec de la bienvenida). Con las opciones por
-  defecto, el logo se deja de ver en dos casos. Al llegar al asistente de carrera el alumno que
-  todavía no elige su especialidad, donde el logo se achica y se desvanece (S-29 y B-10), y
-  mientras el alumno cambia su contraseña en las pantallas de hoy de «¿Olvidaste tu contraseña?»
-  (B-9 de la bienvenida). Las alternativas de esas decisiones lo mantienen a la vista.
+  logo se pierda en ningún momento (RF-SPL-21 y la spec de la bienvenida). El logo tampoco se deja
+  de ver con el alumno sin especialidad, que sigue en la conversación con el logo en el sello (S-29
+  y B-10), ni en las pantallas de «¿Olvidaste tu contraseña?», que llevan el sello en su cabecera
+  (B-9 de la bienvenida).
 
 ### Para el dueño
 
-Cambian lo que ve el alumno. La columna «Qué ve el alumno» describe la opción por defecto, y las
-dos primeras columnas de texto y la alternativa van en palabras llanas. Los códigos, los archivos
-y los nombres de las maquetas quedan en «Dónde queda». Una decisión que se decide junto con otra
-de la spec de la bienvenida lo dice en su fila.
+Cambian lo que ve el alumno. La columna «Opción aprobada» dice la opción que el dueño aprueba el
+2026-09-26, que en todas salvo S-29 es la que la spec toma por defecto, y «Qué ve el alumno» la
+describe. Las dos primeras columnas de texto y la alternativa van en palabras llanas. Los códigos,
+los archivos y los nombres de las maquetas quedan en «Dónde queda». Una decisión que el dueño
+aprueba junto con otra de la spec de la bienvenida lo dice en su fila.
 
-| # | Decisión | Opción por defecto | Qué ve el alumno | Alternativa | Dónde queda |
+| # | Decisión | Opción aprobada | Qué ve el alumno | Alternativa | Dónde queda |
 | --- | --- | --- | --- | --- | --- |
 | S-1 | Imagen fija al tocar el ícono | La estrella completa, blanca y sin «++», sobre el mismo naranja de fondo y un poco más chica que hoy, para que Android no la corte | Ve la estrella entera, sin puntas cortadas ni un cuadrado de otro naranja. Los «++» llegan con la animación | La misma estrella algo más chica, con más aire hasta el borde del círculo que Android deja ver | RF-SPL-1 |
 | S-2 | Modo oscuro | Todo el arranque en naranja en los dos temas, y al final el naranja se funde con el color oscuro de la pantalla de destino | Con el teléfono en oscuro, la apertura se ve naranja, igual que en claro, y la app aparece oscura | La imagen fija y la animación sobre fondo oscuro en el tema oscuro, con la estrella blanca | RF-SPL-1 y RF-SPL-13 |
 | S-3 | Cómo empieza Ensamble | Los ocho rombos se abren juntos desde la estrella completa y vuelven a encajar uno a uno en sentido horario | La estrella se desarma y se vuelve a armar frente a él, pieza por pieza | Los rombos se apagan en su sitio y vuelven a entrar uno a uno en espiral desde afuera, como en la maqueta original | RF-SPL-7. La opción por defecto es `ensamble-adaptada.html` y la alternativa, su casilla «Arranque alternativo» |
 | S-4 | Azar | Cada apertura elige una de las tres animaciones sin repetir la de la vez anterior | Nunca ve la misma dos veces seguidas, y a la larga ve las tres por igual | Cada apertura elige entre las tres, así que a veces se repite | RF-SPL-6 |
 | S-5 | Cuándo hay animación | Cada vez que la app se abre desde cero | La ve al abrir la app cerrada. Al volver a la app que sigue abierta en segundo plano no la ve, salvo que el teléfono la haya cerrado en segundo plano para liberar memoria. Hasta Android 15, salir con el botón atrás cierra la app y la siguiente apertura tiene animación; desde Android 16 la app queda en segundo plano y no la tiene | También al volver a la app después de 30 minutos o más en segundo plano, sobre la pantalla en que está, lo que pide un final más para la animación | RF-SPL-6 |
-| S-6 | Cuánto dura si la app carga rápido | La animación completa siempre, de 1,6 a 1,8 s hasta el horario o el asistente, y de 1,15 a 1,33 s hasta que Ulises toma el relevo sin sesión | La ve entera en cada apertura. Sin sesión guardada, Ulises toma el relevo cerca de 1 s después de cuando hoy aparece el login, y el que vuelve puede tocar «Sí, entrar» de 3,5 a 3,7 s después de abrir la app, unos 3 s más tarde que hoy la tarjeta del login (B-2). Con sesión, el horario aparece entre unas décimas y algo más de 1 s después que hoy, según la red | Un toque en la pantalla salta al final en cuanto la app termina de cargar, o una animación abreviada a unos 600 ms cuando la app ya está cargada | RF-SPL-17 y RF-BIEN-2 |
+| S-6 | Cuánto dura si la app carga rápido. Confirmada de forma explícita el 2026-09-26 | La animación completa siempre, cerca de 1,8 s hasta el horario, y de 1,15 a 1,33 s hasta que Ulises toma el relevo sin sesión o sin especialidad | La ve entera en cada apertura. Sin sesión guardada, Ulises toma el relevo cerca de 1 s después de cuando hoy aparece el login, y el que vuelve puede tocar «Sí, entrar» de 3,5 a 3,7 s después de abrir la app, unos 3 s más tarde que hoy la tarjeta del login (B-2). Con sesión, el horario aparece entre unas décimas y algo más de 1 s después que hoy, según la red | Un toque en la pantalla salta al final en cuanto la app termina de cargar, o una animación abreviada a unos 600 ms cuando la app ya está cargada | RF-SPL-17 y RF-BIEN-2 |
 | S-7 | El número de la campana | La app entra sin esperar las alertas, y el inicio las pide al abrirse, como ya hace hoy | Entra al inicio antes, y el número de la campana puede aparecer un momento después | La app espera también las alertas, y el número está desde el primer momento, a cambio de entrar más tarde | RF-SPL-4 y RF-SPL-17 |
 | S-8 | Si la carga no termina | La animación sigue en su espera hasta que la app responde | Sin red va a la conversación con Ulises, como hoy va al login. Si la red se cuelga sin fallar, ve la espera animada todo lo que dure, como hoy ve la imagen fija | A los 10 s va a la conversación con Ulises, lo que pide cambiar antes cómo se restaura la sesión para que un fallo tardío no cierre la sesión nueva | RF-SPL-10 y RF-SPL-18 |
-| S-9 | Cómo termina según la pantalla | Al llegar al horario, del alumno o del docente, cada animación termina a su manera. Al llegar al asistente de carrera, las tres terminan igual. Sin sesión no hay final, porque el logo se queda y Ulises toma el relevo, como decide el dueño | En el asistente, el final es el mismo con las tres, y la diferencia está en el comienzo. Sin sesión, las tres dejan el logo entero en el centro para Ulises | Un final propio de cada animación también en el asistente | RF-SPL-11, RF-SPL-12 y RF-SPL-21 |
-| S-10 | La franja de arriba del asistente de carrera | Queda gris claro, como hoy | La barra de estado queda sobre gris claro con íconos oscuros, y la cabecera naranja empieza debajo | Pintarla de naranja, para que la cabecera llegue hasta arriba, también al llegar desde la conversación con Ulises | RF-SPL-4 y RF-SPL-12 |
+| S-9 | Cómo termina según la pantalla | Al llegar al horario, del alumno o del docente, cada animación termina a su manera. Sin sesión, o con cuenta y sin especialidad (S-29), no hay final, porque el logo se queda y Ulises toma el relevo, como decide el dueño | Al llegar al horario, cada animación tiene su final. En los demás casos, las tres dejan el logo entero en el centro para Ulises | Un final propio de cada animación también en el asistente de carrera. Desde S-29 la animación ya no llega al asistente, así que no tiene objeto | RF-SPL-11, RF-SPL-12 y RF-SPL-21 |
+| S-10 | La franja de arriba del asistente de carrera | Queda gris claro, como hoy | Nada distinto. Desde S-29 la animación ya no llega al asistente, que queda como hoy | Pintarla de naranja, para que la cabecera llegue hasta arriba | RF-SPL-12. Sin efecto en esta spec desde S-29 |
 | S-11 | Estrella en la cabecera | La estrella blanca a la izquierda de «ULIMA++», como adorno | La cabecera muestra la estrella junto al nombre, y la estrella de la animación aterriza en ella | Solo el texto, como hoy, y la estrella de la animación se disuelve junto a él. Como el sello de la conversación con Ulises también termina en esta cabecera, su estrella se disuelve igual | BR-SHELL-F-04 de app-shell, RF-SPL-11, RF-SPL-21 y RF-BIEN-4 |
 | S-12 | Reducir movimiento | Sin animación. La estrella queda quieta, los «++» aparecen con un fundido corto y la app aparece con otro. Sin sesión, Ulises toma el relevo sin fundido | Con «Quitar animaciones» o «Reducir movimiento» activado en el teléfono, nada se mueve ni gira | Ni siquiera fundidos, y la app aparece de golpe cuando termina de cargar | RF-SPL-14 |
 | S-13 | Lector de pantalla | Anuncia «ULIMA++, cargando» una sola vez | Con TalkBack o VoiceOver oye esa frase una vez y después la pantalla de destino, sin repeticiones mientras carga | Anuncia solo «ULIMA++» | RF-SPL-15 |
 | S-14 | Vibración | Sin vibración | El teléfono no vibra al abrir la app | Una vibración muy leve cuando aparece cada «+», nunca con reducir movimiento | RF-SPL-16 |
 | S-15 | Letra de Código | La letra de máquina de escribir que trae el teléfono | La palabra «ULima» que se escribe en Código se ve un poco distinta en Android y en iPhone | Una letra propia, JetBrains Mono, de licencia libre, para que se vea igual en los dos | RF-SPL-9 |
-| S-24 | Quién abre en Horario | Todos los roles, alumno, delegado, subdelegado, profesor titular y jefe de práctica | Con sesión, después del splash ve su horario, sea alumno o docente | Solo los alumnos, delegados incluidos, y el docente sigue abriendo en Secciones | RF-SPL-20 |
+| S-24 | Quién abre en Horario. Confirmada de forma explícita el 2026-09-26 | Todos los roles, alumno, delegado, subdelegado, profesor titular y jefe de práctica | Con sesión, después del splash ve su horario, sea alumno o docente | Solo los alumnos, delegados incluidos, y el docente sigue abriendo en Secciones | RF-SPL-20 |
 | S-25 | Qué llegadas al inicio abren en Horario | Las que vienen de la animación y de la conversación con Ulises. Al terminar el asistente de carrera se sigue abriendo en Malla, como hoy | Ve su horario al abrir la app con sesión y al entrar o crear su cuenta con Ulises. Al terminar el asistente de carrera ve Malla | Que también abra en Horario al terminar el asistente de carrera, o cada vez que se llega al inicio | RF-SPL-20 y BR-SHELL-F-02 de app-shell. La primera alternativa cambia RF-TEST-9 de la spec del test, y la segunda, la prueba «la app abre en Malla» de `chats_pestana_test.dart` |
 | S-26 | Girar el teléfono al abrir en Horario | La app sigue en vertical mientras corre el final de la animación y gira después, si el teléfono está de lado | Ve el final completo en vertical y, con el teléfono de lado, el horario gira apenas termina | Girar desde que aparece el inicio, y con el teléfono de lado el final es un fundido, sin la cabecera | RF-SPL-20 y BR-SHELL-F-00 de app-shell |
 | S-27 | El horario al aparecer | La página pide el horario al aparecer, como hoy al tocar la pestaña, y la animación no lo espera | Con red lenta puede ver el esqueleto del horario un momento, durante el final de la animación o después | La animación espera también el horario, así que aparece completo, a cambio de una espera animada más larga | RF-SPL-20 y RF-SPL-17 |
-| S-28 | Ulises al llegar al horario desde la animación. Se decide junto con B-16 | Su burbuja aparece con la página, como hoy, con su latido | Ulises ya está en su esquina cuando termina la animación | Aparece con un rebote después de la animación, como en la maqueta de la bienvenida | RF-SPL-20. La alternativa cambia `chatbot_bubble.dart`, que está en los targets de la bienvenida y no en los de esta spec |
-| S-29 | El alumno con cuenta que todavía no elige su especialidad, al abrir la app. Se decide junto con B-10 | Va al asistente de carrera de hoy, y el logo se achica hacia el ícono del saludo y se desvanece | Ve el asistente de carrera en lugar de su horario y ve desaparecer el logo, contra los dos pedidos | Va a la conversación con Ulises, que lo retoma en la invitación al test, sin el paso de la carrera, y termina en su horario con el logo en el sello. Es la misma alternativa de B-10 | RF-SPL-12 y RF-BIEN-10 |
-| S-30 | Orden de publicación | El splash y la conversación con Ulises se publican juntos, en la misma actualización | Sin sesión, el arranque siempre termina en Ulises | El splash primero, con un fundido corto hacia el login de hoy mientras falte la conversación con Ulises | RF-SPL-21 y «Verificación» de la bienvenida. La alternativa suma `login_page.dart` a los targets para su barra de estado |
+| S-28 | Ulises al llegar al horario desde la animación. Aprobada junto con B-16 | Su burbuja aparece con la página, como hoy, con su latido | Ulises ya está en su esquina cuando termina la animación | Aparece con un rebote después de la animación, como en la maqueta de la bienvenida | RF-SPL-20. La alternativa cambia `chatbot_bubble.dart`, que está en los targets de la bienvenida y no en los de esta spec |
+| S-29 | El alumno con cuenta que todavía no elige su especialidad, al abrir la app. Elegida por el dueño el 2026-09-26, junto con B-10 | La animación deja el logo entero en el centro, como sin sesión, y Ulises le toma el test en la conversación, con el logo en la cabecera, antes de llevarlo a su horario | Ve aterrizar a Ulises junto al logo, el logo sube a la cabecera y Ulises lo invita al test. Al terminar ve su horario, y en ningún momento deja de ver el logo | La opción por defecto anterior, que el dueño descarta. Iba al asistente de carrera de hoy, y el logo se achicaba hacia el ícono del saludo y se desvanecía | RF-SPL-12 y RF-SPL-21, y RF-BIEN-21 de la bienvenida. Es la misma opción de B-10 |
+| S-30 | Orden de publicación. Confirmada de forma explícita el 2026-09-26 | El splash y la conversación con Ulises se publican juntos, en la misma actualización | Sin sesión, el arranque siempre termina en Ulises | El splash primero, con un fundido corto hacia el login de hoy mientras falte la conversación con Ulises | RF-SPL-21 y «Verificación» de la bienvenida |
 
 ### Técnicas (las propone el equipo)
 
-No cambian lo que ve el alumno, salvo donde la columna lo dice.
+No cambian lo que ve el alumno, salvo donde la columna lo dice. El dueño las aprueba el 2026-09-26
+en la propuesta del equipo.
 
 | # | Decisión | Propuesta del equipo | Alternativa | Qué ve el alumno | Dónde queda |
 | --- | --- | --- | --- | --- | --- |
@@ -957,7 +1004,7 @@ No cambian lo que ve el alumno, salvo donde la columna lo dice.
 | S-19 | Navegar sin transición | `Get.offAll` con el `page` y el `binding` de la `GetPage` del destino, `Transition.noTransition` y el argumento de ruta del destino, solo desde la intro | `transition` en las `GetPage` de los tres destinos, que quita también la transición del login y del logout, o medir al terminar la transición de 300 ms y sumarla a la animación | Nada distinto. Con la primera alternativa, el login y el logout pierden su transición; con la segunda, la animación dura 300 ms más | RF-SPL-4 |
 | S-20 | Un 401 durante la carga | `offAllToLogin` no navega mientras la ruta es `/arranque`, salvo desde la intro | Las llamadas de `tryRestoreSession` con `suppressSessionExpiry`, que cambia `auth_service.dart` y exige sumarlo a `fetchTeacherSections` | Con la sesión vencida va a la bienvenida sin el aviso «Sesión expirada», como hoy va al login | RF-SPL-4 |
 | S-21 | Centro de la estrella en Android 12 a 14 | La mitad del alto de la pantalla física (`display.size`), medido desde el borde superior de la vista | Activar el modo de borde a borde en toda la app, que es un cambio global | Nada distinto. Con la alternativa, todas las pantallas llegan bajo la barra de navegación | RF-SPL-5 |
-| S-22 | Web | Sin intro en web, con el arranque de hoy, así que la bienvenida arranca sin pose | Forzar `/arranque` como ruta inicial en web, también al recargar en otra ruta | Nada en Android ni en iOS. Web no se despliega (`README.md:701`) | RF-SPL-4 |
+| S-22 | Web | Sin intro en web, con el arranque de hoy, así que la bienvenida arranca sin pose. Desde S-29, la ruta inicial del alumno sin especialidad pasa de `/setup-carrera` a `/login` (RF-SPL-12) | Forzar `/arranque` como ruta inicial en web, también al recargar en otra ruta | Nada en Android ni en iOS. Web no se despliega (`README.md:701`) | RF-SPL-4 |
 | S-23 | Lugar de la spec y de las maquetas | Spec propia en `specs/features/splash/`, BR-SHELL-F-04 y la enmienda de BR-SHELL-F-02 en app-shell, maquetas en `docs/images/UI/splash/`, que están en el repo desde `b720d70`, y la maqueta de la bienvenida en `docs/images/UI/bienvenida/`, para la spec nueva `specs/features/bienvenida/bienvenida.spec.md` | La spec dentro de app-shell, o la maqueta de la bienvenida junto a las del splash | Nada distinto | Estado y RF-SPL-19 |
 | S-31 | Cómo se pasa la pestaña | El argumento de ruta `{'pestana': 'horario'}`, que `HomePage` lee una sola vez al montarse | El parámetro `/home?pestana=horario`, que solo sirve con la navegación por nombre, o `HomePage` siempre en Horario, sin argumento | Nada distinto. Con la segunda alternativa, toda llegada al inicio abre en Horario (decisión S-25) | RF-SPL-20 |
 | S-32 | Ruta de la bienvenida | `/login`, que conserva su nombre y todos sus llamadores | Una ruta nueva `/bienvenida`, con `offAllToLogin` y sus llamadores cambiados | Nada distinto | RF-SPL-4 y RF-SPL-21 |
@@ -969,20 +1016,22 @@ No cambian lo que ve el alumno, salvo donde la columna lo dice.
 - Antes de aprobar, el dueño abre `docs/images/UI/splash/ensamble-adaptada.html`, con y sin
   «Arranque alternativo», para decidir la decisión S-3 sobre lo que se construye, y
   `docs/images/UI/bienvenida/ulises-te-recibe-combinada.html` para ver el horario con sesión y el
-  relevo sin sesión (RF-SPL-20 y RF-SPL-21).
+  relevo sin sesión (RF-SPL-20 y RF-SPL-21). Aprueba el 2026-09-26, y las dos maquetas siguen
+  como referencia de la revisión manual.
 - `dart format` sobre los archivos Dart que cambien.
 - `flutter analyze --no-pub`.
 - `flutter test --no-pub`, con la suite completa, porque `main.dart`, `app_header.dart`,
   `home_page.dart` y `session_navigation.dart` los usan otras features. Incluye `test/splash`,
   `test/components/header/app_header_test.dart` y `test/HU23_jeff/chats_pestana_test.dart`, que
   sigue abriendo en Malla sin argumento. `splash_arranque_test` cubre el 401 durante la carga, sin
-  snackbar y con una sola navegación a la bienvenida. `home_pestana_inicial_test` cubre Horario
-  con el argumento para el alumno, el delegado, el profesor titular y el jefe de práctica, la
-  primera pestaña sin argumento y la orientación vertical hasta que la capa se retira.
-  `splash_traspaso_test` cubre la pose que recibe la bienvenida en cada variante, la vuelta al
-  reposo desde el bucle y que la capa se retira sin cambiar la pantalla y queda montada e
-  inactiva, sin pintar, sin bloquear toques y fuera de la semántica, lista para el paso al
-  horario de la bienvenida (RF-SPL-4).
+  snackbar y con una sola navegación a la bienvenida. `home_pestana_inicial_test` cubre Horario con
+  el argumento para el alumno, el delegado, el profesor titular y el jefe de práctica, la primera
+  pestaña sin argumento y la orientación vertical hasta que la capa se retira.
+  `splash_traspaso_test` cubre la pose que recibe la bienvenida en cada variante, sin sesión y con
+  la sesión de un alumno sin especialidad, sin salida hacia el asistente y sin tocar la sesión.
+  Cubre también la vuelta al reposo desde el bucle y que la capa se retira sin cambiar la pantalla y
+  queda montada e inactiva, sin pintar, sin bloquear toques y fuera de la semántica, lista para el
+  paso al horario de la bienvenida (RF-SPL-4).
 - `flutter test --update-goldens test/splash/splash_png_nativo_test.dart` y
   `dart run flutter_native_splash:create` después de cambiar la geometría, y un `git diff` que solo
   muestre los recursos del splash.
@@ -993,7 +1042,8 @@ No cambian lo que ve el alumno, salvo donde la columna lo dice.
   Flutter ni al retirarse la capa, que en el relevo a la bienvenida el logo no se mueve ni
   parpadea, también con la carga lenta, y que la barra de estado queda legible en cada destino.
 - En la misma revisión, con sesión, el alumno, el delegado, el profesor titular y el jefe de
-  práctica abren en Horario, con el teléfono en vertical y en horizontal.
+  práctica abren en Horario, con el teléfono en vertical y en horizontal, y un alumno de prueba
+  con cuenta y sin especialidad pasa por el relevo a Ulises, sin ver el asistente de carrera.
 - En Android 12 o superior, el sistema puede reproducir su animación de salida del splash, un
   fundido o un revelado, encima del primer cuadro de Flutter. Si la grabación la muestra, quitarla
   exige `setOnExitAnimationListener` en `MainActivity.kt`, que no está en targets, y el cambio

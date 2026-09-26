@@ -21,13 +21,15 @@ targets:
 > no cambian.
 > Ajustada el 2026-09-25 por la spec del splash animado (`specs/features/splash/splash.spec.md`),
 > que suma BR-SHELL-F-04, la estrella del logo junto a «ULIMA++» y los íconos claros de la barra
-> de estado sobre el header. **Pendiente de la aprobación del dueño**, junto con esa spec (su
-> decisión S-11 para la estrella). Ese ajuste no cambia BR-SHELL-F-00 a BR-SHELL-F-03.
+> de estado sobre el header. **Aprobado por el dueño el 2026-09-26** junto con esa spec, con la
+> estrella de su decisión S-11, y pendiente de implementar. Ese ajuste no cambia BR-SHELL-F-00 a
+> BR-SHELL-F-03.
 > Enmendada el mismo 2026-09-25 por la misma spec, porque el dueño pide que quien tiene sesión vea
 > su horario después del splash (RF-SPL-20). BR-SHELL-F-02 suma la pestaña inicial Horario con
 > un argumento de ruta y BR-SHELL-F-00 suma la orientación de Horario mientras la intro cubre la
-> pantalla. **Las dos enmiendas quedan pendientes de la aprobación del dueño**, junto con esa spec
-> (sus decisiones S-24, S-25, S-26 y S-31).
+> pantalla. **El dueño aprueba las dos enmiendas el 2026-09-26** junto con esa spec, con sus
+> decisiones S-24, S-25, S-26 y S-31 en la opción por defecto, y deja explícita S-24, así que todos
+> los roles abren en Horario. Quedan pendientes de implementar.
 
 ## Scope
 
@@ -36,10 +38,10 @@ targets:
 - Agrega la pestaña Chats al footer del alumno (BR-SHELL-F-02) y quita del header el
   control de lista de Horario (BR-SHELL-F-03). No crea rutas ni modifica sesión, permisos,
   APIs ni persistencia.
-- BR-SHELL-F-04, pendiente de aprobación, pone la estrella del logo junto a «ULIMA++» y fija
+- BR-SHELL-F-04, aprobada el 2026-09-26, pone la estrella del logo junto a «ULIMA++» y fija
   los íconos claros de la barra de estado sobre el header. La ruta `/arranque` y la intro que
   aterriza en el header son de la spec del splash.
-- La enmienda de BR-SHELL-F-00 y BR-SHELL-F-02, pendiente de aprobación, abre el shell en
+- La enmienda de BR-SHELL-F-00 y BR-SHELL-F-02, aprobada el 2026-09-26, abre el shell en
   Horario cuando la ruta lo pide. La intro que pasa ese argumento es de la spec del splash, y la
   bienvenida con Ulises que también lo pasa es de su spec nueva.
 
@@ -59,7 +61,7 @@ targets:
   vuelve a restringir la orientación a vertical.
 - Al salir o destruir el shell autenticado, la orientación global vuelve a
   vertical.
-- Enmienda pendiente de aprobación (RF-SPL-20 de la spec del splash). Si el shell se monta en
+- Enmienda aprobada el 2026-09-26 (RF-SPL-20 de la spec del splash). Si el shell se monta en
   Horario mientras la capa de la intro cubre la pantalla, sigue en vertical y pide las
   orientaciones de Horario cuando la capa se retira (decisión S-26 de esa spec). Pasa lo mismo
   cuando llega desde el paso al horario de la bienvenida, que usa la misma capa (RF-BIEN-11).
@@ -86,11 +88,12 @@ targets:
   toda pestaña salvo Horario (BR-SHELL-F-00).
 - La aplicación sigue abriendo en la primera pestaña, Malla para el alumno, cuando la ruta
   `/home` llega sin argumento.
-- Enmienda pendiente de aprobación (RF-SPL-20 de la spec del splash). Con el argumento de ruta
+- Enmienda aprobada el 2026-09-26 (RF-SPL-20 de la spec del splash). Con el argumento de ruta
   `{'pestana': 'horario'}`, el shell abre en la pestaña Horario, que busca por su etiqueta, así que
   sirve para el alumno, el delegado, el subdelegado, el profesor titular y el jefe de práctica
   (decisiones S-24 y S-31 de esa spec). Lo pasan la intro del splash y, según su spec, la
-  bienvenida con Ulises. Las demás llegadas a `/home` no lo pasan (decisión S-25 de esa spec).
+  bienvenida con Ulises, también cuando el alumno sin especialidad termina su test en la
+  conversación. Las demás llegadas a `/home` no lo pasan (decisión S-25 de esa spec).
   `[@test] ../../../test/splash/home_pestana_inicial_test.dart` (pendiente)
 - El footer del docente no cambia.
 - Con cinco pestañas o menos, la etiqueta activa del footer va en 14 px y las demás en 12 px.
@@ -110,7 +113,7 @@ targets:
   del horario al volver de las alertas (`app_header.dart:128-131`).
   `[@test] ../../../test/components/header/app_header_test.dart`
 
-### BR-SHELL-F-04: Estrella del logo junto a «ULIMA++» (pendiente de aprobación)
+### BR-SHELL-F-04: Estrella del logo junto a «ULIMA++» (aprobada el 2026-09-26)
 
 - A la izquierda del texto «ULIMA++», el header muestra la estrella del logo en blanco
   (`onPrimary`), de 26 dp de punta a punta, a 10 dp del texto y centrada en su línea, en los temas
@@ -129,8 +132,11 @@ targets:
   `AnnotatedRegion<SystemUiOverlayStyle>`, en los temas claro y oscuro, porque la intro del splash
   deja aplicado el último estilo de la barra y hoy ningún archivo de `lib/` fija uno (RF-SPL-4 de
   la spec del splash). Esta parte no depende de la decisión S-11.
-- Si el dueño elige la alternativa de la decisión S-11 de la spec del splash, la estrella no entra y
-  el header sigue solo con el texto.
+- La misma estrella forma el sello de la bienvenida con Ulises, en la franja de la conversación y
+  en la cabecera de las pantallas de «¿Olvidaste tu contraseña?» (RF-BIEN-4 y RF-BIEN-20 de
+  `specs/features/bienvenida/bienvenida.spec.md`).
+- El dueño descarta la alternativa de la decisión S-11 de la spec del splash, así que la estrella
+  entra.
   `[@test] ../../../test/components/header/app_header_test.dart` (pendiente del caso nuevo)
 
 ## Verification

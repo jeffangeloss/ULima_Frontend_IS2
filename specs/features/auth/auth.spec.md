@@ -13,11 +13,11 @@ targets:
 
 # Auth
 
-> Enmienda del 2026-09-25, **pendiente de aprobación**. La bienvenida con Ulises
-> (`specs/features/bienvenida/bienvenida.spec.md`) reemplaza a la tarjeta del login como pantalla
-> sin sesión y cambia la forma, no las reglas, del inicio de sesión. El detalle está en
-> «Enmienda de la bienvenida con Ulises», al final. Mientras el dueño no la apruebe, rige el texto
-> de arriba.
+> Enmienda del 2026-09-25, **aprobada por el dueño el 2026-09-26** junto con la spec de la
+> bienvenida con Ulises (`specs/features/bienvenida/bienvenida.spec.md`) y pendiente de
+> implementar. La bienvenida reemplaza a la tarjeta del login como pantalla sin sesión y cambia la
+> forma, no las reglas, del inicio de sesión. El detalle está en «Enmienda de la bienvenida con
+> Ulises», al final. Hasta que se implemente, el código sigue el texto de arriba.
 
 ## User Stories
 
@@ -251,10 +251,11 @@ User action → AuthService.logout()
 
 *(Test links a ser agregados cuando existan tests de auth. Los `test/auth/` y `test/services/api_client_auth_test.dart` no existen actualmente.)*
 
-## Enmienda de la bienvenida con Ulises (2026-09-25, pendiente de aprobación)
+## Enmienda de la bienvenida con Ulises (2026-09-25, aprobada el 2026-09-26)
 
-Nace con `specs/features/bienvenida/bienvenida.spec.md` (RF-BIEN-1, RF-BIEN-3, RF-BIEN-6 y
-RF-BIEN-12) y queda pendiente de aprobación con ella. Cambia los puntos de esta lista, y el resto
+Nace con `specs/features/bienvenida/bienvenida.spec.md` (RF-BIEN-1, RF-BIEN-3, RF-BIEN-6,
+RF-BIEN-12, RF-BIEN-20 y RF-BIEN-21), y el dueño la aprueba con ella el 2026-09-26, con las
+decisiones B-9 y B-10 en la opción que elige ese día. Cambia los puntos de esta lista, y el resto
 de la spec sigue igual. Las referencias `archivo:línea` apuntan a `4e2a0b2`.
 
 - **Targets.** Suma `lib/pages/bienvenida/**`, `lib/services/session_navigation.dart` y
@@ -267,8 +268,10 @@ de la spec sigue igual. Las referencias `archivo:línea` apuntan a `4e2a0b2`.
   cambian. El botón de envío de E1 y «Entrar» quedan inactivos mientras su campo está vacío, y
   «Ingresa tu código y contraseña.» sigue en `LoginController` como defensa. Tras un error, la
   conversación vuelve a E1 con el código escrito y la contraseña vacía (decisión B-6 de la
-  bienvenida). Tras el éxito, la navegación la hace la bienvenida y no `LoginController`, con
-  `postLoginRoute` para decidir entre el paso al horario de RF-BIEN-11 y `/setup-carrera`.
+  bienvenida). Tras el éxito, la navegación la hace la bienvenida y no `LoginController`. La
+  bienvenida decide con `postLoginRoute`, que no cambia, entre el paso al horario de RF-BIEN-11
+  y, para un alumno con la configuración a medias, el test dentro de la conversación, sin navegar
+  a `/setup-carrera` (decisión B-10 y RF-BIEN-21).
 - **Fallo de red en el login.** `AuthService.login` solo atrapa `ApiException`
   (`auth_service.dart:218-250`), así que hoy un fallo de red deja `submitting` en `true` y el botón
   «Entrar» girando (`login_controller.dart:73-75`), y en web `_onGoogleUserChanged` queda
@@ -282,9 +285,11 @@ de la spec sigue igual. Las referencias `archivo:línea` apuntan a `4e2a0b2`.
   llevando a `/login`, que ahora muestra la bienvenida. `offAllToLogin` suma el parámetro
   opcional `motivo`, con `expirada` desde el interceptor del 401 y `restablecida` desde el
   restablecimiento de contraseña (RF-BIEN-1 y RF-BIEN-3). El botón «Volver a iniciar sesión» del
-  Perfil (`perfil.dart:97`) no pasa motivo y sigue compilando. Por defecto, los avisos «Sesión
-  expirada» y «Contraseña actualizada» salen abajo para no tapar el sello (decisión B-29 de la
-  bienvenida).
+  Perfil (`perfil.dart:97`) no pasa motivo y sigue compilando. Los avisos «Sesión expirada» y
+  «Contraseña actualizada» salen abajo para no tapar el sello (decisión B-29 de la bienvenida). En
+  BR-AUTH-F-03, la sesión restaurada de un alumno con `setupComplete` en `false` ya no lleva a
+  `/setup-carrera`. El splash hace el relevo a `/login` sin borrar la sesión, y la bienvenida la
+  reconoce y le toma el test (RF-SPL-12 del splash y RF-BIEN-21).
 - **BR-AUTH-F-07.** Un 401 dentro de la conversación, con la sesión ya puesta, no navega, porque
   `/login` ya es la ruta actual. La bienvenida lo detecta y vuelve a E1 con «Tu sesión caducó o
   iniciaste sesión en otro dispositivo.» (RF-BIEN-12).
@@ -301,16 +306,19 @@ de la spec sigue igual. Las referencias `archivo:línea` apuntan a `4e2a0b2`.
 - **UI Behavior.** La tarjeta de `login_page.dart` sale, y con ella la frase «La UI ya está
   implementada y no requiere cambios visuales». La pantalla sin sesión es la bienvenida, con sus
   estados de carga, error y éxito en la conversación (RF-BIEN-5 y RF-BIEN-12). «¿Olvidaste tu
-  contraseña?» sigue abriendo `/forgot-password`, y «¿No tienes cuenta? Créala» deja su lugar a
-  «Soy nuevo» (RF-BIEN-6).
+  contraseña?» sigue abriendo `/forgot-password`, cuyas pantallas de hoy llevan el sello del logo
+  en su cabecera (decisión B-9 y RF-BIEN-20), y «¿No tienes cuenta? Créala» deja su lugar a «Soy
+  nuevo» (RF-BIEN-6).
 - **Navigation.** El login correcto termina en el paso al horario, con `Get.offAll` a `/home`, sin
-  transición y con el argumento de la pestaña Horario (RF-SPL-20 y RF-BIEN-11), o en
-  `/setup-carrera` para un alumno con la configuración a medias.
+  transición y con el argumento de la pestaña Horario (RF-SPL-20 y RF-BIEN-11). Un alumno con la
+  configuración a medias hace antes el test en la conversación y termina en el mismo paso al
+  horario (decisión B-10 y RF-BIEN-21).
 - **Implementation Plan.** `login_controller.dart` deja de navegar, devuelve el resultado a la
-  bienvenida y vacía sus campos cuando la bienvenida sale hacia `/home` o `/setup-carrera`, y
-  `login_page.dart` sale. `login_binding.dart` no reinicia nada dentro del build (RF-BIEN-1). Lo
-  demás del plan de arriba ya está hecho y no cambia.
+  bienvenida y vacía sus campos cuando la bienvenida sale hacia `/home`, y `login_page.dart` sale.
+  `login_binding.dart` no reinicia nada dentro del build (RF-BIEN-1). Lo demás del plan de arriba
+  ya está hecho y no cambia.
 - **Test Links.** Las pruebas de la enmienda son `test/bienvenida/bienvenida_ruta_test.dart`,
-  `bienvenida_entrar_test.dart` y `bienvenida_errores_test.dart` (pendientes), y siguen
-  `test/HU01_jeff/login_navigation_paths_test.dart` y `login_relogin_regression_test.dart`,
+  `bienvenida_entrar_test.dart`, `bienvenida_errores_test.dart`,
+  `bienvenida_sin_especialidad_test.dart` y `bienvenida_restablecer_test.dart` (pendientes), y
+  siguen `test/HU01_jeff/login_navigation_paths_test.dart` y `login_relogin_regression_test.dart`,
   ajustadas a la bienvenida.

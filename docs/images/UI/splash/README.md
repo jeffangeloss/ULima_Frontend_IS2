@@ -1,7 +1,7 @@
 # Maquetas del splash animado
 
-Estas maquetas son la referencia visual de `specs/features/splash/splash.spec.md`, que sigue
-pendiente de la aprobación del dueño. Donde una maqueta y la spec difieren, manda la spec.
+Estas maquetas son la referencia visual de `specs/features/splash/splash.spec.md`, que el dueño
+aprueba el 2026-09-26. Donde una maqueta y la spec difieren, manda la spec.
 
 - `splash-conceptos.html` es la página que ve el dueño el 2026-09-25, con los tres conceptos y el
   diagnóstico. Queda como constancia y no se corrige.

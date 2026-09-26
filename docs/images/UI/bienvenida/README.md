@@ -3,8 +3,8 @@
 `ulises-te-recibe-combinada.html` es la versión combinada de «Ulises te recibe», la que el dueño
 elige el 2026-09-25 para el arranque sin sesión. Es la referencia visual de RF-SPL-20 y RF-SPL-21
 de `specs/features/splash/splash.spec.md` y de `specs/features/bienvenida/bienvenida.spec.md`
-(RF-BIEN-19). Las dos specs siguen pendientes de la aprobación del dueño, y donde la maqueta y una
-spec difieren, manda la spec.
+(RF-BIEN-19). El dueño aprueba las dos specs el 2026-09-26, y donde la maqueta y una spec
+difieren, manda la spec.
 
 - Se abre sola en un navegador. Arriba elige el recorrido («Con sesión», «Soy nuevo» y «Ya tengo
   cuenta») y la intro del splash («Al azar», Ensamble, Incremento y Código), y abajo tiene Repetir,
@@ -21,9 +21,11 @@ spec difieren, manda la spec.
 - Las tres intros son las maquetas de `docs/images/UI/splash/`, con las diferencias que lista su
   README, como los 86 dp de la estrella de Código.
 - Con sesión, Ulises aparece en su burbuja con un rebote después de la salida. En la spec del
-  splash aparece con la página, como hoy (decisión S-28, que se decide junto con B-16).
-- La maqueta abre Horario solo para una alumna. La pestaña de cada rol es la decisión S-24 del
-  splash.
+  splash aparece con la página, como hoy (decisión S-28, que el dueño aprueba junto con B-16).
+- La maqueta abre Horario solo para una alumna. En la app abren en Horario todos los roles
+  (decisión S-24 del splash).
+- La maqueta no tiene el recorrido del alumno con sesión y sin especialidad. En la spec del splash,
+  la intro hace con él el mismo relevo que sin sesión (RF-SPL-12 y decisión S-29).
 
 ## Diferencias con la spec de la bienvenida
 
@@ -68,6 +70,11 @@ Las decisiones de la bienvenida llevan el prefijo B y las del splash, el prefijo
 - Los campos, las píldoras y los enlaces miden menos de 48 dp. En la spec miden al menos 48 dp
   (RF-BIEN-16).
 - La franja mide 100 px y la cabecera 96 px. En la spec miden lo mismo (RF-BIEN-4).
+- No hay llegada con la sesión de un alumno sin especialidad. En la spec, Ulises aterriza junto a
+  la estrella sin la tarjeta ni los botones, la estrella sube al sello y Ulises lo invita al test,
+  que termina en el horario (RF-BIEN-21 y decisión B-10).
+- No hay pantallas de «¿Olvidaste tu contraseña?». En la spec son las de hoy, con el sello en su
+  cabecera, en el mismo lugar que en la conversación (RF-BIEN-20 y decisión B-9).
 
 Los datos son ficticios. El código es `20230001`, la alumna se llama Valeria, las contraseñas son
 de relleno y se muestran como puntos, el código del autenticador, `482913`, es inventado, y los

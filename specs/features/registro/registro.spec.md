@@ -16,10 +16,11 @@ targets:
 
 > Estado: **implementada el 2026-09-08.** Consume `POST /auth/register`, que hoy vive en una rama del backend sin desplegar, así que la pantalla está probada entera contra dobles pero **todavía no contra el portal real**. Es la cara visible de `specs/features/registro/registro.spec.md` del backend (RS-BE-17 y RS-BE-18).
 >
-> Enmienda del 2026-09-25, **pendiente de aprobación**. La bienvenida con Ulises
-> (`specs/features/bienvenida/bienvenida.spec.md`) lleva el registro a la conversación de
-> «Soy nuevo», sin la ruta `/registro`, y conserva sus reglas. El detalle está en «Enmienda de la
-> bienvenida con Ulises», al final. Mientras el dueño no la apruebe, rige el texto de arriba.
+> Enmienda del 2026-09-25, **aprobada por el dueño el 2026-09-26** junto con la spec de la
+> bienvenida con Ulises (`specs/features/bienvenida/bienvenida.spec.md`) y pendiente de
+> implementar. La bienvenida lleva el registro a la conversación de «Soy nuevo», sin la ruta
+> `/registro`, y conserva sus reglas. El detalle está en «Enmienda de la bienvenida con Ulises»,
+> al final. Hasta que se implemente, el código sigue el texto de arriba.
 
 ## Contexto
 
@@ -263,10 +264,10 @@ El límite de 5 intentos por código por hora **no** cierra esto: averiguar si u
 
 **El contador por código se consume aunque el rechazo venga del limitador de concurrencia.** Los dos middlewares corren en orden y el de código incrementa antes de que el de concurrencia pueda rechazar, así que un salón entero registrándose a la vez gasta cupo recibiendo «hay demasiados registros en curso, intenta en unos segundos» — un mensaje que invita a reintentar justo lo que agota el cupo. También es del backend.
 
-## Enmienda de la bienvenida con Ulises (2026-09-25, pendiente de aprobación)
+## Enmienda de la bienvenida con Ulises (2026-09-25, aprobada el 2026-09-26)
 
-Nace con `specs/features/bienvenida/bienvenida.spec.md` (RF-BIEN-7, RF-BIEN-8 y RF-BIEN-9) y
-queda pendiente de aprobación con ella. El registro deja de ser una pantalla y pasa a ser la rama
+Nace con `specs/features/bienvenida/bienvenida.spec.md` (RF-BIEN-7, RF-BIEN-8 y RF-BIEN-9), y el
+dueño la aprueba con ella el 2026-09-26. El registro deja de ser una pantalla y pasa a ser la rama
 «Soy nuevo» de la conversación con Ulises, con las mismas reglas. Cambian los puntos de esta
 lista, y el resto de la spec sigue igual. Las referencias `archivo:línea` apuntan a `4e2a0b2`.
 
@@ -313,31 +314,32 @@ lista, y el resto de la spec sigue igual. Las referencias `archivo:línea` apunt
   notamos» y cada `message` tal cual.
 - **BR-REG-F-08.** Sin cambios en el plazo de 120 s. Un fallo de red durante el envío, también
   cuando el sistema corta la conexión con la app en segundo plano, sigue siendo `SIN_CONEXION` y
-  vuelve a N5, como hoy vuelve a `verificar`. Tratarlo como `incierto` es la alternativa de la
-  decisión B-32 de la bienvenida.
+  vuelve a N5, como hoy vuelve a `verificar` (decisión B-32 de la bienvenida).
 - **BR-REG-F-09.** El `PopScope` pasa a la bienvenida y veta el atrás del sistema mientras se
-  envía, con el aviso de hoy, que por defecto sale abajo para no tapar el sello (decisión B-29 de
-  la bienvenida).
+  envía, con el aviso de hoy, que sale abajo para no tapar el sello (decisión B-29 de la
+  bienvenida).
 - **BR-REG-F-11.** Si «Iniciar sesión» entra desde `incierto`, la conversación sigue con el test o
   con el paso al horario, según la configuración, en lugar de `Get.offAllNamed(postLoginRoute)`.
   `incierto` suma el enlace «Ya tengo cuenta», que cierra el tramo del registro y lleva a iniciar
-  sesión, donde está «¿Olvidaste tu contraseña?». Si el login falla, el texto accionable ya no
-  dice «desde el login», porque esa pantalla deja de existir. Por defecto dice «Seguimos sin poder
-  confirmarlo. Puedes volver a intentar el registro: si te dice que ya existe una cuenta con ese
-  código, es que sí se creó y puedes recuperar la contraseña con “Ya tengo cuenta”.» (decisión
-  B-30 de la bienvenida y `registro_controller.dart:321-323`).
+  sesión, donde está «¿Olvidaste tu contraseña?», que abre las pantallas de hoy con el sello del
+  logo (decisión B-9 de la bienvenida). Si el login falla, el texto accionable ya no dice «desde
+  el login», porque esa pantalla deja de existir, y dice «Seguimos sin poder confirmarlo. Puedes
+  volver a intentar el registro: si te dice que ya existe una cuenta con ese código, es que sí se
+  creó y puedes recuperar la contraseña con “Ya tengo cuenta”.» (decisión B-30 de la bienvenida y
+  `registro_controller.dart:321-323`).
 - **UI Behavior.** Los seis estados siguen en `RegistroController` y se dibujan como turnos
   (RF-BIEN-7 y RF-BIEN-8). `enviando` es la píldora «Creando tu cuenta…», el pulso del sello y
   las burbujas «Estoy creando tu cuenta y trayendo tu ciclo.» y «Puede tomar un par de minutos:
-  no cierres la app.», la advertencia de hoy, que por defecto no cambia (decisión B-17 de la
-  bienvenida). `listo` es la píldora «Cuenta creada» y una burbuja con «¡Craa! Tu cuenta ya está
+  no cierres la app.», la advertencia de hoy, que no cambia (decisión B-17 de la bienvenida). `listo` es la píldora «Cuenta creada» y una burbuja con «¡Craa! Tu cuenta ya está
   lista.» y el conteo de cursos, que no va con 0 cursos ni sin `summary`, sin el nombre (decisión
   B-4 de la bienvenida) y sin el botón «Entrar», porque la conversación sigue con el test. Salen
   los títulos, las bajadas y las filas del resumen de la pantalla, también «Clases en tu horario»
   y «Cursos de tu avance» (decisión B-31 de la bienvenida).
 - **Data Flow.** Después del 201 y de `adoptarSesion`, el registro no navega a
   `postLoginRoute(user)`. La bienvenida sigue con el test de especialidad (RF-BIEN-10), y el
-  alumno llega a `/home` en Horario al terminarlo (RF-BIEN-11).
+  alumno llega a `/home` en Horario al terminarlo (RF-BIEN-11). Si cierra la app antes de elegir
+  su especialidad, al abrirla Ulises lo retoma en el test y no en el asistente de carrera
+  (decisión B-10 y RF-BIEN-21).
 - **Verification.** Los casos de `test/HU33_jeff/registro_page_test.dart` pasan a
   `test/bienvenida/bienvenida_registro_test.dart` (pendiente), y los casos 10 a 12 de
   `test/HU34_jeff/registro_consent_test.dart` pasan a montar la conversación.
