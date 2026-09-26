@@ -24,6 +24,7 @@ import 'package:ulima_plus/pages/bienvenida/widgets/burbujas.dart';
 import 'package:ulima_plus/pages/bienvenida/widgets/compositor.dart';
 import 'package:ulima_plus/pages/bienvenida/widgets/franja_con_sello.dart';
 import 'package:ulima_plus/pages/bienvenida/widgets/recibimiento.dart';
+import 'package:ulima_plus/pages/specialty_test/widgets/ulises_bubble.dart';
 import 'package:ulima_plus/services/session_navigation.dart';
 
 import 'apoyo_bienvenida.dart';
@@ -60,6 +61,8 @@ _cuadro(WidgetTester tester) => Recibimiento.cuadroActual(
 );
 
 void main() {
+  // Las posiciones de la maqueta se miden con Roboto, como en la app.
+  setUpAll(cargarRoboto);
   setUp(() {
     Get.testMode = true;
     Get.reset();
@@ -76,15 +79,33 @@ void main() {
       argumentos: _conPose(),
       sinMovimiento: true,
     );
-    await avanzar(tester, 80);
+    await avanzar(tester, 112);
     expect(_ulises(), findsNothing);
-    await avanzar(tester, 120);
+    await tester.pump(const Duration(milliseconds: 16));
+    expect(_ulises(), findsOneWidget, reason: 'a los 128 ms ya aparece');
+    await tester.pump(const Duration(milliseconds: 72));
+    // A los 200 ms va por la mitad de su fundido de 160 ms, en su lugar.
     expect(tester.getSize(_ulises()).width, 70);
-    expect(_opacidadDeUlises(tester), inExclusiveRange(0, 1));
+    expect(_opacidadDeUlises(tester), closeTo(0.5, 0.02));
+    final ulises = tester.getRect(_ulises());
+    expect(ulises.center.dx, closeTo(187.5 - 104, 1));
+    expect(ulises.center.dy, closeTo(333.5 + 138, 1));
+    // El fondo cambia en 150 ms desde los 120.
+    final fondo = _cuadro(tester).fondo!;
+    final esperado = Color.lerp(
+      const Color(0xFFE77330),
+      const Color(0xFFFF6600),
+      80 / 150,
+    )!;
+    expect(fondo.b, closeTo(esperado.b, 1.5 / 255));
     expect(_cuadro(tester).puntos, 0);
     await avanzar(tester, 150);
     expect(_opacidadDeUlises(tester), 1);
+    expect(_cuadro(tester).fondo, const Color(0xFFFF6600));
+    // Ni al aterrizar hay partículas.
+    await avanzar(tester, 1300);
     expect(_cuadro(tester).puntos, 0);
+    expect(tester.getRect(_ulises()), ulises);
   });
 
   testWidgets('la tarjeta y los botones aparecen con fundidos de 180 ms, sin '
@@ -96,6 +117,13 @@ void main() {
       argumentos: _conPose(),
       sinMovimiento: true,
     );
+    double opacidadDe(Key clave) => tester
+        .widget<Opacity>(
+          find
+              .ancestor(of: find.byKey(clave), matching: find.byType(Opacity))
+              .first,
+        )
+        .opacity;
     await avanzar(tester, 360);
     final escala = tester.widget<Transform>(
       find
@@ -106,8 +134,34 @@ void main() {
           .first,
     );
     expect(escala.transform, Matrix4.identity());
+    // A los 368 ms la tarjeta va por la mitad de su fundido de 180 ms.
+    expect(
+      opacidadDe(Recibimiento.claveDeLaTarjeta),
+      closeTo((368 - 280) / 180, 0.02),
+    );
+    final tarjeta = tester.getRect(find.byKey(Recibimiento.claveDeLaTarjeta));
     await avanzar(tester, 400);
     expect(find.byKey(Recibimiento.claveDeLosBotones), findsOneWidget);
+    expect(
+      opacidadDe(Recibimiento.claveDeLosBotones),
+      closeTo((768 - 660) / 180, 0.02),
+    );
+    expect(
+      tester.getRect(find.byKey(Recibimiento.claveDeLaTarjeta)),
+      tarjeta,
+      reason: 'la tarjeta no se desplaza',
+    );
+    // Y se dibuja donde la pone su lugar, sin ningún corrimiento.
+    final lugar = tester.getRect(
+      find
+          .ancestor(
+            of: find.byKey(Recibimiento.claveDeLaTarjeta),
+            matching: find.byType(IgnorePointer),
+          )
+          .first,
+    );
+    expect(tarjeta.top, lugar.top);
+    expect(tarjeta.left, lugar.left);
     // A mitad de su fundido, los botones no se desplazan.
     final desplazamiento = tester.widget<Transform>(
       find
@@ -135,16 +189,56 @@ void main() {
       sinMovimiento: true,
       escala: 2,
     );
-    await avanzar(tester, 100);
-    final cuadro = _cuadro(tester);
-    expect(cuadro.estrellaDebajo, isNotNull);
-    expect(cuadro.estrellaDebajo!.pose.centro, const Offset(187.5, 333.5));
-    expect(cuadro.estrellaDebajo!.pose.radio, 90);
-    expect(cuadro.estrella!.pose.centro.dy, lessThan(333.5));
-    expect(cuadro.opacidadDeLaEstrella, inExclusiveRange(0, 1));
-    await avanzar(tester, 200);
+    var cuadrosDelCruce = 0;
+    for (var t = 0; t < 400; t += 16) {
+      await tester.pump(const Duration(milliseconds: 16));
+      final cuadro = _cuadro(tester);
+      if (cuadro.estrellaDebajo == null) continue;
+      cuadrosDelCruce++;
+      expect(cuadro.estrellaDebajo!.pose.centro, const Offset(187.5, 333.5));
+      expect(cuadro.estrellaDebajo!.pose.radio, 90);
+      expect(cuadro.estrella!.pose.centro.dy, lessThan(333.5));
+      expect(cuadro.opacidadDeLaEstrella, lessThan(1));
+    }
+    // 220 ms son unos 14 cuadros de 16 ms.
+    expect(cuadrosDelCruce, inInclusiveRange(12, 15));
     expect(_cuadro(tester).estrellaDebajo, isNull);
     expect(_cuadro(tester).opacidadDeLaEstrella, 1);
+  });
+
+  testWidgets('con sesión, Ulises tampoco vuela y la estrella no se mueve', (
+    tester,
+  ) async {
+    final b = Bienvenida(
+      auth: AuthDeLaBienvenida(usuario: alumnaDePrueba(setupComplete: false)),
+      token: 'jwt-de-prueba',
+    );
+    await montarLaBienvenida(
+      tester,
+      b,
+      argumentos: _conPose(),
+      sinMovimiento: true,
+      escala: 2,
+    );
+    for (var t = 0; t < 600; t += 16) {
+      await tester.pump(const Duration(milliseconds: 16));
+      if (find.byType(Recibimiento).evaluate().isEmpty) break;
+      final cuadro = _cuadro(tester);
+      expect(cuadro.puntos, 0);
+      expect(cuadro.estrellaDebajo, isNull);
+      final estrella = Recibimiento.estrellaActual(
+        tester.element(find.byKey(Recibimiento.claveDelFondo)),
+      );
+      expect(estrella.centro, const Offset(187.5, 333.5));
+      if (_ulises().evaluate().isNotEmpty) {
+        expect(tester.getSize(_ulises()).width, 70);
+      }
+    }
+    await avanzar(tester, 3000);
+    expect(
+      find.text(TextosDeLaBienvenida.saludoConSesion, skipOffstage: false),
+      findsOneWidget,
+    );
   });
 
   testWidgets('si el token tarda 300 ms, el cruce de la estrella igual '
@@ -222,6 +316,47 @@ void main() {
     await tester.tap(find.text(TextosDeLaBienvenida.siEntrar));
     await avanzar(tester, 100);
     expect(find.byType(Recibimiento), findsOneWidget);
+    // La conversación va encima del recibimiento.
+    final pila = tester.widget<Stack>(
+      find
+          .ancestor(
+            of: find.byKey(const ValueKey<String>('conversacion')),
+            matching: find.byType(Stack),
+          )
+          .first,
+    );
+    final claves = pila.children.map((w) => w.key).toList();
+    expect(
+      claves.indexOf(const ValueKey<String>('recibimiento')),
+      lessThan(claves.indexOf(const ValueKey<String>('conversacion'))),
+    );
+    // El sello y el avatar se ven enteros en lo que aparece encima.
+    expect(
+      tester
+          .widget<Opacity>(
+            find
+                .ancestor(
+                  of: find.byType(SelloDelLogo),
+                  matching: find.byType(Opacity),
+                )
+                .first,
+          )
+          .opacity,
+      1,
+    );
+    expect(
+      tester
+          .widget<Opacity>(
+            find
+                .ancestor(
+                  of: find.byType(UlisesAvatar).first,
+                  matching: find.byType(Opacity),
+                )
+                .first,
+          )
+          .opacity,
+      1,
+    );
     final cuadro = _cuadro(tester);
     expect(cuadro.estrella!.pose.radio, 90, reason: 'entero debajo');
     expect(
@@ -237,8 +372,10 @@ void main() {
           )
           .first,
     );
-    expect(encima.opacity.value, inExclusiveRange(0, 1));
-    expect(_opacidadDeUlises(tester), lessThan(1));
+    // Los dos cuentan desde el cuadro que sigue al toque: 96 ms de 220 y de
+    // 140.
+    expect(encima.opacity.value, closeTo(96 / 220, 0.05));
+    expect(_opacidadDeUlises(tester), closeTo(1 - 96 / 140, 0.05));
     await avanzar(tester, 200);
     expect(find.byType(Recibimiento), findsNothing);
     expect(find.byType(SelloDelLogo), findsOneWidget);

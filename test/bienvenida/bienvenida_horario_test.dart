@@ -411,6 +411,7 @@ void main() {
           late Rect ulima;
           late Rect losMas;
           late Rect franja;
+          late double yDeLosMas;
           await _hastaElPaso(
             tester,
             escala: escala,
@@ -425,14 +426,37 @@ void main() {
                     .last,
               );
               franja = tester.getRect(find.byType(CabeceraConSello));
+              // El pintor de los «++» los centra en la base de sus glifos
+              // menos 0,34 em, contados desde arriba de su caja.
+              final contexto = tester.element(sello);
+              final escala = tester
+                  .widget<Text>(
+                    find.descendant(of: sello, matching: find.text('ULIMA')),
+                  )
+                  .textScaler!;
+              final estilo = DefaultTextStyle.of(contexto).style.merge(
+                SelloDelLogo.estilo(Theme.of(contexto).colorScheme),
+              );
+              final glifos = TextPainter(
+                text: TextSpan(text: '++', style: estilo),
+                textDirection: TextDirection.ltr,
+                textScaler: escala,
+              )..layout();
+              yDeLosMas =
+                  losMas.top +
+                  glifos.computeDistanceToActualBaseline(
+                    TextBaseline.alphabetic,
+                  ) -
+                  0.34 * escala.scale(estilo.fontSize!);
+              glifos.dispose();
             },
           );
           final e = CapaDeArranque.pasoActual!;
           expect(e.escalaDeUlima, 1);
           expect(e.origenDeUlima.dx, closeTo(ulima.left, 0.5));
           expect(e.origenDeUlima.dy, closeTo(ulima.top, 0.5));
-          // Cada «+» va al 25 % y al 75 % de la caja de los «++», como los
-          // dibuja su pintor, y dentro de su alto.
+          // Cada «+» va al 25 % y al 75 % de la caja de los «++», a la altura
+          // en que los dibuja su pintor.
           expect(e.cruces, hasLength(2));
           for (var i = 0; i < 2; i++) {
             final c = e.cruces[i].centro;
@@ -440,7 +464,7 @@ void main() {
               c.dx,
               closeTo(losMas.left + losMas.width * (0.25 + 0.5 * i), 0.5),
             );
-            expect(c.dy, inInclusiveRange(losMas.top, losMas.bottom));
+            expect(c.dy, closeTo(yDeLosMas, 0.5));
           }
           expect(e.franja.top, 0);
           expect(e.franja.height, closeTo(franja.height, 0.5));
