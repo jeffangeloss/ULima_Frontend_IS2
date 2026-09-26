@@ -112,12 +112,13 @@ class RegistroController extends GetxController {
 
   final paso = RegistroPaso.datos.obs;
 
-  /// True cuando el alumno ya tocó «Acepto» en ESTA visita a `/registro`.
+  /// True cuando el alumno ya tocó «Acepto» en ESTE registro.
   ///
-  /// No se guarda en ningún lado (RF-REC-6, «Qué NO entra»): `RegistroBinding`
-  /// usa `lazyPut` sin `fenix`, así que salir de la ruta destruye el controller
-  /// y volver a entrar pide la aceptación de nuevo. Un fallo que devuelve a
-  /// `datos` sí la conserva: el alumno no se movió de la pantalla.
+  /// No se guarda en ningún lado (RF-REC-6, «Qué NO entra»). La bienvenida
+  /// crea un RegistroController nuevo en cada registro y lo cierra al salir,
+  /// así que volver a empezar pide la aceptación de nuevo. Un fallo que
+  /// devuelve a `datos` sí la conserva, porque el alumno sigue en el mismo
+  /// registro.
   final consentimientoAceptado = false.obs;
 
   final errorMessage = RxnString();
@@ -183,15 +184,10 @@ class RegistroController extends GetxController {
 
   @override
   void onClose() {
-    // Por la ruta /registro de hoy, que la Tarea 29 quita. `clear()` antes
-    // de `dispose()`, así el texto no queda en el buffer del campo.
-    if (!_cerrado) {
-      _cerrado = true;
-      for (final c in _campos) {
-        c.clear();
-        c.dispose();
-      }
-    }
+    // Desde que /registro sale (B-23), ninguna ruta lo registra en GetX, y
+    // la bienvenida lo cierra con cerrar(). Si alguien lo registrara, su
+    // cierre hace lo mismo.
+    cerrar();
     super.onClose();
   }
 
@@ -210,7 +206,7 @@ class RegistroController extends GetxController {
     errorMessage.value = null;
     // RF-REC-6: el consentimiento va ANTES del formulario del portal, nunca
     // entre el código del authenticator y el botón que envía (BR-REG-F-01).
-    // Aceptado una vez, dura lo que dura la visita a /registro.
+    // Aceptado una vez, dura lo que dura este registro.
     paso.value = consentimientoAceptado.value
         ? RegistroPaso.verificar
         : RegistroPaso.consentimiento;

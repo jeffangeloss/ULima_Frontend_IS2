@@ -4,11 +4,13 @@
 // desplaza por dentro si su contenido es más alto. Todo control mide al
 // menos 48 dp de alto.
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../components/google_sign_in_button.dart';
 import '../../../configs/themes.dart';
 import '../../../domain/bienvenida/bienvenida_turnos.dart';
 import '../../password_reset/password_reset_ui.dart';
@@ -592,7 +594,14 @@ class _E1 extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          BotonDeGoogle(alTocar: c.esperando.value ? null : c.entrarConGoogle),
+          // En web, signIn() no funciona con google_sign_in 6.x, así que va
+          // el botón oficial, y la cuenta llega por onCurrentUserChanged.
+          if (kIsWeb)
+            Center(child: googleSignInButton())
+          else
+            BotonDeGoogle(
+              alTocar: c.esperando.value ? null : c.entrarConGoogle,
+            ),
           EnlaceSecundario(texto: _Textos.soyNuevo, alTocar: c.soyNuevo),
         ],
       ),

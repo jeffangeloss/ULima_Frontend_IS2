@@ -9,12 +9,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:ulima_plus/configs/themes.dart';
+import 'package:ulima_plus/domain/bienvenida/bienvenida_turnos.dart';
 import 'package:ulima_plus/models/portal_sync_models.dart';
 import 'package:ulima_plus/models/registro_models.dart';
 import 'package:ulima_plus/models/user_model.dart';
 import 'package:ulima_plus/pages/bienvenida/bienvenida_controller.dart';
 import 'package:ulima_plus/pages/bienvenida/bienvenida_page.dart';
 import 'package:ulima_plus/pages/bienvenida/conversacion.dart';
+import 'package:ulima_plus/pages/bienvenida/widgets/compositor.dart';
 import 'package:ulima_plus/pages/login/login_controller.dart';
 import 'package:ulima_plus/pages/registro/registro_controller.dart';
 import 'package:ulima_plus/pages/specialty_test/specialty_test_logic.dart';
@@ -22,6 +24,7 @@ import 'package:ulima_plus/services/auth_service.dart';
 import 'package:ulima_plus/services/registro_service.dart';
 import 'package:ulima_plus/services/session_navigation.dart';
 import 'package:ulima_plus/services/specialty_test_service.dart';
+import 'package:ulima_plus/services/storage_service.dart';
 
 import '../HU36_jeff/dobles_de_red.dart';
 
@@ -72,6 +75,9 @@ class AuthDeLaBienvenida extends AuthService {
   int logouts = 0;
   int logins = 0;
 
+  /// Si no es null, `login` espera a este Completer, como un login lento.
+  Completer<String?>? loginPendiente;
+
   /// Cada login, con código o con Google, cada guardado y cada recarga del
   /// catálogo esperan al primero de estos antes de responder, como una red
   /// lenta.
@@ -90,6 +96,8 @@ class AuthDeLaBienvenida extends AuthService {
     required String password,
   }) async {
     logins++;
+    final pendiente = loginPendiente;
+    if (pendiente != null) return pendiente.future;
     await _esperar();
     if (redCaida) throw const RedCaida();
     if (errorDeLogin != null) return errorDeLogin;
@@ -362,4 +370,39 @@ Future<void> avanzar(WidgetTester tester, int ms) async {
   for (var t = 0; t < ms; t += 16) {
     await tester.pump(const Duration(milliseconds: 16));
   }
+}
+
+/// Un StorageService sin sesión guardada, para montar la ruta real de /login.
+class StorageSinToken extends StorageService {
+  @override
+  Future<String?> get savedToken async => null;
+}
+
+/// Registra, sin red, los servicios que lee la bienvenida que crea
+/// LoginBinding, como en la app real.
+AuthDeLaBienvenida registrarLosServiciosDeLaBienvenida() {
+  Get.testMode = true;
+  final auth = AuthDeLaBienvenida();
+  Get.put<AuthService>(auth);
+  Get.put<StorageService>(StorageSinToken());
+  return auth;
+}
+
+/// Desde el recibimiento, toca «Sí, entrar» y espera el compositor de E1.
+Future<void> llegarAE1(WidgetTester tester) async {
+  await avanzar(tester, 2800);
+  await tester.tap(find.text(TextosDeLaBienvenida.siEntrar));
+  await avanzar(tester, 2600);
+}
+
+/// Desde E1, envía [codigo] y espera el compositor de E2.
+Future<void> llegarAE2(
+  WidgetTester tester, {
+  String codigo = '20230001',
+}) async {
+  await tester.enterText(find.byType(TextField).first, codigo);
+  // Un cuadro tras teclear, para que el botón de envío se encienda.
+  await tester.pump();
+  await tester.tap(find.byType(BotonDeEnvio));
+  await avanzar(tester, 2000);
 }

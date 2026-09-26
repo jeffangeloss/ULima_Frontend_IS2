@@ -8,7 +8,6 @@ import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../services/auth_service.dart';
-import '../../services/post_login_route.dart';
 
 enum TipoDeDesenlace { sesionPuesta, error, sinConexion, cancelado }
 
@@ -69,9 +68,6 @@ class LoginController extends GetxController {
           : DesenlaceDelLogin.error(error);
       if (error != null) errorMessage.value = error;
       desenlaceDeGoogleEnWeb.value = desenlace;
-      // Solo la tarjeta de hoy navega. La Tarea 29 quita estas dos líneas.
-      final user = _auth.currentUser;
-      if (error == null && user != null) Get.offAllNamed(postLoginRoute(user));
     } catch (_) {
       desenlaceDeGoogleEnWeb.value = const DesenlaceDelLogin.sinConexion();
     } finally {
@@ -148,28 +144,6 @@ class LoginController extends GetxController {
       return const DesenlaceDelLogin.sinConexion();
     } finally {
       submitting.value = false;
-    }
-  }
-
-  /// La tarjeta de hoy, hasta la Tarea 29.
-  Future<void> submit() async {
-    final d = await entrar();
-    if (d.tipo == TipoDeDesenlace.sinConexion) {
-      errorMessage.value =
-          'No hay conexión. Revisa tu internet e inténtalo de nuevo.';
-    }
-    final user = _auth.currentUser;
-    if (d.tipo == TipoDeDesenlace.sesionPuesta && user != null) {
-      Get.offAllNamed(postLoginRoute(user));
-    }
-  }
-
-  /// La tarjeta de hoy, hasta la Tarea 29.
-  Future<void> loginWithGoogle() async {
-    final d = await entrarConGoogle();
-    final user = _auth.currentUser;
-    if (d.tipo == TipoDeDesenlace.sesionPuesta && user != null) {
-      Get.offAllNamed(postLoginRoute(user));
     }
   }
 

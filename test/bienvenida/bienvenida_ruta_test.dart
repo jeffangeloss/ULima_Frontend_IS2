@@ -7,8 +7,8 @@
 // sesión y «Volver a iniciar sesión» del Perfil no pasan motivo. Cada montaje
 // es una visita, con el primer cuadro sacado de los argumentos, el reinicio
 // que cierra los tramos, y lo que una visita vieja deja en vuelo, que no toca
-// la nueva. La Tarea 29 suma que /login muestra la bienvenida y que
-// /registro sale.
+// la nueva. La ruta /login muestra la bienvenida, con LoginBinding, y
+// /registro ya no existe.
 // Archivos probados lib/services/session_navigation.dart,
 // lib/services/api_client.dart,
 // lib/pages/bienvenida/bienvenida_controller.dart y
@@ -23,10 +23,14 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:ulima_plus/domain/bienvenida/bienvenida_turnos.dart';
+import 'package:ulima_plus/main.dart';
 import 'package:ulima_plus/models/registro_models.dart';
+import 'package:ulima_plus/pages/bienvenida/bienvenida_controller.dart';
 import 'package:ulima_plus/pages/bienvenida/bienvenida_page.dart';
 import 'package:ulima_plus/pages/bienvenida/widgets/compositor.dart';
 import 'package:ulima_plus/pages/bienvenida/widgets/recibimiento.dart';
+import 'package:ulima_plus/pages/login/login_binding.dart';
+import 'package:ulima_plus/pages/login/login_controller.dart';
 import 'package:ulima_plus/pages/registro/registro_controller.dart';
 import 'package:ulima_plus/pages/splash/salidas.dart' show naranjaDelSplash;
 import 'package:ulima_plus/services/api_client.dart';
@@ -460,6 +464,47 @@ void main() {
       expect(b.controlador.registro, isNotNull, reason: 'la vieja no la toca');
       expect(b.controlador.turno.value, TurnoDeLaBienvenida.n1Codigo);
       expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('la ruta /login con la bienvenida (RF-BIEN-1, B-19, B-23 y B-25)', () {
+    test('/login muestra la bienvenida con LoginBinding, y /registro ya no '
+        'existe', () {
+      final login = paginasDeLaApp.firstWhere((p) => p.name == '/login');
+      expect(login.page(), isA<BienvenidaPage>());
+      expect(login.binding, isA<LoginBinding>());
+      expect(paginasDeLaApp.map((p) => p.name), isNot(contains('/registro')));
+    });
+
+    testWidgets('LoginBinding registra LoginController y la bienvenida y los '
+        'reusa en cada llegada (B-19)', (tester) async {
+      registrarLosServiciosDeLaBienvenida();
+      LoginBinding().dependencies();
+      final login = Get.find<LoginController>();
+      final bienvenida = Get.find<BienvenidaController>();
+      LoginBinding().dependencies();
+      await tester.pump();
+      expect(Get.find<LoginController>(), same(login));
+      expect(Get.find<BienvenidaController>(), same(bienvenida));
+    });
+
+    testWidgets('en la app real, «Soy nuevo» abre el registro en la '
+        'conversación sin salir de /login (RS-FE-1 y B-23)', (tester) async {
+      registrarLosServiciosDeLaBienvenida();
+      await tester.pumpWidget(const MyApp(initialRoute: '/login'));
+      await avanzar(tester, 2800);
+      await tester.tap(find.text(TextosDeLaBienvenida.soyNuevo));
+      await tester.pump();
+      expect(
+        Get.find<BienvenidaController>().turno.value,
+        TurnoDeLaBienvenida.n1Codigo,
+      );
+      expect(Get.currentRoute, '/login');
+      await avanzar(tester, 4000);
+      expect(
+        find.text(TextosDeLaBienvenida.rotuloCodigoDeAlumno),
+        findsOneWidget,
+      );
     });
   });
 }

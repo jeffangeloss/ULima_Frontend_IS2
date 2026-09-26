@@ -190,10 +190,11 @@ class AuthService extends GetxService {
       // `suppressSessionExpiry: true` es obligatorio acá, no una comodidad.
       // Los catálogos no están exentos del tratamiento genérico del 401, así
       // que sin esto un 401 suyo borraría la sesión que se acaba de guardar,
-      // arrancaría `/registro` de la pila con `offAllToLogin()` y anunciaría
-      // "Sesión expirada" a alguien cuya cuenta nació hace un segundo. El
-      // efecto ocurre DENTRO de `ApiClient`, antes de que el `catch` de abajo
-      // vea nada: atraparlo acá no lo desharía. Recibido el 201 la cuenta
+      // sacaría a la persona de la conversación del registro con
+      // `offAllToLogin()` y anunciaría "Sesión expirada" a alguien cuya
+      // cuenta nació hace un segundo. El efecto ocurre DENTRO de
+      // `ApiClient`, antes de que el `catch` de abajo vea nada: atraparlo acá
+      // no lo desharía. Recibido el 201 la cuenta
       // existe, y un tropiezo leyendo un catálogo no puede echar a la persona
       // ni mentirle sobre su sesión (BR-REG-F-10 y RS-FE-4).
       try {

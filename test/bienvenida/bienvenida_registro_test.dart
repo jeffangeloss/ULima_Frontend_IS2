@@ -19,6 +19,7 @@ import 'package:ulima_plus/configs/themes.dart';
 import 'package:ulima_plus/domain/bienvenida/bienvenida_turnos.dart';
 import 'package:ulima_plus/models/registro_models.dart';
 import 'package:ulima_plus/pages/bienvenida/bienvenida_controller.dart';
+import 'package:ulima_plus/pages/bienvenida/bienvenida_page.dart';
 import 'package:ulima_plus/pages/bienvenida/conversacion.dart';
 import 'package:ulima_plus/pages/bienvenida/widgets/compositor.dart';
 import 'package:ulima_plus/pages/password_reset/password_reset_ui.dart';
@@ -623,5 +624,143 @@ void main() {
       expect(b.servicioDeRegistro.llamadas, 1);
       await avanzar(tester, 4000);
     });
+  });
+
+  group('lo que probaba la pantalla del registro, ahora en la conversación '
+      '(HU33 y RF-BIEN-8)', () {
+    setUp(() {
+      Get.testMode = true;
+      Get.reset();
+    });
+
+    /// Monta la bienvenida y deja el registro listo para enviar en N5.
+    Future<Bienvenida> montadaEnN5(
+      WidgetTester tester, {
+      RegistroFalso? registro,
+      bool adoptarFalla = false,
+    }) async {
+      final b = Bienvenida(registro: registro, adoptarFalla: adoptarFalla);
+      await montarLaBienvenida(
+        tester,
+        b,
+        argumentos: const {argumentoDeMotivo: MotivoDeLlegada.expirada},
+      );
+      await avanzar(tester, 1500);
+      final c = b.controlador..soyNuevo();
+      c.registro!.codigoCtrl.text = '20230001';
+      c.enviarCodigoDeAlumno();
+      c.registro!
+        ..passwordCtrl.text = 'Contrasena1'
+        ..confirmacionCtrl.text = 'Contrasena1';
+      c.enviarContrasenas();
+      c.aceptarConsentimiento();
+      c.registro!.portalPasswordCtrl.text = 'clave-de-prueba';
+      c.enviarPortal();
+      c.registro!.passcodeCtrl.text = '123456';
+      // Las burbujas de N1 a N5 entran con su ritmo.
+      await avanzar(tester, 12000);
+      return b;
+    }
+
+    testWidgets('mientras se envía, el atrás no sale y avisa abajo (caso 3)', (
+      tester,
+    ) async {
+      final pendiente = Completer<RegistroResult>();
+      final b = await montadaEnN5(
+        tester,
+        registro: RegistroFalso(pendiente: pendiente),
+      );
+      unawaited(b.controlador.crearCuenta());
+      await avanzar(tester, 300);
+      expect(find.text(TextosDeLaBienvenida.pildoraCreando), findsOneWidget);
+      final scope = tester.widget<PopScope>(
+        find
+            .ancestor(
+              of: find.text(TextosDeLaBienvenida.pildoraCreando),
+              matching: find.byWidgetPredicate((w) => w is PopScope),
+            )
+            .first,
+      );
+      expect(scope.canPop, isFalse);
+      await Get.key.currentState!.maybePop();
+      await tester.pump();
+      expect(b.avisos, [TextosDeLaBienvenida.avisoEnvioTitulo]);
+      expect(find.byType(BienvenidaPage), findsOneWidget);
+      pendiente.completeError(
+        const RegistroFailure(
+          'No hay conexión. Revisa tu internet e inténtalo de nuevo.',
+          code: 'SIN_CONEXION',
+        ),
+      );
+      await avanzar(tester, 3000);
+    });
+
+    testWidgets(
+      'con el plazo vencido, «No pudimos confirmar…» se lee una vez y '
+      'están las dos salidas (casos 4 y 5)',
+      (tester) async {
+        final b = await montadaEnN5(
+          tester,
+          registro: RegistroFalso(
+            fallo: const RegistroFailure(
+              'No pudimos confirmar si tu cuenta se creó.',
+              code: 'TIEMPO_AGOTADO',
+            ),
+          ),
+        );
+        await b.controlador.crearCuenta();
+        await avanzar(tester, 4000);
+        expect(
+          find.textContaining('No pudimos confirmar si tu cuenta se creó'),
+          findsOneWidget,
+        );
+        expect(find.text(TextosDeLaBienvenida.iniciarSesion), findsOneWidget);
+        expect(find.text(TextosDeLaBienvenida.volverAIntentar), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'si el 201 llegó, Ulises no duda de lo que ya se sabe (caso 6)',
+      (tester) async {
+        final b = await montadaEnN5(tester, adoptarFalla: true);
+        await b.controlador.crearCuenta();
+        await avanzar(tester, 5000);
+        expect(find.text(TextosDeLaBienvenida.creadaTitulo), findsOneWidget);
+        expect(find.text(TextosDeLaBienvenida.inciertoTitulo), findsNothing);
+      },
+    );
+
+    testWidgets(
+      '«Iniciar sesión» se apaga mientras el login de rescate está en '
+      'vuelo y un segundo toque no pide otro (caso 7)',
+      (tester) async {
+        final b = await montadaEnN5(
+          tester,
+          registro: RegistroFalso(
+            fallo: const RegistroFailure('x', code: 'TIEMPO_AGOTADO'),
+          ),
+        );
+        await b.controlador.crearCuenta();
+        await avanzar(tester, 4000);
+        final puerta = Completer<String?>();
+        b.auth.loginPendiente = puerta;
+        await tester.tap(find.text(TextosDeLaBienvenida.iniciarSesion));
+        await tester.pump();
+        expect(find.text(TextosDeLaBienvenida.iniciarSesion), findsNothing);
+        expect(
+          find.descendant(
+            of: find.byType(RespuestaRapida),
+            matching: find.byType(CircularProgressIndicator),
+          ),
+          findsOneWidget,
+        );
+        await tester.tap(find.byType(RespuestaRapida).last);
+        await tester.pump();
+        expect(b.auth.logins, 1);
+        puerta.complete('Código o contraseña incorrectos.');
+        await avanzar(tester, 3000);
+        expect(find.text(TextosDeLaBienvenida.iniciarSesion), findsOneWidget);
+      },
+    );
   });
 }

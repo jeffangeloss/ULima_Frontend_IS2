@@ -32,13 +32,11 @@ import 'pages/academic_record/academic_record_page.dart';
 import 'pages/mis_notas/mis_notas_binding.dart';
 import 'pages/portal_sync/portal_sync_binding.dart';
 import 'pages/portal_sync/portal_sync_page.dart';
-import 'pages/registro/registro_binding.dart';
-import 'pages/registro/registro_page.dart';
 import 'pages/mis_notas/mis_notas_page.dart';
-import 'pages/login/login_page.dart';
 import 'pages/malla/malla_controller.dart';
 import 'pages/malla/malla_list_controller.dart';
 import 'pages/malla/malla_page.dart';
+import 'pages/bienvenida/bienvenida_page.dart';
 import 'pages/login/login_binding.dart';
 import 'pages/password_reset/forgot_password_controller.dart';
 import 'pages/password_reset/reset_password_controller.dart';
@@ -103,10 +101,12 @@ final List<GetPage<dynamic>> paginasDeLaApp = <GetPage<dynamic>>[
   // (crash "TextEditingController was used after being disposed").
   GetPage(
     name: '/login',
-    page: () => const LoginPage(),
-    // LoginController PERMANENTE (ver LoginBinding): evita el "tipeo
-    // fantasma" cuando se navega a /login con una /login previa aún en el
-    // stack (flujo reset de contraseña). Cubre todos los caminos a /login.
+    // La bienvenida con Ulises (specs/features/bienvenida, RF-BIEN-1).
+    page: () => const BienvenidaPage(),
+    // LoginController y BienvenidaController PERMANENTES (ver
+    // LoginBinding), que evitan el "tipeo fantasma" cuando se navega a
+    // /login con una /login previa aún en el stack (flujo reset de
+    // contraseña). Cubre todos los caminos a /login.
     binding: LoginBinding(),
   ),
   GetPage(
@@ -122,14 +122,6 @@ final List<GetPage<dynamic>> paginasDeLaApp = <GetPage<dynamic>>[
     binding: BindingsBuilder(() {
       Get.lazyPut(() => ResetPasswordController());
     }),
-  ),
-  // Alta de cuenta contra miUlima (HU33). Binding por ruta, como el
-  // resto: `lazyPut` sin `fenix` garantiza que GetX elimine el controller
-  // al salir y que `onClose` borre las credenciales del portal.
-  GetPage(
-    name: '/registro',
-    page: () => const RegistroPage(),
-    binding: RegistroBinding(),
   ),
   // Asistente del alumno nuevo (RF-TEST-1). Binding por ruta, en lugar
   // del Get.put que tenía dentro de build.
