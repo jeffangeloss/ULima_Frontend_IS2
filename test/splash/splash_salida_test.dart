@@ -56,6 +56,52 @@ EscenaDeSalida _salida(
   destino: DestinoDeLaSalida.desdeMedida(medida ?? _medida(), _pantalla),
 );
 
+/// Comprueba que los «++» sueltan la estrella en [msDeSuelta] y llegan a sus
+/// glifos en [msDeLlegada]. En cada instante de [instantes], cada «+» va por
+/// la recta que une el punto donde se soltó con su glifo, con el avance de
+/// easeInOutCubic, y su distancia a la estrella ya no es la del comienzo
+/// escalada con el radio de ella.
+void _compruebaLaSuelta(
+  VarianteDeIntro v, {
+  required double msDeSuelta,
+  required double msDeLlegada,
+  required List<double> instantes,
+}) {
+  final d = DestinoDeLaSalida.desdeMedida(_medida(), _pantalla);
+  final inicial = _salida(v, 0);
+  final alSoltar = _salida(v, msDeSuelta);
+  for (final ms in instantes) {
+    final s = _salida(v, ms);
+    final avance = Curves.easeInOutCubic.transform(
+      (ms - msDeSuelta) / (msDeLlegada - msDeSuelta),
+    );
+    final factor = s.estrella.radio / inicial.estrella.radio;
+    for (var i = 0; i < 2; i++) {
+      final motivo = 'el «+» $i a los $ms ms';
+      final esperado = Offset.lerp(
+        alSoltar.cruces[i].centro,
+        d.cruces[i],
+        avance,
+      )!;
+      expect(s.cruces[i].centro.dx, closeTo(esperado.dx, 1e-6), reason: motivo);
+      expect(s.cruces[i].centro.dy, closeTo(esperado.dy, 1e-6), reason: motivo);
+      final pegado =
+          s.estrella.centro +
+          (inicial.cruces[i].centro - inicial.estrella.centro) * factor;
+      expect(
+        (s.cruces[i].centro - pegado).distance,
+        greaterThan(1),
+        reason: motivo,
+      );
+    }
+  }
+  final llegada = _salida(v, msDeLlegada);
+  for (var i = 0; i < 2; i++) {
+    expect(llegada.cruces[i].centro.dx, closeTo(d.cruces[i].dx, 1e-6));
+    expect(llegada.cruces[i].centro.dy, closeTo(d.cruces[i].dy, 1e-6));
+  }
+}
+
 void main() {
   group('las salidas como funciones puras (RF-SPL-11)', () {
     final variantes = <VarianteDeIntro>[
@@ -148,18 +194,40 @@ void main() {
         expect(_salida(v, 265).combado, closeTo(130, 1e-6));
         expect(_salida(v, 0.68 * 530).reveladoDeUlima, closeTo(0, 1e-9));
         expect(_salida(v, 0.84 * 530).reveladoDeUlima, closeTo(0.5, 1e-6));
-        final s = _salida(v, 0.5 * 530);
+        // El segundo «+» sigue en su origen hasta el 4 % de la salida y
+        // después avanza con la curva de (t − 0,04) / 0,96, que se lee en su
+        // largo.
         final d = DestinoDeLaSalida.desdeMedida(_medida(), _pantalla);
-        final avance0 = (s.cruces[0].centro - d.cruces[0]).distance;
-        final avance1 = (s.cruces[1].centro - d.cruces[1]).distance;
-        expect(avance1, greaterThan(avance0 - 1));
+        final inicio = _salida(v, 0);
+        final alCuatro = _salida(v, 0.04 * 530);
+        expect(
+          alCuatro.cruces[1].centro.dx,
+          closeTo(inicio.cruces[1].centro.dx, 1e-9),
+        );
+        expect(
+          alCuatro.cruces[1].centro.dy,
+          closeTo(inicio.cruces[1].centro.dy, 1e-9),
+        );
+        expect(alCuatro.cruces[1].largo, closeTo(inicio.cruces[1].largo, 1e-9));
+        final mitad = _salida(v, 0.5 * 530);
+        double avance(int i) =>
+            (mitad.cruces[i].largo - inicio.cruces[i].largo) /
+            (d.tamanoDeCruz - inicio.cruces[i].largo);
+        expect(avance(0), closeTo(Curves.easeInOutCubic.transform(0.5), 1e-9));
+        expect(
+          avance(1),
+          closeTo(Curves.easeInOutCubic.transform(0.46 / 0.96), 1e-9),
+        );
+        // Cada «+» se sesga con su propio avance hasta −12°.
+        expect(mitad.cruces[1].sesgo, closeTo(-12 * grado * avance(1), 1e-9));
         expect(_salida(v, 530).cruces[0].sesgo, closeTo(-12 * grado, 1e-6));
         expect(_salida(v, 0.5 * 530).paginaDy, closeTo(10, 1e-6));
       },
     );
 
     test('B. las esquinas llegan a 75 dp, la estrella gira otros 45° más lo '
-        'que falte del tic y los «++» se sueltan a los 150 ms', () {
+        'que falte del tic y los «++» se sueltan a los 150 ms y llegan a los '
+        'glifos en 450 ms', () {
       const v = Incremento();
       expect(_salida(v, 310).radioInferior, closeTo(75, 1e-6));
       // Sin tic en curso, gira de 45° a 90°.
@@ -179,6 +247,14 @@ void main() {
       final factor = pegados.estrella.radio / inicial.estrella.radio;
       expect(rel0.dx, closeTo(relInicial.dx * factor, 1e-6));
       expect(rel1.dx, greaterThan(rel0.dx));
+      // Desde los 150 ms cada «+» va del punto donde se soltó a su glifo, así
+      // que su distancia a la estrella ya no escala con el radio de ella.
+      _compruebaLaSuelta(
+        v,
+        msDeSuelta: 150,
+        msDeLlegada: 600,
+        instantes: const <double>[200, 375],
+      );
       // Se sesgan como la cursiva desde que se sueltan, hasta −12°.
       expect(_salida(v, 150).cruces[0].sesgo, closeTo(0, 1e-12));
       expect(_salida(v, 620).cruces[1].sesgo, closeTo(-12 * grado, 1e-6));
@@ -202,6 +278,12 @@ void main() {
       final relInicial = inicial.cruces[0].centro - inicial.estrella.centro;
       final factor = antes.estrella.radio / inicial.estrella.radio;
       expect(rel.dx, closeTo(relInicial.dx * factor, 1e-6));
+      _compruebaLaSuelta(
+        v,
+        msDeSuelta: 0.45 * 420,
+        msDeLlegada: 420,
+        instantes: const <double>[0.5 * 420, 0.75 * 420],
+      );
       expect(_salida(v, 420).cruces[1].sesgo, closeTo(-10 * grado, 1e-6));
       expect(_salida(v, 0.35 * 420).paginaOpacidad, closeTo(0, 1e-9));
       // El anillo de Código sigue en el centro de la pantalla.
