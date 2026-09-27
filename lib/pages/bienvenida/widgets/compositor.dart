@@ -1,11 +1,17 @@
 // lib/pages/bienvenida/widgets/compositor.dart
 // El compositor de la conversación y sus piezas (RF-BIEN-5 y RF-BIEN-16).
 // Va fijo abajo, sobre el teclado, mide hasta el 60 % del alto disponible y
-// desplaza por dentro si su contenido es más alto. Todo control mide al
-// menos 48 dp de alto.
+// desplaza por dentro si su contenido es más alto. Con el teclado abierto se
+// achica además hasta dejar a la vista el último mensaje, sin bajar del
+// bloque que va del rótulo al envío del turno. Todo control mide al menos
+// 48 dp de alto.
+
+import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show BoxParentData, RenderProxyBox;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -25,6 +31,7 @@ class MarcoDelCompositor extends StatelessWidget {
     super.key,
     required this.child,
     required this.altoDisponible,
+    this.altoLibre,
   });
 
   final Widget child;
@@ -33,6 +40,12 @@ class MarcoDelCompositor extends StatelessWidget {
   /// teclado de su cuerpo, así que su MediaQuery no lo trae y la página lo
   /// mide con su LayoutBuilder.
   final double altoDisponible;
+
+  /// Con el teclado abierto, el alto que queda bajo la franja después de
+  /// dejar entero el último mensaje. El compositor no pasa de él, salvo para
+  /// dejar entero el bloque del envío del turno (RF-BIEN-5). Es null sin
+  /// teclado.
+  final double? altoLibre;
 
   @override
   Widget build(BuildContext context) {
@@ -43,8 +56,9 @@ class MarcoDelCompositor extends StatelessWidget {
         color: MaterialTheme.cardBg(b),
         border: Border(top: BorderSide(color: MaterialTheme.testLine(b))),
       ),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: altoDisponible * 0.6),
+      child: _TopeDelCompositor(
+        tope: altoDisponible * 0.6,
+        libre: altoLibre,
         child: SingleChildScrollView(
           padding: EdgeInsets.fromLTRB(
             12,
@@ -56,6 +70,171 @@ class MarcoDelCompositor extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// El alto máximo del compositor. Mide hasta el 60 % del alto disponible y,
+/// con el teclado abierto, hasta lo libre bajo el último mensaje, pero nunca
+/// menos que lo que va de su borde de arriba al final del bloque del envío,
+/// con 10 dp debajo. El bloque se mide en el mismo cuadro, también con el
+/// texto grande o en una pantalla angosta, así que el campo con el foco, su
+/// error y su envío quedan a la vista aunque la última burbuja se recorte
+/// (RF-BIEN-5).
+class _TopeDelCompositor extends SingleChildRenderObjectWidget {
+  const _TopeDelCompositor({
+    required this.tope,
+    required this.libre,
+    super.child,
+  });
+
+  /// El 60 % del alto disponible sobre el teclado.
+  final double tope;
+
+  /// Con el teclado abierto, lo libre bajo el último mensaje. Es null sin
+  /// teclado.
+  final double? libre;
+
+  @override
+  _RenderDelTope createRenderObject(BuildContext context) =>
+      _RenderDelTope(tope: tope, libre: libre);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderDelTope renderObject) {
+    renderObject
+      ..tope = tope
+      ..libre = libre;
+  }
+}
+
+class _RenderDelTope extends RenderProxyBox {
+  _RenderDelTope({required double tope, required double? libre})
+    : _tope = tope,
+      _libre = libre;
+
+  /// En un turno sin bloque del envío, como los de respuestas rápidas, el
+  /// mínimo es el relleno de arriba y una fila de controles de 48 dp.
+  static const double _sinBloque = 10 + 48;
+
+  /// El espacio que queda bajo el bloque del envío.
+  static const double _bajoElBloque = 10;
+
+  double _tope;
+  set tope(double valor) {
+    if (valor == _tope) return;
+    _tope = valor;
+    markNeedsLayout();
+  }
+
+  double? _libre;
+  set libre(double? valor) {
+    if (valor == _libre) return;
+    _libre = valor;
+    markNeedsLayout();
+  }
+
+  /// El bloque del envío del turno, que se anota aquí cada vez que se mide.
+  _RenderDelBloque? _bloque;
+
+  /// Lo que va del borde de arriba del compositor al final del bloque del
+  /// envío, con el relleno. Es null en un turno sin bloque.
+  double? _finDelBloque() {
+    final bloque = _bloque;
+    final alto = bloque?._alto;
+    if (bloque == null || alto == null) return null;
+    var fin = alto;
+    RenderObject? nodo = bloque;
+    while (nodo != null && nodo != this) {
+      final datos = nodo.parentData;
+      // El desplazamiento interno no cuenta, porque la vista del compositor
+      // pinta su contenido corrido y no lo guarda en sus datos.
+      if (datos is BoxParentData) fin += datos.offset.dy;
+      nodo = nodo.parent;
+    }
+    return nodo == null ? null : fin;
+  }
+
+  double _altoMaximo() {
+    final libre = _libre;
+    if (libre == null) return _tope;
+    final minimo = (_finDelBloque() ?? _sinBloque) + _bajoElBloque;
+    return math.min(_tope, math.max(libre, minimo));
+  }
+
+  BoxConstraints _limites(BoxConstraints limites) =>
+      limites.enforce(BoxConstraints(maxHeight: _altoMaximo()));
+
+  @override
+  void performLayout() {
+    final hijo = child;
+    if (hijo == null) {
+      size = constraints.smallest;
+      return;
+    }
+    final antes = _limites(constraints);
+    hijo.layout(antes, parentUsesSize: true);
+    // Al medirse, el bloque pudo cambiar de alto, como cuando aparece el
+    // error, así que el compositor toma su alto nuevo en el mismo cuadro.
+    final despues = _limites(constraints);
+    if (despues != antes) hijo.layout(despues, parentUsesSize: true);
+    size = hijo.size;
+  }
+
+  @override
+  Size computeDryLayout(covariant BoxConstraints constraints) {
+    final hijo = child;
+    if (hijo == null) return constraints.smallest;
+    return hijo.getDryLayout(_limites(constraints));
+  }
+
+  @override
+  double computeMinIntrinsicHeight(double width) =>
+      math.min(super.computeMinIntrinsicHeight(width), _altoMaximo());
+
+  @override
+  double computeMaxIntrinsicHeight(double width) =>
+      math.min(super.computeMaxIntrinsicHeight(width), _altoMaximo());
+}
+
+/// El bloque del compositor que va del rótulo al envío del turno, con el
+/// error local bajo el campo. Con el teclado abierto, el compositor no se
+/// achica por debajo de él (RF-BIEN-5).
+class _BloqueDelEnvio extends SingleChildRenderObjectWidget {
+  const _BloqueDelEnvio({required Widget super.child});
+
+  @override
+  _RenderDelBloque createRenderObject(BuildContext context) =>
+      _RenderDelBloque();
+}
+
+class _RenderDelBloque extends RenderProxyBox {
+  _RenderDelTope? _tope;
+
+  /// Su alto de la última medida. El tope no es su padre, así que no puede
+  /// leer su tamaño y lee este.
+  double? _alto;
+
+  @override
+  void performLayout() {
+    super.performLayout();
+    _alto = size.height;
+    // Se anota en el tope del compositor que lo contiene, que lo lee al
+    // terminar de medir su contenido.
+    RenderObject? nodo = parent;
+    while (nodo != null && nodo is! _RenderDelTope) {
+      nodo = nodo.parent;
+    }
+    if (nodo is _RenderDelTope) {
+      nodo._bloque = this;
+      _tope = nodo;
+    }
+  }
+
+  @override
+  void detach() {
+    final tope = _tope;
+    if (tope != null && tope._bloque == this) tope._bloque = null;
+    _tope = null;
+    super.detach();
   }
 }
 
@@ -459,10 +638,42 @@ class EnlaceSecundario extends StatelessWidget {
   }
 }
 
-class ErrorLocal extends StatelessWidget {
+class ErrorLocal extends StatefulWidget {
   const ErrorLocal(this.mensaje, {super.key});
 
   final String mensaje;
+
+  @override
+  State<ErrorLocal> createState() => _ErrorLocalState();
+}
+
+class _ErrorLocalState extends State<ErrorLocal> {
+  @override
+  void initState() {
+    super.initState();
+    _llevarALaVista();
+  }
+
+  @override
+  void didUpdateWidget(ErrorLocal anterior) {
+    super.didUpdateWidget(anterior);
+    if (anterior.mensaje != widget.mensaje) _llevarALaVista();
+  }
+
+  /// El error que aparece o cambia queda a la vista dentro del compositor, de
+  /// un salto, aunque el alumno lo haya desplazado por dentro o el compositor
+  /// esté en su 60 % (RF-BIEN-5 y RF-BIEN-15).
+  void _llevarALaVista() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(
+        Scrollable.ensureVisible(
+          context,
+          alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+        ),
+      );
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -477,7 +688,7 @@ class ErrorLocal extends StatelessWidget {
             const SizedBox(width: 6),
             Expanded(
               child: Text(
-                mensaje,
+                widget.mensaje,
                 style: TextStyle(color: color, fontSize: 12),
               ),
             ),
@@ -603,18 +814,28 @@ class _E1 extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          const RotuloDelCampo(_Textos.rotuloCodigo),
-          _AlEscribir(
-            controlador: login.codeController,
-            builder: (context, vacio) => _CampoConEnvio(
-              campo: CampoDelCompositor(
-                controlador: login.codeController,
-                pista: _Textos.pistaCodigo,
-                accion: TextInputAction.next,
-                pistasDeAutocompletado: const [AutofillHints.username],
-                alEnviar: (_) => c.enviarCodigo(),
-              ),
-              alEnviar: vacio || c.esperando.value ? null : c.enviarCodigo,
+          _BloqueDelEnvio(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const RotuloDelCampo(_Textos.rotuloCodigo),
+                _AlEscribir(
+                  controlador: login.codeController,
+                  builder: (context, vacio) => _CampoConEnvio(
+                    campo: CampoDelCompositor(
+                      controlador: login.codeController,
+                      pista: _Textos.pistaCodigo,
+                      accion: TextInputAction.next,
+                      pistasDeAutocompletado: const [AutofillHints.username],
+                      alEnviar: (_) => c.enviarCodigo(),
+                    ),
+                    alEnviar: vacio || c.esperando.value
+                        ? null
+                        : c.enviarCodigo,
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 10),
@@ -687,25 +908,34 @@ class _E2 extends StatelessWidget {
               ),
             ),
           ),
-          const RotuloDelCampo(_Textos.rotuloContrasena),
-          CampoDelCompositor(
-            controlador: login.passwordController,
-            pista: _Textos.pistaContrasena,
-            oculto: !login.passwordVisible.value,
-            pistasDeAutocompletado: const [AutofillHints.password],
-            alEnviar: (_) => c.entrar(),
-            sufijo: OjoDeLaContrasena(
-              visible: login.passwordVisible.value,
-              alTocar: login.passwordVisible.toggle,
-            ),
-          ),
-          const SizedBox(height: 10),
-          _AlEscribir(
-            controlador: login.passwordController,
-            builder: (context, vacio) => BotonPrincipal(
-              texto: _Textos.entrar,
-              esperando: esperando,
-              alTocar: vacio ? null : c.entrar,
+          // El envío de E2 es «Entrar», bajo el campo.
+          _BloqueDelEnvio(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const RotuloDelCampo(_Textos.rotuloContrasena),
+                CampoDelCompositor(
+                  controlador: login.passwordController,
+                  pista: _Textos.pistaContrasena,
+                  oculto: !login.passwordVisible.value,
+                  pistasDeAutocompletado: const [AutofillHints.password],
+                  alEnviar: (_) => c.entrar(),
+                  sufijo: OjoDeLaContrasena(
+                    visible: login.passwordVisible.value,
+                    alTocar: login.passwordVisible.toggle,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                _AlEscribir(
+                  controlador: login.passwordController,
+                  builder: (context, vacio) => BotonPrincipal(
+                    texto: _Textos.entrar,
+                    esperando: esperando,
+                    alTocar: vacio ? null : c.entrar,
+                  ),
+                ),
+              ],
             ),
           ),
           EnlaceSecundario(
@@ -782,11 +1012,14 @@ class _EnlacesDelRegistro extends StatelessWidget {
 }
 
 /// Un turno con campo. El error local de la validación va bajo el campo, y
-/// después los botones y los enlaces (RF-BIEN-5).
+/// después los botones y los enlaces (RF-BIEN-5). Los campos, el error y el
+/// envío forman el bloque que el compositor deja entero con el teclado
+/// abierto.
 class _ConError extends StatelessWidget {
   const _ConError({
     required this.c,
     required this.campo,
+    this.envio = const <Widget>[],
     this.despues = const <Widget>[],
   });
 
@@ -794,6 +1027,10 @@ class _ConError extends StatelessWidget {
 
   /// El rótulo y el campo, hasta el que lleva el error debajo.
   final List<Widget> campo;
+
+  /// Lo que va bajo el error hasta el envío, cuando el envío no va al lado
+  /// del campo.
+  final List<Widget> envio;
   final List<Widget> despues;
 
   @override
@@ -802,8 +1039,17 @@ class _ConError extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        ...campo,
-        if (c.errorLocal.value != null) ErrorLocal(c.errorLocal.value!),
+        _BloqueDelEnvio(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ...campo,
+              if (c.errorLocal.value != null) ErrorLocal(c.errorLocal.value!),
+              ...envio,
+            ],
+          ),
+        ),
         ...despues,
       ],
     ),
@@ -993,7 +1239,8 @@ class _N5 extends StatelessWidget {
           autofocus: !MediaQuery.accessibleNavigationOf(context),
         ),
       ],
-      despues: [
+      // N5 solo envía con «Crear mi cuenta», bajo la nota (RF-BIEN-7).
+      envio: [
         const SizedBox(height: 6),
         Text(
           _Textos.notaAuthenticator,
@@ -1007,8 +1254,8 @@ class _N5 extends StatelessWidget {
             alTocar: vacio ? null : c.crearCuenta,
           ),
         ),
-        _EnlacesDelRegistro(c: c),
       ],
+      despues: [_EnlacesDelRegistro(c: c)],
     );
   }
 }
