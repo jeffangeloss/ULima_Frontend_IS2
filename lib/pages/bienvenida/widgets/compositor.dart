@@ -1,8 +1,11 @@
 // lib/pages/bienvenida/widgets/compositor.dart
 // El compositor de la conversación y sus piezas (RF-BIEN-5 y RF-BIEN-16).
 // Va fijo abajo, sobre el teclado, mide hasta el 60 % del alto disponible y
-// desplaza por dentro si su contenido es más alto. Todo control mide al
-// menos 48 dp de alto.
+// desplaza por dentro si su contenido es más alto. Con el teclado abierto se
+// achica además hasta dejar a la vista el último mensaje. Todo control mide
+// al menos 48 dp de alto.
+
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -25,6 +28,7 @@ class MarcoDelCompositor extends StatelessWidget {
     super.key,
     required this.child,
     required this.altoDisponible,
+    this.altoLibre,
   });
 
   final Widget child;
@@ -34,17 +38,34 @@ class MarcoDelCompositor extends StatelessWidget {
   /// mide con su LayoutBuilder.
   final double altoDisponible;
 
+  /// Con el teclado abierto, el alto que queda bajo la franja después de
+  /// dejar entero el último mensaje. El compositor no pasa de él, salvo
+  /// para respetar [_altoMinimo] (RF-BIEN-5). Es null sin teclado.
+  final double? altoLibre;
+
+  /// El relleno de arriba, el rótulo, con su línea a 1,5 veces su letra, y
+  /// la fila del campo con su envío, con 10 dp debajo. El campo va primero,
+  /// así que con este alto el campo con el foco y su envío nunca salen de la
+  /// vista, aun en una pantalla muy baja.
+  static double _altoMinimo(BuildContext context) =>
+      10 + MediaQuery.textScalerOf(context).scale(11.5 * 1.5) + 5 + 48 + 10;
+
   @override
   Widget build(BuildContext context) {
     final b = Theme.brightnessOf(context);
     final mq = MediaQuery.of(context);
+    var tope = altoDisponible * 0.6;
+    final libre = altoLibre;
+    if (libre != null) {
+      tope = math.min(tope, math.max(libre, _altoMinimo(context)));
+    }
     return DecoratedBox(
       decoration: BoxDecoration(
         color: MaterialTheme.cardBg(b),
         border: Border(top: BorderSide(color: MaterialTheme.testLine(b))),
       ),
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: altoDisponible * 0.6),
+        constraints: BoxConstraints(maxHeight: tope),
         child: SingleChildScrollView(
           padding: EdgeInsets.fromLTRB(
             12,

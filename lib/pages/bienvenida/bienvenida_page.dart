@@ -9,9 +9,10 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show ValueListenable, kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show RenderRepaintBoundary;
+import 'package:flutter/rendering.dart'
+    show RenderProxyBox, RenderRepaintBoundary;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -80,6 +81,13 @@ class _BienvenidaPageState extends State<BienvenidaPage>
   final GlobalKey _claveDeLaConversacion = GlobalKey();
   final GlobalKey _claveDelUltimoAvatar = GlobalKey();
   bool _pasoEmpezado = false;
+
+  /// El alto de la última entrada, que el compositor deja entera a la vista
+  /// con el teclado abierto (RF-BIEN-5). Solo se escucha en el compositor,
+  /// así que al cambiar no reconstruye la franja ni la conversación.
+  final ValueNotifier<double> _altoDeLaUltima = ValueNotifier<double>(0);
+  double _ultimaMedida = 0;
+  bool _medidaPendiente = false;
 
   /// Sin movimiento, la franja con el sello y la conversación aparecen encima
   /// del recibimiento en 220 ms (RF-BIEN-15). Fuera de ese cruce vale 1.
@@ -250,6 +258,18 @@ class _BienvenidaPageState extends State<BienvenidaPage>
     }
   }
 
+  /// La medida llega durante el layout de la lista, así que se publica al
+  /// terminar el cuadro.
+  void _alMedirLaUltima(double alto) {
+    _ultimaMedida = alto;
+    if (_medidaPendiente) return;
+    _medidaPendiente = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _medidaPendiente = false;
+      if (mounted) _altoDeLaUltima.value = _ultimaMedida;
+    });
+  }
+
   /// Entrega a la capa la franja, el sello, a Ulises en su último avatar y
   /// una imagen de la conversación, navega a /home en Horario sin transición
   /// y reinicia la conversación (RF-BIEN-11).
@@ -380,6 +400,7 @@ class _BienvenidaPageState extends State<BienvenidaPage>
     _pulso.dispose();
     _rombos.dispose();
     _pildora.dispose();
+    _altoDeLaUltima.dispose();
     _cruceDeLaSubida.dispose();
     _pedirElCursorQuieto(false);
     _c.terminarVisita(_visita);
@@ -570,7 +591,8 @@ class _BienvenidaPageState extends State<BienvenidaPage>
         ultimoAvatar = i;
       }
     }
-    // El compositor mide hasta el 60 % del alto sobre el teclado (RF-BIEN-5).
+    // El compositor mide hasta el 60 % del alto sobre el teclado y, con el
+    // teclado abierto, deja entera la última entrada (RF-BIEN-5).
     return LayoutBuilder(
       builder: (context, limites) => Column(
         children: [
@@ -591,9 +613,10 @@ class _BienvenidaPageState extends State<BienvenidaPage>
                         constraints: const BoxConstraints(maxWidth: 600),
                         child: ListView.builder(
                           controller: _desplazamiento,
+                          physics: const _PegadaAlFinal(),
                           keyboardDismissBehavior:
                               ScrollViewKeyboardDismissBehavior.onDrag,
-                          padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+                          padding: _rellenoDeLaLista,
                           itemCount: cuantas,
                           itemBuilder: (context, i) {
                             final entrada = entradas[i];
@@ -602,19 +625,27 @@ class _BienvenidaPageState extends State<BienvenidaPage>
                               i,
                               primerIdDeUlises,
                             );
-                            return EntradaView(
+                            return _Medida(
                               key: ValueKey<int>(entrada.id),
-                              entrada: entrada,
-                              anterior: i > 0 ? entradas[i - 1] : null,
-                              primerGrupo: primerGrupo,
-                              ocultarAvatar: primerGrupo && !_avatarVisible,
-                              claveDelAvatar: i == ultimoAvatar
-                                  ? _claveDelUltimoAvatar
+                              alMedir: i == cuantas - 1
+                                  ? _alMedirLaUltima
                                   : null,
-                              enfocar: entrada.id == _idAEnfocar,
-                              conMovimiento: !_sinMovimiento,
-                              resultado: (context, r) =>
-                                  ResultadoEnLaConversacion(c: _c, entrada: r),
+                              child: EntradaView(
+                                entrada: entrada,
+                                anterior: i > 0 ? entradas[i - 1] : null,
+                                primerGrupo: primerGrupo,
+                                ocultarAvatar: primerGrupo && !_avatarVisible,
+                                claveDelAvatar: i == ultimoAvatar
+                                    ? _claveDelUltimoAvatar
+                                    : null,
+                                enfocar: entrada.id == _idAEnfocar,
+                                conMovimiento: !_sinMovimiento,
+                                resultado: (context, r) =>
+                                    ResultadoEnLaConversacion(
+                                      c: _c,
+                                      entrada: r,
+                                    ),
+                              ),
                             );
                           },
                         ),
@@ -629,6 +660,11 @@ class _BienvenidaPageState extends State<BienvenidaPage>
                           key: ValueKey<TurnoDeLaBienvenida>(turno),
                           conMovimiento: !_sinMovimiento,
                           altoDisponible: limites.maxHeight,
+                          bajoLaFranja: _bajoLaFranjaConTeclado(
+                            context,
+                            limites.maxHeight,
+                          ),
+                          altoDeLaUltima: _altoDeLaUltima,
                           child: compositorDelTurno(context, _c, turno),
                         ),
                       ),
@@ -640,6 +676,14 @@ class _BienvenidaPageState extends State<BienvenidaPage>
         ],
       ),
     );
+  }
+
+  /// Con el teclado abierto, el alto bajo la franja que comparten la lista y
+  /// el compositor. El Scaffold descuenta el teclado del MediaQuery de su
+  /// cuerpo, así que el teclado se lee en la vista. Es null sin teclado.
+  double? _bajoLaFranjaConTeclado(BuildContext context, double alto) {
+    if (View.of(context).viewInsets.bottom <= 0) return null;
+    return alto - CabeceraConSello.alto(context);
   }
 
   /// El primer grupo de Ulises es el de las burbujas desde la primera hasta
@@ -657,6 +701,10 @@ class _BienvenidaPageState extends State<BienvenidaPage>
   }
 }
 
+/// El relleno de la lista. El de abajo también queda libre bajo la última
+/// entrada cuando el compositor le hace sitio (RF-BIEN-5).
+const EdgeInsets _rellenoDeLaLista = EdgeInsets.fromLTRB(12, 8, 12, 16);
+
 /// El compositor entra en 300 ms, subiendo 8 dp, o con un fundido de 200 ms
 /// con reducir movimiento (RF-BIEN-5 y RF-BIEN-15).
 class _CompositorAnimado extends StatelessWidget {
@@ -664,23 +712,39 @@ class _CompositorAnimado extends StatelessWidget {
     super.key,
     required this.conMovimiento,
     required this.altoDisponible,
+    required this.bajoLaFranja,
+    required this.altoDeLaUltima,
     required this.child,
   });
 
   final bool conMovimiento;
   final double altoDisponible;
+
+  /// Con el teclado abierto, el alto bajo la franja. Es null sin teclado.
+  final double? bajoLaFranja;
+  final ValueListenable<double> altoDeLaUltima;
   final Widget? child;
 
   @override
   Widget build(BuildContext context) {
     final contenido = child;
     if (contenido == null) return const SizedBox.shrink();
+    final bajo = bajoLaFranja;
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: 0, end: 1),
       duration: Duration(milliseconds: conMovimiento ? 300 : 200),
       curve: Curves.easeOutCubic,
-      child: MarcoDelCompositor(
-        altoDisponible: altoDisponible,
+      // Con el teclado abierto, lo libre bajo la franja es lo que no ocupan la
+      // última entrada ni el relleno inferior de la lista.
+      child: ValueListenableBuilder<double>(
+        valueListenable: altoDeLaUltima,
+        builder: (context, ultima, hijo) => MarcoDelCompositor(
+          altoDisponible: altoDisponible,
+          altoLibre: bajo == null
+              ? null
+              : bajo - ultima - _rellenoDeLaLista.bottom,
+          child: hijo!,
+        ),
         child: contenido,
       ),
       builder: (context, t, hijo) => Opacity(
@@ -690,5 +754,81 @@ class _CompositorAnimado extends StatelessWidget {
             : hijo,
       ),
     );
+  }
+}
+
+/// Con el alumno al final de la conversación, o a menos de 48 dp, un cambio
+/// de alto de la vista, como el teclado que se abre o se cierra o el
+/// compositor que entra o crece, la deja pegada al final de un salto, sin
+/// animación, también con reducir movimiento (RF-BIEN-5 y RF-BIEN-15). Si el
+/// alumno subió a leer el historial, o arrastra o se anima la lista, no se
+/// le mueve.
+class _PegadaAlFinal extends ScrollPhysics {
+  const _PegadaAlFinal({super.parent});
+
+  static const double _cerca = 48;
+
+  @override
+  _PegadaAlFinal applyTo(ScrollPhysics? ancestor) =>
+      _PegadaAlFinal(parent: buildParent(ancestor));
+
+  @override
+  double adjustPositionForNewDimensions({
+    required ScrollMetrics oldPosition,
+    required ScrollMetrics newPosition,
+    required bool isScrolling,
+    required double velocity,
+  }) {
+    if (!isScrolling &&
+        oldPosition.viewportDimension != newPosition.viewportDimension &&
+        oldPosition.extentAfter <= _cerca) {
+      return newPosition.maxScrollExtent;
+    }
+    return super.adjustPositionForNewDimensions(
+      oldPosition: oldPosition,
+      newPosition: newPosition,
+      isScrolling: isScrolling,
+      velocity: velocity,
+    );
+  }
+}
+
+/// Avisa el alto de su entrada cada vez que se mide, mientras [alMedir] no
+/// sea null. La lista se lo pasa solo a la última entrada.
+class _Medida extends SingleChildRenderObjectWidget {
+  const _Medida({super.key, required this.alMedir, super.child});
+
+  final ValueChanged<double>? alMedir;
+
+  @override
+  _RenderDeLaMedida createRenderObject(BuildContext context) =>
+      _RenderDeLaMedida(alMedir);
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    _RenderDeLaMedida renderObject,
+  ) {
+    renderObject.alMedir = alMedir;
+  }
+}
+
+class _RenderDeLaMedida extends RenderProxyBox {
+  _RenderDeLaMedida(this._alMedir);
+
+  ValueChanged<double>? _alMedir;
+
+  /// Una entrada que pasa a ser la última se vuelve a medir, aunque su
+  /// tamaño no cambie.
+  set alMedir(ValueChanged<double>? valor) {
+    if (valor == _alMedir) return;
+    _alMedir = valor;
+    if (valor != null) markNeedsLayout();
+  }
+
+  @override
+  void performLayout() {
+    super.performLayout();
+    _alMedir?.call(size.height);
   }
 }
