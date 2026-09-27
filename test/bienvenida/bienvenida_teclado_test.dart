@@ -278,8 +278,9 @@ void main() {
     await montarLaBienvenida(tester, b, argumentos: _expirada);
     await avanzar(tester, 1800);
     await abrirElTeclado(tester, 300);
-    // Una burbuja de Ulises se vuelve a medir con cada cuadro de la lista,
-    // así que la que pasa a ser la última es una respuesta del alumno.
+    // Una burbuja de Ulises se vuelve a medir cada vez que la lista se
+    // reconstruye, por su LayoutBuilder, así que la que pasa a ser la última
+    // es una respuesta del alumno.
     const respuesta = RespuestaDelAlumno(id: 100000, texto: 'Una respuesta');
     const larga = BurbujaDeUlises(
       id: 100001,
