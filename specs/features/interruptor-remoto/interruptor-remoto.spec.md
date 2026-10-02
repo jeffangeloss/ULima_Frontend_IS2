@@ -58,12 +58,16 @@ D-5). Su constructor admite inyectar cliente, preferencias, tope y URL base, com
 `AvisoVersionService`. No usa `ApiClient`, que no tiene tope, adjunta el token y borra la sesión ante
 un 401, y solo toma de él la URL base.
 
+`[@test] ../../../test/interruptor_remoto/modo_remoto_service_test.dart`
+
 ### RF-IRM-7. El último modo conocido
 
 La última respuesta conocida se guarda en la clave `modo_estatico_conocido` de SharedPreferences,
 con instancia propia como `SplashVarianteService`, así que se lee antes de que exista
 `StorageService`. `clearSession` no la borra, un valor que no es booleano cuenta como ninguno y un
 fallo de lectura o escritura no lanza.
+
+`[@test] ../../../test/interruptor_remoto/modo_remoto_service_test.dart`
 
 ### RF-IRM-8. El modo del arranque
 
