@@ -667,7 +667,7 @@ class HorarioPage extends StatelessWidget {
                 shape: const RoundedRectangleBorder(
                   borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                 ),
-                builder: (context) => _TeacherCourseDetailSheet(
+                builder: (context) => TeacherCourseDetailSheet(
                   idSeccion: idSeccion,
                   courseName: course['curso'] ?? '',
                   sectionCode: course['codigoSeccion'] ?? '',
@@ -1331,23 +1331,25 @@ class HorarioPage extends StatelessWidget {
   }
 }
 
-class _TeacherCourseDetailSheet extends StatefulWidget {
+/// Ficha de sección del docente. Es pública solo para que las pruebas la
+/// monten sin pasar por toda la grilla del horario.
+class TeacherCourseDetailSheet extends StatefulWidget {
   final String idSeccion;
   final String courseName;
   final String sectionCode;
 
-  const _TeacherCourseDetailSheet({
+  const TeacherCourseDetailSheet({
     required this.idSeccion,
     required this.courseName,
     required this.sectionCode,
   });
 
   @override
-  State<_TeacherCourseDetailSheet> createState() =>
-      _TeacherCourseDetailSheetState();
+  State<TeacherCourseDetailSheet> createState() =>
+      TeacherCourseDetailSheetState();
 }
 
-class _TeacherCourseDetailSheetState extends State<_TeacherCourseDetailSheet> {
+class TeacherCourseDetailSheetState extends State<TeacherCourseDetailSheet> {
   bool _isLoading = true;
   String? _errorMessage;
   String _delegateName = 'No asignado';
