@@ -13,7 +13,10 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart'
+    show FlutterMemoryAllocations, ObjectCreated, ObjectDisposed, ObjectEvent;
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -55,6 +58,28 @@ class _BindingMarcado extends Bindings {
 
   @override
   void dependencies() => veces++;
+}
+
+/// Anota los Ticker que la capa crea y libera. Flutter avisa de cada uno a
+/// FlutterMemoryAllocations en modo debug, y el de la capa se reconoce por la
+/// etiqueta «created by _CapaDeArranqueState#…» que le pone su State.
+class _RelojesDeLaCapa {
+  _RelojesDeLaCapa() {
+    FlutterMemoryAllocations.instance.addListener(_escuchar);
+  }
+
+  final List<Ticker> creados = <Ticker>[];
+  final List<Ticker> liberados = <Ticker>[];
+
+  void _escuchar(ObjectEvent evento) {
+    final objeto = evento.object;
+    if (objeto is! Ticker) return;
+    if (!(objeto.debugLabel ?? '').contains('_CapaDeArranqueState')) return;
+    if (evento is ObjectCreated) creados.add(objeto);
+    if (evento is ObjectDisposed) liberados.add(objeto);
+  }
+
+  void cerrar() => FlutterMemoryAllocations.instance.removeListener(_escuchar);
 }
 
 Widget _pagina(String texto) => Scaffold(body: Center(child: Text(texto)));
@@ -167,6 +192,41 @@ void main() {
       expect(EstadoDeLaCapa.cubre.value, isFalse);
       await tester.tap(find.text('bienvenida'));
       expect(toquesEnLaPagina, 1);
+    });
+
+    testWidgets(
+      'sin intro sale del árbol sin crear su reloj, que Flutter 3.44.2 '
+      'no deja crear dentro de dispose()',
+      (tester) async {
+        telefono(tester);
+        final relojes = _RelojesDeLaCapa();
+        addTearDown(relojes.cerrar);
+        await tester.pumpWidget(appConCapa());
+        await tester.pump();
+        await tester.pumpWidget(const SizedBox.shrink());
+        expect(relojes.creados, isEmpty);
+      },
+    );
+
+    testWidgets('con intro crea un solo reloj al montarse y lo libera al salir '
+        'del árbol', (tester) async {
+      telefono(tester);
+      final relojes = _RelojesDeLaCapa();
+      addTearDown(relojes.cerrar);
+      await tester.pumpWidget(
+        appConCapa(
+          intro: IntroDelArranque(
+            carga: CargaFalsa().call,
+            variantes: VariantesFijas(VarianteSplash.ensamble),
+            random: Random(1),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(relojes.creados, hasLength(1));
+      expect(relojes.liberados, isEmpty);
+      await tester.pumpWidget(const SizedBox.shrink());
+      expect(relojes.liberados, orderedEquals(relojes.creados));
     });
 
     testWidgets('con intro tapa la pantalla, bloquea los toques y la barra de '
