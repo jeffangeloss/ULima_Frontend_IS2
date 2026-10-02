@@ -219,8 +219,8 @@ la intro empieza a moverse (RF-SPL-6).
   384 px del centro.
 - La comparación con la geometría usa un comparador con la tolerancia de RF-SPL-5 y no la
   comparación exacta de `matchesGoldenFile`, porque el antialiasing cambia entre macOS y Linux.
-  La CI de hoy (`.github/workflows/build-apk.yml`) no corre pruebas, así que la prueba corre en
-  la Mac del equipo, igual que el resto de la suite.
+  Desde la versión 1.1.0, `.github/workflows/ci.yml` corre la suite en Linux en cada PR, y la
+  tolerancia cubre la diferencia de antialiasing con la Mac del equipo.
 - No se agrega ningún paquete ni herramienta fuera del SDK de Flutter.
 
 `[@test] ../../../test/splash/splash_png_nativo_test.dart`
@@ -259,6 +259,10 @@ la intro empieza a moverse (RF-SPL-6).
     `HomePage` cuando se retira, para que Horario pida sus orientaciones (RF-SPL-20). Cuando
     mide `ChatbotBubble`, le dice si hay un aterrizaje de Ulises en curso, lo que solo pasa en
     este paso, y la intro nunca se lo dice (decisiones S-28 y B-16).
+- **El reloj nace con su primer uso.** El `Ticker` de la capa se crea cuando arranca la intro o el
+  paso al horario, y `dispose()` libera solo el que existe, porque Flutter 3.44.2 lanza una
+  aserción en modo debug si se crea un `Ticker` dentro de `dispose()`. Una capa que nunca arranca,
+  como la de web, sale del árbol sin crear ninguno.
 - El estado de la capa vive en el `State` de su widget y no en un `GetxController` registrado
   con `Get.put` mientras la ruta actual es `/arranque`. GetX liga esa instancia a la ruta y la
   borra cuando la navegación retira `/arranque`, en plena salida (`get_instance.dart:199-210` y
@@ -1024,9 +1028,10 @@ en la propuesta del equipo.
   `home_page.dart` y `session_navigation.dart` los usan otras features. Incluye `test/splash`,
   `test/components/header/app_header_test.dart` y `test/HU23_jeff/chats_pestana_test.dart`, que
   sigue abriendo en Malla sin argumento. `splash_arranque_test` cubre el 401 durante la carga, sin
-  snackbar y con una sola navegación a la bienvenida. `home_pestana_inicial_test` cubre Horario con
-  el argumento para el alumno, el delegado, el profesor titular y el jefe de práctica, la primera
-  pestaña sin argumento y la orientación vertical hasta que la capa se retira.
+  snackbar y con una sola navegación a la bienvenida, y que la capa sin intro sale del árbol sin
+  crear su reloj mientras la capa con intro crea uno solo y lo libera. `home_pestana_inicial_test`
+  cubre Horario con el argumento para el alumno, el delegado, el profesor titular y el jefe de
+  práctica, la primera pestaña sin argumento y la orientación vertical hasta que la capa se retira.
   `splash_traspaso_test` cubre la pose que recibe la bienvenida en cada variante, sin sesión y con
   la sesión de un alumno sin especialidad, sin salida hacia el asistente y sin tocar la sesión.
   Cubre también la vuelta al reposo desde el bucle y que la capa se retira sin cambiar la pantalla y

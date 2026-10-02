@@ -1037,11 +1037,11 @@ se enlaza con `[@test]` junto a su requisito. Comparten los dobles de `recarga_d
 
 - `flutter analyze` sin avisos nuevos y `flutter test` en verde, con los avisos previos reportados
   aparte.
-- `TZ=UTC flutter test --no-pub test/HU37_jeff/ultima_lectura_test.dart`. La suite corre solo en
-  una máquina local, porque `.github/workflows/build-apk.yml` no corre `flutter test`, y en UTC−5
-  la hora local coincide con la de Lima. Con `TZ=UTC`, las pruebas de RF-RCG-9 detectan una hora
-  o un día calculados con `toLocal()`, y el caso de las 23:59 y las 00:00 cubre el teléfono en
-  otra zona.
+- `TZ=UTC flutter test --no-pub test/HU37_jeff/ultima_lectura_test.dart`. En una máquina de Lima
+  (UTC−5) la hora local coincide con la de Lima, así que hace falta `TZ=UTC` para que las pruebas
+  de RF-RCG-9 detecten una hora o un día calculados con `toLocal()`, y el caso de las 23:59 y las
+  00:00 cubre el teléfono en otra zona. Desde la versión 1.1.0, `.github/workflows/ci.yml` corre
+  la suite en Linux, que ya usa UTC, en cada PR.
 - Revisión manual en un iPhone SE, en claro y en oscuro, con el texto al 200 % y con VoiceOver, de
   la fila, la franja, la hoja con el teclado abierto, el aviso y el bloque de asistencia, y la
   misma revisión en Android con TalkBack.

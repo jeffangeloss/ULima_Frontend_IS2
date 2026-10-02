@@ -67,7 +67,7 @@ ULima++ es la app que un alumno de la Universidad de Lima abre para no tener que
 
 Desde **HU18** la app dejó de ser solo del alumno. Un profesor o jefe de práctica entra con las mismas credenciales y recibe otro shell: [`lib/pages/home/home_shell_config.dart`](lib/pages/home/home_shell_config.dart) decide en `forUser(user)` si arma la barra de alumno —Malla · Notas · Horario · Chats · Perfil, con Delegado antes de Perfil si el alumno es delegado— o la de docente —Secciones · Calificar · Horario · Asesorias · Perfil—. La pestaña **Calificar** solo aparece si el usuario es profesor titular (`AuthService.to.canGrade`); un JP puro no la ve, y por eso `HomePage` deriva el índice de cada pestaña en runtime en lugar de hardcodearlo (`home_page.dart:42-43`). El mismo criterio se repite en el resto de la UI: la campana de alertas se oculta para docentes (`app_header.dart:55-56, 93-148`), y la burbuja del chatbot solo se dibuja si `!user.isTeacher` (`home_page.dart:112`).
 
-Este repositorio es **únicamente la app Flutter**: paquete Dart `ulima_plus` versión `1.0.0+1` ([`pubspec.yaml`](pubspec.yaml)), **30 217 líneas de Dart repartidas en 151 archivos** bajo [`lib/`](lib), **15 specs** en [`specs/features/`](specs/features) y **49 suites de prueba** (6 567 líneas) en [`test/`](test). Son 28 pantallas, 25 controllers GetX, 30 servicios, 21 modelos y 20 componentes. Las plataformas que realmente arrancan son **Android, iOS y Web**: `Firebase.initializeApp` corre siempre en el arranque ([`lib/main.dart:53`](lib/main.dart)) y `DefaultFirebaseOptions.currentPlatform` lanza `UnsupportedError` en macOS, Windows y Linux ([`lib/firebase_options.dart:27-45`](lib/firebase_options.dart)). Los directorios de esas tres plataformas existen en el repo, pero son andamiaje generado por `flutter create` que nadie compila.
+Este repositorio es **únicamente la app Flutter**: paquete Dart `ulima_plus` versión `1.1.0` (`version: 1.1.0+1` en [`pubspec.yaml`](pubspec.yaml); el número de build lo pone la CI), **30 217 líneas de Dart repartidas en 151 archivos** bajo [`lib/`](lib), **15 specs** en [`specs/features/`](specs/features) y **49 suites de prueba** (6 567 líneas) en [`test/`](test). Son 28 pantallas, 25 controllers GetX, 30 servicios, 21 modelos y 20 componentes. Las plataformas que realmente arrancan son **Android, iOS y Web**: `Firebase.initializeApp` corre siempre en el arranque ([`lib/main.dart:53`](lib/main.dart)) y `DefaultFirebaseOptions.currentPlatform` lanza `UnsupportedError` en macOS, Windows y Linux ([`lib/firebase_options.dart:27-45`](lib/firebase_options.dart)). Los directorios de esas tres plataformas existen en el repo, pero son andamiaje generado por `flutter create` que nadie compila.
 
 Lo que este repo **no** es importa tanto como lo que es. No es una segunda implementación de las reglas académicas: `KNOWLEDGE.md:110` y `README.md:60` prohíben duplicar lógica de negocio del backend, y el código lo respeta en los sitios donde se nota. El promedio de la calculadora **lo calcula el backend** (`POST /grades/me/calculate`, `calculadora_controller.dart:185-198`), no un `fold` local. El carnet de networking declara la regla explícita de que "el frontend no decide permisos, propiedad, límites persistentes ni autorización" (BR-NET-F-01, `networking.spec.md:38-44`): manda el borrador y presenta el error que el backend devuelva. Tampoco es un almacén académico: `shared_preferences` guarda sesión, token y preferencias, nunca datos académicos oficiales (`AGENTS.md:41`, `KNOWLEDGE.md:111`), y el JWT vive aparte en `flutter_secure_storage`.
 
@@ -111,7 +111,7 @@ No hay Provider, ni Riverpod, ni Bloc, ni Dio. Hay **GetX** para estado, inyecci
 
 ### El stack
 
-Entorno declarado en [`pubspec.yaml`](pubspec.yaml)`:22`: `sdk: ^3.11.4`. El `pubspec.lock` resuelve `dart: ">=3.11.4 <4.0.0"` y `flutter: ">=3.38.4"`. El paquete Dart se llama `ulima_plus`, versión `1.0.0+1`.
+Entorno declarado en [`pubspec.yaml`](pubspec.yaml)`:22`: `sdk: ^3.11.4`. El `pubspec.lock` resuelve `dart: ">=3.12.0 <4.0.0"` y `flutter: ">=3.44.0"`, y está escrito con un Flutter más nuevo que el 3.44.2 de la CI (deuda anotada en [`docs/devops.md`](docs/devops.md)). El paquete Dart se llama `ulima_plus`, versión `1.1.0`.
 
 | Pieza | Paquete | Restricción | Resuelto |
 |:---|:---|:---|:---|
@@ -670,10 +670,10 @@ ULima_Frontend_IS2/
 ├── linux/                      (10)  # ANDAMIAJE
 │
 ├── assets/images/               (7)  # Las ÚNICAS assets. NO existe assets/data/ — es una regla, no un olvido
-├── .github/workflows/           (1)  # build-apk.yml (207 L). Único workflow del proyecto
+├── .github/workflows/           (2)  # ci.yml (28 L, pruebas) y build-apk.yml (234 L, APK solo en meltiruiz)
 ├── .tessl/                     (13)  # Reglas y skills vendorizadas de Spec Driven Development v2.0.1
 │
-├── pubspec.yaml                      # Paquete ulima_plus 1.0.0+1; assets; splash e ícono #E77330
+├── pubspec.yaml                      # Paquete ulima_plus 1.1.0+1; assets; splash e ícono #E77330
 ├── analysis_options.yaml             # flutter_lints ^6.0.0; excluye android/ ios/ web/ desktop del analyze
 ├── firebase.json                     # flutter.platforms android/ios/dart del proyecto ulima-plus-chat.
 │                                     #   NO tiene clave "hosting": hoy solo se despliegan reglas
@@ -705,7 +705,7 @@ ULima_Frontend_IS2/
 | [`.tessl/`](.tessl) | Reglas vendorizadas de Spec Driven Development | 13 |
 | [`linux/`](linux) | Andamiaje de `flutter create`, sin uso | 10 |
 | [`assets/images/`](assets/images) | 7 imágenes. No hay `assets/data/` | 7 |
-| [`.github/`](.github) | `workflows/build-apk.yml`, único workflow | 1 |
+| [`.github/`](.github) | `workflows/ci.yml` (pruebas) y `workflows/build-apk.yml` (APK) | 2 |
 
 ### Qué carpetas de plataforma están vivas
 
@@ -3447,8 +3447,8 @@ cuando la app tiene que reaccionar a ellas.
 | `RNF-APP-23` | Compatibilidad | iOS compila (piso 15.0, Podfile presente) pero **no tiene CI ni comando documentado**; Web compila pero **no tiene hosting configurado** | `ios/Podfile`, `firebase.json` | Compilable, sin distribución |
 | `RNF-APP-24` | Compatibilidad | Los tres escritorios tienen scaffold pero **la app crashea al arrancar**: `firebase_options.dart` lanza `UnsupportedError` para macOS, Windows y Linux | `lib/firebase_options.dart:27-41` | **No funcional** |
 | `RNF-APP-25` | Compatibilidad | Orientación vertical forzada en todo el shell autenticado; excepciones: la pestaña `Horario` y la ruta `/malla-clasica` | `app-shell.spec.md:21-34` | Implementado |
-| `RNF-APP-26` | Entorno de build | Flutter **3.44.2** en CI; revisión del canal `stable` fijada en `.metadata` | `build-apk.yml:61` | Fijado |
-| `RNF-APP-27` | Tamaño del APK | **No consta.** Ningún archivo del repositorio publica el peso del artefacto: el workflow lo compila, lo renombra a `ULimaPlus.apk` y lo sube al release `latest` sin registrar tamaño | `build-apk.yml:179-207` | Sin dato |
+| `RNF-APP-26` | Entorno de build | Flutter **3.44.2** en CI; revisión del canal `stable` fijada en `.metadata` | `ci.yml:23` y `build-apk.yml:62` | Fijado |
+| `RNF-APP-27` | Tamaño del APK | **No consta.** Ningún archivo del repositorio publica el peso del artefacto: el workflow lo compila, lo renombra a `ULimaPlus.apk` y lo sube al release `latest` y al de su versión (`vX.Y.Z`) sin registrar tamaño | `build-apk.yml:191-234` | Sin dato |
 
 ---
 
@@ -4701,7 +4701,7 @@ Sin adornos:
   público. La práctica correcta ya existe en el árbol
   —`test/HU_asistencia/at_risk_student_sin_datos_test.dart` usa un código con el comentario
   `// sintetico: el repo es publico`— y falta homogeneizarla.
-- **Nada de esto corre en CI.** Ver más abajo.
+- **La CI no cubre nada de esto.** Solo repite `flutter analyze` y `flutter test` en cada PR. Ver más abajo.
 
 ---
 
@@ -4748,8 +4748,10 @@ conviven las dos comillas en el árbol.
 
 `flutter analyze` es **puerta obligatoria** del flujo de trabajo: lo exigen `README.md`,
 `AGENTS.md` y `docs/specs/workflow.md` como paso previo a cualquier PR, y
-`specs/features/platform-runtime/platform-runtime.spec.md` lo repite. Obligatoria, sí, pero
-**verificada a mano**: nada la hace cumplir automáticamente.
+`specs/features/platform-runtime/platform-runtime.spec.md` lo repite. Desde la versión 1.1.0 también
+la hace cumplir la CI: el job `pruebas` de [`ci.yml`](.github/workflows/ci.yml) corre
+`flutter analyze --no-fatal-infos` en cada PR, así que un error o un warning falla el check y un aviso
+`info` no (ver la sección CI más abajo).
 
 ```mermaid
 flowchart TD
@@ -4771,41 +4773,67 @@ flowchart TD
 
     L4 --> GATE{"Puerta de calidad"}
     T4 --> GATE
-    GATE -- "verificada a mano segun AGENTS.md" --> OK["Listo para PR"]
-    GATE -.-> WARN["El CI NO ejecuta analyze ni test"]
+    GATE -- "AGENTS.md y el check pruebas de ci.yml" --> OK["Listo para PR"]
+    GATE -.-> WARN["La CI corre analyze y test en cada PR<br/>y deja pasar los avisos info"]
 ```
 
 ---
 
-### CI — un solo workflow, y no prueba nada
+### CI — dos workflows, uno prueba y otro publica
 
-`.github/` contiene **un único archivo**: [`.github/workflows/build-apk.yml`](.github/workflows/build-apk.yml),
-207 líneas, llamado «Build and Release APK». No hay workflow de análisis, ni de tests, ni de web,
-ni de iOS.
+`.github/workflows/` contiene **dos archivos**: [`ci.yml`](.github/workflows/ci.yml), llamado «CI»,
+28 líneas, que corre `flutter analyze` y `flutter test`, y
+[`build-apk.yml`](.github/workflows/build-apk.yml), llamado «Build and Release APK», 234 líneas, que
+compila, firma y publica el APK. No hay workflow de web ni de iOS. Las ramas, la publicación de una
+versión, el hotfix y la versión de Flutter están en [`docs/devops.md`](docs/devops.md), y aquí queda lo
+que hace cada workflow.
+
+#### `ci.yml` — las pruebas
+
+- **Se dispara** con `pull_request` hacia `develop` o `main` y con `push` a `develop`, así que cada PR
+  corre las pruebas antes de fusionarse.
+- **Concurrencia**: grupo `ci-${{ github.ref }}` con `cancel-in-progress: true`; una ejecución nueva
+  sobre la misma referencia cancela la anterior.
+- **Permisos**: `contents: read`.
+- **Runner**: `ubuntu-latest`, un solo job, `pruebas`, que es el nombre que exige la regla de rama de
+  `develop` en el fork.
+
+| # | Paso | Líneas | Qué hace | Falla si |
+|---:|:---|:---|:---|:---|
+| 1 | Descargar código | 20 | `actions/checkout@v4` | — |
+| 2 | Instalar Flutter | 21-25 | `subosito/flutter-action@v2`, **Flutter 3.44.2**, canal `stable`, `cache: true` | — |
+| 3 | Instalar dependencias | 26 | `flutter pub get` | no resuelve |
+| 4 | Análisis estático | 27 | `flutter analyze --no-fatal-infos` | hay un error o un warning; los avisos `info` no fallan |
+| 5 | Pruebas | 28 | `flutter test`, la suite completa | falla una prueba |
+
+#### `build-apk.yml` — el APK
 
 - **Se dispara** con `push` a la rama `main` y con `workflow_dispatch` manual. **No corre en Pull
-  Requests**, así que ninguna PR se valida automáticamente.
+  Requests.** El job lleva la guarda `github.repository == 'meltiruiz/ULima_Frontend_IS2'` (`:19`), así
+  que en el fork se omite aunque el workflow se active, y el APK sale solo de meltiruiz.
 - **Concurrencia**: grupo `build-apk-${{ github.ref }}` con `cancel-in-progress: true` — varios
   pushes seguidos a `main` cancelan el build anterior.
-- **Permisos**: `contents: write`, lo mínimo para crear el GitHub Release.
+- **Permisos**: `contents: write`, lo mínimo para crear los GitHub Releases.
 - **Runner**: `ubuntu-latest`, job `build-android`.
 
 | # | Paso | Líneas | Qué hace | Falla si |
 |---:|:---|:---|:---|:---|
-| 1 | Descargar código | 22-23 | `actions/checkout@v4` | — |
-| 2 | Validar secretos de firma | 25-49 | Comprueba los 4 GitHub Secrets de firma antes de gastar 10 minutos de build | falta alguno |
-| 3 | Configurar Java | 51-56 | `actions/setup-java@v4`, `temurin`, Java 17, `cache: gradle` | — |
-| 4 | Instalar Flutter | 58-63 | `subosito/flutter-action@v2`, **Flutter 3.44.2**, canal `stable`, `cache: true` | — |
-| 5 | Cache pub | 65-70 | `actions/cache@v4` sobre `~/.pub-cache`, clave por hash de `pubspec.lock` | — |
-| 6 | Instalar dependencias | 72-73 | `flutter pub get` | — |
-| 7 | Configurar firma de release | 75-96 | Decodifica el keystore base64 a `android/app/upload-keystore.jks`, escribe `android/key.properties` y valida el alias con `keytool -list` | keystore, alias o contraseña inválidos |
-| 8 | Cache Android native | 98-103 | Cachea el `cmake` del SDK, clave `android-cmake-<os>-3.22.1` | — |
-| 9 | **Compilar APK** | 105-106 | `flutter build apk --release --dart-define=API_BASE_URL=https://u-lima-backend-is-2-jeffangeloss-projects.vercel.app` — **no** el `-one` que documentan el README y `.vscode/launch.json`; ver [Deuda técnica](#-deuda-técnica-y-límites-conocidos) | error de compilación |
-| 10 | **Verificar firma y autorización de Firebase Auth** | 108-177 | El paso interesante, detallado abajo | ver abajo |
-| 11 | Preparar APKs | 179-187 | `release/ULimaPlus.apk` (estable, el que enlaza la landing) y `release/ULimaPlus-build-<run_number>.apk` (historial) | — |
-| 12 | Crear o actualizar Release | 189-207 | `softprops/action-gh-release@v2`, tag fijo `latest`, nombre «ULima++ Latest», cuerpo con número de build y commit, `make_latest: true` | — |
+| 1 | Descargar código | 23-24 | `actions/checkout@v4` | — |
+| 2 | Validar secretos de firma | 26-50 | Comprueba los 4 GitHub Secrets de firma antes de gastar 10 minutos de build | falta alguno |
+| 3 | Configurar Java | 52-57 | `actions/setup-java@v4`, `temurin`, Java 17, `cache: gradle` | — |
+| 4 | Instalar Flutter | 59-64 | `subosito/flutter-action@v2`, **Flutter 3.44.2**, canal `stable`, `cache: true` | — |
+| 5 | Cache pub | 66-71 | `actions/cache@v4` sobre `~/.pub-cache`, clave por hash de `pubspec.lock` | — |
+| 6 | Instalar dependencias | 73-74 | `flutter pub get` | — |
+| 7 | Configurar firma de release | 76-97 | Decodifica el keystore base64 a `android/app/upload-keystore.jks`, escribe `android/key.properties` y valida el alias con `keytool -list` | keystore, alias o contraseña inválidos |
+| 8 | Cache Android native | 99-104 | Cachea el `cmake` del SDK, clave `android-cmake-<os>-3.22.1` | — |
+| 9 | **Leer la versión de pubspec.yaml** | 106-115 | Extrae `X.Y.Z` de la línea `version:` de `pubspec.yaml` con `sed` y lo deja como salida `nombre` | la línea no trae una versión `X.Y.Z` (imprime `::error::`) |
+| 10 | **Compilar APK** | 117-118 | `flutter build apk --release --build-name=<X.Y.Z> --build-number=<run_number> --dart-define=API_BASE_URL=https://u-lima-backend-is-2-jeffangeloss-projects.vercel.app` — **no** el `-one` que documentan el README y `.vscode/launch.json`; ver [Deuda técnica](#-deuda-técnica-y-límites-conocidos) | error de compilación |
+| 11 | **Verificar firma y autorización de Firebase Auth** | 120-189 | El paso interesante, detallado abajo | ver abajo |
+| 12 | Preparar APKs | 191-199 | `release/ULimaPlus.apk` (estable, el que enlaza la landing) y `release/ULimaPlus-build-<run_number>.apk` (historial) | — |
+| 13 | Crear o actualizar Release | 201-219 | `softprops/action-gh-release@v2`, tag fijo `latest`, nombre «ULima++ Latest», cuerpo con número de build y commit, `make_latest: true` | — |
+| 14 | **Publicar el release de la versión** | 221-234 | Solo en `main` (`:222`). Si el release `vX.Y.Z` no existe, lo crea con `release/ULimaPlus-build-<run_number>.apk` adjunto y `--latest=false`; si ya existe, no crea otro | falla `gh` |
 
-El paso 10 es lo que distingue a este workflow de un `flutter build apk` con adornos. En vez de
+El paso 11 es lo que distingue a este workflow de un `flutter build apk` con adornos. En vez de
 confiar en que la firma y la configuración de Firebase estén bien, **las verifica contra Google en
 vivo**:
 
@@ -4824,7 +4852,7 @@ vivo**:
 
 ```mermaid
 flowchart TD
-    A["push a main o workflow_dispatch"] --> B["actions/checkout v4"]
+    A["push a main o workflow_dispatch<br/>solo en meltiruiz"] --> B["actions/checkout v4"]
     B --> C{"Estan los 4 secretos de firma"}
     C -- No --> CX["Falla · Faltan GitHub Secrets de firma"]
     C -- "Si" --> D["setup-java · temurin 17 · cache gradle"]
@@ -4832,7 +4860,8 @@ flowchart TD
     E --> F["cache de pub-cache por hash de pubspec.lock"]
     F --> G["flutter pub get"]
     G --> H["Decodifica keystore base64<br/>escribe key.properties<br/>keytool -list valida el alias"]
-    H --> I["flutter build apk --release<br/>con --dart-define de API_BASE_URL"]
+    H --> H2["Lee X.Y.Z de pubspec.yaml<br/>falla si no hay versión"]
+    H2 --> I["flutter build apk --release<br/>con --build-name, --build-number<br/>y --dart-define de API_BASE_URL"]
     I --> J["apksigner verify<br/>SHA-1 del certificado con openssl"]
     J --> K{"La API key de google-services.json<br/>coincide con firebase_options.dart"}
     K -- No --> KX["Falla · Ejecuta flutterfire configure"]
@@ -4843,21 +4872,22 @@ flowchart TD
     M -- "HTTP 400 INVALID_CUSTOM_TOKEN" --> N["APK autorizado por Firebase Auth"]
     N --> O["Copia a ULimaPlus.apk<br/>y ULimaPlus-build-N.apk"]
     O --> P["Release con tag latest y make_latest<br/>descarga directa desde la landing"]
+    P --> P2["Si corre sobre main y no existe vX.Y.Z<br/>crea ese release con el APK, sin make_latest"]
 ```
 
 **Lo que el CI no hace**, dicho sin rodeos:
 
-- **No ejecuta `flutter analyze`.**
-- **No ejecuta `flutter test`.** Los 336 casos nunca corren automáticamente: son una red de
-  seguridad que solo atrapa lo que alguien decida atrapar antes de commitear.
-- No corre en Pull Requests, solo en `push` a `main` y en disparo manual.
+- **No mide cobertura ni corre pruebas de integración.** `flutter test` corre la suite que hay, y sus
+  casos solo atrapan lo que alguien decide atrapar al escribirlos.
+- **Deja pasar los avisos `info`.** `--no-fatal-infos` solo falla con errores y warnings.
+- **`build-apk.yml` no espera al check `pruebas`.** Se dispara con el `push` a `main`, así que un
+  commit que llegue a `main` con las pruebas en rojo igual se compila, se firma y se publica.
 - No compila iOS ni Web, no despliega Firebase Hosting (no está configurado) ni publica las reglas
   de Realtime Database.
 
-> ⚠️ La consecuencia práctica: un commit que rompa 300 tests se compila, se firma, se publica como
-> «ULima++ Latest» y llega al APK que la gente descarga. Añadir dos pasos —`flutter analyze` y
-> `flutter test`— antes del paso 9, y un disparador `pull_request`, es la mejora de calidad más
-> barata que le queda a este repo.
+> ⚠️ La consecuencia práctica: `pruebas` avisa en cada PR, pero no frena la publicación. Exigir el
+> check al fusionar en `main` de meltiruiz es una regla de rama que este diseño no agrega, porque el
+> dueño del fork no es admin allí (ver [`docs/devops.md`](docs/devops.md)).
 
 ---
 
@@ -4868,7 +4898,8 @@ flowchart TD
 flutter pub get
 
 # Puerta 1 · análisis estático. Solo mira lib/ y test/ (el resto está excluido).
-# Debe salir "No issues found!" antes de abrir una PR.
+# Debe salir sin errores ni warnings antes de abrir una PR. La CI usa --no-fatal-infos,
+# así que los avisos info no la hacen fallar.
 flutter analyze
 
 # Puerta 2 · la suite completa: 46 archivos, 336 casos.
@@ -4904,25 +4935,29 @@ arranque en vez de apuntar silenciosamente a `localhost`. Esa decisión también
 ## 📦 Compilación y distribución
 
 Solo hay **un** artefacto que se publica de verdad: el APK de Android, compilado y
-firmado por GitHub Actions y colgado en el Release de tag fijo `latest`. iOS y web
+firmado por GitHub Actions y colgado en el Release de tag fijo `latest` (y, desde la 1.1.0, en el
+release de su versión, `vX.Y.Z`). iOS y web
 compilan pero nadie los distribuye. Los tres escritorios ni siquiera arrancan.
 
 ### Requisitos previos
 
 | Herramienta | Versión | Dónde está fijada |
 |:---|:---|:---|
-| **Flutter** | `3.44.2`, canal `stable` | [`.github/workflows/build-apk.yml`](.github/workflows/build-apk.yml)`:61` |
+| **Flutter** | `3.44.2`, canal `stable` | [`.github/workflows/ci.yml`](.github/workflows/ci.yml)`:23` y [`.github/workflows/build-apk.yml`](.github/workflows/build-apk.yml)`:62`, siempre juntos (ver [`docs/devops.md`](docs/devops.md)) |
 | Revisión del motor | `db50e20168db8fee486b9abf32fc912de3bc5b6a` | [`.metadata`](.metadata)`:7` |
 | **SDK de Dart** | `^3.11.4` | [`pubspec.yaml`](pubspec.yaml)`:22` |
-| JDK (solo Android) | Temurin **17** | `build-apk.yml:51-56`; `JavaVersion.VERSION_17` en [`android/app/build.gradle.kts`](android/app/build.gradle.kts)`:30-33` |
+| JDK (solo Android) | Temurin **17** | `build-apk.yml:52-57`; `JavaVersion.VERSION_17` en [`android/app/build.gradle.kts`](android/app/build.gradle.kts)`:30-33` |
 | Gradle wrapper | `gradle-8.14-all.zip` | [`android/gradle/wrapper/gradle-wrapper.properties`](android/gradle/wrapper/gradle-wrapper.properties) |
 | Android Gradle Plugin | `8.11.1` | [`android/settings.gradle.kts`](android/settings.gradle.kts)`:22` |
 | Kotlin Android | `2.2.20` | `android/settings.gradle.kts:26` |
 | `google-services` | `4.3.15` | `android/settings.gradle.kts:24` |
 | CocoaPods (solo iOS) | piso `platform :ios, '15.0'` | [`ios/Podfile`](ios/Podfile)`:2` |
 
-El paquete Dart se llama `ulima_plus` y la versión es `1.0.0+1`
-([`pubspec.yaml`](pubspec.yaml)`:1,19`). Nunca se ha subido: `publish_to: 'none'`.
+El paquete Dart se llama `ulima_plus` y la versión es `1.1.0`, escrita como `version: 1.1.0+1`
+([`pubspec.yaml`](pubspec.yaml)`:1,19`). Nunca se ha subido: `publish_to: 'none'`. El sufijo `+1` no
+se toca, porque `build-apk.yml` compila con `--build-name` igual a `1.1.0` y `--build-number` igual al
+número de ejecución del workflow, el mismo que lleva `ULimaPlus-build-<N>.apk`, y crea el release
+`v1.1.0` si todavía no existe. Cómo se sube la versión está en [`docs/devops.md`](docs/devops.md).
 
 El build de Android pide memoria de verdad —
 `org.gradle.jvmargs=-Xmx8G -XX:MaxMetaspaceSize=4G` en
@@ -4961,7 +4996,7 @@ El artefacto sale en `build/app/outputs/flutter-apk/app-release.apk`.
 > y la spec de `platform-runtime` usan `https://u-lima-backend-is-2-one.vercel.app`
 > —el despliegue verificado vivo—, pero el APK que el CI publica en GitHub Releases
 > se compila contra `https://u-lima-backend-is-2-jeffangeloss-projects.vercel.app`
-> ([`.github/workflows/build-apk.yml`](.github/workflows/build-apk.yml)`:106`). No está
+> ([`.github/workflows/build-apk.yml`](.github/workflows/build-apk.yml)`:118`). No está
 > verificado que ambos hosts apunten al mismo despliegue. El dominio
 > `-tau.vercel.app` que aparece en documentación antigua está **muerto**.
 
@@ -5010,8 +5045,8 @@ signingConfig = if (hasReleaseKeystore) {
 > el fallback silencioso a debug también.
 
 En el CI el problema no se da: el paso «Validar secretos de firma»
-(`build-apk.yml:25-49`) aborta con `::error::` si falta alguno de los cuatro
-GitHub Secrets, y el paso `:75-96` decodifica el keystore desde base64, escribe
+(`build-apk.yml:26-50`) aborta con `::error::` si falta alguno de los cuatro
+GitHub Secrets, y el paso `:76-97` decodifica el keystore desde base64, escribe
 `android/key.properties` y valida el alias con `keytool -list` antes de compilar.
 
 #### Identidad de la app y tráfico en claro
@@ -5032,11 +5067,13 @@ GitHub Secrets, y el paso `:75-96` decodifica el keystore desde base64, escribe
 
 #### Distribución
 
-El workflow copia el mismo APK dos veces (`:179-187`): `release/ULimaPlus.apk`
+El workflow copia el mismo APK dos veces (`:191-199`): `release/ULimaPlus.apk`
 —nombre estable, el que enlaza la landing— y `release/ULimaPlus-build-<N>.apk`
 para historial. `softprops/action-gh-release@v2` lo publica con tag fijo `latest`,
 nombre «ULima++ Latest» y un cuerpo que incluye el número de build y el SHA del
-commit (`:189-207`). No hay Play Store, ni TestFlight, ni Firebase App Distribution.
+commit (`:201-219`). Un paso más (`:221-234`), solo en `main`, crea el release `vX.Y.Z` con el mismo APK
+adjunto si todavía no existe, sin marcarlo como el último. No hay Play Store, ni TestFlight, ni Firebase
+App Distribution.
 
 ---
 
@@ -5215,26 +5252,36 @@ motor pinta el primer frame.
 
 ```mermaid
 flowchart TD
-    subgraph LOCAL["Local · TODO manual"]
+    subgraph LOCAL["Local · antes de abrir la PR"]
         L1["Código en lib y test"] --> L2["flutter pub get"]
         L2 --> L3["flutter analyze"]
         L3 --> L4["flutter test<br/>46 archivos · 336 casos"]
         L4 --> L5{"Verde"}
         L5 -- No --> L1
-        L5 -- Si --> L6["Pull Request a main<br/>SIN validación automática"]
+        L5 -- Si --> L6["Pull Request a develop o main"]
     end
 
-    L6 --> CI0
+    L6 --> PR0
+
+    subgraph PRC["GitHub Actions · ci.yml · en cada PR"]
+        PR0["pull_request a develop o main<br/>push a develop"] --> PR1["Flutter 3.44.2 · flutter pub get"]
+        PR1 --> PR2["flutter analyze --no-fatal-infos"]
+        PR2 --> PR3["flutter test"]
+    end
+
+    PR3 --> MG["Merge a main de meltiruiz"]
+    MG --> CI0
 
     subgraph CI["GitHub Actions · build-apk.yml · AUTOMÁTICO"]
-        CI0["push a main o workflow_dispatch"] --> CI1["checkout v4"]
+        CI0["push a main o workflow_dispatch<br/>solo en meltiruiz"] --> CI1["checkout v4"]
         CI1 --> CI2{"Están los 4 secretos de firma"}
         CI2 -- No --> CIX["Falla temprano"]
         CI2 -- Si --> CI3["Java 17 temurin · Flutter 3.44.2"]
         CI3 --> CI4["cache pub-cache y cmake"]
         CI4 --> CI5["flutter pub get"]
         CI5 --> CI6["Decodifica keystore base64<br/>escribe key.properties<br/>keytool -list valida el alias"]
-        CI6 --> CI7["flutter build apk --release<br/>--dart-define API_BASE_URL"]
+        CI6 --> CI6B["Lee X.Y.Z de pubspec.yaml"]
+        CI6B --> CI7["flutter build apk --release<br/>--build-name · --build-number<br/>--dart-define API_BASE_URL"]
         CI7 --> CI8["apksigner verify + SHA-1 del cert<br/>aapt2 dump packagename"]
         CI8 --> CI9{"API key de google-services.json<br/>igual a la de firebase_options.dart"}
         CI9 -- No --> CIY["Falla · ejecuta flutterfire configure"]
@@ -5243,6 +5290,7 @@ flowchart TD
         CI11 -- "API_KEY_ANDROID_APP_BLOCKED" --> CIZ["Falla · registra package y SHA-1"]
         CI11 -- "HTTP 400 INVALID_CUSTOM_TOKEN" --> CI12["OK · Firebase autoriza el APK"]
         CI12 --> CI13["GitHub Release tag latest<br/>ULimaPlus.apk + ULimaPlus-build-N.apk"]
+        CI13 --> CI14["Release vX.Y.Z si no existe<br/>solo en main"]
     end
 
     subgraph MAN["Fuera del CI · MANUAL O INEXISTENTE"]
@@ -5252,16 +5300,16 @@ flowchart TD
         M4["dart run flutter_launcher_icons<br/>dart run flutter_native_splash create"]
     end
 
-    L4 -.- NOTA["El CI NO ejecuta analyze ni test<br/>los 336 casos nunca corren solos"]
+    CI0 -.- NOTA["build-apk.yml no espera al check pruebas<br/>ni corre analyze ni test"]
     CI7 -.- MAN
 ```
 
-> **5 · El CI compila, verifica firma y publica, pero no valida el código.**
-> `.github/workflows/build-apk.yml` es el **único** workflow del repositorio, tiene
-> 207 líneas y en ningún paso invoca `flutter analyze` ni `flutter test`. Además
-> solo se dispara con `push` a `main` y `workflow_dispatch`: **ninguna Pull Request
-> se valida automáticamente**. La compensación es la verificación post-build
-> (`:108-177`), que sí es seria: extrae el SHA-1 del certificado del APK, compara la
+> **5 · El CI se reparte en dos workflows: uno prueba el código y otro compila, verifica firma y
+> publica.** [`ci.yml`](.github/workflows/ci.yml) corre `flutter analyze` y `flutter test` en cada PR a
+> `develop` o `main` y en cada push a `develop`. [`build-apk.yml`](.github/workflows/build-apk.yml) tiene
+> 234 líneas, solo se dispara con `push` a `main` y `workflow_dispatch`, y en ningún paso invoca
+> `flutter analyze` ni `flutter test`: **no espera al check `pruebas`**. Su compensación es la
+> verificación post-build (`:120-189`), que sí es seria: extrae el SHA-1 del certificado del APK, compara la
 > API key de `google-services.json` con la de `lib/firebase_options.dart`, y hace un
 > `POST` real a `identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken`
 > con las cabeceras `X-Android-Package` y `X-Android-Cert`. El criterio de éxito es
@@ -5273,7 +5321,7 @@ flowchart TD
 
 | Plataforma | Estado | Notas |
 |:---|:---|:---|
-| **Android** | **Producción** | Único canal real. CI compila, verifica firma contra Firebase y publica en GitHub Releases (tag `latest`). Firma de release condicional a `key.properties`; `applicationId` aún es `com.example.ulima_plus`. |
+| **Android** | **Producción** | Único canal real. CI compila, verifica firma contra Firebase y publica en GitHub Releases (tag `latest` y el de su versión, `vX.Y.Z`). Firma de release condicional a `key.properties`; `applicationId` aún es `com.example.ulima_plus`. |
 | **iOS** | Compilable, sin CI ni distribución | Podfile con piso 15.0, SPM desactivado a propósito, Firebase 12.15.0 resuelto en `Podfile.lock`. Ningún comando de build documentado en el repo. |
 | **Web** | Compilable, sin hosting | `FirebaseOptions.web` existe y el login con Google usa `renderButton`. `firebase.json` **no tiene** sección `hosting`. Renderizador `html` posiblemente obsoleto; PDF.js depende de un CDN. |
 | **Linux** | **No funcional** | Scaffold real en `linux/`, pero [`lib/firebase_options.dart`](lib/firebase_options.dart)`:37-41` lanza `UnsupportedError` y `main.dart:53` llama a `Firebase.initializeApp` sin condición: **crashea al arrancar**. |
@@ -5321,7 +5369,7 @@ La inyección en la práctica ocurre en cuatro sitios:
 [`README.md`](README.md)`:113,119`, las tres configuraciones de
 [`.vscode/launch.json`](.vscode/launch.json) (Vercel, local `10.0.2.2:3000` y
 perfil), la spec `platform-runtime` `:33-34`, y
-[`.github/workflows/build-apk.yml`](.github/workflows/build-apk.yml)`:106`.
+[`.github/workflows/build-apk.yml`](.github/workflows/build-apk.yml)`:118`.
 
 ### Puesta en marcha local
 
@@ -5329,7 +5377,7 @@ perfil), la spec `platform-runtime` `:33-34`, y
 # 0. Dependencias. Repetir siempre que cambie pubspec.yaml.
 flutter pub get
 
-# 1. Comprobaciones antes de abrir PR (el CI NO las corre por ti).
+# 1. Comprobaciones antes de abrir PR (la CI las repite en cada PR, pero así te enteras antes).
 flutter analyze
 flutter test
 
@@ -5383,7 +5431,7 @@ el chat por sección: `firebase_core 4.11.0`, `firebase_auth 6.5.4` y
 > **público**, y eso es correcto por diseño: son identificadores, no secretos. Pero
 > su seguridad depende por completo de dos capas que sí hay que mantener: **(a)** las
 > restricciones Android por *package name* + SHA-1 en Google Cloud —lo que el CI
-> comprueba en vivo en `build-apk.yml:150-177`— y **(b)** las reglas de
+> comprueba en vivo en `build-apk.yml:162-189`— y **(b)** las reglas de
 > `database.rules.json`. Si se relaja cualquiera de las dos, la clave deja de estar
 > protegida. Los secretos de verdad viven en GitHub Secrets:
 > `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`,
@@ -5503,11 +5551,13 @@ estados UI, validaciones, loading, errores, navegacion y consumo de API» — no
 > dos excepciones: cambios triviales que no alteran comportamiento y hotfixes de emergencia — y
 > estos últimos exigen spec retroactiva.
 
-> **2 · `flutter analyze` y `flutter test` son puertas locales, no de CI.** El único workflow del
-> repo, [`.github/workflows/build-apk.yml`](.github/workflows/build-apk.yml), **no ejecuta ninguno
-> de los dos**: compila y firma el APK, nada más. Los 46 archivos de prueba y sus 336 casos nunca
-> corren automáticamente, y el workflow solo se dispara con `push` a `main` o a mano, así que
-> ninguna Pull Request se valida sola. Si no corres las puertas antes de commitear, nadie las corre.
+> **2 · `flutter analyze` y `flutter test` son puertas locales y también de CI.** Desde la versión
+> 1.1.0, [`.github/workflows/ci.yml`](.github/workflows/ci.yml) corre las dos en cada Pull Request a
+> `develop` o `main` y en cada push a `develop`, con Flutter 3.44.2 y `--no-fatal-infos` (ver
+> [`docs/devops.md`](docs/devops.md)). El otro workflow,
+> [`.github/workflows/build-apk.yml`](.github/workflows/build-apk.yml), no ejecuta ninguno de los dos:
+> compila y firma el APK, nada más. Correr las puertas antes de commitear sigue siendo lo normal,
+> porque así el check `pruebas` no falla después de abrir la PR.
 
 > **3 · Los `targets` son un contrato de alcance.** El frontmatter de cada spec lista los archivos
 > que esa feature puede tocar ([`specs/README.md`](specs/README.md)`:13-20`). Implementar fuera de
@@ -5693,7 +5743,7 @@ Los tres hallazgos críticos que tocaban a este repositorio, contrastados contra
 | ID | Hallazgo de junio | Estado hoy | Evidencia |
 |:---|:---|:---|:---|
 | **C6** | Cero pruebas en el frontend: no existía la carpeta `test/` | ✅ **CERRADO** | **46 archivos de prueba, 6 456 líneas, 336 casos** repartidos en 15 carpetas `HU##_<autor>` más `test/HU_asistencia/`, `test/components/` y `test/services/`. El backend cerró su gemelo C5 con 74 suites. |
-| **C8** | El APK de release se firmaba con la llave de **debug** | 🟠 **PARCIAL** | [`android/app/build.gradle.kts`](android/app/build.gradle.kts)`:72-80` usa el keystore de release **si existe `android/key.properties`** y **cae a la firma de debug si no existe**. El CI sí firma bien: [`.github/workflows/build-apk.yml`](.github/workflows/build-apk.yml)`:25-49` aborta con `::error::Faltan GitHub Secrets de firma` si falta cualquiera de las cuatro variables, y `:108-177` verifica la firma con `apksigner` y el SHA-1 del certificado. El riesgo residual es un `flutter build apk --release` local sin `key.properties`: produce un APK firmado con debug y sin ningún aviso, y el propio Gradle lo rotula «NO apto para producción ni para subir a Play Store». |
+| **C8** | El APK de release se firmaba con la llave de **debug** | 🟠 **PARCIAL** | [`android/app/build.gradle.kts`](android/app/build.gradle.kts)`:72-80` usa el keystore de release **si existe `android/key.properties`** y **cae a la firma de debug si no existe**. El CI sí firma bien: [`.github/workflows/build-apk.yml`](.github/workflows/build-apk.yml)`:26-50` aborta con `::error::Faltan GitHub Secrets de firma` si falta cualquiera de las cuatro variables, y `:120-189` verifica la firma con `apksigner` y el SHA-1 del certificado. El riesgo residual es un `flutter build apk --release` local sin `key.properties`: produce un APK firmado con debug y sin ningún aviso, y el propio Gradle lo rotula «NO apto para producción ni para subir a Play Store». |
 | **C9** | Campos `late` que pueden crashear en tiempo de ejecución | ❌ **Pendiente** | El informe lo dejó abierto y no consta cierre posterior. |
 
 C7 (doble lockfile) y las críticas de autenticación C1–C4 eran del backend; tres de ellas están
@@ -5749,7 +5799,8 @@ Y los límites estructurales, en tabla:
 
 | Límite | Detalle verificado | Dónde |
 |:---|:---|:---|
-| El CI no valida nada más que la compilación | No corre `flutter analyze` ni `flutter test`; no hay workflow de Pull Request; solo `push` a `main` y disparo manual | [`.github/workflows/build-apk.yml`](.github/workflows/build-apk.yml) |
+| La publicación del APK no depende de las pruebas | `ci.yml` corre `flutter analyze` y `flutter test` en cada PR, pero `build-apk.yml` solo depende del `push` a `main` y no consulta el check `pruebas`; exigirlo al fusionar es una regla de rama de meltiruiz, que este diseño no agrega | [`.github/workflows/ci.yml`](.github/workflows/ci.yml), [`.github/workflows/build-apk.yml`](.github/workflows/build-apk.yml) y [`docs/devops.md`](docs/devops.md) |
+| `pubspec.lock` escrito con un Flutter más nuevo que el de la CI | Con Flutter 3.44.2, `flutter pub get` cambia `matcher`, `meta`, `test_api` y `vector_math`; el cambio no se versiona, y el remedio es fijar la misma versión en todo el equipo o subir la CI y el APK juntos | [`docs/devops.md`](docs/devops.md), `pubspec.lock` |
 | Sin cobertura medida ni pruebas de integración | No existe `integration_test/`, ni goldens, ni ningún paso `--coverage`/`lcov`. `.gitignore:34` ignora `/coverage/`, señal de que se generó local alguna vez | — |
 | Features sin ninguna prueba | Academic Profile (US05), Alerts (US15), estadísticas de Section Management (US18) y Chatbot | [`test/`](test/) |
 | 8 de 10 enlaces `[@test]` rotos | `grades.spec.md:38,40` apuntan a `test/HU06_aurelio/` y `HU07_aurelio/`, renombradas a `_sam` el 14-jul-2026; `networking.spec.md` apunta a `test/networking_*.dart` en la raíz, hoy bajo `test/HU25_mel/` | [`specs/features/`](specs/features/) |
@@ -5758,7 +5809,7 @@ Y los límites estructurales, en tabla:
 | Cuatro módulos se consumen sin capa de servicio | Todo `schedule`, `grades/me/notes`, `grades/me/calculate` y `curriculum/me/simulation` van directo con `ApiClient` desde controllers o widgets — **13 de los 66 endpoints**; [`lib/pages/horario/horario.dart`](lib/pages/horario/horario.dart)`:976` llega a instanciar `ApiClient()` dentro de un `State` | `lib/pages/**` |
 | Código muerto en `lib/services/` | `DocenteService` y `SectionRepresentativeService` no tienen llamadores; `EnrollmentService` solo lo usa el segundo, así que tampoco se ejecuta; `SeccionService.fetchSecciones()` está sin llamadores | [`lib/services/`](lib/services/) |
 | Dos mocks residuales, hoy inalcanzables | `DelegateService._mockDelegateSections` y los estáticos de `DelegateAnnouncementService` solo se activan con `404` + `code == 'HTTP_ERROR'`; los endpoints reales ya existen | `lib/services/delegate_service.dart:48-92` |
-| `API_BASE_URL` diverge entre documentación y CI | `README.md`, `.vscode/launch.json` y `platform-runtime.spec.md` usan `https://u-lima-backend-is-2-one.vercel.app`; el APK publicado se compila contra `https://u-lima-backend-is-2-jeffangeloss-projects.vercel.app` | `build-apk.yml:106` |
+| `API_BASE_URL` diverge entre documentación y CI | `README.md`, `.vscode/launch.json` y `platform-runtime.spec.md` usan `https://u-lima-backend-is-2-one.vercel.app`; el APK publicado se compila contra `https://u-lima-backend-is-2-jeffangeloss-projects.vercel.app` | `build-apk.yml:118` |
 | `applicationId` sigue siendo un placeholder | `com.example.ulima_plus`, con un `// TODO` explícito. Un identificador `com.example.*` **no se puede subir a Play Store** | [`android/app/build.gradle.kts`](android/app/build.gradle.kts)`:40-41` |
 | Tráfico en claro habilitado en toda la app | `android:usesCleartextTraffic="true"` sin `network_security_config`, también en release. Está para los fallbacks de desarrollo `http://10.0.2.2:3000` / `http://localhost:3000` | `android/app/src/main/AndroidManifest.xml:7` |
 | Escritorio no arranca | Existen scaffolds `linux/`, `macos/` y `windows/`, pero `lib/main.dart:53` llama incondicionalmente a `Firebase.initializeApp` y `lib/firebase_options.dart:27-41` lanza `UnsupportedError` en esas tres plataformas | `lib/firebase_options.dart` |
@@ -5792,7 +5843,7 @@ Y los límites estructurales, en tabla:
 > `lib/firebase_options.dart` + `ios/Runner/GoogleService-Info.plist`, que contienen claves de
 > cliente que Firebase considera públicas por diseño. Su seguridad **descansa por completo** en dos
 > cosas: la restricción de la API key por package name + huella SHA-1 en Google Cloud — que el
-> propio CI comprueba en `build-apk.yml:150-177`, buscando `API_KEY_ANDROID_APP_BLOCKED` — y las
+> propio CI comprueba en `build-apk.yml:162-189`, buscando `API_KEY_ANDROID_APP_BLOCKED` — y las
 > reglas de `database.rules.json`. Si se relaja cualquiera de las dos, la clave queda expuesta.
 >
 > **Pendiente de limpiar:** cuatro archivos versionados usan códigos de alumno que aparentan ser

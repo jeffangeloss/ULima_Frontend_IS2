@@ -133,7 +133,11 @@ class CapaDeArranque extends StatefulWidget {
 
 class _CapaDeArranqueState extends State<CapaDeArranque>
     with SingleTickerProviderStateMixin {
-  late final Ticker _reloj = createTicker(_alTic);
+  /// El reloj nace con su primer uso, que es el arranque de la intro o el del
+  /// paso al horario. `dispose()` libera solo el que existe, porque Flutter no
+  /// deja crear un Ticker mientras el elemento se desmonta (RF-SPL-4).
+  Ticker? _relojCreado;
+  Ticker get _reloj => _relojCreado ??= createTicker(_alTic);
   final ValueNotifier<FaseDeLaCapa> _fase = ValueNotifier<FaseDeLaCapa>(
     FaseDeLaCapa.inactiva,
   );
@@ -531,7 +535,7 @@ class _CapaDeArranqueState extends State<CapaDeArranque>
 
   @override
   void dispose() {
-    _reloj.dispose();
+    _relojCreado?.dispose();
     if (identical(CapaDeArranque._estado, this)) {
       CapaDeArranque._estado = null;
       // Una capa que sale del árbol ya no cubre nada, así que /home no queda

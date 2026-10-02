@@ -16,6 +16,7 @@ permissions:
 
 jobs:
   build-android:
+    if: github.repository == 'meltiruiz/ULima_Frontend_IS2'
     runs-on: ubuntu-latest
 
     steps:
@@ -102,8 +103,19 @@ jobs:
             /usr/local/lib/android/sdk/cmake
           key: android-cmake-${{ runner.os }}-3.22.1
 
+      - name: Leer la versión de pubspec.yaml
+        id: version
+        shell: bash
+        run: |
+          nombre="$(sed -n -E 's/^version:[[:space:]]*([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' pubspec.yaml)"
+          if [[ -z "$nombre" ]]; then
+            echo "::error::No se pudo leer una versión X.Y.Z en la línea 'version:' de pubspec.yaml. Debe decir, por ejemplo, version: 1.1.0+1."
+            exit 1
+          fi
+          echo "nombre=$nombre" >> "$GITHUB_OUTPUT"
+
       - name: Compilar APK
-        run: flutter build apk --release --dart-define=API_BASE_URL=https://u-lima-backend-is-2-jeffangeloss-projects.vercel.app
+        run: flutter build apk --release --build-name=${{ steps.version.outputs.nombre }} --build-number=${{ github.run_number }} --dart-define=API_BASE_URL=https://u-lima-backend-is-2-jeffangeloss-projects.vercel.app
 
       - name: Verificar firma y autorización de Firebase Auth
         shell: bash
@@ -205,3 +217,18 @@ jobs:
 
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publicar el release de la versión si todavía no existe
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: v${{ steps.version.outputs.nombre }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "$TAG ya tiene release; no se crea otro"
+          else
+            gh release create "$TAG" --target "$GITHUB_SHA" \
+              --title "ULima++ $TAG (build ${{ github.run_number }})" \
+              --notes "APK de la versión $TAG, build ${{ github.run_number }}. Los cambios están en CHANGELOG.md." \
+              --latest=false "release/ULimaPlus-build-${{ github.run_number }}.apk"
+          fi
