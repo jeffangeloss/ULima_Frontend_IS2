@@ -219,8 +219,8 @@ la intro empieza a moverse (RF-SPL-6).
   384 px del centro.
 - La comparación con la geometría usa un comparador con la tolerancia de RF-SPL-5 y no la
   comparación exacta de `matchesGoldenFile`, porque el antialiasing cambia entre macOS y Linux.
-  La CI de hoy (`.github/workflows/build-apk.yml`) no corre pruebas, así que la prueba corre en
-  la Mac del equipo, igual que el resto de la suite.
+  Desde la versión 1.1.0, `.github/workflows/ci.yml` corre la suite en Linux en cada PR, y la
+  tolerancia cubre la diferencia de antialiasing con la Mac del equipo.
 - No se agrega ningún paquete ni herramienta fuera del SDK de Flutter.
 
 `[@test] ../../../test/splash/splash_png_nativo_test.dart`

@@ -748,10 +748,10 @@ la conversación, bajo el AppBar, sí cumple 4,5:1. En oscuro el blanco sobre `#
   `horario_controller.dart`, `home_page.dart` y `app_header.dart`, que usan otras features.
   Incluye `test/HU23_jeff`, `test/components/header/app_header_test.dart` y `test/HU35_jeff`
   sin las dos pruebas de la lista de chats.
-- `TZ=UTC flutter test --no-pub test/HU23_jeff`. Las pruebas corren solo en una máquina
-  local, porque `.github/workflows/build-apk.yml` no corre `flutter test`, y en UTC−5 la hora
-  local coincide con la de Lima. Con `TZ=UTC`, las pruebas de RF-CHAT-11 detectan una hora o
-  un día calculados en la zona del teléfono, como con `.toLocal()`.
+- `TZ=UTC flutter test --no-pub test/HU23_jeff`. En una máquina de Lima (UTC−5) la hora local
+  coincide con la de Lima, así que hace falta `TZ=UTC` para que las pruebas de RF-CHAT-11
+  detecten una hora o un día calculados en la zona del teléfono, como con `.toLocal()`. Desde la
+  versión 1.1.0, `.github/workflows/ci.yml` corre la suite en Linux, que ya usa UTC, en cada PR.
 - `chats_pestana_test` comprueba que con seis pestañas la etiqueta activa va en 13 px y que
   con cinco o menos sigue en 14. Monta además el footer de un delegado a 360×640 y a 375×667
   con cada pestaña activa, y comprueba que no hay desborde y que las seis etiquetas se leen
