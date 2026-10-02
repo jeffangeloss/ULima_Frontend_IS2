@@ -110,12 +110,22 @@ el Perfil no pide `GET /academic-record/me` y la calculadora, la ficha del curso
 piden `GET /grades/me/ulima`. Enmienda RF-EST-9 y la excepción RF-REC-5 de RF-EST-10 de la spec
 `modo-estatico`, cuyo resto sigue vigente.
 
+`[@test] ../../../test/interruptor_remoto/respaldo_y_servicios_test.dart`
+`[@test] ../../../test/modo_estatico/arranque_estatico_test.dart`
+`[@test] ../../../test/modo_estatico/borrar_record_estatico_test.dart`
+`[@test] ../../../test/modo_estatico/inicio_y_perfil_estaticos_test.dart`
+`[@test] ../../../test/modo_estatico/ficha_y_calculadora_estaticas_test.dart`
+
 ### RF-IRM-12. `MODO_ESTATICO`, respaldo de fábrica
 
 `modo_estatico.dart` sigue siendo el único lector de `fromEnvironment('MODO_ESTATICO')`, cuyo valor,
 `ModoEstatico.deCompilacion`, pasa a ser el respaldo de fábrica y el valor con que arranca
 `ModoEstatico.activo`. Enmienda RF-EST-7 de la spec `modo-estatico`. `build-apk.yml` conserva
 `--dart-define=MODO_ESTATICO=true` y no cambia.
+
+`[@test] ../../../test/interruptor_remoto/respaldo_y_servicios_test.dart`
+`[@test] ../../../test/modo_estatico/modo_estatico_test.dart`
+`[@test] ../../../test/modo_estatico/workflow_y_version_test.dart`
 
 ### RF-IRM-13. Con el modo fijo, la app de siempre
 

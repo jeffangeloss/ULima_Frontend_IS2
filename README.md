@@ -111,7 +111,7 @@ Con el modo encendido, la app oculta o apaga lo siguiente.
 |:---|:---|
 | Registro | La bienvenida no ofrece «Soy nuevo» ni pide credenciales de miUlima ni código SecurID. Solo queda el inicio de sesión |
 | Importación del portal | Sin `/portal-sync`, sin el banner del inicio y sin la tarjeta «Actualizar desde miUlima» del Perfil |
-| Recarga de notas y asistencia | Sin los componentes de `recarga_ulima`. El arranque no registra `RecargaUlimaService` ni `AcademicRecordService` |
+| Recarga de notas y asistencia | Sin los componentes de `recarga_ulima`. `RecargaUlimaService` y `AcademicRecordService` se registran igual, sin peticiones, para que el paso a normal no rompa ninguna pantalla |
 | Datos oficiales de la ULima | Sin `/mi-record` ni la tarjeta del récord, sin `/mis-notas` ni las filas oficiales de la calculadora (queda simulada), y sin el bloque de asistencia de la ficha del curso |
 | Riesgo de asistencia | Sin el botón ni el contador en la ficha de sección del docente y sin `AtRiskStudentsPage` |
 | Rutas ocultas | `/portal-sync`, `/mi-record` y `/mis-notas` llevan al inicio |

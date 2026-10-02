@@ -9,7 +9,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../configs/modo_estatico.dart';
 import '../../firebase_options.dart';
 import '../../services/academic_record_service.dart';
 import '../../services/alert_service.dart';
@@ -44,22 +43,21 @@ Future<String> cargarElArranque({
   return postLoginRoute(AuthService.to.currentUser!);
 }
 
-/// Los servicios globales permanentes, en el orden de siempre.
+/// Los servicios globales permanentes, en el orden de siempre. Ninguno hace
+/// peticiones al registrarse. El récord y la recarga se registran en los dos
+/// modos, así que el paso de estático a normal no deja ningún Get.find sin
+/// servicio, y en modo estático las pantallas que los usan siguen ocultas
+/// (RF-IRM-11, que enmienda RF-EST-9).
 void registrarLosServicios() {
   Get.put<AuthService>(AuthService(), permanent: true);
   Get.put<AlertService>(AlertService(), permanent: true);
   Get.put<MallaService>(MallaService(), permanent: true);
-  // La versión estática no consulta a la ULima ni muestra sus datos, así que
-  // no registra los servicios del récord ni de la recarga (RF-EST-9). Las
-  // pantallas que los usan están ocultas o los buscan con Get.isRegistered.
-  if (!ModoEstatico.activo) {
-    // Estado único del récord (RF-REC-5), compartido por la tarjeta del Perfil
-    // y /mi-record. No carga nada al arrancar.
-    Get.put<AcademicRecordService>(AcademicRecordService(), permanent: true);
-    // Estado único de la recarga desde la ULima (RF-RCG-1), compartido por la
-    // calculadora, /mis-notas y la ficha del curso. No carga nada al arrancar.
-    Get.put<RecargaUlimaService>(RecargaUlimaService(), permanent: true);
-  }
+  // Estado único del récord (RF-REC-5), compartido por la tarjeta del Perfil
+  // y /mi-record. No carga nada al arrancar.
+  Get.put<AcademicRecordService>(AcademicRecordService(), permanent: true);
+  // Estado único de la recarga desde la ULima (RF-RCG-1), compartido por la
+  // calculadora, /mis-notas y la ficha del curso. No carga nada al arrancar.
+  Get.put<RecargaUlimaService>(RecargaUlimaService(), permanent: true);
   // Estado único de los bloques de horario propios (RF-BLQ-7). Tampoco carga
   // nada al arrancar.
   Get.put<TimeBlocksService>(TimeBlocksService(), permanent: true);
