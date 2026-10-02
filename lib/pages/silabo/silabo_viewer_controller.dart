@@ -21,6 +21,7 @@ import 'package:pdfx/pdfx.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../configs/modo_estatico.dart';
 import '../../domain/silabo/silabo_link.dart';
 import '../../services/silabo_service.dart';
 
@@ -55,6 +56,10 @@ class SilaboViewerController extends GetxController {
   static const double zoomMaximo = 5.0;
   static const double factorPasoZoom = 1.4;
   static const double zoomDobleToque = 2.5;
+
+  /// Lo que dice el visor en la versión estática ante una URL que no es de
+  /// Drive (RF-EST-12).
+  static const String sinSilabo = 'Sílabo no disponible';
 
   /// Título del curso mostrado en el AppBar.
   String cursoTitulo = 'Sílabo';
@@ -108,8 +113,12 @@ class SilaboViewerController extends GetxController {
   Future<void> cargar() async {
     final l = link;
     if (l == null) {
-      mensajeError.value =
-          'El enlace del sílabo no es válido para verlo dentro de la app.';
+      // La versión estática solo abre enlaces de Drive. Una URL de cactus, de
+      // la importación, no se abre ni dentro de la app ni en el navegador
+      // (RF-EST-12).
+      mensajeError.value = ModoEstatico.activo
+          ? sinSilabo
+          : 'El enlace del sílabo no es válido para verlo dentro de la app.';
       estado.value = SilaboViewerEstado.error;
       return;
     }
@@ -332,9 +341,13 @@ class SilaboViewerController extends GetxController {
     }
   }
 
-  /// Fallback: abrir el sílabo en Drive (comportamiento previo a HU21).
+  /// Fallback: abrir el sílabo en Drive (comportamiento previo a HU21). En la
+  /// versión estática solo abre la vista de Drive de un enlace de Drive, y
+  /// nunca la URL cruda (RF-EST-12).
   Future<void> abrirEnDrive() async {
-    final url = link?.externalViewUrl ?? rawUrl;
+    final url = ModoEstatico.activo
+        ? link?.externalViewUrl
+        : (link?.externalViewUrl ?? rawUrl);
     if (url == null) return;
     await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
   }

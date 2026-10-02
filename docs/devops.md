@@ -152,6 +152,27 @@ Management) y un `.fvmrc` en la raíz, o la CI y `build-apk.yml` suben juntos a 
 Mientras tanto, los resultados locales con otra versión son solo orientativos, porque el análisis
 puede reportar avisos distintos y las dependencias resueltas difieren, y la CI manda.
 
+## Modo estático
+
+`MODO_ESTATICO` es un interruptor de compilación que desconecta la app de la Universidad de Lima y oculta
+los datos que vinieron de ella. La app lo lee de `--dart-define` en un único punto,
+`lib/configs/modo_estatico.dart`, y lo apaga por defecto, así que una build sin el define se comporta como
+la 1.2.0. `build-apk.yml` compila con `--dart-define=MODO_ESTATICO=true` desde la 2.0.0, y el APK de
+producción sale en modo estático. El workflow `Build and Release APK` del fork sigue desactivado a
+propósito, y el APK solo sale del repositorio de producción (`meltiruiz/ULima_Frontend_IS2`).
+
+Para ver cada modo en local:
+
+```bash
+flutter run --dart-define=API_BASE_URL=<URL del backend>
+flutter run --dart-define=API_BASE_URL=<URL del backend> --dart-define=MODO_ESTATICO=true
+```
+
+Las pruebas fijan `ModoEstatico.activo` en cada caso y lo restauran al terminar, de modo que `flutter test`
+cubre los dos modos sin ninguna bandera. Para revertir, basta quitar el define de `build-apk.yml`, sin
+revertir commits. El backend tiene su propio `MODO_ESTATICO` (véase su `docs/devops.md`), y el orden de
+publicación es el backend primero y la app después.
+
 ## Build de depuración contra pruebas
 
 El APK de `build-apk.yml` apunta siempre a producción, porque compila con un

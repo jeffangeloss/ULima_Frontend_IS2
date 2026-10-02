@@ -4,6 +4,7 @@ import '../../components/calculadora/curso_card.dart';
 import '../../components/calculadora/add_score.dart';
 import '../../components/error_retry.dart';
 import '../../components/recarga_ulima/fila_notas_oficiales.dart';
+import '../../configs/modo_estatico.dart';
 import '../../domain/recarga_ulima/filas_calculadora.dart';
 import 'calculadora_controller.dart';
 
@@ -52,13 +53,16 @@ class CalculadoraPage extends GetView<CalculadoraController> {
                 // RF-RCG-5. Es la única entrada a /mis-notas, en los tres
                 // estados de la calculadora. No espera resultado, porque la
                 // calculadora lee la vista de la ULima y se actualiza sola.
-                Obx(
-                  () => FilaNotasOficiales(
-                    hayVista: controller.hayVistaUlima.value,
-                    ultimaLectura: controller.ultimaLecturaUlima.value,
-                    onTap: () => Get.toNamed('/mis-notas'),
+                // La versión estática no muestra las notas de la ULima, y la
+                // calculadora queda en modo simulado (RF-EST-10).
+                if (!ModoEstatico.activo)
+                  Obx(
+                    () => FilaNotasOficiales(
+                      hayVista: controller.hayVistaUlima.value,
+                      ultimaLectura: controller.ultimaLecturaUlima.value,
+                      onTap: () => Get.toNamed('/mis-notas'),
+                    ),
                   ),
-                ),
               ],
             ),
           ),

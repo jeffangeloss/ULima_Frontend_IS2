@@ -17,6 +17,7 @@ import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../components/google_sign_in_button.dart';
+import '../../../configs/modo_estatico.dart';
 import '../../../configs/themes.dart';
 import '../../../domain/bienvenida/bienvenida_turnos.dart';
 import '../../password_reset/password_reset_ui.dart';
@@ -871,7 +872,9 @@ class _E1 extends StatelessWidget {
             BotonDeGoogle(
               alTocar: c.esperando.value ? null : c.entrarConGoogle,
             ),
-          EnlaceSecundario(texto: _Textos.soyNuevo, alTocar: c.soyNuevo),
+          // La versión estática no tiene registro (RF-EST-8).
+          if (!ModoEstatico.activo)
+            EnlaceSecundario(texto: _Textos.soyNuevo, alTocar: c.soyNuevo),
         ],
       ),
     );
@@ -943,7 +946,9 @@ class _E2 extends StatelessWidget {
             alTocar: c.abrirOlvido,
             apagado: true,
           ),
-          EnlaceSecundario(texto: _Textos.soyNuevo, alTocar: c.soyNuevo),
+          // La versión estática no tiene registro (RF-EST-8).
+          if (!ModoEstatico.activo)
+            EnlaceSecundario(texto: _Textos.soyNuevo, alTocar: c.soyNuevo),
         ],
       );
     });
@@ -980,10 +985,12 @@ Widget? compositorDelTurno(
           principal: true,
           alTocar: () => c.responderAlSaludo(yaUsa: true),
         ),
-        RespuestaRapida(
-          texto: _Textos.soyNuevo,
-          alTocar: () => c.responderAlSaludo(yaUsa: false),
-        ),
+        // La versión estática no tiene registro (RF-EST-8).
+        if (!ModoEstatico.activo)
+          RespuestaRapida(
+            texto: _Textos.soyNuevo,
+            alTocar: () => c.responderAlSaludo(yaUsa: false),
+          ),
       ],
     ),
   TurnoDeLaBienvenida.recibimiento ||
