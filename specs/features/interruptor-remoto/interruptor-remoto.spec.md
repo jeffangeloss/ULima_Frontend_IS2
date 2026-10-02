@@ -88,6 +88,8 @@ global de `WidgetsBinding`, y toda respuesta de `ApiClient` con código `PORTAL_
 del arranque. Hay a lo sumo una consulta en curso, y mientras el arranque espera, su consulta cubre
 cualquier disparador (decisión D-3).
 
+`[@test] ../../../test/interruptor_remoto/cambio_de_modo_test.dart`
+
 ### RF-IRM-10. El cambio de modo
 
 Si la respuesta es conocida y difiere de `ModoEstatico.activo`, la app la fija, la guarda y vuelve a
@@ -100,6 +102,8 @@ vuelve a navegar y la conversación sigue en su turno, donde «Soy nuevo» apare
 Con un turno del registro abierto, de N1 a N5 o incierto, el paso a estático la devuelve a E1,
 porque la versión estática no tiene registro (RF-EST-8 y decisión D-2). Sin navegador, el modo queda
 fijado y la primera pantalla que se construya ya lo lee.
+
+`[@test] ../../../test/interruptor_remoto/cambio_de_modo_test.dart`
 
 ### RF-IRM-11. El récord y la recarga, siempre registrados
 
