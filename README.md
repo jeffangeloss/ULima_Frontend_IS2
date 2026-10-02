@@ -67,7 +67,7 @@ ULima++ es la app que un alumno de la Universidad de Lima abre para no tener que
 
 Desde **HU18** la app dejó de ser solo del alumno. Un profesor o jefe de práctica entra con las mismas credenciales y recibe otro shell: [`lib/pages/home/home_shell_config.dart`](lib/pages/home/home_shell_config.dart) decide en `forUser(user)` si arma la barra de alumno —Malla · Notas · Horario · Chats · Perfil, con Delegado antes de Perfil si el alumno es delegado— o la de docente —Secciones · Calificar · Horario · Asesorias · Perfil—. La pestaña **Calificar** solo aparece si el usuario es profesor titular (`AuthService.to.canGrade`); un JP puro no la ve, y por eso `HomePage` deriva el índice de cada pestaña en runtime en lugar de hardcodearlo (`home_page.dart:42-43`). El mismo criterio se repite en el resto de la UI: la campana de alertas se oculta para docentes (`app_header.dart:55-56, 93-148`), y la burbuja del chatbot solo se dibuja si `!user.isTeacher` (`home_page.dart:112`).
 
-Este repositorio es **únicamente la app Flutter**: paquete Dart `ulima_plus` versión `1.2.0` (`version: 1.2.0+1` en [`pubspec.yaml`](pubspec.yaml); el número de build lo pone la CI), **30 217 líneas de Dart repartidas en 245 archivos** bajo [`lib/`](lib), **25 specs** en [`specs/features/`](specs/features) y **145 suites de prueba** (6 567 líneas) en [`test/`](test). Son 28 pantallas, 25 controllers GetX, 30 servicios, 21 modelos y 20 componentes. Las plataformas que realmente arrancan son **Android, iOS y Web**: `Firebase.initializeApp` corre siempre en el arranque ([`lib/main.dart:53`](lib/main.dart)) y `DefaultFirebaseOptions.currentPlatform` lanza `UnsupportedError` en macOS, Windows y Linux ([`lib/firebase_options.dart:27-45`](lib/firebase_options.dart)). Los directorios de esas tres plataformas existen en el repo, pero son andamiaje generado por `flutter create` que nadie compila.
+Este repositorio es **únicamente la app Flutter**: paquete Dart `ulima_plus` versión `1.2.0` (`version: 1.2.0+1` en [`pubspec.yaml`](pubspec.yaml); el número de build lo pone la CI), **245 archivos de Dart** bajo [`lib/`](lib), **25 specs** en [`specs/features/`](specs/features) y **145 suites de prueba** en [`test/`](test). Son 28 pantallas, 25 controllers GetX, 30 servicios, 21 modelos y 20 componentes. Las plataformas que realmente arrancan son **Android, iOS y Web**: `Firebase.initializeApp` corre siempre en el arranque ([`lib/main.dart:53`](lib/main.dart)) y `DefaultFirebaseOptions.currentPlatform` lanza `UnsupportedError` en macOS, Windows y Linux ([`lib/firebase_options.dart:27-45`](lib/firebase_options.dart)). Los directorios de esas tres plataformas existen en el repo, pero son andamiaje generado por `flutter create` que nadie compila.
 
 Lo que este repo **no** es importa tanto como lo que es. No es una segunda implementación de las reglas académicas: `KNOWLEDGE.md:110` y `README.md:60` prohíben duplicar lógica de negocio del backend, y el código lo respeta en los sitios donde se nota. El promedio de la calculadora **lo calcula el backend** (`POST /grades/me/calculate`, `calculadora_controller.dart:185-198`), no un `fold` local. El carnet de networking declara la regla explícita de que "el frontend no decide permisos, propiedad, límites persistentes ni autorización" (BR-NET-F-01, `networking.spec.md:38-44`): manda el borrador y presenta el error que el backend devuelva. Tampoco es un almacén académico: `shared_preferences` guarda sesión, token y preferencias, nunca datos académicos oficiales (`AGENTS.md:41`, `KNOWLEDGE.md:111`), y el JWT vive aparte en `flutter_secure_storage`.
 
@@ -4872,7 +4872,7 @@ flowchart TD
     M -- "HTTP 400 INVALID_CUSTOM_TOKEN" --> N["APK autorizado por Firebase Auth"]
     N --> O["Copia a ULimaPlus.apk<br/>y ULimaPlus-build-N.apk"]
     O --> P["Release con tag latest y make_latest<br/>descarga directa desde la landing"]
-    P --> P2["Si corre sobre main y no existe vX.Y.Z<br/>genera version.json, lo sube a latest<br/>crea ese release con el APK, sin make_latest"]
+    P --> P2["Si corre sobre main y no existe vX.Y.Z<br/>crea ese release con el APK, sin make_latest<br/>y después sube version.json a latest"]
 ```
 
 **Lo que el CI no hace**, dicho sin rodeos:
@@ -5071,8 +5071,9 @@ El workflow copia el mismo APK dos veces (`:191-199`): `release/ULimaPlus.apk`
 —nombre estable, el que enlaza la landing— y `release/ULimaPlus-build-<N>.apk`
 para historial. `softprops/action-gh-release@v2` lo publica con tag fijo `latest`,
 nombre «ULima++ Latest» y un cuerpo que incluye el número de build y el SHA del
-commit (`:201-219`). Un paso más (`:221-237`), solo en `main`, genera `version.json` y lo sube al release `latest`, luego crea el release `vX.Y.Z` con el mismo APK
-adjunto si todavía no existe, sin marcarlo como el último. No hay Play Store, ni TestFlight, ni Firebase
+commit (`:201-219`). Un paso más (`:221-237`), solo en `main`, crea el release `vX.Y.Z` con el mismo APK
+adjunto si todavía no existe, sin marcarlo como el último, y justo después sube `version.json` al release
+`latest`, de modo que el aviso nunca anuncia un APK que aún no está publicado. No hay Play Store, ni TestFlight, ni Firebase
 App Distribution.
 
 ---
@@ -5290,7 +5291,7 @@ flowchart TD
         CI11 -- "API_KEY_ANDROID_APP_BLOCKED" --> CIZ["Falla · registra package y SHA-1"]
         CI11 -- "HTTP 400 INVALID_CUSTOM_TOKEN" --> CI12["OK · Firebase autoriza el APK"]
         CI12 --> CI13["GitHub Release tag latest<br/>ULimaPlus.apk + ULimaPlus-build-N.apk"]
-        CI13 --> CI14["Genera version.json y lo sube a latest<br/>Release vX.Y.Z si no existe<br/>solo en main"]
+        CI13 --> CI14["Release vX.Y.Z si no existe<br/>y después version.json a latest<br/>solo en main"]
     end
 
     subgraph MAN["Fuera del CI · MANUAL O INEXISTENTE"]
