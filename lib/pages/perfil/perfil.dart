@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../components/networking/networking_profile_entry_card.dart';
+import '../../configs/modo_estatico.dart';
 import '../../configs/themes.dart';
 import '../academic_record/record_profile_card.dart';
 import '../specialty_test/specialty_test_logic.dart';
@@ -46,8 +47,12 @@ class ProfilePage extends StatelessWidget {
                           ),
                           const SizedBox(height: 16),
                           if (!user.isTeacher) ...[
-                            const RecordProfileCard(),
-                            const SizedBox(height: 16),
+                            // Versión estática: sin los datos oficiales de la
+                            // ULima (RF-EST-10).
+                            if (!ModoEstatico.activo) ...[
+                              const RecordProfileCard(),
+                              const SizedBox(height: 16),
+                            ],
                             const _CarreraCard(),
                             const SizedBox(height: 16),
                             const _ConfigAcademicaSection(),
@@ -682,8 +687,10 @@ class _SeguridadSection extends StatelessWidget {
         ),
         const _ResetPasswordCard(),
         // Solo alumnos: portal-sync exige rol de alumno y un docente
-        // recibiría 403 del backend.
-        if (!(AuthService.to.currentUser?.isTeacher ?? false)) ...[
+        // recibiría 403 del backend. La versión estática no importa desde la
+        // ULima (RF-EST-9).
+        if (!ModoEstatico.activo &&
+            !(AuthService.to.currentUser?.isTeacher ?? false)) ...[
           const SizedBox(height: 10),
           const _CargarDesdeMiUlimaCard(),
         ],

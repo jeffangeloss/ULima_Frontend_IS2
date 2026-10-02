@@ -19,6 +19,7 @@ import '../../services/attendance_risk_service.dart';
 import '../../models/contacto_model.dart';
 import '../../models/time_block_model.dart';
 import '../../configs/course_colors.dart';
+import '../../configs/modo_estatico.dart';
 import '../../configs/themes.dart';
 
 class HorarioPage extends StatelessWidget {
@@ -1339,6 +1340,7 @@ class TeacherCourseDetailSheet extends StatefulWidget {
   final String sectionCode;
 
   const TeacherCourseDetailSheet({
+    super.key,
     required this.idSeccion,
     required this.courseName,
     required this.sectionCode,
@@ -1470,7 +1472,9 @@ class TeacherCourseDetailSheetState extends State<TeacherCourseDetailSheet> {
                   return <String, dynamic>{};
                 })
           : Future.value(<String, dynamic>{});
-      final atRiskFuture = isTeacher
+      // El riesgo de asistencia sale de lo que leyó la ULima. La versión
+      // estática no lo pide ni lo muestra (RF-EST-10).
+      final atRiskFuture = isTeacher && !ModoEstatico.activo
           ? AttendanceRiskService().fetchSummary(widget.idSeccion).catchError((
               e,
             ) {
@@ -1580,47 +1584,50 @@ class TeacherCourseDetailSheetState extends State<TeacherCourseDetailSheet> {
                     ),
                   ),
                 ),
-                _isLoading
-                    ? const SizedBox(width: 48, height: 48)
-                    : Badge(
-                        isLabelVisible: _atRiskCount > 0,
-                        label: Text(
-                          '$_atRiskCount',
-                          style: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        backgroundColor: Colors.red,
-                        textColor: Colors.white,
-                        smallSize: 20,
-                        child: IconButton(
-                          icon: Icon(
-                            Icons.warning_amber_rounded,
-                            color: _atRiskCount > 0
-                                ? Colors.orange
-                                : Colors.grey,
-                            size: 24,
-                          ),
-                          tooltip: 'Alumnos impedidos y en riesgo',
-                          onPressed: () async {
-                            await SystemChrome.setPreferredOrientations(
-                              HorarioPage._portraitOnly,
-                            );
-                            await Get.to(
-                              () => AtRiskStudentsPage(
-                                sectionId: widget.idSeccion,
-                                courseName: widget.courseName,
-                                sectionCode: widget.sectionCode,
-                                isProfesor: isProfesor,
-                              ),
-                            );
-                            await SystemChrome.setPreferredOrientations(
-                              HorarioPage._scheduleOrientations,
-                            );
-                          },
-                        ),
+                if (ModoEstatico.activo)
+                  const SizedBox.shrink()
+                else if (_isLoading)
+                  const SizedBox(width: 48, height: 48)
+                else
+                  Badge(
+                    isLabelVisible: _atRiskCount > 0,
+                    label: Text(
+                      '$_atRiskCount',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
                       ),
+                    ),
+                    backgroundColor: Colors.red,
+                    textColor: Colors.white,
+                    smallSize: 20,
+                    child: IconButton(
+                      icon: Icon(
+                        Icons.warning_amber_rounded,
+                        color: _atRiskCount > 0
+                            ? Colors.orange
+                            : Colors.grey,
+                        size: 24,
+                      ),
+                      tooltip: 'Alumnos impedidos y en riesgo',
+                      onPressed: () async {
+                        await SystemChrome.setPreferredOrientations(
+                          HorarioPage._portraitOnly,
+                        );
+                        await Get.to(
+                          () => AtRiskStudentsPage(
+                            sectionId: widget.idSeccion,
+                            courseName: widget.courseName,
+                            sectionCode: widget.sectionCode,
+                            isProfesor: isProfesor,
+                          ),
+                        );
+                        await SystemChrome.setPreferredOrientations(
+                          HorarioPage._scheduleOrientations,
+                        );
+                      },
+                    ),
+                  ),
               ],
             ),
             const SizedBox(height: 4),

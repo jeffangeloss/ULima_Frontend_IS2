@@ -59,23 +59,26 @@ void main() {
       expect(b.servicioDeRegistro.llamadas, 0);
     });
 
-    test('modo estático: soyNuevo() desde E1 y desde E2 no hace nada', () async {
-      ModoEstatico.activo = true;
-      final b = Bienvenida();
-      await b.visitar();
-      final c = b.controlador..responderAlSaludo(yaUsa: true);
-      expect(c.turno.value, _T.e1Codigo);
-      c.soyNuevo();
-      expect(c.turno.value, _T.e1Codigo);
-      expect(c.registro, isNull);
-      b.login.codeController.text = '20230001';
-      c.enviarCodigo();
-      expect(c.turno.value, _T.e2Contrasena);
-      c.soyNuevo();
-      expect(c.turno.value, _T.e2Contrasena);
-      expect(c.registro, isNull);
-      expect(b.delAlumno, isNot(contains(TextosDeLaBienvenida.soyNuevo)));
-    });
+    test(
+      'modo estático: soyNuevo() desde E1 y desde E2 no hace nada',
+      () async {
+        ModoEstatico.activo = true;
+        final b = Bienvenida();
+        await b.visitar();
+        final c = b.controlador..responderAlSaludo(yaUsa: true);
+        expect(c.turno.value, _T.e1Codigo);
+        c.soyNuevo();
+        expect(c.turno.value, _T.e1Codigo);
+        expect(c.registro, isNull);
+        b.login.codeController.text = '20230001';
+        c.enviarCodigo();
+        expect(c.turno.value, _T.e2Contrasena);
+        c.soyNuevo();
+        expect(c.turno.value, _T.e2Contrasena);
+        expect(c.registro, isNull);
+        expect(b.delAlumno, isNot(contains(TextosDeLaBienvenida.soyNuevo)));
+      },
+    );
 
     test('modo apagado: «Soy nuevo» abre N1 como en la 1.2.0', () async {
       final b = Bienvenida();

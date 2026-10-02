@@ -17,6 +17,7 @@ import '../../../components/logo/escena_del_logo.dart';
 import '../../../components/logo/logo_geometria.dart';
 import '../../../components/logo/pintor_del_logo.dart';
 import '../../../components/logo/sello_del_logo.dart';
+import '../../../configs/modo_estatico.dart';
 import '../../../configs/themes.dart';
 import '../../../domain/bienvenida/bienvenida_turnos.dart';
 import '../../splash/salidas.dart' show naranjaDelSplash;
@@ -699,14 +700,17 @@ class _RecibimientoState extends State<Recibimiento>
                       tinta: MaterialTheme.bienvenidaEntrarTinta(b),
                       alTocar: () => _responder(true),
                     ),
-                    const SizedBox(height: 10),
-                    _Boton(
-                      texto: _Textos.soyNuevo,
-                      fondo: MaterialTheme.bienvenidaNuevoFondo(b),
-                      tinta: MaterialTheme.bienvenidaNuevoTinta(b),
-                      borde: MaterialTheme.bienvenidaNuevoBorde(b),
-                      alTocar: () => _responder(false),
-                    ),
+                    // La versión estática no tiene registro (RF-EST-8).
+                    if (!ModoEstatico.activo) ...[
+                      const SizedBox(height: 10),
+                      _Boton(
+                        texto: _Textos.soyNuevo,
+                        fondo: MaterialTheme.bienvenidaNuevoFondo(b),
+                        tinta: MaterialTheme.bienvenidaNuevoTinta(b),
+                        borde: MaterialTheme.bienvenidaNuevoBorde(b),
+                        alTocar: () => _responder(false),
+                      ),
+                    ],
                   ],
                 ),
               ),

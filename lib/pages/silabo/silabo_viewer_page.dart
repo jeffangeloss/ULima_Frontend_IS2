@@ -19,6 +19,7 @@ import 'package:get/get.dart';
 import 'package:pdfx/pdfx.dart';
 
 import '../../components/skeleton.dart';
+import '../../configs/modo_estatico.dart';
 import '../../configs/themes.dart';
 import 'silabo_viewer_controller.dart';
 
@@ -374,34 +375,38 @@ class _SilaboError extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: controller.cargar,
-              icon: const Icon(Icons.refresh, size: 18),
-              label: const Text('Reintentar'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: MaterialTheme.primaryColor,
-                foregroundColor: Colors.white,
-                minimumSize: const Size(double.infinity, 48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+            // Sin enlace de Drive, la versión estática no ofrece reintentar ni
+            // abrir nada (RF-EST-12).
+            if (!(ModoEstatico.activo && controller.link == null)) ...[
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: controller.cargar,
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('Reintentar'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: MaterialTheme.primaryColor,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 10),
-            OutlinedButton.icon(
-              onPressed: controller.abrirEnDrive,
-              icon: const Icon(Icons.open_in_new, size: 18),
-              label: const Text('Abrir en Drive'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: MaterialTheme.textPrimary(brightness),
-                side: BorderSide(color: MaterialTheme.borderColor(brightness)),
-                minimumSize: const Size(double.infinity, 48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: controller.abrirEnDrive,
+                icon: const Icon(Icons.open_in_new, size: 18),
+                label: const Text('Abrir en Drive'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: MaterialTheme.textPrimary(brightness),
+                  side: BorderSide(color: MaterialTheme.borderColor(brightness)),
+                  minimumSize: const Size(double.infinity, 48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
-            ),
+            ],
           ],
         ),
       ),

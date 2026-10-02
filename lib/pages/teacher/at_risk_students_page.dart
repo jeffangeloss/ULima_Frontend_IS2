@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:ulima_plus/components/error_retry.dart';
+import 'package:ulima_plus/configs/modo_estatico.dart';
 import 'package:ulima_plus/configs/themes.dart';
 import 'package:ulima_plus/models/at_risk_student_model.dart';
 import 'package:ulima_plus/pages/teacher/at_risk_students_controller.dart';
@@ -33,6 +34,15 @@ class _AtRiskStudentsPageState extends State<AtRiskStudentsPage> {
   @override
   void initState() {
     super.initState();
+    // El riesgo de asistencia sale de lo que leyó la ULima. En la versión
+    // estática la pantalla no se muestra ni pide nada, y lleva al inicio
+    // (RF-EST-10 y RF-EST-11).
+    if (ModoEstatico.activo) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Get.offAllNamed<void>(ModoEstatico.rutaDeInicio);
+      });
+      return;
+    }
     if (!Get.isRegistered<AtRiskStudentsController>()) {
       Get.put(AtRiskStudentsController());
     }
@@ -43,6 +53,7 @@ class _AtRiskStudentsPageState extends State<AtRiskStudentsPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (ModoEstatico.activo) return const SizedBox.shrink();
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final brightness = isDark ? Brightness.dark : Brightness.light;
     final controller = Get.find<AtRiskStudentsController>();

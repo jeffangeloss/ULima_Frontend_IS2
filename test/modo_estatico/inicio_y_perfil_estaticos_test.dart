@@ -22,7 +22,6 @@ import 'package:ulima_plus/pages/malla/malla_list_controller.dart';
 import 'package:ulima_plus/pages/perfil/perfil.dart';
 import 'package:ulima_plus/services/academic_record_service.dart';
 import 'package:ulima_plus/services/alert_service.dart';
-import 'package:ulima_plus/services/auth_service.dart';
 import 'package:ulima_plus/services/malla_service.dart';
 import 'package:ulima_plus/services/portal_sync_service.dart';
 
@@ -68,7 +67,10 @@ Future<void> _montar(WidgetTester tester, Widget pantalla) async {
   addTearDown(tester.view.reset);
   final tema = MaterialTheme(ThemeData().textTheme);
   await tester.pumpWidget(
-    GetMaterialApp(theme: tema.light(), home: Scaffold(body: pantalla)),
+    GetMaterialApp(
+      theme: tema.light(),
+      home: Scaffold(body: pantalla),
+    ),
   );
   await tester.pump();
   await tester.pump();
@@ -164,7 +166,10 @@ void main() {
   });
 
   group('RF-EST-9 y RF-EST-10 · el Perfil', () {
-    Future<void> abrirPerfil(WidgetTester tester, {required bool conRecord}) async {
+    Future<void> abrirPerfil(
+      WidgetTester tester, {
+      required bool conRecord,
+    }) async {
       loguear(alumna());
       Get.put<MallaService>(_MallaSinRed());
       if (conRecord) {

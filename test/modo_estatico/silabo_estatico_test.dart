@@ -10,7 +10,6 @@
 // lib/pages/silabo/silabo_viewer_page.dart.
 
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -35,10 +34,7 @@ class _ServicioFalso extends SilaboService {
   int llamadas = 0;
 
   @override
-  Future<Uint8List> obtenerPdf(
-    SilaboLink link, {
-    bool forzarDescarga = false,
-  }) {
+  Future<Uint8List> obtenerPdf(SilaboLink link, {bool forzarDescarga = false}) {
     llamadas++;
     return _respuesta();
   }

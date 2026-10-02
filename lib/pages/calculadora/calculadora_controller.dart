@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
+import '../../configs/modo_estatico.dart';
 import '../../domain/recarga_ulima/filas_calculadora.dart';
 import '../../models/evaluation_model.dart';
 import '../../services/evaluations_service.dart';
@@ -58,7 +59,8 @@ class CalculadoraController extends GetxController {
   /// cada cambio de su vista (RF-RCG-7). La página nunca hace `Get.find` del
   /// servicio. Sin el servicio registrado, la calculadora queda como hoy.
   void conectarUlima() {
-    if (!Get.isRegistered<RecargaUlimaService>()) return;
+    // La versión estática deja la calculadora en modo simulado (RF-EST-10).
+    if (ModoEstatico.activo || !Get.isRegistered<RecargaUlimaService>()) return;
     final servicio = RecargaUlimaService.to;
     _vistaUlima?.dispose();
     _vistaUlima = servicio.alCambiarVista(aplicarVistaUlima);
@@ -75,7 +77,7 @@ class CalculadoraController extends GetxController {
   /// con el JWT ya revocado, y un `POST /grades/me/calculate` con ese token
   /// recibe un 401 que `ApiClient` trata como sesión expirada.
   void aplicarVistaUlima({bool recalcular = true}) {
-    final vista = Get.isRegistered<RecargaUlimaService>()
+    final vista = !ModoEstatico.activo && Get.isRegistered<RecargaUlimaService>()
         ? RecargaUlimaService.to.vista
         : null;
     hayVistaUlima.value = vista != null;
@@ -110,7 +112,7 @@ class CalculadoraController extends GetxController {
   Future<void> recargarTodo() async {
     await _cargarDatosSyllabus();
     await _inicializarCursos();
-    if (Get.isRegistered<RecargaUlimaService>()) {
+    if (!ModoEstatico.activo && Get.isRegistered<RecargaUlimaService>()) {
       await RecargaUlimaService.to.cargar();
     }
   }

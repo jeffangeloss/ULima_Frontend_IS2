@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter/services.dart';
 
+import '/configs/modo_estatico.dart';
 import '/configs/themes.dart';
 import '/services/auth_service.dart';
 import '/services/alert_service.dart';
@@ -205,6 +206,8 @@ final List<GetPage<dynamic>> paginasDeLaApp = <GetPage<dynamic>>[
     name: '/mis-notas',
     page: () => const MisNotasPage(),
     binding: MisNotasBinding(),
+    // Versión estática: la ruta lleva al inicio (RF-EST-11).
+    middlewares: [OcultaEnModoEstatico()],
   ),
   // Récord académico del portal (RF-REC-2). Binding por ruta, como el
   // resto.
@@ -212,6 +215,8 @@ final List<GetPage<dynamic>> paginasDeLaApp = <GetPage<dynamic>>[
     name: '/mi-record',
     page: () => const AcademicRecordPage(),
     binding: AcademicRecordBinding(),
+    // Versión estática: la ruta lleva al inicio (RF-EST-11).
+    middlewares: [OcultaEnModoEstatico()],
   ),
   // Carga de ciclo desde miUlima. Binding por ruta, como el resto: un
   // Get.put dentro de build() ataría el controller al overlay del
@@ -220,6 +225,8 @@ final List<GetPage<dynamic>> paginasDeLaApp = <GetPage<dynamic>>[
     name: '/portal-sync',
     page: () => const PortalSyncPage(),
     binding: PortalSyncBinding(),
+    // Versión estática: la ruta lleva al inicio (RF-EST-11).
+    middlewares: [OcultaEnModoEstatico()],
   ),
   GetPage(name: '/chatbot', page: () => const ChatbotPage()),
   GetPage(

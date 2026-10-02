@@ -75,7 +75,9 @@ void main() {
       expect(espia.alPortal, isEmpty);
       // Lo demás de la ficha se sigue pidiendo.
       expect(
-        espia.peticiones.any((p) => p.contains('/schedule/teacher/sections/301')),
+        espia.peticiones.any(
+          (p) => p.contains('/schedule/teacher/sections/301'),
+        ),
         isTrue,
       );
     });
@@ -125,8 +127,10 @@ void main() {
       expect(find.text('INICIO'), findsOneWidget);
       expect(Get.currentRoute, '/home');
       expect(Get.isRegistered<AtRiskStudentsController>(), isFalse);
-      expect(espia.peticiones.where((p) => p.contains('/attendance-risk')),
-          isEmpty);
+      expect(
+        espia.peticiones.where((p) => p.contains('/attendance-risk')),
+        isEmpty,
+      );
     });
 
     testWidgets('modo apagado: abre la lista y pide el riesgo', (tester) async {

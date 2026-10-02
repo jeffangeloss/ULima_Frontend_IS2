@@ -24,7 +24,10 @@ void main() {
   group('RF-EST-14 · build-apk.yml', () {
     test('compila con --dart-define=MODO_ESTATICO=true, una sola vez', () {
       final comando = _comandoDeCompilacion();
-      expect('--dart-define=MODO_ESTATICO=true'.allMatches(comando), hasLength(1));
+      expect(
+        '--dart-define=MODO_ESTATICO=true'.allMatches(comando),
+        hasLength(1),
+      );
       expect(comando, contains('MODO_ESTATICO=true'));
     });
 
@@ -57,8 +60,10 @@ void main() {
   group('RF-EST-14 · la versión 2.0.0', () {
     test('pubspec.yaml dice 2.0.0+1', () {
       final pubspec = File('pubspec.yaml').readAsStringSync();
-      expect(RegExp(r'^version: 2\.0\.0\+1$', multiLine: true).hasMatch(pubspec),
-          isTrue);
+      expect(
+        RegExp(r'^version: 2\.0\.0\+1$', multiLine: true).hasMatch(pubspec),
+        isTrue,
+      );
     });
 
     test('CHANGELOG.md abre con la sección 2.0.0 y enlaza la comparación', () {
