@@ -79,6 +79,10 @@ guardado o, sin él, con el de compilación, y espera la respuesta a lo sumo 1,5
 tiempo se fija y se guarda antes de que exista cualquier pantalla, sin navegar. Un fallo de la
 consulta da el modo desconocido y la carga sigue.
 
+`[@test] ../../../test/interruptor_remoto/arranque_remoto_test.dart`
+`[@test] ../../../test/modo_estatico/arranque_estatico_test.dart`
+`[@test] ../../../test/splash/splash_arranque_test.dart`
+
 ### RF-IRM-9. Cuándo se pide el modo
 
 Disparan una consulta nueva la respuesta de la consulta del arranque que llega después de su espera,
@@ -90,6 +94,7 @@ cualquier disparador (decisión D-3).
 
 `[@test] ../../../test/interruptor_remoto/cambio_de_modo_test.dart`
 `[@test] ../../../test/interruptor_remoto/disparadores_test.dart`
+`[@test] ../../../test/interruptor_remoto/arranque_remoto_test.dart`
 
 ### RF-IRM-10. El cambio de modo
 

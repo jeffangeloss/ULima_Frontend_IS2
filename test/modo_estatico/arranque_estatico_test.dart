@@ -16,10 +16,12 @@ import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ulima_plus/configs/modo_estatico.dart';
 import 'package:ulima_plus/pages/splash/carga_del_arranque.dart';
+import 'package:ulima_plus/pages/splash/interruptor_remoto.dart';
 import 'package:ulima_plus/services/academic_record_service.dart';
 import 'package:ulima_plus/services/alert_service.dart';
 import 'package:ulima_plus/services/auth_service.dart';
 import 'package:ulima_plus/services/malla_service.dart';
+import 'package:ulima_plus/services/modo_remoto_service.dart';
 import 'package:ulima_plus/services/recarga_ulima_service.dart';
 import 'package:ulima_plus/services/specialty_test_service.dart';
 import 'package:ulima_plus/services/storage_service.dart';
@@ -38,6 +40,7 @@ void main() {
   });
   tearDown(() {
     ModoEstatico.activo = false;
+    InterruptorRemoto.reiniciar();
     Get.reset();
   });
 
@@ -67,14 +70,18 @@ void main() {
       expect(Get.isRegistered<MallaService>(), isTrue);
     });
 
-    test('modo estático: cargar el arranque sin sesión no pide nada al '
-        'portal y termina en /login', () async {
-      ModoEstatico.activo = true;
+    test('modo estático guardado: cargar el arranque sin sesión no pide nada '
+        'al portal, conserva el modo y termina en /login', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        ModoRemotoService.claveConocido: true,
+      });
       final espia = EspiaDeRed();
       final ruta = await espia.correr(
         () => cargarElArranque(iniciarFirebase: () async {}),
       );
       expect(ruta, '/login');
+      expect(ModoEstatico.activo, isTrue);
+      expect(espia.peticiones, contains('GET /config'));
       expect(espia.alPortal, isEmpty);
       expect(Get.isRegistered<StorageService>(), isTrue);
       expect(Get.isRegistered<RecargaUlimaService>(), isTrue);

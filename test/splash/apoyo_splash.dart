@@ -12,6 +12,7 @@ import 'package:get/get.dart';
 import 'package:ulima_plus/pages/splash/arranque_page.dart';
 import 'package:ulima_plus/pages/splash/capa_de_arranque.dart';
 import 'package:ulima_plus/pages/splash/estado_de_la_capa.dart';
+import 'package:ulima_plus/pages/splash/interruptor_remoto.dart';
 import 'package:ulima_plus/pages/splash/puntos_de_aterrizaje.dart';
 import 'package:ulima_plus/services/session_navigation.dart';
 import 'package:ulima_plus/services/splash_variante_service.dart';
@@ -161,12 +162,13 @@ Widget appConCapa({
   ],
 );
 
-/// Deja la capa, sus puntos y Get como al empezar.
+/// Deja la capa, sus puntos, el interruptor remoto y Get como al empezar.
 void reiniciarArranque() {
   Get.testMode = true;
   Get.reset();
   CapaDeArranque.reiniciar();
   EstadoDeLaCapa.cubre.value = false;
+  InterruptorRemoto.reiniciar();
   PuntosDeAterrizaje.reiniciar();
   toquesEnLaPagina = 0;
   BienvenidaDePrueba.argumentos = null;

@@ -3,7 +3,10 @@
 // corre en paralelo con la intro (RF-SPL-4). Da los mismos pasos que el
 // main() de antes y en el mismo orden, salvo las alertas del alumno, que
 // pide HomeController al montarse (decisión S-7). Un fallo antes de registrar
-// los servicios deja la intro en su bucle (RF-SPL-18).
+// los servicios deja la intro en su bucle (RF-SPL-18). La consulta del modo
+// sale en su primera línea y la carga la espera a lo sumo 1,5 s antes de
+// devolver la ruta o de propagar un fallo (RF-IRM-8 de
+// specs/features/interruptor-remoto).
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:get/get.dart';
@@ -20,27 +23,39 @@ import '../../services/specialty_test_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/time_blocks_service.dart';
 import 'capa_de_arranque.dart';
+import 'interruptor_remoto.dart';
 
 Future<void> _iniciarFirebase() =>
     Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
 Future<String> cargarElArranque({
   Future<void> Function()? iniciarFirebase,
+  InterruptorRemoto? interruptor,
 }) async {
+  // La consulta del modo sale en la primera línea y corre en paralelo con
+  // todo lo demás. Su espera va en el finally, así que el modo queda fijado
+  // antes de devolver la ruta y también si la carga falla (decisión D-6). Esa
+  // espera nunca lanza, de modo que un fallo de la consulta nunca es un fallo
+  // antes de los servicios (RF-IRM-8).
+  final esperarElModo = (interruptor ?? InterruptorRemoto.actual).arrancar();
   try {
-    await (iniciarFirebase ?? _iniciarFirebase)();
-    LucideIcons.info.codePoint;
-    await Get.putAsync<StorageService>(
-      () => StorageService().init(),
-      permanent: true,
-    );
-  } catch (error) {
-    throw FalloAntesDeLosServicios(error);
+    try {
+      await (iniciarFirebase ?? _iniciarFirebase)();
+      LucideIcons.info.codePoint;
+      await Get.putAsync<StorageService>(
+        () => StorageService().init(),
+        permanent: true,
+      );
+    } catch (error) {
+      throw FalloAntesDeLosServicios(error);
+    }
+    registrarLosServicios();
+    final restaurada = await AuthService.to.tryRestoreSession();
+    if (!restaurada) return '/login';
+    return postLoginRoute(AuthService.to.currentUser!);
+  } finally {
+    await esperarElModo();
   }
-  registrarLosServicios();
-  final restaurada = await AuthService.to.tryRestoreSession();
-  if (!restaurada) return '/login';
-  return postLoginRoute(AuthService.to.currentUser!);
 }
 
 /// Los servicios globales permanentes, en el orden de siempre. Ninguno hace

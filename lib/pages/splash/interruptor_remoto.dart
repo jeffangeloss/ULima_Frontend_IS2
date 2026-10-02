@@ -1,10 +1,13 @@
 // lib/pages/splash/interruptor_remoto.dart
 // El interruptor remoto del modo estático (specs/features/interruptor-remoto).
-// Pide el modo al backend con ModoRemotoService, con a lo sumo una consulta
-// en curso (RF-IRM-9). Ante un modo conocido lo guarda y, si difiere del que
-// rige, lo fija y vuelve a la ruta que daría el arranque, después del retiro
-// de la capa si todavía cubre (RF-IRM-10). Vive fuera de GetX, como el estado
-// de la capa, para que ni el cambio de rutas ni Get.reset lo borren.
+// Al arrancar fija el modo guardado o el de compilación y espera la consulta
+// a lo sumo 1,5 s (RF-IRM-8). Después pide el modo al volver a primer plano,
+// ante los códigos del modo estático y cuando la respuesta del arranque llega
+// tarde, con a lo sumo una consulta en curso (RF-IRM-9). Ante un modo
+// conocido lo guarda y, si difiere del que rige, lo fija y vuelve a la ruta
+// que daría el arranque, después del retiro de la capa si todavía cubre
+// (RF-IRM-10). Vive fuera de GetX, como el estado de la capa, para que ni el
+// cambio de rutas ni Get.reset lo borren.
 
 import 'dart:async';
 
@@ -23,12 +26,16 @@ import 'estado_de_la_capa.dart';
 
 class InterruptorRemoto with WidgetsBindingObserver {
   /// Todo se inyecta para las pruebas. En la app, el servicio toma la URL de
-  /// `API_BASE_URL` y la señal es la de la capa del arranque.
+  /// `API_BASE_URL`, la señal es la de la capa del arranque, el respaldo es
+  /// `MODO_ESTATICO` y la espera del arranque es de 1,5 s.
   InterruptorRemoto({
     ModoRemotoService? servicio,
     ValueListenable<bool>? capaCubre,
+    bool deCompilacion = ModoEstatico.deCompilacion,
+    this.esperaDelArranque = const Duration(milliseconds: 1500),
   }) : _servicio = servicio ?? ModoRemotoService(),
-       _capaCubre = capaCubre ?? EstadoDeLaCapa.cubre;
+       _capaCubre = capaCubre ?? EstadoDeLaCapa.cubre,
+       _deCompilacion = deCompilacion;
 
   static InterruptorRemoto? _actual;
 
@@ -55,16 +62,66 @@ class InterruptorRemoto with WidgetsBindingObserver {
 
   final ModoRemotoService _servicio;
   final ValueListenable<bool> _capaCubre;
+  final bool _deCompilacion;
+
+  /// Lo más que cargarElArranque espera la respuesta antes de devolver la
+  /// ruta (RF-IRM-8).
+  final Duration esperaDelArranque;
 
   /// La consulta en curso, o null si no hay ninguna (RF-IRM-9).
   Future<bool?>? _enCurso;
 
-  /// Pide el modo y aplica la respuesta (RF-IRM-10). Con una consulta en
-  /// curso no abre otra, porque quien la abrió aplica su respuesta
-  /// (RF-IRM-9). Nunca lanza.
+  /// Desde arrancar() hasta el fin de su espera, aunque la carga falle.
+  /// Mientras tanto la consulta del arranque cubre cualquier disparador
+  /// (decisión D-3).
+  bool _enElArranque = false;
+
+  /// La primera línea de cargarElArranque (RF-IRM-8). Lanza la consulta, o se
+  /// une a la que esté en curso, y la lectura del modo guardado, y devuelve
+  /// la espera que cargarElArranque hace en su finally (decisión D-6).
+  Future<void> Function() arrancar() {
+    _enElArranque = true;
+    final consulta = _pedir();
+    final guardado = _servicio.leerGuardado();
+    return () => _terminarElArranque(consulta, guardado);
+  }
+
+  /// Fija el modo guardado o, sin él, el de compilación, y aguarda la
+  /// respuesta a lo sumo [esperaDelArranque]. Una respuesta a tiempo se fija y
+  /// se guarda sin navegar, porque todavía no hay pantallas (RF-IRM-8). Una
+  /// tardía dispara una consulta nueva cuando llega, y esa consulta aplica su
+  /// respuesta como un cambio (RF-IRM-9 y RF-IRM-10). Nunca lanza, y siempre
+  /// cierra la ventana del arranque.
+  Future<void> _terminarElArranque(
+    Future<bool?> consulta,
+    Future<bool?> guardado,
+  ) async {
+    try {
+      ModoEstatico.activo = await guardado ?? _deCompilacion;
+      // Un registro con la respuesta si llegó a tiempo, o null si no.
+      final aTiempo = await consulta
+          .then<(bool?,)?>((respuesta) => (respuesta,))
+          .timeout(esperaDelArranque, onTimeout: () => null);
+      if (aTiempo != null) {
+        await _fijar(aTiempo.$1);
+      } else {
+        unawaited(consulta.then((_) => consultar()));
+      }
+    } finally {
+      _enElArranque = false;
+    }
+  }
+
+  /// Pide el modo y aplica la respuesta (RF-IRM-10). Durante la espera del
+  /// arranque, o con una consulta en curso, no abre otra, porque quien la
+  /// abrió aplica su respuesta (RF-IRM-9). Si el arranque se une a esta
+  /// consulta antes de que responda, la respuesta la fija el arranque, sin
+  /// navegar (decisión D-3). Nunca lanza.
   Future<void> consultar() async {
-    if (_enCurso != null) return;
-    await _recibir(await _pedir());
+    if (_enElArranque || _enCurso != null) return;
+    final respuesta = await _pedir();
+    if (_enElArranque) return;
+    await _recibir(respuesta);
   }
 
   /// Desde aquí piden el modo cada vuelta a primer plano y cada respuesta de
