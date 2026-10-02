@@ -67,7 +67,7 @@ ULima++ es la app que un alumno de la Universidad de Lima abre para no tener que
 
 Desde **HU18** la app dejó de ser solo del alumno. Un profesor o jefe de práctica entra con las mismas credenciales y recibe otro shell: [`lib/pages/home/home_shell_config.dart`](lib/pages/home/home_shell_config.dart) decide en `forUser(user)` si arma la barra de alumno —Malla · Notas · Horario · Chats · Perfil, con Delegado antes de Perfil si el alumno es delegado— o la de docente —Secciones · Calificar · Horario · Asesorias · Perfil—. La pestaña **Calificar** solo aparece si el usuario es profesor titular (`AuthService.to.canGrade`); un JP puro no la ve, y por eso `HomePage` deriva el índice de cada pestaña en runtime en lugar de hardcodearlo (`home_page.dart:42-43`). El mismo criterio se repite en el resto de la UI: la campana de alertas se oculta para docentes (`app_header.dart:55-56, 93-148`), y la burbuja del chatbot solo se dibuja si `!user.isTeacher` (`home_page.dart:112`).
 
-Este repositorio es **únicamente la app Flutter**: paquete Dart `ulima_plus` versión `1.1.0` (`version: 1.1.0+1` en [`pubspec.yaml`](pubspec.yaml); el número de build lo pone la CI), **30 217 líneas de Dart repartidas en 151 archivos** bajo [`lib/`](lib), **15 specs** en [`specs/features/`](specs/features) y **49 suites de prueba** (6 567 líneas) en [`test/`](test). Son 28 pantallas, 25 controllers GetX, 30 servicios, 21 modelos y 20 componentes. Las plataformas que realmente arrancan son **Android, iOS y Web**: `Firebase.initializeApp` corre siempre en el arranque ([`lib/main.dart:53`](lib/main.dart)) y `DefaultFirebaseOptions.currentPlatform` lanza `UnsupportedError` en macOS, Windows y Linux ([`lib/firebase_options.dart:27-45`](lib/firebase_options.dart)). Los directorios de esas tres plataformas existen en el repo, pero son andamiaje generado por `flutter create` que nadie compila.
+Este repositorio es **únicamente la app Flutter**: paquete Dart `ulima_plus` versión `1.2.0` (`version: 1.2.0+1` en [`pubspec.yaml`](pubspec.yaml); el número de build lo pone la CI), **30 217 líneas de Dart repartidas en 245 archivos** bajo [`lib/`](lib), **25 specs** en [`specs/features/`](specs/features) y **145 suites de prueba** (6 567 líneas) en [`test/`](test). Son 28 pantallas, 25 controllers GetX, 30 servicios, 21 modelos y 20 componentes. Las plataformas que realmente arrancan son **Android, iOS y Web**: `Firebase.initializeApp` corre siempre en el arranque ([`lib/main.dart:53`](lib/main.dart)) y `DefaultFirebaseOptions.currentPlatform` lanza `UnsupportedError` en macOS, Windows y Linux ([`lib/firebase_options.dart:27-45`](lib/firebase_options.dart)). Los directorios de esas tres plataformas existen en el repo, pero son andamiaje generado por `flutter create` que nadie compila.
 
 Lo que este repo **no** es importa tanto como lo que es. No es una segunda implementación de las reglas académicas: `KNOWLEDGE.md:110` y `README.md:60` prohíben duplicar lógica de negocio del backend, y el código lo respeta en los sitios donde se nota. El promedio de la calculadora **lo calcula el backend** (`POST /grades/me/calculate`, `calculadora_controller.dart:185-198`), no un `fold` local. El carnet de networking declara la regla explícita de que "el frontend no decide permisos, propiedad, límites persistentes ni autorización" (BR-NET-F-01, `networking.spec.md:38-44`): manda el borrador y presenta el error que el backend devuelva. Tampoco es un almacén académico: `shared_preferences` guarda sesión, token y preferencias, nunca datos académicos oficiales (`AGENTS.md:41`, `KNOWLEDGE.md:111`), y el JWT vive aparte en `flutter_secure_storage`.
 
@@ -111,7 +111,7 @@ No hay Provider, ni Riverpod, ni Bloc, ni Dio. Hay **GetX** para estado, inyecci
 
 ### El stack
 
-Entorno declarado en [`pubspec.yaml`](pubspec.yaml)`:22`: `sdk: ^3.11.4`. El `pubspec.lock` resuelve `dart: ">=3.12.0 <4.0.0"` y `flutter: ">=3.44.0"`, y está escrito con un Flutter más nuevo que el 3.44.2 de la CI (deuda anotada en [`docs/devops.md`](docs/devops.md)). El paquete Dart se llama `ulima_plus`, versión `1.1.0`.
+Entorno declarado en [`pubspec.yaml`](pubspec.yaml)`:22`: `sdk: ^3.11.4`. El `pubspec.lock` resuelve `dart: ">=3.12.0 <4.0.0"` y `flutter: ">=3.44.0"`, y está escrito con un Flutter más nuevo que el 3.44.2 de la CI (deuda anotada en [`docs/devops.md`](docs/devops.md)). El paquete Dart se llama `ulima_plus`, versión `1.2.0`.
 
 | Pieza | Paquete | Restricción | Resuelto |
 |:---|:---|:---|:---|
@@ -475,9 +475,9 @@ Dos backends distintos conviven en [`lib/services/storage_service.dart`](lib/ser
 | Setups por usuario | `shared_preferences` | `user_setups_v1` | JSON `{código: {…}}` |
 | Estados por usuario | `shared_preferences` | `user_statuses_v1` | JSON `{código: {courseId: index}}` |
 
-**12 claves en `shared_preferences`, 1 en el almacén seguro.** El JWT está solo porque es la única credencial: con él, cualquiera es el usuario. El resto son preferencias o cachés cuyo original vive en la base de datos, así que un atacante con acceso al `shared_preferences` del dispositivo no obtiene nada que no pudiera pedir al backend con el mismo token.
+**13 claves en `shared_preferences`, 1 en el almacén seguro.** El JWT está solo porque es la única credencial: con él, cualquiera es el usuario. El resto son preferencias o cachés cuyo original vive en la base de datos, así que un atacante con acceso al `shared_preferences` del dispositivo no obtiene nada que no pudiera pedir al backend con el mismo token. Las claves son `token`, `isLoggedIn`, `lastSyncTimestamp`, `session_statuses_v2`, `session_statuses`, `user_setups_v1`, `user_statuses_v1`, `notas_estudiante_<id>`, `currentStudentId`, `aviso_version_pospuesta`, `user_id` y `user_dni`.
 
-Dos accesos a `shared_preferences` viven **fuera** de `StorageService` y conviene conocerlos: [`lib/services/notas_service.dart`](lib/services/notas_service.dart) escribe directo las claves `notas_estudiante_<id>` y `currentStudentId`; y [`lib/services/silabo_service.dart`](lib/services/silabo_service.dart) cachea los PDF en `getTemporaryDirectory()` como `<fileId>.pdf`, con tope de 25 MB y validación de la firma `%PDF`.
+Tres accesos a `shared_preferences` viven **fuera** de `StorageService` y conviene conocerlos: [`lib/services/notas_service.dart`](lib/services/notas_service.dart) escribe directo las claves `notas_estudiante_<id>` y `currentStudentId`; [`lib/services/silabo_service.dart`](lib/services/silabo_service.dart) cachea los PDF en `getTemporaryDirectory()` como `<fileId>.pdf`, con tope de 25 MB y validación de la firma `%PDF`; y [`lib/services/aviso_version_service.dart`](lib/services/aviso_version_service.dart) gestiona `aviso_version_pospuesta`.
 
 > ⚠️ **`clearSession()` no borra todo.** `storage_service.dart:206-218` borra el token seguro y 10 claves de `shared_preferences`, pero **no** `user_setups_v1` ni `user_statuses_v1`, ni las claves de `NotasService`. Esas cachés por código de alumno sobreviven al logout en el dispositivo. No hay comentario que lo justifique, y contradice el propósito declarado de invalidar todas las cachés por usuario (`auth_service.dart:328-329`).
 
@@ -673,7 +673,7 @@ ULima_Frontend_IS2/
 ├── .github/workflows/           (2)  # ci.yml (28 L, pruebas) y build-apk.yml (234 L, APK solo en meltiruiz)
 ├── .tessl/                     (13)  # Reglas y skills vendorizadas de Spec Driven Development v2.0.1
 │
-├── pubspec.yaml                      # Paquete ulima_plus 1.1.0+1; assets; splash e ícono #E77330
+├── pubspec.yaml                      # Paquete ulima_plus 1.2.0+1; assets; splash e ícono #E77330
 ├── analysis_options.yaml             # flutter_lints ^6.0.0; excluye android/ ios/ web/ desktop del analyze
 ├── firebase.json                     # flutter.platforms android/ios/dart del proyecto ulima-plus-chat.
 │                                     #   NO tiene clave "hosting": hoy solo se despliegan reglas
@@ -3448,7 +3448,7 @@ cuando la app tiene que reaccionar a ellas.
 | `RNF-APP-24` | Compatibilidad | Los tres escritorios tienen scaffold pero **la app crashea al arrancar**: `firebase_options.dart` lanza `UnsupportedError` para macOS, Windows y Linux | `lib/firebase_options.dart:27-41` | **No funcional** |
 | `RNF-APP-25` | Compatibilidad | Orientación vertical forzada en todo el shell autenticado; excepciones: la pestaña `Horario` y la ruta `/malla-clasica` | `app-shell.spec.md:21-34` | Implementado |
 | `RNF-APP-26` | Entorno de build | Flutter **3.44.2** en CI; revisión del canal `stable` fijada en `.metadata` | `ci.yml:23` y `build-apk.yml:62` | Fijado |
-| `RNF-APP-27` | Tamaño del APK | **No consta.** Ningún archivo del repositorio publica el peso del artefacto: el workflow lo compila, lo renombra a `ULimaPlus.apk` y lo sube al release `latest` y al de su versión (`vX.Y.Z`) sin registrar tamaño | `build-apk.yml:191-234` | Sin dato |
+| `RNF-APP-27` | Tamaño del APK | **No consta.** Ningún archivo del repositorio publica el peso del artefacto: el workflow lo compila, lo renombra a `ULimaPlus.apk` y lo sube al release `latest` y al de su versión (`vX.Y.Z`) sin registrar tamaño | `build-apk.yml:191-237` | Sin dato |
 
 ---
 
@@ -4827,11 +4827,11 @@ que hace cada workflow.
 | 7 | Configurar firma de release | 76-97 | Decodifica el keystore base64 a `android/app/upload-keystore.jks`, escribe `android/key.properties` y valida el alias con `keytool -list` | keystore, alias o contraseña inválidos |
 | 8 | Cache Android native | 99-104 | Cachea el `cmake` del SDK, clave `android-cmake-<os>-3.22.1` | — |
 | 9 | **Leer la versión de pubspec.yaml** | 106-115 | Extrae `X.Y.Z` de la línea `version:` de `pubspec.yaml` con `sed` y lo deja como salida `nombre` | la línea no trae una versión `X.Y.Z` (imprime `::error::`) |
-| 10 | **Compilar APK** | 117-118 | `flutter build apk --release --build-name=<X.Y.Z> --build-number=<run_number> --dart-define=API_BASE_URL=https://u-lima-backend-is-2-jeffangeloss-projects.vercel.app` — **no** el `-one` que documentan el README y `.vscode/launch.json`; ver [Deuda técnica](#-deuda-técnica-y-límites-conocidos) | error de compilación |
+| 10 | **Compilar APK** | 117-118 | `flutter build apk --release --build-name=<X.Y.Z> --build-number=<run_number> --dart-define=API_BASE_URL=https://u-lima-backend-is-2-jeffangeloss-projects.vercel.app --dart-define=APP_VERSION=<X.Y.Z>` — **no** el `-one` que documentan el README y `.vscode/launch.json`; ver [Deuda técnica](#-deuda-técnica-y-límites-conocidos) | error de compilación |
 | 11 | **Verificar firma y autorización de Firebase Auth** | 120-189 | El paso interesante, detallado abajo | ver abajo |
 | 12 | Preparar APKs | 191-199 | `release/ULimaPlus.apk` (estable, el que enlaza la landing) y `release/ULimaPlus-build-<run_number>.apk` (historial) | — |
 | 13 | Crear o actualizar Release | 201-219 | `softprops/action-gh-release@v2`, tag fijo `latest`, nombre «ULima++ Latest», cuerpo con número de build y commit, `make_latest: true` | — |
-| 14 | **Publicar el release de la versión** | 221-234 | Solo en `main` (`:222`). Si el release `vX.Y.Z` no existe, lo crea con `release/ULimaPlus-build-<run_number>.apk` adjunto y `--latest=false`; si ya existe, no crea otro | falla `gh` |
+| 14 | **Publicar el release de la versión** | 221-237 | Solo en `main` (`:222`). Si el release `vX.Y.Z` no existe, lo crea con `release/ULimaPlus-build-<run_number>.apk` adjunto y `--latest=false`, genera `version.json` y lo sube al release `latest`; si ya existe, no crea otro | falla `gh` |
 
 El paso 11 es lo que distingue a este workflow de un `flutter build apk` con adornos. En vez de
 confiar en que la firma y la configuración de Firebase estén bien, **las verifica contra Google en
@@ -4861,7 +4861,7 @@ flowchart TD
     F --> G["flutter pub get"]
     G --> H["Decodifica keystore base64<br/>escribe key.properties<br/>keytool -list valida el alias"]
     H --> H2["Lee X.Y.Z de pubspec.yaml<br/>falla si no hay versión"]
-    H2 --> I["flutter build apk --release<br/>con --build-name, --build-number<br/>y --dart-define de API_BASE_URL"]
+    H2 --> I["flutter build apk --release<br/>con --build-name, --build-number<br/>y --dart-define de API_BASE_URL y APP_VERSION"]
     I --> J["apksigner verify<br/>SHA-1 del certificado con openssl"]
     J --> K{"La API key de google-services.json<br/>coincide con firebase_options.dart"}
     K -- No --> KX["Falla · Ejecuta flutterfire configure"]
@@ -4872,7 +4872,7 @@ flowchart TD
     M -- "HTTP 400 INVALID_CUSTOM_TOKEN" --> N["APK autorizado por Firebase Auth"]
     N --> O["Copia a ULimaPlus.apk<br/>y ULimaPlus-build-N.apk"]
     O --> P["Release con tag latest y make_latest<br/>descarga directa desde la landing"]
-    P --> P2["Si corre sobre main y no existe vX.Y.Z<br/>crea ese release con el APK, sin make_latest"]
+    P --> P2["Si corre sobre main y no existe vX.Y.Z<br/>genera version.json, lo sube a latest<br/>crea ese release con el APK, sin make_latest"]
 ```
 
 **Lo que el CI no hace**, dicho sin rodeos:
@@ -4953,11 +4953,11 @@ compilan pero nadie los distribuye. Los tres escritorios ni siquiera arrancan.
 | `google-services` | `4.3.15` | `android/settings.gradle.kts:24` |
 | CocoaPods (solo iOS) | piso `platform :ios, '15.0'` | [`ios/Podfile`](ios/Podfile)`:2` |
 
-El paquete Dart se llama `ulima_plus` y la versión es `1.1.0`, escrita como `version: 1.1.0+1`
+El paquete Dart se llama `ulima_plus` y la versión es `1.2.0`, escrita como `version: 1.2.0+1`
 ([`pubspec.yaml`](pubspec.yaml)`:1,19`). Nunca se ha subido: `publish_to: 'none'`. El sufijo `+1` no
-se toca, porque `build-apk.yml` compila con `--build-name` igual a `1.1.0` y `--build-number` igual al
+se toca, porque `build-apk.yml` compila con `--build-name` igual a `1.2.0` y `--build-number` igual al
 número de ejecución del workflow, el mismo que lleva `ULimaPlus-build-<N>.apk`, y crea el release
-`v1.1.0` si todavía no existe. Cómo se sube la versión está en [`docs/devops.md`](docs/devops.md).
+`v1.2.0` si todavía no existe. Cómo se sube la versión está en [`docs/devops.md`](docs/devops.md).
 
 El build de Android pide memoria de verdad —
 `org.gradle.jvmargs=-Xmx8G -XX:MaxMetaspaceSize=4G` en
@@ -5071,7 +5071,7 @@ El workflow copia el mismo APK dos veces (`:191-199`): `release/ULimaPlus.apk`
 —nombre estable, el que enlaza la landing— y `release/ULimaPlus-build-<N>.apk`
 para historial. `softprops/action-gh-release@v2` lo publica con tag fijo `latest`,
 nombre «ULima++ Latest» y un cuerpo que incluye el número de build y el SHA del
-commit (`:201-219`). Un paso más (`:221-234`), solo en `main`, crea el release `vX.Y.Z` con el mismo APK
+commit (`:201-219`). Un paso más (`:221-237`), solo en `main`, genera `version.json` y lo sube al release `latest`, luego crea el release `vX.Y.Z` con el mismo APK
 adjunto si todavía no existe, sin marcarlo como el último. No hay Play Store, ni TestFlight, ni Firebase
 App Distribution.
 
@@ -5281,7 +5281,7 @@ flowchart TD
         CI4 --> CI5["flutter pub get"]
         CI5 --> CI6["Decodifica keystore base64<br/>escribe key.properties<br/>keytool -list valida el alias"]
         CI6 --> CI6B["Lee X.Y.Z de pubspec.yaml"]
-        CI6B --> CI7["flutter build apk --release<br/>--build-name · --build-number<br/>--dart-define API_BASE_URL"]
+        CI6B --> CI7["flutter build apk --release<br/>--build-name · --build-number<br/>--dart-define API_BASE_URL y APP_VERSION"]
         CI7 --> CI8["apksigner verify + SHA-1 del cert<br/>aapt2 dump packagename"]
         CI8 --> CI9{"API key de google-services.json<br/>igual a la de firebase_options.dart"}
         CI9 -- No --> CIY["Falla · ejecuta flutterfire configure"]
@@ -5290,7 +5290,7 @@ flowchart TD
         CI11 -- "API_KEY_ANDROID_APP_BLOCKED" --> CIZ["Falla · registra package y SHA-1"]
         CI11 -- "HTTP 400 INVALID_CUSTOM_TOKEN" --> CI12["OK · Firebase autoriza el APK"]
         CI12 --> CI13["GitHub Release tag latest<br/>ULimaPlus.apk + ULimaPlus-build-N.apk"]
-        CI13 --> CI14["Release vX.Y.Z si no existe<br/>solo en main"]
+        CI13 --> CI14["Genera version.json y lo sube a latest<br/>Release vX.Y.Z si no existe<br/>solo en main"]
     end
 
     subgraph MAN["Fuera del CI · MANUAL O INEXISTENTE"]
