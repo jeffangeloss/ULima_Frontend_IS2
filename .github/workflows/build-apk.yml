@@ -115,7 +115,7 @@ jobs:
           echo "nombre=$nombre" >> "$GITHUB_OUTPUT"
 
       - name: Compilar APK
-        run: flutter build apk --release --build-name=${{ steps.version.outputs.nombre }} --build-number=${{ github.run_number }} --dart-define=API_BASE_URL=https://u-lima-backend-is-2-jeffangeloss-projects.vercel.app --dart-define=APP_VERSION=${{ steps.version.outputs.nombre }}
+        run: flutter build apk --release --build-name=${{ steps.version.outputs.nombre }} --build-number=${{ github.run_number }} --dart-define=API_BASE_URL=https://u-lima-backend-is-2-jeffangeloss-projects.vercel.app --dart-define=APP_VERSION=${{ steps.version.outputs.nombre }} --dart-define=MODO_ESTATICO=true
 
       - name: Verificar firma y autorización de Firebase Auth
         shell: bash

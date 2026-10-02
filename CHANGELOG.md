@@ -6,6 +6,33 @@ Este archivo reúne los cambios relevantes de la app ULima++. Su formato sigue
 `meltiruiz/ULima_Frontend_IS2`, el repositorio de producción. El flujo de ramas y la forma de
 publicar una versión están en [`docs/devops.md`](docs/devops.md).
 
+## [2.0.0] - 2026-10-02
+
+La versión estática. La app deja de consultar a la Universidad de Lima y oculta lo que dependía de ella.
+Es una versión mayor porque retira funcionalidades.
+
+### Añadido
+
+- Interruptor `MODO_ESTATICO`, leído de `--dart-define` en `lib/configs/modo_estatico.dart` y apagado por
+  defecto. El código del portal sigue en el repositorio, apagado detrás de él, y retirarlo queda para una
+  versión posterior.
+- Spec `modo-estatico` con RF-EST-7 a RF-EST-14 y pruebas de los dos modos en `test/modo_estatico/`.
+
+### Cambiado
+
+- `build-apk.yml` compila con `--dart-define=MODO_ESTATICO=true`.
+- En modo estático la bienvenida solo ofrece iniciar sesión, sin «Soy nuevo» ni pasos que pidan la
+  contraseña de miUlima o el código SecurID.
+- En modo estático no hay importación del portal (`/portal-sync`, el banner del inicio y la tarjeta del
+  Perfil) ni recarga de notas y asistencia, y el arranque no registra `RecargaUlimaService` ni
+  `AcademicRecordService`.
+- En modo estático se ocultan los datos oficiales de la ULima. Son el récord, las notas de la ULima, las
+  filas oficiales de la calculadora, que queda simulada, el bloque de asistencia de la ficha del curso y
+  el riesgo de asistencia. `/portal-sync`, `/mi-record` y `/mis-notas` llevan al inicio.
+- En modo estático el visor de sílabos abre solo enlaces de Drive. Ante otra URL dice «Sílabo no
+  disponible» y no abre el navegador.
+- `pubspec.yaml` pasa a `version: 2.0.0+1`.
+
 ## [1.2.0] - 2026-10-02
 
 ### Añadido
@@ -99,6 +126,7 @@ esta sección son de `meltiruiz/ULima_Frontend_IS2`.
 - Un bloque de horario sin ningún día real dentro de sus fechas ya no se guarda (#178).
 - El teclado ya no tapa la pregunta de Ulises en la bienvenida (#184).
 
+[2.0.0]: https://github.com/meltiruiz/ULima_Frontend_IS2/compare/v1.2.0...v2.0.0
 [1.2.0]: https://github.com/meltiruiz/ULima_Frontend_IS2/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/meltiruiz/ULima_Frontend_IS2/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/meltiruiz/ULima_Frontend_IS2/releases/tag/v1.0.0
