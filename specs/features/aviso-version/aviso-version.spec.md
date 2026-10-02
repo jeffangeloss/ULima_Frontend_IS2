@@ -47,6 +47,8 @@ de desarrollo no ocurre nada.
 Las versiones se comparan como SemVer `X.Y.Z`, componente por componente y en número, así que
 `1.10.0` es mayor que `1.9.0`.
 
+`[@test] ../../../test/aviso_version/version_semver_test.dart`
+
 ### RF-AVV-3. El aviso
 
 Si la versión publicada es mayor que la instalada y que la pospuesta, cuando hay una guardada,
