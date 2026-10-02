@@ -12,6 +12,7 @@ import '/services/auth_service.dart';
 import '/services/alert_service.dart';
 import 'pages/home/home_page.dart';
 import 'pages/splash/arranque_page.dart';
+import 'pages/splash/aviso_version_arranque.dart';
 import 'pages/splash/capa_de_arranque.dart';
 import 'pages/splash/carga_del_arranque.dart';
 import 'services/session_navigation.dart';
@@ -87,6 +88,9 @@ void main() async {
       ),
     ),
   );
+  // El aviso de versión nueva espera a que la capa del arranque se retire y
+  // no retrasa nada de lo anterior (RF-AVV-1). En web no se crea.
+  AvisoVersionArranque().programar();
 }
 
 /// Las rutas de la app, declaradas una sola vez. La intro y la bienvenida
