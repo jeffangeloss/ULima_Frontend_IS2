@@ -8,8 +8,9 @@
 // turno y lo escrito, y que su toque ya sigue el modo nuevo. Un turno del
 // registro, de N1 a N5 o incierto, no sigue en estático (RF-EST-8), así que
 // el paso a estático, o el fin de un envío con la app ya estática, vuelve a
-// E1 sin respuesta del alumno. Sin red, con la bienvenida real y con datos
-// inventados.
+// E1 sin respuesta del alumno. Las dos últimas pruebas comprueban que una
+// bienvenida ya no sigue el modo después de su prueba. Sin red, con la
+// bienvenida real y con datos inventados.
 // Archivos probados lib/configs/modo_estatico.dart,
 // lib/pages/splash/interruptor_remoto.dart,
 // lib/pages/bienvenida/bienvenida_controller.dart,
@@ -293,6 +294,42 @@ void main() {
       expect(b.controlador.turno.value, _T.e1Codigo);
       expect(b.controlador.registro, isNull);
       expect(b.deUlises.last, TextosDeLaBienvenida.e1);
+    });
+  });
+
+  // ModoEstatico.cambios es estática y vive todo el isolate, y Get.reset no
+  // cierra los controladores, así que el arnés cierra cada bienvenida al
+  // terminar su prueba. Estas dos pruebas van juntas y en este orden: la
+  // primera deja una bienvenida en N1 y la segunda fija el modo sin
+  // bienvenida propia.
+  group('el arnés · una bienvenida no sigue el modo después de su prueba', () {
+    Bienvenida? deLaPruebaAnterior;
+
+    test(
+      'una prueba deja su bienvenida en N1 con el registro abierto',
+      () async {
+        final b = Bienvenida();
+        await b.visitar();
+        b.controlador.responderAlSaludo(yaUsa: false);
+        expect(b.controlador.turno.value, _T.n1Codigo);
+        expect(b.controlador.registro, isNotNull);
+        deLaPruebaAnterior = b;
+      },
+    );
+
+    test('el paso a estático de la prueba siguiente no la toca', () async {
+      final anterior = deLaPruebaAnterior;
+      expect(
+        anterior,
+        isNotNull,
+        reason: 'corre justo después de la prueba anterior del grupo',
+      );
+      final entradas = anterior!.controlador.entradas.length;
+      await _elBackendResponde(estatico: true);
+      expect(ModoEstatico.activo, isTrue);
+      expect(anterior.controlador.turno.value, _T.n1Codigo);
+      expect(anterior.controlador.entradas, hasLength(entradas));
+      expect(anterior.controlador.isClosed, isTrue);
     });
   });
 }
