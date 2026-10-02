@@ -41,6 +41,7 @@ vez por arranque, después de que la capa de arranque termina, en segundo plano 
 5 s. La consulta corre solo en Android y solo si la build trae `APP_VERSION`; en web, iOS y builds
 de desarrollo no ocurre nada.
 
+`[@test] ../../../test/aviso_version/aviso_version_service_test.dart`
 
 ### RF-AVV-2. Comparación SemVer
 
@@ -56,10 +57,14 @@ aparece un diálogo con el estilo de los diálogos existentes, título «Hay una
 «ULima++ {publicada} ya está disponible. Tienes la {instalada}.» y los botones «Más tarde» y
 «Descargar».
 
+`[@test] ../../../test/aviso_version/aviso_version_service_test.dart`
+
 ### RF-AVV-4. Más tarde
 
 «Más tarde» guarda la versión publicada en `shared_preferences` con la clave
 `aviso_version_pospuesta` y cierra el diálogo. El aviso vuelve solo con una versión mayor.
+
+`[@test] ../../../test/aviso_version/aviso_version_service_test.dart`
 
 ### RF-AVV-5. Descargar
 
@@ -71,6 +76,9 @@ actualizó.
 
 Sin red, con un tiempo de espera vencido, una respuesta distinta de 200, un JSON mal formado o una
 versión inválida, la app no muestra nada ni registra un error visible.
+
+`[@test] ../../../test/aviso_version/aviso_version_service_test.dart`
+`[@test] ../../../test/aviso_version/version_publicada_test.dart`
 
 ### RF-AVV-7. version.json en cada versión nueva
 
