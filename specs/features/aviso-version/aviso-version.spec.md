@@ -42,6 +42,7 @@ vez por arranque, después de que la capa de arranque termina, en segundo plano 
 de desarrollo no ocurre nada.
 
 `[@test] ../../../test/aviso_version/aviso_version_service_test.dart`
+`[@test] ../../../test/aviso_version/aviso_version_arranque_test.dart`
 
 ### RF-AVV-2. Comparación SemVer
 
@@ -116,8 +117,12 @@ Estas decisiones completan los requisitos sin cambiarlos.
   de la capa (RF-SPL-20). La consulta empieza la primera vez que la capa pasa de cubrir la pantalla
   a no cubrirla, y no vuelve a empezar cuando el paso al horario de la bienvenida la usa de nuevo.
   `main()` crea el enganche solo en la rama móvil, después de `runApp`, así que web no lo monta.
-- El enganche no registra nada cuando `APP_VERSION` viene vacía ni cuando la plataforma no es
-  Android. Un APK de desarrollo y un iPhone nunca piden `version.json`.
+- El enganche no registra nada cuando la build no trae una `APP_VERSION` válida, que en desarrollo
+  viene vacía, ni cuando la plataforma no es Android. Un APK de desarrollo y un iPhone nunca piden
+  `version.json`.
+- El diálogo sale sobre el contexto del navegador de GetX que haya cuando llega la respuesta, y
+  solo si ese contexto sigue montado. Si el contexto no existe, ya no está montado o el diálogo no
+  se puede abrir, no pasa nada.
 - `version.json` es válido cuando `version` es una cadena `X.Y.Z`, `build` es un entero no
   negativo y `url` es una URL `https` absoluta con servidor. Con cualquier otro valor se aplica
   RF-AVV-6.
@@ -134,8 +139,9 @@ Las pruebas viven en `test/aviso_version/`. Cubren el comparador (mayor, menor, 
 contra `1.9.0` e inválidas), el servicio con `http` simulado (respuesta correcta, 404, JSON roto,
 versión inválida y tiempo vencido), la decisión (sin versión instalada, publicada igual o menor,
 pospuesta igual o mayor), el diálogo (los dos botones, la clave guardada y la URL abierta por una
-función simulada) y el enganche (una sola consulta, después de la capa, sin consulta con la
-versión instalada vacía).
+función simulada y por el canal de `url_launcher` simulado) y el enganche (una sola consulta,
+después de que la capa real se retira, sin consulta con la versión instalada vacía ni fuera de
+Android).
 
 ## Entrega
 
