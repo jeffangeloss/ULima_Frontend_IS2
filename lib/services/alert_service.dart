@@ -3,12 +3,19 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
+import '../configs/modo_estatico.dart';
 import '../models/alert_model.dart';
 import 'api_client.dart';
 import 'auth_service.dart';
 
 class AlertService extends GetxService {
   static AlertService get to => Get.find();
+
+  /// Comienzo del título de las alertas que el backend crea con la asistencia
+  /// leída de miUlima (`attendance-risk.service.ts`). En modo estático no se
+  /// muestran (RF-EST-10).
+  static const String prefijoAlertaDeInasistencias =
+      'Alerta de inasistencias - ';
 
   final ApiClient _api = ApiClient();
   final RxList<AlertModel> _alerts = <AlertModel>[].obs;
@@ -34,9 +41,20 @@ class AlertService extends GetxService {
     try {
       final response = await _api.getJson('/alerts/me');
       final List<dynamic> listRaw = response['alerts'] ?? [];
-      final List<AlertModel> loadedAlerts = listRaw.map((item) {
-        return AlertModel.fromJson(Map<String, dynamic>.from(item as Map));
-      }).toList();
+      final List<AlertModel> loadedAlerts = listRaw
+          .map((item) {
+            return AlertModel.fromJson(Map<String, dynamic>.from(item as Map));
+          })
+          // La versión estática oculta el riesgo de asistencia en toda
+          // pantalla (RF-EST-10), también el que el servidor ya guardó. El
+          // filtro vive aquí para que la campana, el contador y el buzón lo
+          // compartan.
+          .where(
+            (a) =>
+                !ModoEstatico.activo ||
+                !a.title.startsWith(prefijoAlertaDeInasistencias),
+          )
+          .toList();
       _alerts.assignAll(loadedAlerts);
     } catch (e) {
       debugPrint('Error fetching alerts: $e');

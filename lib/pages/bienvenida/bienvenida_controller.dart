@@ -11,6 +11,7 @@ import 'dart:async';
 import 'package:flutter/services.dart' show TextInput;
 import 'package:get/get.dart';
 
+import '../../configs/modo_estatico.dart';
 import '../../domain/bienvenida/bienvenida_turnos.dart';
 import '../../models/specialty_test_models.dart';
 import '../../services/auth_service.dart';
@@ -318,8 +319,11 @@ class BienvenidaController extends GetxController {
       entradas.add(BurbujaDeUlises(id: _id(), texto: TextosB.saludo));
       entradas.add(BurbujaDeUlises(id: _id(), texto: TextosB.pregunta));
     }
-    _responder(yaUsa ? TextosB.siEntrar : TextosB.soyNuevo);
-    if (yaUsa) {
+    // La versión estática no tiene registro: «Soy nuevo» no existe y toda
+    // respuesta entra por el inicio de sesión (RF-EST-8).
+    final entra = yaUsa || ModoEstatico.activo;
+    _responder(entra ? TextosB.siEntrar : TextosB.soyNuevo);
+    if (entra) {
       _abrirE1();
     } else {
       _abrirN1();
@@ -426,6 +430,7 @@ class BienvenidaController extends GetxController {
   /// «Soy nuevo» en E1 o en E2. Lo escrito no pasa de una rama a la otra.
   /// Mientras se espera un login, el compositor no responde (BR-AUTH-F-08).
   void soyNuevo() {
+    if (ModoEstatico.activo) return;
     final t = turno.value;
     if (t != TurnoB.e1Codigo && t != TurnoB.e2Contrasena) return;
     if (esperando.value) return;

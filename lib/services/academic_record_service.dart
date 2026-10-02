@@ -133,7 +133,11 @@ class AcademicRecordService extends GetxService {
   /// `DELETE /academic-record/me`. Si falla, lanza [AcademicRecordFailure]
   /// con [deleteErrorMessage] y el récord no cambia. Si sale bien, [record]
   /// pasa al instante a [AcademicRecord.empty] y se recarga para confirmarlo.
-  Future<void> deleteRecord() async {
+  ///
+  /// Con [recargar] en false no vuelve a pedir `GET /academic-record/me`. La
+  /// versión estática lo usa desde el Perfil, donde el récord está oculto y no
+  /// se consulta (RF-EST-10).
+  Future<void> deleteRecord({bool recargar = true}) async {
     final user = AuthService.to.currentUser;
     if (user == null || user.isTeacher) return;
     try {
@@ -153,6 +157,7 @@ class AcademicRecordService extends GetxService {
     _record.value = AcademicRecord.empty;
     _hasError.value = false;
     _loading.value = false;
+    if (!recargar) return;
     // load() nunca lanza: si esta recarga falla, record sigue siendo
     // AcademicRecord.empty (no null) y la pantalla se queda en el estado vacío.
     await load(force: true);

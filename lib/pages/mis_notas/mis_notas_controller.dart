@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 
+import '../../configs/modo_estatico.dart';
 import '../../domain/notas/notas_calculo.dart' as notas_calculo;
 import '../../domain/recarga_ulima/avisos_recarga.dart';
 import '../../models/recarga_ulima_models.dart';
@@ -14,10 +15,13 @@ class MisNotasController extends GetxController {
   MisNotasController({
     RecargaUlimaService? servicio,
     EvaluationSyllabusService? silabo,
-  }) : _servicio = servicio ?? RecargaUlimaService.to,
+  }) : _servicio =
+           servicio ??
+           (ModoEstatico.activo ? null : RecargaUlimaService.to),
        _silabo = silabo ?? EvaluationSyllabusService();
 
-  final RecargaUlimaService _servicio;
+  /// Es null en la versión estática, que no registra el servicio (RF-EST-9).
+  final RecargaUlimaService? _servicio;
   final EvaluationSyllabusService _silabo;
 
   final isLoading = false.obs;
@@ -26,13 +30,13 @@ class MisNotasController extends GetxController {
   /// vacía si el sílabo no carga, y entonces las filas van sin prefijo.
   final siglas = <String, String>{}.obs;
 
-  VistaUlima? get vista => _servicio.vista;
-  AvisoRecarga? get aviso => _servicio.ultimoAviso;
-  bool get errorCarga => _servicio.errorCarga;
+  VistaUlima? get vista => _servicio?.vista;
+  AvisoRecarga? get aviso => _servicio?.ultimoAviso;
+  bool get errorCarga => _servicio?.errorCarga ?? false;
 
   /// El último resultado no trae las notas de [curso] como leídas.
   bool sinLectura(CursoUlima curso) =>
-      _servicio.sinLecturaDeNotas(curso.sectionId);
+      _servicio?.sinLecturaDeNotas(curso.sectionId) ?? false;
 
   @override
   void onInit() {
@@ -42,9 +46,12 @@ class MisNotasController extends GetxController {
 
   /// Consulta solo a ULima++, nunca entra a miUlima.
   Future<void> load() async {
+    final servicio = _servicio;
+    // Sin servicio no hay notas de la ULima que pedir (RF-EST-9).
+    if (servicio == null) return;
     isLoading.value = true;
     try {
-      await Future.wait([_servicio.cargar(), _cargarSiglas()]);
+      await Future.wait([servicio.cargar(), _cargarSiglas()]);
     } finally {
       isLoading.value = false;
     }

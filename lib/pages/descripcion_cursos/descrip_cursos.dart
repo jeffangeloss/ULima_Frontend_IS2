@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../components/recarga_ulima/pie_asistencia.dart';
+import '../../configs/modo_estatico.dart';
 import '../../configs/themes.dart';
 import '../../models/seccion_model.dart';
 import '../../services/chat_repository.dart';
@@ -48,7 +49,8 @@ class DescripCursosPage extends StatelessWidget {
 
   /// La recarga desde la ULima solo se monta con su servicio registrado
   /// (RF-RCG-8). Sin él, el bloque queda como antes de la recarga.
-  bool get _conRecarga => Get.isRegistered<RecargaUlimaService>();
+  bool get _conRecarga =>
+      !ModoEstatico.activo && Get.isRegistered<RecargaUlimaService>();
 
   Future<void> _recargarSeccion() => control.recargarSeccion(idSeccion);
 
@@ -160,6 +162,9 @@ class DescripCursosPage extends StatelessWidget {
   }
 
   Widget _asistencia(BuildContext context, Seccion seccion) {
+    // Las horas de asistencia vienen de miUlima. La versión estática no las
+    // muestra, ni el pie con la última lectura (RF-EST-10).
+    if (ModoEstatico.activo) return const SizedBox.shrink();
     ColorScheme colors = Theme.of(context).colorScheme;
 
     int asistido = seccion.asistido;
