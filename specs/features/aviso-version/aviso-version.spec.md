@@ -93,10 +93,14 @@ con
 (`gh release upload latest version.json --clobber`). Un build sin cambio de versión no toca el
 archivo.
 
+`[@test] ../../../test/aviso_version/aviso_version_workflow_test.dart`
+
 ### RF-AVV-8. APP_VERSION en la compilación
 
 `build-apk.yml` compila con `--dart-define=APP_VERSION=X.Y.Z`, tomado del mismo paso que ya lee la
 versión de `pubspec.yaml`.
+
+`[@test] ../../../test/aviso_version/aviso_version_workflow_test.dart`
 
 ## Piezas
 
@@ -139,9 +143,10 @@ Las pruebas viven en `test/aviso_version/`. Cubren el comparador (mayor, menor, 
 contra `1.9.0` e inválidas), el servicio con `http` simulado (respuesta correcta, 404, JSON roto,
 versión inválida y tiempo vencido), la decisión (sin versión instalada, publicada igual o menor,
 pospuesta igual o mayor), el diálogo (los dos botones, la clave guardada y la URL abierta por una
-función simulada y por el canal de `url_launcher` simulado) y el enganche (una sola consulta,
+función simulada y por el canal de `url_launcher` simulado), el enganche (una sola consulta,
 después de que la capa real se retira, sin consulta con la versión instalada vacía ni fuera de
-Android).
+Android) y `build-apk.yml`, que se lee como texto y cuyo paso de publicación corre con bash y un
+`gh` falso, para comprobar el `version.json` que sube y que la app lo lee.
 
 ## Entrega
 

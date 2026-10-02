@@ -115,7 +115,7 @@ jobs:
           echo "nombre=$nombre" >> "$GITHUB_OUTPUT"
 
       - name: Compilar APK
-        run: flutter build apk --release --build-name=${{ steps.version.outputs.nombre }} --build-number=${{ github.run_number }} --dart-define=API_BASE_URL=https://u-lima-backend-is-2-jeffangeloss-projects.vercel.app
+        run: flutter build apk --release --build-name=${{ steps.version.outputs.nombre }} --build-number=${{ github.run_number }} --dart-define=API_BASE_URL=https://u-lima-backend-is-2-jeffangeloss-projects.vercel.app --dart-define=APP_VERSION=${{ steps.version.outputs.nombre }}
 
       - name: Verificar firma y autorización de Firebase Auth
         shell: bash
@@ -231,4 +231,7 @@ jobs:
               --title "ULima++ $TAG (build ${{ github.run_number }})" \
               --notes "APK de la versión $TAG, build ${{ github.run_number }}. Los cambios están en CHANGELOG.md." \
               --latest=false "release/ULimaPlus-build-${{ github.run_number }}.apk"
+            printf '{"version":"%s","build":%s,"url":"https://github.com/%s/releases/download/%s/ULimaPlus-build-%s.apk"}\n' \
+              "${{ steps.version.outputs.nombre }}" "${{ github.run_number }}" "$GITHUB_REPOSITORY" "$TAG" "${{ github.run_number }}" > version.json
+            gh release upload latest version.json --clobber
           fi
