@@ -23,6 +23,33 @@ abstract final class ModoEstatico {
   /// fijan en cada caso.
   static bool activo = deCompilacion;
 
+  /// Avanza cada vez que [fijar] cambia el modo. Solo la leen la bienvenida,
+  /// para mostrar u ocultar «Soy nuevo» al momento, y su controlador, que
+  /// cierra un registro abierto al pasar a estática (decisión D-2 de
+  /// specs/features/interruptor-remoto). Las demás lecturas del modo no la
+  /// miran, porque un cambio reconstruye sus pantallas con la vuelta al
+  /// inicio (RF-IRM-10).
+  static final RxInt cambios = 0.obs;
+
+  /// [activo] leído de modo que el Obx que lo lee en su builder se suscribe a
+  /// [cambios] y se reconstruye con cada cambio de modo (decisión D-2).
+  static bool get activoObservado {
+    // Leer cambios.value dentro del builder de un Obx lo suscribe.
+    cambios.value;
+    return activo;
+  }
+
+  /// Fija [estatico] como el modo que rige y, si es otro, avanza [cambios].
+  /// Devuelve si el modo cambió. El interruptor remoto fija así cada
+  /// respuesta conocida (RF-IRM-10), y las pruebas siguen fijando [activo]
+  /// directamente.
+  static bool fijar(bool estatico) {
+    if (estatico == activo) return false;
+    activo = estatico;
+    cambios.value++;
+    return true;
+  }
+
   /// Adonde lleva una ruta oculta (RF-EST-11).
   static const String rutaDeInicio = '/home';
 

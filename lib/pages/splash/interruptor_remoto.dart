@@ -156,11 +156,13 @@ class InterruptorRemoto with WidgetsBindingObserver {
       _enCurso ??= _servicio.consultar().whenComplete(() => _enCurso = null);
 
   /// Fija y guarda una respuesta conocida, sin navegar, y dice si cambió el
-  /// modo. Una respuesta desconocida no cambia nada (RF-IRM-7 y RF-IRM-10).
+  /// modo. La fija con ModoEstatico.fijar, que ante un cambio avanza
+  /// ModoEstatico.cambios, así que la bienvenida abierta muestra u oculta
+  /// «Soy nuevo» al momento (decisión D-2). Una respuesta desconocida no
+  /// cambia nada (RF-IRM-7 y RF-IRM-10).
   Future<bool> _fijar(bool? respuesta) async {
     if (respuesta == null) return false;
-    final cambia = respuesta != ModoEstatico.activo;
-    ModoEstatico.activo = respuesta;
+    final cambia = ModoEstatico.fijar(respuesta);
     await _servicio.guardar(respuesta);
     return cambia;
   }

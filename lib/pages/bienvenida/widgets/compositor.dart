@@ -872,8 +872,10 @@ class _E1 extends StatelessWidget {
             BotonDeGoogle(
               alTocar: c.esperando.value ? null : c.entrarConGoogle,
             ),
-          // La versión estática no tiene registro (RF-EST-8).
-          if (!ModoEstatico.activo)
+          // La versión estática no tiene registro (RF-EST-8). Se lee con
+          // activoObservado, en el alcance de este Obx, para que un cambio de
+          // modo muestre u oculte el enlace al momento (decisión D-2).
+          if (!ModoEstatico.activoObservado)
             EnlaceSecundario(texto: _Textos.soyNuevo, alTocar: c.soyNuevo),
         ],
       ),
@@ -946,8 +948,10 @@ class _E2 extends StatelessWidget {
             alTocar: c.abrirOlvido,
             apagado: true,
           ),
-          // La versión estática no tiene registro (RF-EST-8).
-          if (!ModoEstatico.activo)
+          // La versión estática no tiene registro (RF-EST-8). Se lee con
+          // activoObservado, en el alcance de este Obx, para que un cambio de
+          // modo muestre u oculte el enlace al momento (decisión D-2).
+          if (!ModoEstatico.activoObservado)
             EnlaceSecundario(texto: _Textos.soyNuevo, alTocar: c.soyNuevo),
         ],
       );
@@ -976,22 +980,28 @@ Widget? compositorDelTurno(
   TurnoDeLaBienvenida.resultado => CompositorDelTest(c: c, turno: turno),
   TurnoDeLaBienvenida.seleccionManual => SeleccionManual(c: c),
   // «Si no cabe», Ulises saluda ya en la conversación y la pregunta queda
-  // con sus respuestas rápidas (B-28).
+  // con sus respuestas rápidas (B-28). La página arma este compositor dentro
+  // de un LayoutBuilder, fuera del alcance de su Obx, así que las respuestas
+  // llevan un Obx propio, que lee el modo con activoObservado y muestra u
+  // oculta «Soy nuevo» al momento (decisión D-2 de
+  // specs/features/interruptor-remoto).
   TurnoDeLaBienvenida.recibimiento when c.saludoEnLaConversacion.value =>
-    RespuestasRapidas(
-      respuestas: [
-        RespuestaRapida(
-          texto: _Textos.siEntrar,
-          principal: true,
-          alTocar: () => c.responderAlSaludo(yaUsa: true),
-        ),
-        // La versión estática no tiene registro (RF-EST-8).
-        if (!ModoEstatico.activo)
+    Obx(
+      () => RespuestasRapidas(
+        respuestas: [
           RespuestaRapida(
-            texto: _Textos.soyNuevo,
-            alTocar: () => c.responderAlSaludo(yaUsa: false),
+            texto: _Textos.siEntrar,
+            principal: true,
+            alTocar: () => c.responderAlSaludo(yaUsa: true),
           ),
-      ],
+          // La versión estática no tiene registro (RF-EST-8).
+          if (!ModoEstatico.activoObservado)
+            RespuestaRapida(
+              texto: _Textos.soyNuevo,
+              alTocar: () => c.responderAlSaludo(yaUsa: false),
+            ),
+        ],
+      ),
     ),
   TurnoDeLaBienvenida.recibimiento ||
   TurnoDeLaBienvenida.llegadaConSesion ||

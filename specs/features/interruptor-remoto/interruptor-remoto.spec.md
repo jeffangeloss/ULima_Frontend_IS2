@@ -110,6 +110,8 @@ porque la versión estática no tiene registro (RF-EST-8 y decisión D-2). Sin n
 fijado y la primera pantalla que se construya ya lo lee.
 
 `[@test] ../../../test/interruptor_remoto/cambio_de_modo_test.dart`
+`[@test] ../../../test/interruptor_remoto/senal_del_modo_test.dart`
+`[@test] ../../../test/interruptor_remoto/bienvenida_al_momento_test.dart`
 
 ### RF-IRM-11. El récord y la recarga, siempre registrados
 
