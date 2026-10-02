@@ -79,7 +79,7 @@ Para publicar una versión nueva se siguen estos pasos.
    El PR se fusiona con merge commit, y no con squash ni rebase, para que `develop` siga siendo
    ancestro de `main` y el paso 6 sea un fast-forward.
 5. Esperar a que `build-apk.yml` termine en meltiruiz y comprobar que el release `vX.Y.Z` aparece con
-   el archivo `ULimaPlus-build-<n>.apk` adjunto.
+   el archivo `ULimaPlus-build-<n>.apk` adjunto. Luego confirmar que https://github.com/meltiruiz/ULima_Frontend_IS2/releases/download/latest/version.json muestra la nueva versión; si no es así (falló la carga o un push más reciente canceló la ejecución), regenerar `version.json` con el mismo printf del archivo `.github/workflows/build-apk.yml` y ejecutar `gh release upload latest version.json --clobber -R meltiruiz/ULima_Frontend_IS2`.
 6. Igualar `main` y `develop` del fork con meltiruiz.
 
    ```bash
