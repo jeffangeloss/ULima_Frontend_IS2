@@ -62,6 +62,11 @@ en cada caso y lo restauran al terminar.
 
 `[@test] ../../../test/modo_estatico/modo_estatico_test.dart`
 
+> Enmienda de RF-IRM-12 (spec `interruptor-remoto`, 2026-10-02). El valor de `--dart-define` pasa a
+> ser el respaldo de fábrica, `ModoEstatico.deCompilacion`. `ModoEstatico.activo` arranca en él y lo
+> fija el interruptor remoto con lo que responde `GET /config`. `modo_estatico.dart` sigue siendo el
+> único lector de la variable.
+
 ### RF-EST-8. La bienvenida solo ofrece iniciar sesión
 
 En modo estático la bienvenida no ofrece «Soy nuevo» ni ningún paso que pida credenciales de
@@ -81,6 +86,11 @@ inicio y `_CargarDesdeMiUlimaCard` del Perfil) y la recarga de notas y asistenci
 
 `[@test] ../../../test/modo_estatico/arranque_estatico_test.dart`
 `[@test] ../../../test/modo_estatico/inicio_y_perfil_estaticos_test.dart`
+
+> Enmienda de RF-IRM-11 (spec `interruptor-remoto`, 2026-10-02). `registrarLosServicios` registra
+> `AcademicRecordService` y `RecargaUlimaService` en los dos modos, sin peticiones al registrarse, de
+> modo que el paso de estático a normal no deja ningún `Get.find` sin servicio. El resto de la regla
+> sigue vigente.
 
 ### RF-EST-10. Los datos oficiales de la ULima no se muestran
 
@@ -109,6 +119,12 @@ en `/mi-record`.
 `[@test] ../../../test/modo_estatico/riesgo_de_asistencia_estatico_test.dart`
 `[@test] ../../../test/modo_estatico/alertas_estaticas_test.dart`
 `[@test] ../../../test/modo_estatico/borrar_record_estatico_test.dart`
+
+> Enmienda de RF-IRM-11 (spec `interruptor-remoto`, 2026-10-02). El arranque registra
+> `AcademicRecordService` en los dos modos, así que deja de valer que no se registra, como dice la
+> excepción RF-REC-5. El borrado del Perfil sigue sin mostrar el récord y sin pedir
+> `GET /academic-record/me`, y la calculadora, la ficha del curso y `/mis-notas` siguen sin pedir
+> `GET /grades/me/ulima` con `RecargaUlimaService` registrado.
 
 ### RF-EST-11. Las rutas ocultas llevan al inicio
 
@@ -153,7 +169,7 @@ con la versión 2.0.0 y el workflow sigue desactivado en el fork.
 |---|---|---|
 | interruptor | `lib/configs/modo_estatico.dart` | `ModoEstatico.activo`, la lista de rutas ocultas y `OcultaEnModoEstatico` |
 | rutas | `lib/main.dart` | pone el middleware a `/portal-sync`, `/mi-record` y `/mis-notas` |
-| arranque | `lib/pages/splash/carga_del_arranque.dart` | no registra los servicios del récord ni de la recarga |
+| arranque | `lib/pages/splash/carga_del_arranque.dart` | registra el récord y la recarga en los dos modos, sin peticiones (RF-IRM-11) |
 | bienvenida | `lib/pages/bienvenida/**` | sin «Soy nuevo» y sin entrada al registro |
 | inicio y Perfil | `lib/pages/home/**`, `lib/pages/perfil/perfil.dart` | sin banner, sin tarjeta de miUlima y sin tarjeta del récord |
 | notas | `lib/pages/calculadora/**`, `lib/pages/mis_notas/mis_notas_controller.dart` | calculadora simulada y `/mis-notas` sin servicio |
@@ -171,6 +187,8 @@ con la versión 2.0.0 y el workflow sigue desactivado en el fork.
   cambia de expectativa.
 - `registro_service.dart` y `api_client.dart` no cambian: el registro deja de ser alcanzable desde la
   interfaz y la exención 401 de `/auth/register` sigue sirviendo a las pruebas del modo apagado.
+  Enmienda de la decisión D-1 de la spec `interruptor-remoto` (2026-10-02). `api_client.dart` gana el
+  oyente estático `ApiClient.alResponderConCodigo`, que no cambia lo que devuelve ni lo que lanza.
 - El aviso de versión no depende del modo. `AvisoVersionArranque` se programa igual en `main()` y la
   ruta del splash no se toca, de modo que el arreglo del ticker en `dispose` del splash queda intacto.
 
