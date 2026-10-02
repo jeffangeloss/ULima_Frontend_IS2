@@ -48,6 +48,27 @@ class ApiClient {
   );
   final String _configuredBaseUrl;
 
+  /// Quien escucha los códigos de error del backend. main() instala aquí el
+  /// interruptor remoto, que pide el modo ante `PORTAL_DESACTIVADO` o
+  /// `REGISTRATION_UNAVAILABLE` (RF-IRM-9 y decisión D-1 de
+  /// specs/features/interruptor-remoto). Sin nadie no pasa nada, y lo que
+  /// ApiClient devuelve o lanza no cambia.
+  static void Function(String codigo)? alResponderConCodigo;
+
+  /// Avisa [codigo] a quien escucha. Un oyente que falla no cambia la
+  /// excepción de la petición.
+  static void _avisarCodigo(String codigo) {
+    final oyente = alResponderConCodigo;
+    if (oyente == null) return;
+    try {
+      oyente(codigo);
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint('ApiClient. El oyente de $codigo falló con $error');
+      }
+    }
+  }
+
   String get baseUrl {
     if (_configuredBaseUrl.trim().isNotEmpty) {
       return _sanitizeBaseUrl(_configuredBaseUrl);
@@ -224,9 +245,11 @@ class ApiClient {
 
     final error = json['error'];
     if (error is Map) {
+      final codigo = error['code']?.toString() ?? 'HTTP_ERROR';
+      _avisarCodigo(codigo);
       throw ApiException(
         statusCode: response.statusCode,
-        code: error['code']?.toString() ?? 'HTTP_ERROR',
+        code: codigo,
         message: error['message']?.toString() ?? 'Error del servidor',
         details: error['details'],
       );

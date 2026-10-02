@@ -89,6 +89,7 @@ del arranque. Hay a lo sumo una consulta en curso, y mientras el arranque espera
 cualquier disparador (decisión D-3).
 
 `[@test] ../../../test/interruptor_remoto/cambio_de_modo_test.dart`
+`[@test] ../../../test/interruptor_remoto/disparadores_test.dart`
 
 ### RF-IRM-10. El cambio de modo
 

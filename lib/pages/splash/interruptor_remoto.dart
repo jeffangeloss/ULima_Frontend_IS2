@@ -9,9 +9,11 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
 import '../../configs/modo_estatico.dart';
+import '../../services/api_client.dart';
 import '../../services/auth_service.dart';
 import '../../services/modo_remoto_service.dart';
 import '../../services/post_login_route.dart';
@@ -19,7 +21,7 @@ import '../../services/session_navigation.dart';
 import '../home/home_page.dart' show abrirEnHorario;
 import 'estado_de_la_capa.dart';
 
-class InterruptorRemoto {
+class InterruptorRemoto with WidgetsBindingObserver {
   /// Todo se inyecta para las pruebas. En la app, el servicio toma la URL de
   /// `API_BASE_URL` y la señal es la de la capa del arranque.
   InterruptorRemoto({
@@ -30,13 +32,24 @@ class InterruptorRemoto {
 
   static InterruptorRemoto? _actual;
 
+  /// El que escucha los disparadores, o null si nadie escucha.
+  static InterruptorRemoto? _escuchando;
+
   /// El interruptor de la app. main() lo pone a escuchar y cargarElArranque
   /// lo usa cuando nadie le pasa otro.
   static InterruptorRemoto get actual => _actual ??= InterruptorRemoto();
 
-  /// Deja la clase como al empezar, para que cada prueba parta de cero.
+  /// Los códigos de error del backend que delatan otro modo (RF-IRM-9).
+  static const Set<String> codigosQueConsultan = <String>{
+    'PORTAL_DESACTIVADO',
+    'REGISTRATION_UNAVAILABLE',
+  };
+
+  /// Deja la clase como al empezar, sin nadie que escuche, para que cada
+  /// prueba parta de cero.
   @visibleForTesting
   static void reiniciar() {
+    _escuchando?.dejarDeEscuchar();
     _actual = null;
   }
 
@@ -52,6 +65,34 @@ class InterruptorRemoto {
   Future<void> consultar() async {
     if (_enCurso != null) return;
     await _recibir(await _pedir());
+  }
+
+  /// Desde aquí piden el modo cada vuelta a primer plano y cada respuesta de
+  /// ApiClient con uno de [codigosQueConsultan] (RF-IRM-9 y decisión D-1).
+  /// main() lo llama una vez. Si otro interruptor escuchaba, deja de hacerlo.
+  void escuchar() {
+    _escuchando?.dejarDeEscuchar();
+    WidgetsBinding.instance.addObserver(this);
+    ApiClient.alResponderConCodigo = alCodigoDelBackend;
+    _escuchando = this;
+  }
+
+  /// Apaga los dos disparadores de este interruptor.
+  void dejarDeEscuchar() {
+    WidgetsBinding.instance.removeObserver(this);
+    if (!identical(_escuchando, this)) return;
+    ApiClient.alResponderConCodigo = null;
+    _escuchando = null;
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) unawaited(consultar());
+  }
+
+  /// El oyente de ApiClient. Solo los códigos del modo piden el modo.
+  void alCodigoDelBackend(String codigo) {
+    if (codigosQueConsultan.contains(codigo)) unawaited(consultar());
   }
 
   Future<bool?> _pedir() =>
