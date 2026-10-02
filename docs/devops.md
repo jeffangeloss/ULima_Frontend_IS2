@@ -41,7 +41,9 @@ La versión vive en `pubspec.yaml` como `version: X.Y.Z+1`. El sufijo `+1` no se
 workflow lee `X.Y.Z` de `pubspec.yaml` y compila con `--build-name=X.Y.Z` y con el número de ejecución
 como `--build-number`. Después actualiza el release `latest` como antes y, si el release `vX.Y.Z` no
 existe, lo crea con el APK adjunto y sin marcarlo como el último. Un push a `main` que no sube `version`
-actualiza solo `latest`, porque `vX.Y.Z` ya existe.
+actualiza solo `latest`, porque `vX.Y.Z` ya existe. Si la línea `version:` no trae `X.Y.Z`, el workflow
+falla antes de compilar con un `::error::` que lo dice. El release `vX.Y.Z` solo se crea cuando el
+workflow corre sobre `main`, de modo que un disparo manual desde otra rama no publica versiones.
 
 Para publicar una versión nueva se siguen estos pasos.
 
@@ -55,7 +57,9 @@ Para publicar una versión nueva se siguen estos pasos.
 
 2. Subir `version` en `pubspec.yaml` a `X.Y.Z+1` y agregar al `CHANGELOG.md` una sección
    `## [X.Y.Z] - <fecha>` con la fecha de publicación (año, mes y día) y lo que cambia desde la
-   versión anterior.
+   versión anterior, más la línea de enlace al pie del archivo,
+   `[X.Y.Z]: https://github.com/meltiruiz/ULima_Frontend_IS2/compare/vA.B.C...vX.Y.Z`, donde `vA.B.C`
+   es el tag de la versión anterior.
 3. Subir la rama, abrir un PR a `develop`, esperar el check `pruebas` en verde y fusionarlo.
 4. Abrir el PR de versión hacia producción, titulado «Versión X.Y.Z», con la sección del
    `CHANGELOG.md` como cuerpo.
@@ -77,9 +81,10 @@ Para publicar una versión nueva se siguen estos pasos.
    git push origin upstream/main:develop
    ```
 
-   El segundo push es un fast-forward mientras `develop` no tenga commits que `main` no tiene. Si ya
-   los tiene, el push se rechaza y no se fuerza. Entonces `main` entra a `develop` por un merge dentro
-   de un PR `chore/sync-main`.
+   El segundo push escribe en una rama protegida y funciona por el bypass de administrador del dueño
+   (`enforce_admins` en `false`), así que solo el dueño lo hace. Es un fast-forward mientras `develop`
+   no tenga commits que `main` no tiene. Si ya los tiene, el push se rechaza y no se fuerza. Entonces
+   `main` entra a `develop` por un merge dentro de un PR `chore/sync-main`.
 
 ## Hotfix
 
@@ -128,8 +133,17 @@ flutter test
 La CI y el APK compilan con Flutter 3.44.2 del canal stable. El valor está en `flutter-version` de
 `ci.yml` y de `build-apk.yml`, ambos con la acción `subosito/flutter-action@v2`. Subir la versión es un
 cambio de un PR propio que edita los dos archivos a la vez, para que las pruebas y el APK usen siempre
-la misma. Un Flutter local de otra versión da resultados orientativos, porque el análisis puede
-reportar avisos distintos, y la CI manda.
+la misma.
+
+Hay una deuda abierta con esta versión. `pubspec.lock` está escrito con un Flutter más nuevo que el
+3.44.2 (el local es 3.47.2), y con 3.44.2 `flutter pub get` cambia `matcher` (0.12.20 a 0.12.19),
+`meta` (1.19.0 a 1.18.0), `test_api` (0.7.12 a 0.7.11) y `vector_math` (2.4.2 a 2.2.0), que el kit de
+desarrollo (SDK) de Flutter fija por debajo de las del lock, de modo que la CI imprime «Changed 4
+dependencies!». El cambio queda en el workspace de la ejecución y no se versiona. Para cerrar la
+deuda, todo el equipo fija Flutter 3.44.2 en su máquina, por ejemplo con FVM (Flutter Version
+Management) y un `.fvmrc` en la raíz, o la CI y `build-apk.yml` suben juntos a una versión más nueva.
+Mientras tanto, los resultados locales con otra versión son solo orientativos, porque el análisis
+puede reportar avisos distintos y las dependencias resueltas difieren, y la CI manda.
 
 ## Build de depuración contra pruebas
 

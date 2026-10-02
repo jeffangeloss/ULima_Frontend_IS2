@@ -1,4 +1,4 @@
-# Changelog
+# Registro de cambios
 
 Este archivo reúne los cambios relevantes de la app ULima++. Su formato sigue
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y las versiones siguen
@@ -6,7 +6,7 @@ Este archivo reúne los cambios relevantes de la app ULima++. Su formato sigue
 `meltiruiz/ULima_Frontend_IS2`, el repositorio de producción. El flujo de ramas y la forma de
 publicar una versión están en [`docs/devops.md`](docs/devops.md).
 
-## [1.1.0] - 2026-10-01
+## [1.1.0] - 2026-10-02
 
 ### Añadido
 
@@ -16,8 +16,8 @@ publicar una versión están en [`docs/devops.md`](docs/devops.md).
 - Rama `develop` del fork como rama de integración. Las ramas de trabajo salen de ella y vuelven por
   PR, y cada versión llega a `main` de meltiruiz con un PR de versión desde `jeffangeloss:develop`.
 - Release por versión. Después de publicar el release `latest`, `build-apk.yml` crea el release
-  `vX.Y.Z` con el instalador de Android (APK) adjunto si todavía no existe, sin marcarlo como el último
-  y sin tocar `latest`.
+  `vX.Y.Z` con el instalador de Android (APK) adjunto si todavía no existe y solo cuando corre sobre
+  `main`, sin marcarlo como el último y sin tocar `latest`.
 - `docs/devops.md`, con las ramas, la publicación de una versión, el hotfix, la integración continua, la
   versión de Flutter y la forma de apuntar una build de depuración al entorno de pruebas del backend.
 
@@ -29,6 +29,8 @@ publicar una versión están en [`docs/devops.md`](docs/devops.md).
   ejecución del workflow, que es el mismo que lleva el archivo `ULimaPlus-build-<n>.apk`.
 - El job `build-android` de `build-apk.yml` corre solo en `meltiruiz/ULima_Frontend_IS2`. El fork no
   compila ni publica APK aunque active el workflow.
+- `README.md` describe los dos workflows, la versión `1.1.0` y el número de build que fija la
+  integración continua, y ya no dice que esta no prueba nada.
 
 ## [1.0.0] - 2026-10-01
 
