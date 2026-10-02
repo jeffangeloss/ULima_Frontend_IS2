@@ -45,6 +45,13 @@ actualiza solo `latest`, porque `vX.Y.Z` ya existe. Si la línea `version:` no t
 falla antes de compilar con un `::error::` que lo dice. El release `vX.Y.Z` solo se crea cuando el
 workflow corre sobre `main`, de modo que un disparo manual desde otra rama no publica versiones.
 
+La compilación también recibe `--dart-define=APP_VERSION=X.Y.Z`, y la app usa ese valor como su
+versión instalada para avisar de una versión nueva, así que una build sin él, como las de desarrollo,
+no avisa. Al crear el release `vX.Y.Z`, el workflow sube además `version.json` (versión, número de
+build y dirección del APK) al release `latest` con `gh release upload latest version.json --clobber`,
+y la app lo lee para saber cuál es la última versión. Un push a `main` que no sube `version` no lo
+toca.
+
 Para publicar una versión nueva se siguen estos pasos.
 
 1. Crear la rama de versión desde `develop` actualizado.

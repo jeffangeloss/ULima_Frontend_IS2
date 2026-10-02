@@ -6,6 +6,29 @@ Este archivo reúne los cambios relevantes de la app ULima++. Su formato sigue
 `meltiruiz/ULima_Frontend_IS2`, el repositorio de producción. El flujo de ramas y la forma de
 publicar una versión están en [`docs/devops.md`](docs/devops.md).
 
+## [1.2.0] - 2026-10-02
+
+### Añadido
+
+- Aviso de versión nueva. Cuando termina la intro del arranque, la app de Android consulta
+  `version.json` en el release `latest`, en segundo plano y con un tope de 5 s. Si la versión
+  publicada es mayor que la instalada, un diálogo dice «Hay una versión nueva» y ofrece
+  «Descargar», que abre el APK nuevo, y «Más tarde», que guarda esa versión para que el aviso
+  vuelva solo con una mayor. Sin red, con una respuesta inválida, en web, en iOS y en builds de
+  desarrollo no pasa nada. La 1.1.0 no trae este código, así que quien la tiene instala la 1.2.0 a
+  mano una vez.
+- `build-apk.yml` publica `version.json` en el release `latest` cada vez que crea el release de una
+  versión nueva. El archivo lleva la versión, el número de build y la dirección del APK, y un push a
+  `main` sin cambio de versión no lo toca.
+
+### Cambiado
+
+- `pubspec.yaml` pasa a `version: 1.2.0+1`.
+- El APK conoce su versión instalada. `build-apk.yml` compila con `--dart-define=APP_VERSION=X.Y.Z`,
+  tomado del paso que ya lee la versión de `pubspec.yaml`, y la app lo compara con la versión
+  publicada.
+- `docs/devops.md` explica `version.json` y `APP_VERSION`.
+
 ## [1.1.0] - 2026-10-02
 
 ### Añadido
@@ -76,5 +99,6 @@ esta sección son de `meltiruiz/ULima_Frontend_IS2`.
 - Un bloque de horario sin ningún día real dentro de sus fechas ya no se guarda (#178).
 - El teclado ya no tapa la pregunta de Ulises en la bienvenida (#184).
 
+[1.2.0]: https://github.com/meltiruiz/ULima_Frontend_IS2/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/meltiruiz/ULima_Frontend_IS2/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/meltiruiz/ULima_Frontend_IS2/releases/tag/v1.0.0
