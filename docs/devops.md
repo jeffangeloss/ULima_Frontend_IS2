@@ -1,9 +1,11 @@
 # DevOps del front de ULima++
 
 Este documento explica cómo se ramifica, se integra y se publica la app Flutter de ULima++. Cubre las
-ramas, la publicación de una versión, el hotfix, la integración continua, la versión de Flutter y la
-forma de apuntar una build de depuración al entorno de pruebas del backend. Todo lo que hace falta para
-repetir esos pasos queda en este repo, en `.github/workflows/`, `pubspec.yaml` y `CHANGELOG.md`.
+ramas, la publicación de una versión, el hotfix, la integración continua (CI), la versión de Flutter y
+la forma de apuntar una build de depuración al entorno de pruebas del backend. Los cambios entran por
+pull request (PR), y el paquete de instalación de Android (APK) sale de un workflow de GitHub Actions.
+Todo lo que hace falta para repetir esos pasos queda en este repo, en `.github/workflows/`,
+`pubspec.yaml` y `CHANGELOG.md`.
 
 ## Ramas
 
@@ -31,8 +33,8 @@ persona.
 ## Publicar una versión
 
 Las versiones siguen SemVer y cada una lleva un tag `vX.Y.Z` en meltiruiz. El tag `v1.0.0` marca el
-estado de producción al 2026-10-01 (APK build 77, commit `2058957`). Una versión nueva sube PATCH para
-una corrección, MINOR para una función compatible y MAJOR para un cambio incompatible.
+estado de producción al 2026-10-01 (APK build 77, commit `2058957`). Una corrección sube el tercer
+número de la versión, una función compatible sube el segundo y un cambio incompatible sube el primero.
 
 La versión vive en `pubspec.yaml` como `version: X.Y.Z+1`. El sufijo `+1` no se toca, porque
 `build-apk.yml` fija el número de build con `--build-number`. En cada push a `main` de meltiruiz, el
@@ -51,8 +53,9 @@ Para publicar una versión nueva se siguen estos pasos.
    git switch -c chore/version-X.Y.Z
    ```
 
-2. Subir `version` en `pubspec.yaml` a `X.Y.Z+1` y agregar al `CHANGELOG.md` la sección
-   `## [X.Y.Z] - AAAA-MM-DD`, que describe lo que cambia desde la versión anterior.
+2. Subir `version` en `pubspec.yaml` a `X.Y.Z+1` y agregar al `CHANGELOG.md` una sección
+   `## [X.Y.Z] - <fecha>` con la fecha de publicación (año, mes y día) y lo que cambia desde la
+   versión anterior.
 3. Subir la rama, abrir un PR a `develop`, esperar el check `pruebas` en verde y fusionarlo.
 4. Abrir el PR de versión hacia producción, titulado «Versión X.Y.Z», con la sección del
    `CHANGELOG.md` como cuerpo.
@@ -90,11 +93,11 @@ el fork es igual a `upstream/main`.
    git switch -c hotfix/<descripcion> upstream/main
    ```
 
-2. Corregir el defecto, subir el PATCH de `version` en `pubspec.yaml` (de `1.1.0+1` a `1.1.1+1`, por
-   ejemplo) y agregar su sección al `CHANGELOG.md`.
+2. Corregir el defecto, subir el tercer número de `version` en `pubspec.yaml` (de `1.1.0+1` a
+   `1.1.1+1`, por ejemplo) y agregar su sección al `CHANGELOG.md`.
 3. Subir la rama con `git push origin hotfix/<descripcion>` y abrir el PR
-   `jeffangeloss:hotfix/<descripcion>` hacia `meltiruiz:main`, titulado «Versión X.Y.Z» con el PATCH
-   nuevo. Se fusiona con merge commit.
+   `jeffangeloss:hotfix/<descripcion>` hacia `meltiruiz:main`, titulado «Versión X.Y.Z» con la versión
+   nueva. Se fusiona con merge commit.
 4. Cuando `build-apk.yml` publica el release, igualar el fork con los tres comandos del paso 6 de la
    sección anterior. Si `develop` ya tiene commits propios, el hotfix vuelve a `develop` por el merge
    de `main` dentro de un PR `chore/sync-main`.
@@ -141,4 +144,4 @@ flutter run --dart-define=API_BASE_URL=<URL de develop del backend>
 
 La URL vigente está en la sección de entornos del `docs/devops.md` del backend
 (`jeffangeloss/ULima_Backend_IS2`). Una build `release` sin `API_BASE_URL` falla en la primera petición
-a propósito, así que ninguna build sale hacia un servidor que nadie eligió.
+a propósito, para que ninguna build apunte a un servidor por omisión.
