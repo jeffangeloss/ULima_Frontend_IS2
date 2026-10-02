@@ -58,6 +58,7 @@ aparece un diálogo con el estilo de los diálogos existentes, título «Hay una
 «Descargar».
 
 `[@test] ../../../test/aviso_version/aviso_version_service_test.dart`
+`[@test] ../../../test/aviso_version/aviso_version_dialog_test.dart`
 
 ### RF-AVV-4. Más tarde
 
@@ -65,12 +66,15 @@ aparece un diálogo con el estilo de los diálogos existentes, título «Hay una
 `aviso_version_pospuesta` y cierra el diálogo. El aviso vuelve solo con una versión mayor.
 
 `[@test] ../../../test/aviso_version/aviso_version_service_test.dart`
+`[@test] ../../../test/aviso_version/aviso_version_dialog_test.dart`
 
 ### RF-AVV-5. Descargar
 
 «Descargar» abre la URL del APK con `url_launcher` en modo aplicación externa y cierra el diálogo,
 sin guardar nada, de modo que el aviso reaparece en el siguiente arranque si la persona no
 actualizó.
+
+`[@test] ../../../test/aviso_version/aviso_version_dialog_test.dart`
 
 ### RF-AVV-6. Fallas en silencio
 
