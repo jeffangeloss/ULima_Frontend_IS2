@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../components/networking/networking_profile_entry_card.dart';
 import '../../configs/modo_estatico.dart';
 import '../../configs/themes.dart';
+import '../academic_record/borrar_record_estatico.dart';
 import '../academic_record/record_profile_card.dart';
 import '../specialty_test/specialty_test_logic.dart';
 import '../specialty_test/specialty_test_profile_card.dart';
@@ -57,6 +58,13 @@ class ProfilePage extends StatelessWidget {
                             const SizedBox(height: 16),
                             const _ConfigAcademicaSection(),
                             const SizedBox(height: 16),
+                            // La copia del récord sigue en el servidor aunque
+                            // la pantalla esté oculta: el alumno conserva el
+                            // derecho a borrarla (RF-REC-5 y RF-EST-10).
+                            if (ModoEstatico.activo) ...[
+                              const BorrarRecordEstatico(),
+                              const SizedBox(height: 16),
+                            ],
                           ],
                           const _SeguridadSection(),
                           const SizedBox(height: 28),

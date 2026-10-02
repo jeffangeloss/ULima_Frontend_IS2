@@ -10,6 +10,9 @@ targets:
   - ../../../lib/pages/home/home_controller.dart
   - ../../../lib/pages/home/home_page.dart
   - ../../../lib/pages/perfil/perfil.dart
+  - ../../../lib/pages/academic_record/borrar_record_estatico.dart
+  - ../../../lib/services/academic_record_service.dart
+  - ../../../lib/services/alert_service.dart
   - ../../../lib/pages/splash/carga_del_arranque.dart
   - ../../../lib/pages/calculadora/calculadora_controller.dart
   - ../../../lib/pages/calculadora/calculadora_page.dart
@@ -85,12 +88,27 @@ En modo estático se ocultan los datos oficiales que vinieron de la ULima. Son e
 y `RecordProfileCard`), las notas de la ULima (`/mis-notas` y las filas oficiales de la calculadora,
 que queda en modo simulado), el bloque de asistencia de la ficha del curso (`PieAsistencia` y la
 fecha de última lectura) y el riesgo de asistencia en toda pantalla donde aparezca, que son el botón
-con su contador en la ficha de sección del docente y `AtRiskStudentsPage`, sin ninguna petición a
+con su contador en la ficha de sección del docente, `AtRiskStudentsPage` y las alertas «Alerta de
+inasistencias - <curso>» que el backend creó con la asistencia leída de miUlima. Ninguna petición a
 `/attendance-risk/*`.
+
+`AlertService.fetchAlerts` descarta en modo estático las alertas cuyo título empieza por «Alerta de
+inasistencias - », de modo que ni la campana, ni el contador de sin leer, ni `/alertas` las muestran,
+aunque el servidor las siga guardando. Las demás alertas (promedio, alta carga) siguen como siempre.
+
+**Excepción a la ocultación, RF-REC-5.** La copia del récord que el alumno importó de miUlima sigue
+guardada en el servidor, así que el Perfil del alumno trae, en modo estático, el botón «Borrar mi
+récord de ULima++». Pide confirmación, llama a `DELETE /academic-record/me` sin mostrar el récord ni
+volver a pedirlo (`GET /academic-record/me` no se llama y `AcademicRecordService` no se registra) y avisa
+«Tu récord se borró de ULima++.», o «No se pudo borrar tu récord. Inténtalo de nuevo.» si el servidor
+falla. El docente no lo ve. Con el modo apagado el Perfil no lo trae, porque el botón de siempre vive
+en `/mi-record`.
 
 `[@test] ../../../test/modo_estatico/inicio_y_perfil_estaticos_test.dart`
 `[@test] ../../../test/modo_estatico/ficha_y_calculadora_estaticas_test.dart`
 `[@test] ../../../test/modo_estatico/riesgo_de_asistencia_estatico_test.dart`
+`[@test] ../../../test/modo_estatico/alertas_estaticas_test.dart`
+`[@test] ../../../test/modo_estatico/borrar_record_estatico_test.dart`
 
 ### RF-EST-11. Las rutas ocultas llevan al inicio
 
@@ -140,7 +158,8 @@ con la versión 2.0.0 y el workflow sigue desactivado en el fork.
 | inicio y Perfil | `lib/pages/home/**`, `lib/pages/perfil/perfil.dart` | sin banner, sin tarjeta de miUlima y sin tarjeta del récord |
 | notas | `lib/pages/calculadora/**`, `lib/pages/mis_notas/mis_notas_controller.dart` | calculadora simulada y `/mis-notas` sin servicio |
 | ficha del curso | `lib/pages/descripcion_cursos/descrip_cursos.dart` | sin bloque de asistencia |
-| riesgo de asistencia | `lib/pages/horario/horario.dart`, `lib/pages/teacher/at_risk_students_page.dart` | sin botón, sin petición y sin pantalla |
+| riesgo de asistencia | `lib/pages/horario/horario.dart`, `lib/pages/teacher/at_risk_students_page.dart`, `lib/services/alert_service.dart` | sin botón, sin petición, sin pantalla y sin sus alertas |
+| borrado del récord | `lib/pages/academic_record/borrar_record_estatico.dart`, `lib/pages/perfil/perfil.dart` | «Borrar mi récord de ULima++» en el Perfil, sin mostrar el récord |
 | sílabos | `lib/pages/silabo/**` | solo Drive y «Sílabo no disponible» |
 | compilación | `.github/workflows/build-apk.yml` | `--dart-define=MODO_ESTATICO=true` |
 

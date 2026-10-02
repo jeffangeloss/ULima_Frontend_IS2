@@ -28,7 +28,10 @@ Es una versión mayor porque retira funcionalidades.
   `AcademicRecordService`.
 - En modo estático se ocultan los datos oficiales de la ULima. Son el récord, las notas de la ULima, las
   filas oficiales de la calculadora, que queda simulada, el bloque de asistencia de la ficha del curso y
-  el riesgo de asistencia. `/portal-sync`, `/mi-record` y `/mis-notas` llevan al inicio.
+  el riesgo de asistencia, también el de las alertas «Alerta de inasistencias - <curso>», que no llegan
+  a la campana ni al buzón. `/portal-sync`, `/mi-record` y `/mis-notas` llevan al inicio.
+- En modo estático el Perfil del alumno trae «Borrar mi récord de ULima++», para que pueda borrar la
+  copia del récord que sigue guardada en el servidor (RF-REC-5) sin mostrar el récord.
 - En modo estático el visor de sílabos abre solo enlaces de Drive. Ante otra URL dice «Sílabo no
   disponible» y no abre el navegador.
 - `pubspec.yaml` pasa a `version: 2.0.0+1`.
