@@ -277,6 +277,10 @@ class Bienvenida {
       // Con avisosDeGetX, el Get.snackbar de la bienvenida.
       avisar: avisosDeGetX ? null : (titulo, texto) => avisos.add(titulo),
     )..onStart();
+    // El controlador escucha ModoEstatico.cambios, que vive todo el isolate,
+    // y Get.reset no cierra los controladores. Se cierra al terminar la
+    // prueba para que no siga el modo que fijen las siguientes.
+    addTearDown(() => controlador.onDelete());
   }
 
   final AuthDeLaBienvenida auth;

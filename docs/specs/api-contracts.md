@@ -12,7 +12,7 @@ Contrato REST local del frontend ULima++. Mantener alineado manualmente con `ULi
 
 ## Principios Globales
 
-- Todas las rutas, salvo `GET /`, `GET /health`, `POST /auth/login`, `POST /auth/register`, `POST /auth/google`, `POST /auth/password-reset/request` y `POST /auth/password-reset/confirm`, usan `Authorization: Bearer <token>`.
+- Todas las rutas, salvo `GET /`, `GET /health`, `GET /config`, `POST /auth/login`, `POST /auth/register`, `POST /auth/google`, `POST /auth/password-reset/request` y `POST /auth/password-reset/confirm`, usan `Authorization: Bearer <token>`.
 - El usuario autenticado es estudiante **o docente** (HU18).
 - Roles permitidos: `student`, `delegate`, `subdelegate`, `teacher`.
 - `teacher` es el rol técnico compartido por profesor y jefe de práctica (JP); su etiqueta se deriva de `section.teacher_id` vs `section.jp_id`. El JWT docente lleva `teacherId` en vez de `studentId`.
@@ -40,6 +40,11 @@ Contrato REST local del frontend ULima++. Mantener alineado manualmente con `ULi
   - Expone el commit desplegado (Vercel inyecta `VERCEL_GIT_COMMIT_SHA`).
 - `GET /health`
   - Response: `{ "status": "ok", "timestamp": "ISO-8601 string" }`
+- `GET /config`
+  - Pública, sin `Authorization`. La app lo pide sin cabeceras propias y con un tope de 5 s.
+  - Response `200`: `{ "modoEstatico": boolean }`, con `Cache-Control: no-store`. La app ignora las claves que no conoce (D-5 de `specs/features/interruptor-remoto`).
+  - Es el modo que el backend aplica en ese momento, leído de la fila `app_setting` (RF-IRM-2 y RF-IRM-4 del backend). `HEAD`, `POST`, `PUT`, `PATCH` y `DELETE` responden `404`.
+  - La app lo pide al abrirse, al volver a primer plano, ante `PORTAL_DESACTIVADO` o `REGISTRATION_UNAVAILABLE` y cuando la respuesta del arranque llega tarde, y trata cualquier otro estado, un cuerpo sin `modoEstatico` booleano, el tope o un fallo de red como modo desconocido (RF-IRM-6 y RF-IRM-9 de `specs/features/interruptor-remoto`).
 
 ## Auth
 

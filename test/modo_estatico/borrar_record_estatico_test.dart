@@ -1,7 +1,9 @@
 // test/modo_estatico/borrar_record_estatico_test.dart
 //
 // WIDGET · Versión estática del front (specs/features/modo-estatico/
-// modo-estatico.spec.md), RF-EST-10 y RF-EST-13.
+// modo-estatico.spec.md), RF-EST-10 y RF-EST-13, con el récord registrado
+// como lo deja el arranque desde RF-IRM-11 (specs/features/
+// interruptor-remoto).
 // En modo estático el récord está oculto, pero la copia importada de miUlima
 // sigue guardada en el servidor. El Perfil del alumno trae entonces «Borrar mi
 // récord de ULima++» (RF-REC-5), que llama a `DELETE /academic-record/me` sin
@@ -71,10 +73,14 @@ void main() {
   });
 
   group('RF-EST-10 · borrar el récord desde el Perfil', () {
-    testWidgets('modo estático: el alumno borra su copia sin ver el récord ni '
-        'pedirlo de nuevo', (tester) async {
+    testWidgets('modo estático: con el récord registrado, como lo deja el '
+        'arranque, el alumno borra su copia sin ver el récord ni pedirlo de '
+        'nuevo', (tester) async {
       ModoEstatico.activo = true;
       loguear(alumna());
+      // El arranque registra el récord en los dos modos (RF-IRM-11).
+      final api = ApiRecargaFalsa();
+      Get.put<AcademicRecordService>(AcademicRecordService(apiClient: api));
       final espia = EspiaDeRed();
       await espia.correr(() async {
         await _abrirPerfil(tester);
@@ -85,7 +91,8 @@ void main() {
       });
       expect(espia.alPortal, <String>[_borrado]);
       expect(find.text('Tu récord se borró de ULima++.'), findsOneWidget);
-      expect(Get.isRegistered<AcademicRecordService>(), isFalse);
+      // El servicio registrado no pide GET /academic-record/me.
+      expect(api.llamadas, isEmpty);
     });
 
     testWidgets('modo estático: cancelar el diálogo no borra nada', (

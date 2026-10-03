@@ -133,6 +133,7 @@ class BienvenidaController extends GetxController {
   int _siguienteId = 0;
   bool _conSesion = false;
   Worker? _googleEnWeb;
+  Worker? _cambiosDelModo;
 
   /// La visita trae una sesión puesta o la puso «Sí, entrar» (RF-BIEN-21).
   bool get conSesion => _conSesion;
@@ -148,11 +149,19 @@ class BienvenidaController extends GetxController {
       if (turno.value != TurnoB.e1Codigo) return;
       _trasGoogle(d);
     });
+    // La versión estática no tiene registro (RF-EST-8). Si el interruptor
+    // remoto la fija con un turno del registro abierto, la conversación
+    // vuelve a E1 (decisión D-2 de specs/features/interruptor-remoto).
+    _cambiosDelModo = ever<int>(
+      ModoEstatico.cambios,
+      (_) => _sinRegistroEnEstatico(),
+    );
   }
 
   @override
   void onClose() {
     _googleEnWeb?.dispose();
+    _cambiosDelModo?.dispose();
     _cerrarLosTramos();
     super.onClose();
   }
@@ -561,6 +570,9 @@ class BienvenidaController extends GetxController {
         _decirError(r.errorMessage.value ?? TextosB.sinConexion);
         _abrir(TurnoB.n5Authenticator);
     }
+    // Si la app pasó a estática durante el envío, el turno del registro que
+    // reabre un error no sigue abierto (decisión D-2).
+    _sinRegistroEnEstatico();
   }
 
   void _alCrearLaCuenta(RegistroController r) {
@@ -638,21 +650,39 @@ class BienvenidaController extends GetxController {
     _abrirN5();
   }
 
+  /// Los turnos del registro antes del envío, más incierto. Todos traen
+  /// «Ya tengo cuenta» (RF-BIEN-9), y todos llevan a pedir la contraseña de
+  /// miUlima o el código del Authenticator, así que ninguno sigue abierto en
+  /// la versión estática (RF-EST-8).
+  static const Set<TurnoDeLaBienvenida> _turnosDelRegistro = {
+    TurnoB.n1Codigo,
+    TurnoB.n2Contrasena,
+    TurnoB.n3Consentimiento,
+    TurnoB.n4Portal,
+    TurnoB.n5Authenticator,
+    TurnoB.incierto,
+  };
+
   /// «Ya tengo cuenta», en todos los turnos del registro antes del envío y
   /// en incierto (RF-BIEN-9).
   void yaTengoCuenta() {
-    const conEnlace = <TurnoDeLaBienvenida>{
-      TurnoB.n1Codigo,
-      TurnoB.n2Contrasena,
-      TurnoB.n3Consentimiento,
-      TurnoB.n4Portal,
-      TurnoB.n5Authenticator,
-      TurnoB.incierto,
-    };
-    if (!conEnlace.contains(turno.value)) return;
+    if (!_turnosDelRegistro.contains(turno.value)) return;
     _responder(TextosB.yaTengoCuenta);
     _cerrarRegistro();
     _abrirE1();
+  }
+
+  /// Con la app en estática y un turno del registro abierto, cierra el
+  /// registro y vuelve a E1 como «Ya tengo cuenta», pero sin respuesta del
+  /// alumno, porque el cambio no lo decide él (RF-EST-8 y decisión D-2 de
+  /// specs/features/interruptor-remoto). Lo llaman el cambio de modo y el
+  /// fin de un envío. En cualquier otro caso no hace nada.
+  void _sinRegistroEnEstatico() {
+    if (!ModoEstatico.activo) return;
+    if (!_turnosDelRegistro.contains(turno.value)) return;
+    errorLocal.value = null;
+    _cerrarRegistro();
+    _abrirE1(primera: Duration.zero);
   }
 
   /// «Volver» reabre el turno anterior con lo escrito, y Ulises repite su
