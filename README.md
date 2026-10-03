@@ -103,7 +103,7 @@ El ciclo no se lo inventa la app: **lo trae el alumno desde miUlima**. La pantal
 
 ### Modo estático
 
-Desde la versión 2.0.0 el APK se compila con `--dart-define=MODO_ESTATICO=true` y la app deja de consultar a la Universidad de Lima. El único punto que lee la variable es [`lib/configs/modo_estatico.dart`](lib/configs/modo_estatico.dart) (`ModoEstatico.activo`, apagado por defecto), y el código del portal sigue en el repositorio, apagado detrás de ese interruptor. La spec es [`specs/features/modo-estatico`](specs/features/modo-estatico/modo-estatico.spec.md) y el backend tiene su propio interruptor `MODO_ESTATICO`.
+Desde la versión 2.0.0 la app tiene un modo estático que deja de consultar a la Universidad de Lima, y desde la 2.1.0 el modo lo decide el backend. La app lo lee de `GET /config` al abrirse, al volver a primer plano y ante las respuestas `PORTAL_DESACTIVADO` o `REGISTRATION_UNAVAILABLE` ([`lib/pages/splash/interruptor_remoto.dart`](lib/pages/splash/interruptor_remoto.dart)), guarda el último que conoce y, si nunca recibió uno, usa `MODO_ESTATICO` de `--dart-define`, que [`lib/configs/modo_estatico.dart`](lib/configs/modo_estatico.dart) lee como respaldo de fábrica y que el APK trae en `true`. El modo que rige está en `ModoEstatico.activo`, y el código del portal sigue en el repositorio, apagado detrás de ese interruptor. Las specs son [`specs/features/modo-estatico`](specs/features/modo-estatico/modo-estatico.spec.md) y [`specs/features/interruptor-remoto`](specs/features/interruptor-remoto/interruptor-remoto.spec.md), y en el backend el interruptor es la fila `app_setting` de la base.
 
 Con el modo encendido, la app oculta o apaga lo siguiente.
 

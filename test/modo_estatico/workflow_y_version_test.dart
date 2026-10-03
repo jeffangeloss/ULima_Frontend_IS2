@@ -1,11 +1,12 @@
 // test/modo_estatico/workflow_y_version_test.dart
 //
 // UNITARIA · Versión estática del front (specs/features/modo-estatico/
-// modo-estatico.spec.md), RF-EST-14.
+// modo-estatico.spec.md), RF-EST-14, y el interruptor remoto
+// (specs/features/interruptor-remoto), RF-IRM-12 y RF-IRM-13.
 // `build-apk.yml` compila con --dart-define=MODO_ESTATICO=true sin tocar el
-// resto del comando, y la versión pasa a 2.0.0 en pubspec.yaml y en
-// CHANGELOG.md. El workflow se lee como texto, como en
-// test/aviso_version/aviso_version_workflow_test.dart.
+// resto del comando, ahora como respaldo de fábrica, y la versión pasa a
+// 2.1.0 en pubspec.yaml y en CHANGELOG.md. El workflow se lee como texto,
+// como en test/aviso_version/aviso_version_workflow_test.dart.
 // Archivos probados .github/workflows/build-apk.yml, pubspec.yaml y
 // CHANGELOG.md.
 
@@ -21,7 +22,7 @@ String _comandoDeCompilacion() {
 }
 
 void main() {
-  group('RF-EST-14 · build-apk.yml', () {
+  group('RF-EST-14 y RF-IRM-12 · build-apk.yml', () {
     test('compila con --dart-define=MODO_ESTATICO=true, una sola vez', () {
       final comando = _comandoDeCompilacion();
       expect(
@@ -57,25 +58,37 @@ void main() {
     });
   });
 
-  group('RF-EST-14 · la versión 2.0.0', () {
-    test('pubspec.yaml dice 2.0.0+1', () {
+  group('RF-IRM-13 · la versión 2.1.0', () {
+    test('pubspec.yaml dice 2.1.0+1', () {
       final pubspec = File('pubspec.yaml').readAsStringSync();
       expect(
-        RegExp(r'^version: 2\.0\.0\+1$', multiLine: true).hasMatch(pubspec),
+        RegExp(r'^version: 2\.1\.0\+1$', multiLine: true).hasMatch(pubspec),
         isTrue,
       );
     });
 
-    test('CHANGELOG.md abre con la sección 2.0.0 y enlaza la comparación', () {
+    test('CHANGELOG.md abre con la sección 2.1.0 y enlaza la comparación', () {
       final cambios = File('CHANGELOG.md').readAsStringSync();
-      expect(cambios, contains('## [2.0.0] - 2026-10-02'));
       expect(
-        cambios.indexOf('## [2.0.0]'),
-        lessThan(cambios.indexOf('## [1.2.0]')),
+        RegExp(
+          r'^## \[2\.1\.0\] - \d{4}-\d{2}-\d{2}$',
+          multiLine: true,
+        ).hasMatch(cambios),
+        isTrue,
       );
-      expect(cambios, contains('MODO_ESTATICO'));
-      expect(cambios, contains('[2.0.0]: '));
-      expect(cambios, contains('v1.2.0...v2.0.0'));
+      expect(
+        cambios.indexOf('## [2.1.0]'),
+        lessThan(cambios.indexOf('## [2.0.0]')),
+      );
+      expect(cambios, contains('GET /config'));
+      expect(cambios, contains('modo_estatico_conocido'));
+      expect(
+        cambios,
+        contains(
+          '[2.1.0]: https://github.com/meltiruiz/ULima_Frontend_IS2/'
+          'compare/v2.0.0...v2.1.0',
+        ),
+      );
     });
   });
 }

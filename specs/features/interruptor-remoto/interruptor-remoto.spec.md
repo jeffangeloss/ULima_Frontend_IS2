@@ -145,6 +145,16 @@ Con el modo fijo durante la sesión, la app se comporta igual que la 2.0.0 en mo
 1.2.0 en modo normal, y la suite existente pasa salvo las pruebas que fijan el registro condicional
 de servicios o la versión. `pubspec.yaml` pasa a `2.1.0+1` y `CHANGELOG.md` abre con la sección 2.1.0.
 
+`[@test] ../../../test/modo_estatico/modo_estatico_test.dart`
+`[@test] ../../../test/modo_estatico/bienvenida_estatica_test.dart`
+`[@test] ../../../test/modo_estatico/inicio_y_perfil_estaticos_test.dart`
+`[@test] ../../../test/modo_estatico/ficha_y_calculadora_estaticas_test.dart`
+`[@test] ../../../test/modo_estatico/riesgo_de_asistencia_estatico_test.dart`
+`[@test] ../../../test/modo_estatico/alertas_estaticas_test.dart`
+`[@test] ../../../test/modo_estatico/borrar_record_estatico_test.dart`
+`[@test] ../../../test/modo_estatico/silabo_estatico_test.dart`
+`[@test] ../../../test/modo_estatico/workflow_y_version_test.dart`
+
 ## Piezas
 
 | Pieza | Archivo | Responsabilidad |

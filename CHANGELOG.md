@@ -6,6 +6,38 @@ Este archivo reúne los cambios relevantes de la app ULima++. Su formato sigue
 `meltiruiz/ULima_Frontend_IS2`, el repositorio de producción. El flujo de ramas y la forma de
 publicar una versión están en [`docs/devops.md`](docs/devops.md).
 
+## [2.1.0] - 2026-10-02
+
+El interruptor remoto. La app toma el modo estático o dinámico del backend, de modo que un solo cambio
+en la base gobierna el backend y toda APK 2.1.0 o posterior, sin compilar ni publicar otro APK.
+
+### Añadido
+
+- `ModoRemotoService` pide `GET /config` con un tope de 5 s y sin cabeceras propias, y guarda la
+  última respuesta conocida en la clave `modo_estatico_conocido`, que cerrar sesión no borra.
+- `InterruptorRemoto` pide el modo al abrir la app, al volver a primer plano, ante las respuestas
+  `PORTAL_DESACTIVADO` o `REGISTRATION_UNAVAILABLE` y cuando la respuesta del arranque llega tarde,
+  con a lo sumo una consulta en curso. Ante un modo distinto lo guarda, lo fija y vuelve al Horario
+  del inicio con sesión, o a la bienvenida sin sesión o con un alumno sin especialidad.
+- Con la bienvenida abierta, un cambio de modo muestra u oculta «Soy nuevo» al momento en el
+  recibimiento, en las respuestas rápidas, en E1 y en E2, sin salir de la conversación, con la señal
+  `ModoEstatico.cambios` que avanza `ModoEstatico.fijar`. Un registro abierto, que la versión
+  estática no tiene, vuelve a E1 al pasar a estática.
+- Spec `interruptor-remoto` con RF-IRM-6 a RF-IRM-13 y las decisiones D-1 a D-6, y pruebas en
+  `test/interruptor_remoto/`.
+
+### Cambiado
+
+- El arranque lanza la consulta del modo en su primera línea y la espera a lo sumo 1,5 s antes de
+  devolver la ruta, también cuando la carga falla. Sin respuesta usa el último modo conocido y, sin
+  él, el de compilación.
+- `MODO_ESTATICO` pasa a ser el respaldo de fábrica. `build-apk.yml` sigue compilando con
+  `--dart-define=MODO_ESTATICO=true`, así que una APK que nunca habló con el backend arranca estática.
+- El arranque registra `AcademicRecordService` y `RecargaUlimaService` en los dos modos, sin
+  peticiones, para que el paso de estático a normal no rompa ninguna pantalla.
+- `ApiClient` avisa los códigos de error a un oyente, sin cambiar lo que devuelve ni lo que lanza.
+- `pubspec.yaml` pasa a `version: 2.1.0+1`.
+
 ## [2.0.0] - 2026-10-02
 
 La versión estática. La app deja de consultar a la Universidad de Lima y oculta lo que dependía de ella.
@@ -129,6 +161,7 @@ esta sección son de `meltiruiz/ULima_Frontend_IS2`.
 - Un bloque de horario sin ningún día real dentro de sus fechas ya no se guarda (#178).
 - El teclado ya no tapa la pregunta de Ulises en la bienvenida (#184).
 
+[2.1.0]: https://github.com/meltiruiz/ULima_Frontend_IS2/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/meltiruiz/ULima_Frontend_IS2/compare/v1.2.0...v2.0.0
 [1.2.0]: https://github.com/meltiruiz/ULima_Frontend_IS2/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/meltiruiz/ULima_Frontend_IS2/compare/v1.0.0...v1.1.0
