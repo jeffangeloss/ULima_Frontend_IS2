@@ -16,6 +16,7 @@ import 'pages/splash/arranque_page.dart';
 import 'pages/splash/aviso_version_arranque.dart';
 import 'pages/splash/capa_de_arranque.dart';
 import 'pages/splash/carga_del_arranque.dart';
+import 'pages/splash/interruptor_remoto.dart';
 import 'services/session_navigation.dart';
 import 'services/splash_variante_service.dart';
 import 'pages/teacher/teacher_home_binding.dart';
@@ -63,6 +64,10 @@ void main() async {
   await SystemChrome.setPreferredOrientations(const [
     DeviceOrientation.portraitUp,
   ]);
+  // El interruptor remoto pide el modo al volver a primer plano y ante los
+  // códigos del modo estático, también en web (RF-IRM-9). La carga lo usa
+  // para el modo del arranque (RF-IRM-8).
+  InterruptorRemoto.actual.escuchar();
   if (kIsWeb) {
     // En web no hay intro y el arranque sigue en el orden de siempre, porque
     // una recarga en /#/home construiría HomePage antes que los servicios

@@ -5,8 +5,9 @@
 // En modo estático la ficha del curso no muestra el bloque de asistencia (ni
 // el pie con la última lectura ni el botón de actualizar desde miUlima), la
 // calculadora queda en modo simulado sin la fila «Notas oficiales» ni pedir
-// `/grades/me/ulima`, y /mis-notas no resuelve `RecargaUlimaService`. Con el
-// modo apagado todo sigue como en la 1.2.0.
+// `/grades/me/ulima`, y /mis-notas no usa `RecargaUlimaService`, aunque el
+// arranque lo registre en los dos modos desde RF-IRM-11 (specs/features/
+// interruptor-remoto). Con el modo apagado todo sigue como en la 1.2.0.
 // Archivos probados lib/pages/descripcion_cursos/descrip_cursos.dart,
 // lib/pages/calculadora/**, lib/pages/mis_notas/mis_notas_controller.dart.
 //
@@ -73,11 +74,9 @@ Future<void> _abrirFicha(
   tester.view.devicePixelRatio = 2.0;
   addTearDown(tester.view.reset);
   loguear(alumna());
-  // Con el modo apagado, el arranque registra este servicio. Con el modo
-  // estático no, y la ficha tiene que bastarse sin él.
-  if (!ModoEstatico.activo) {
-    Get.put<RecargaUlimaService>(RecargaUlimaService(apiClient: api));
-  }
+  // El arranque registra este servicio en los dos modos (RF-IRM-11), y en
+  // modo estático la ficha no lo usa.
+  Get.put<RecargaUlimaService>(RecargaUlimaService(apiClient: api));
   Get.put<DescripCursosController>(
     _Ficha(Seccion.fromJson(_seccionJson(conDatos: conDatos))),
   );
@@ -221,18 +220,21 @@ void main() {
     });
   });
 
-  group('RF-EST-9 · /mis-notas sin servicio', () {
-    test('modo estático: el controlador no resuelve RecargaUlimaService y no '
+  group('RF-EST-9 y RF-IRM-11 · /mis-notas con el servicio registrado', () {
+    test('modo estático: el controlador no usa RecargaUlimaService y no '
         'pide nada', () async {
       ModoEstatico.activo = true;
       loguear(alumna());
-      expect(Get.isRegistered<RecargaUlimaService>(), isFalse);
+      // El arranque registra la recarga en los dos modos (RF-IRM-11).
+      final api = ApiRecargaFalsa();
+      Get.put<RecargaUlimaService>(RecargaUlimaService(apiClient: api));
       final c = MisNotasController();
       expect(c.vista, isNull);
       expect(c.aviso, isNull);
       expect(c.errorCarga, isFalse);
       await c.load();
-      expect(Get.isRegistered<RecargaUlimaService>(), isFalse);
+      expect(api.veces('GET /grades/me/ulima'), 0);
+      expect(api.llamadas, isEmpty);
     });
   });
 }

@@ -181,6 +181,10 @@ class _RecibimientoState extends State<Recibimiento>
   /// Cuándo empezó el cruce de la estrella, que espera a saber si hay sesión.
   double? _inicioDelCruce;
 
+  /// La suscripción a ModoEstatico.cambios, que reconstruye los botones
+  /// cuando el interruptor remoto fija otro modo (decisión D-2).
+  late final StreamSubscription<int> _cambiosDelModo;
+
   bool get _sinMovimiento => MediaQuery.disableAnimationsOf(context);
   bool get _conLector => MediaQuery.accessibleNavigationOf(context);
 
@@ -228,10 +232,17 @@ class _RecibimientoState extends State<Recibimiento>
   void initState() {
     super.initState();
     unawaited(_reloj.start());
+    // Con todo quieto el reloj calla y nada más reconstruye los botones, así
+    // que un cambio de modo los reconstruye aquí y «Soy nuevo» aparece o se
+    // va al momento (decisión D-2 de specs/features/interruptor-remoto).
+    _cambiosDelModo = ModoEstatico.cambios.listen((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
   void dispose() {
+    unawaited(_cambiosDelModo.cancel());
     _reloj.dispose();
     _destino?.desechar();
     super.dispose();
@@ -700,7 +711,9 @@ class _RecibimientoState extends State<Recibimiento>
                       tinta: MaterialTheme.bienvenidaEntrarTinta(b),
                       alTocar: () => _responder(true),
                     ),
-                    // La versión estática no tiene registro (RF-EST-8).
+                    // La versión estática no tiene registro (RF-EST-8). Un
+                    // cambio de modo reconstruye estos botones al momento,
+                    // con la suscripción de initState (decisión D-2).
                     if (!ModoEstatico.activo) ...[
                       const SizedBox(height: 10),
                       _Boton(

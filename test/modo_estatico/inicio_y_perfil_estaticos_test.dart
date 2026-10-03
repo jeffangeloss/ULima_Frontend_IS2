@@ -1,7 +1,9 @@
 // test/modo_estatico/inicio_y_perfil_estaticos_test.dart
 //
 // UNITARIA + WIDGET · Versión estática del front (specs/features/
-// modo-estatico/modo-estatico.spec.md), RF-EST-9, RF-EST-10 y RF-EST-13.
+// modo-estatico/modo-estatico.spec.md), RF-EST-9, RF-EST-10 y RF-EST-13, y
+// RF-IRM-11 (specs/features/interruptor-remoto), con el récord y la recarga
+// registrados como los deja el arranque.
 // En modo estático el inicio no ofrece cargar desde miUlima ni pide el estado
 // del portal, y el Perfil no trae la tarjeta de miUlima ni la del récord. Con
 // el modo apagado todo sigue como en la 1.2.0.
@@ -24,6 +26,7 @@ import 'package:ulima_plus/services/academic_record_service.dart';
 import 'package:ulima_plus/services/alert_service.dart';
 import 'package:ulima_plus/services/malla_service.dart';
 import 'package:ulima_plus/services/portal_sync_service.dart';
+import 'package:ulima_plus/services/recarga_ulima_service.dart';
 
 import '../HU37_jeff/recarga_dobles.dart';
 import 'apoyo_estatico.dart';
@@ -165,41 +168,42 @@ void main() {
     });
   });
 
-  group('RF-EST-9 y RF-EST-10 · el Perfil', () {
-    Future<void> abrirPerfil(
-      WidgetTester tester, {
-      required bool conRecord,
-    }) async {
+  group('RF-EST-9, RF-EST-10 y RF-IRM-11 · el Perfil', () {
+    // El Perfil con el récord y la recarga registrados, como los deja el
+    // arranque en los dos modos (RF-IRM-11). Devuelve el cliente falso de
+    // los dos servicios, que anota cada petición.
+    Future<ApiRecargaFalsa> abrirPerfil(WidgetTester tester) async {
       loguear(alumna());
       Get.put<MallaService>(_MallaSinRed());
-      if (conRecord) {
-        Get.put<AcademicRecordService>(
-          AcademicRecordService(apiClient: ApiRecargaFalsa()),
-        );
-      }
+      final api = ApiRecargaFalsa();
+      Get.put<AcademicRecordService>(AcademicRecordService(apiClient: api));
+      Get.put<RecargaUlimaService>(RecargaUlimaService(apiClient: api));
       await _montar(tester, const ProfilePage());
+      return api;
     }
 
     testWidgets('modo estático: sin la tarjeta de miUlima ni la del récord, '
-        'y sin peticiones al portal', (tester) async {
+        'y sin peticiones al portal aunque los servicios estén '
+        'registrados', (tester) async {
       ModoEstatico.activo = true;
       final espia = EspiaDeRed();
+      late ApiRecargaFalsa api;
       await espia.correr(() async {
-        await abrirPerfil(tester, conRecord: false);
+        api = await abrirPerfil(tester);
         await tester.pump(const Duration(milliseconds: 200));
       });
       expect(find.text('Actualizar desde miUlima'), findsNothing);
       expect(find.byType(RecordProfileCard), findsNothing);
       expect(find.text('Seguridad'), findsOneWidget);
       expect(find.text('Cerrar sesión'), findsOneWidget);
-      expect(Get.isRegistered<AcademicRecordService>(), isFalse);
+      expect(api.llamadas, isEmpty);
       expect(espia.alPortal, isEmpty);
     });
 
     testWidgets('modo apagado: las dos tarjetas siguen como en la 1.2.0', (
       tester,
     ) async {
-      await abrirPerfil(tester, conRecord: true);
+      await abrirPerfil(tester);
       expect(find.text('Actualizar desde miUlima'), findsOneWidget);
       expect(find.byType(RecordProfileCard), findsOneWidget);
     });

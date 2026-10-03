@@ -154,24 +154,49 @@ puede reportar avisos distintos y las dependencias resueltas difieren, y la CI m
 
 ## Modo estático
 
-`MODO_ESTATICO` es un interruptor de compilación que desconecta la app de la Universidad de Lima y oculta
-los datos que vinieron de ella. La app lo lee de `--dart-define` en un único punto,
-`lib/configs/modo_estatico.dart`, y lo apaga por defecto, así que una build sin el define se comporta como
-la 1.2.0. `build-apk.yml` compila con `--dart-define=MODO_ESTATICO=true` desde la 2.0.0, y el APK de
-producción sale en modo estático. El workflow `Build and Release APK` del fork sigue desactivado a
-propósito, y el APK solo sale del repositorio de producción (`meltiruiz/ULima_Frontend_IS2`).
+La app tiene dos modos. El estático la desconecta de la Universidad de Lima y oculta los datos que
+vinieron de ella, y el dinámico se comporta como la 1.2.0. Desde la 2.1.0 el modo lo decide el
+backend con la fila `app_setting` de la base, y la app lo lee de `GET /config` al abrirse, al volver a
+primer plano, ante las respuestas `PORTAL_DESACTIVADO` o `REGISTRATION_UNAVAILABLE` y cuando la
+respuesta del arranque llega tarde. El modo que rige vive en `ModoEstatico.activo`
+(`lib/configs/modo_estatico.dart`), y lo fija `InterruptorRemoto`
+(`lib/pages/splash/interruptor_remoto.dart`).
 
-Para ver cada modo en local:
+Para alternar, en la consola de Neon del proyecto de ULima++ se elige la rama (producción o
+`develop`), se abre la tabla `app_setting`, se cambia `static_mode` a `true` (estática) o a `false`
+(dinámica) y se guarda. El backend aplica el modo nuevo en unos 10 s, y cada app 2.1.0 lo toma al
+abrirse o al volver a primer plano. Con la app abierta, un cambio la lleva al Horario del inicio o a
+la bienvenida y toda pantalla se reconstruye con el modo nuevo. Una bienvenida ya abierta no se
+vuelve a abrir, sigue en su turno y muestra u oculta «Soy nuevo» al momento, porque
+`ModoEstatico.fijar` avanza la señal `ModoEstatico.cambios`, que leen sus Obx y el recibimiento. Un
+registro abierto, en cambio, vuelve a E1 al pasar a estática, porque esa versión no tiene registro. El
+procedimiento completo y la comprobación con `curl` están en el `docs/devops.md` del backend.
+
+Si la fila de producción queda en `false` por mucho tiempo, conviene poner también
+`MODO_ESTATICO=false` en Vercel y redesplegar el backend. Una instancia fría del backend que no puede
+leer la base responde con su respaldo, que es esa variable, y mientras siga en `true` una APK 2.1.0
+podría volver un rato al modo estático.
+
+Sin respuesta del backend, la app usa el último modo que conoce, guardado en la clave
+`modo_estatico_conocido`, y si nunca recibió uno usa el de compilación. `MODO_ESTATICO` de
+`--dart-define` queda solo como ese respaldo de fábrica. `build-apk.yml` compila con
+`--dart-define=MODO_ESTATICO=true`, así que una APK recién instalada y sin red arranca estática. El
+workflow `Build and Release APK` del fork sigue desactivado a propósito, y el APK solo sale del
+repositorio de producción (`meltiruiz/ULima_Frontend_IS2`).
+
+En local, el define fija el respaldo de una instalación sin modo guardado, y la respuesta de
+`GET /config` manda sobre él.
 
 ```bash
 flutter run --dart-define=API_BASE_URL=<URL del backend>
 flutter run --dart-define=API_BASE_URL=<URL del backend> --dart-define=MODO_ESTATICO=true
 ```
 
-Las pruebas fijan `ModoEstatico.activo` en cada caso y lo restauran al terminar, de modo que `flutter test`
-cubre los dos modos sin ninguna bandera. Para revertir, basta quitar el define de `build-apk.yml`, sin
-revertir commits. El backend tiene su propio `MODO_ESTATICO` (véase su `docs/devops.md`), y el orden de
-publicación es el backend primero y la app después.
+Las pruebas fijan `ModoEstatico.activo` en cada caso y lo restauran al terminar, y las del interruptor
+llaman a `InterruptorRemoto.reiniciar()`, de modo que `flutter test` cubre los dos modos sin ninguna
+bandera. La APK 2.0.0 queda estática hasta actualizar, aunque el backend pase a dinámico, y la 1.2.0
+no conoce el modo. El orden de publicación sigue siendo el backend primero y la app después, porque
+sin `GET /config` la app usa su respaldo.
 
 ## Build de depuración contra pruebas
 
