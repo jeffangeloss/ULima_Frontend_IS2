@@ -21,21 +21,29 @@ import '../../services/auth_service.dart';
 import '../../services/modo_remoto_service.dart';
 import '../../services/post_login_route.dart';
 import '../../services/session_navigation.dart';
+import '../../services/storage_service.dart';
 import '../home/home_page.dart' show abrirEnHorario;
 import 'estado_de_la_capa.dart';
 
 class InterruptorRemoto with WidgetsBindingObserver {
   /// Todo se inyecta para las pruebas. En la app, el servicio toma la URL de
   /// `API_BASE_URL`, la señal es la de la capa del arranque, el respaldo es
-  /// `MODO_ESTATICO` y la espera del arranque es de 1,5 s.
+  /// `MODO_ESTATICO`, la espera del arranque es de 1,5 s y el token es el
+  /// que guarda StorageService.
   InterruptorRemoto({
     ModoRemotoService? servicio,
     ValueListenable<bool>? capaCubre,
     bool deCompilacion = ModoEstatico.deCompilacion,
     this.esperaDelArranque = const Duration(milliseconds: 1500),
+    Future<String?> Function()? tokenGuardado,
   }) : _servicio = servicio ?? ModoRemotoService(),
        _capaCubre = capaCubre ?? EstadoDeLaCapa.cubre,
-       _deCompilacion = deCompilacion;
+       _deCompilacion = deCompilacion,
+       _tokenGuardado = tokenGuardado ?? _tokenDeStorage;
+
+  /// El token guardado, o null si StorageService no está registrado.
+  static Future<String?> _tokenDeStorage() async =>
+      Get.isRegistered<StorageService>() ? StorageService.to.savedToken : null;
 
   static InterruptorRemoto? _actual;
 
@@ -63,6 +71,7 @@ class InterruptorRemoto with WidgetsBindingObserver {
   final ModoRemotoService _servicio;
   final ValueListenable<bool> _capaCubre;
   final bool _deCompilacion;
+  final Future<String?> Function() _tokenGuardado;
 
   /// Lo más que cargarElArranque espera la respuesta antes de devolver la
   /// ruta (RF-IRM-8).
@@ -172,7 +181,7 @@ class InterruptorRemoto with WidgetsBindingObserver {
   Future<void> _recibir(bool? respuesta) async {
     if (!await _fijar(respuesta)) return;
     await _esperarElRetiroDeLaCapa();
-    _volverAlInicio();
+    await _volverAlInicio();
   }
 
   /// Si la capa del arranque cubre la pantalla, espera su retiro, con la
@@ -190,19 +199,25 @@ class InterruptorRemoto with WidgetsBindingObserver {
     return retirada.future;
   }
 
-  /// La ruta que daría el arranque (decisión D-4). Si postLoginRoute da
-  /// /home, va a /home en la pestaña Horario, como la intro (RF-SPL-20). En
-  /// cualquier otro caso, sin sesión o con un alumno sin especialidad, va a
-  /// la bienvenida con offAllToLogin, como el relevo de la intro (RF-SPL-12),
-  /// y offAllToLogin no navega si /login ya es la ruta actual (decisión D-2).
+  /// La ruta que daría el arranque (decisión D-4). Si hay un token guardado,
+  /// un usuario en memoria y postLoginRoute da /home, va a /home en la
+  /// pestaña Horario, como la intro (RF-SPL-20). En cualquier otro caso, sin
+  /// sesión o con un alumno sin especialidad, va a la bienvenida con
+  /// offAllToLogin, como el relevo de la intro (RF-SPL-12), y offAllToLogin
+  /// no navega si /login ya es la ruta actual (decisión D-2). Pide el token
+  /// igual que la bienvenida porque un 401 de ApiClient borra el token y deja
+  /// el usuario en memoria, y el arranque trata ese estado como sin sesión.
   /// Sin navegador no hace nada, y la primera pantalla que se construya ya
   /// lee el modo nuevo.
-  void _volverAlInicio() {
+  Future<void> _volverAlInicio() async {
     if (Get.context == null) return;
     final usuario = Get.isRegistered<AuthService>()
         ? AuthService.to.currentUser
         : null;
-    if (usuario != null && postLoginRoute(usuario) == '/home') {
+    final token = usuario == null ? null : await _tokenGuardado();
+    if (Get.context == null) return;
+    final hayToken = token != null && token.isNotEmpty;
+    if (usuario != null && hayToken && postLoginRoute(usuario) == '/home') {
       Get.offAllNamed<void>('/home', arguments: abrirEnHorario);
       return;
     }

@@ -4,7 +4,8 @@
 // interruptor-remoto.spec.md). RF-IRM-10 fija que un modo conocido y distinto
 // se fija, se guarda y lleva a la ruta que daría el arranque (decisión D-4),
 // que es /home en Horario con una sesión que va a /home y la bienvenida sin
-// sesión o con un alumno sin especialidad, después del retiro de la capa si
+// sesión, con un usuario en memoria sin token guardado o con un alumno sin
+// especialidad, después del retiro de la capa si
 // todavía cubre, y que un modo igual o desconocido no navega. RF-IRM-9 fija
 // que hay a lo sumo una consulta en curso. Sin red, con páginas de prueba y
 // con datos inventados.
@@ -28,13 +29,15 @@ import '../HU36_jeff/dobles_de_red.dart';
 import 'apoyo_interruptor.dart';
 
 /// Un interruptor sobre [backend], con la capa retirada salvo que la prueba
-/// pase la suya.
+/// pase la suya y sin token guardado salvo que la prueba pase uno.
 InterruptorRemoto _interruptor(
   BackendDelModo backend, {
   ValueNotifier<bool>? capa,
+  String? token,
 }) => InterruptorRemoto(
   servicio: backend.servicio(),
   capaCubre: capa ?? ValueNotifier<bool>(false),
+  tokenGuardado: () async => token,
 );
 
 void main() {
@@ -54,8 +57,9 @@ void main() {
     testWidgets('sin sesión, un modo distinto se fija, se guarda y lleva a la '
         'bienvenida', (tester) async {
       await tester.pumpWidget(appDelInterruptor());
-      await _interruptor(BackendDelModo(cuerpo: '{"modoEstatico":true}'))
-          .consultar();
+      await _interruptor(
+        BackendDelModo(cuerpo: '{"modoEstatico":true}'),
+      ).consultar();
       await tester.pumpAndSettle();
       expect(ModoEstatico.activo, isTrue);
       expect(Get.currentRoute, '/login');
@@ -68,8 +72,10 @@ void main() {
       ModoEstatico.activo = true;
       Get.put<AuthService>(AuthConUsuario(alumno()));
       await tester.pumpWidget(appDelInterruptor());
-      await _interruptor(BackendDelModo(cuerpo: '{"modoEstatico":false}'))
-          .consultar();
+      await _interruptor(
+        BackendDelModo(cuerpo: '{"modoEstatico":false}'),
+        token: 'token-de-prueba',
+      ).consultar();
       await tester.pumpAndSettle();
       expect(ModoEstatico.activo, isFalse);
       expect(Get.currentRoute, '/home');
@@ -77,12 +83,29 @@ void main() {
       expect(find.text('INICIO'), findsOneWidget);
     });
 
+    testWidgets('con un alumno en memoria pero sin token guardado, como deja '
+        'un 401 de ApiClient, va a la bienvenida y no a /home', (tester) async {
+      Get.put<AuthService>(AuthConUsuario(alumno()));
+      await tester.pumpWidget(appDelInterruptor());
+      await _interruptor(
+        BackendDelModo(cuerpo: '{"modoEstatico":true}'),
+        token: '',
+      ).consultar();
+      await tester.pumpAndSettle();
+      expect(ModoEstatico.activo, isTrue);
+      expect(Get.currentRoute, '/login');
+      expect(find.text('BIENVENIDA'), findsOneWidget);
+      expect(find.text('INICIO'), findsNothing);
+    });
+
     testWidgets('con la sesión de un alumno sin especialidad va a la '
         'bienvenida, como el arranque, y no a /setup-carrera', (tester) async {
       Get.put<AuthService>(AuthConUsuario(alumno(setupComplete: false)));
       await tester.pumpWidget(appDelInterruptor());
-      await _interruptor(BackendDelModo(cuerpo: '{"modoEstatico":true}'))
-          .consultar();
+      await _interruptor(
+        BackendDelModo(cuerpo: '{"modoEstatico":true}'),
+        token: 'token-de-prueba',
+      ).consultar();
       await tester.pumpAndSettle();
       expect(ModoEstatico.activo, isTrue);
       expect(Get.currentRoute, '/login');
@@ -118,8 +141,9 @@ void main() {
       );
       await tester.pumpAndSettle();
       final antes = rutas.nombres.length;
-      await _interruptor(BackendDelModo(cuerpo: '{"modoEstatico":true}'))
-          .consultar();
+      await _interruptor(
+        BackendDelModo(cuerpo: '{"modoEstatico":true}'),
+      ).consultar();
       await tester.pumpAndSettle();
       expect(ModoEstatico.activo, isTrue);
       expect(rutas.nombres, hasLength(antes));
@@ -129,8 +153,9 @@ void main() {
     testWidgets('un modo igual no navega', (tester) async {
       ModoEstatico.activo = true;
       await tester.pumpWidget(appDelInterruptor());
-      await _interruptor(BackendDelModo(cuerpo: '{"modoEstatico":true}'))
-          .consultar();
+      await _interruptor(
+        BackendDelModo(cuerpo: '{"modoEstatico":true}'),
+      ).consultar();
       await tester.pumpAndSettle();
       expect(ModoEstatico.activo, isTrue);
       expect(Get.currentRoute, '/otra');
@@ -148,8 +173,9 @@ void main() {
     });
 
     test('sin navegador fija el modo y no lanza', () async {
-      await _interruptor(BackendDelModo(cuerpo: '{"modoEstatico":true}'))
-          .consultar();
+      await _interruptor(
+        BackendDelModo(cuerpo: '{"modoEstatico":true}'),
+      ).consultar();
       expect(ModoEstatico.activo, isTrue);
     });
   });
